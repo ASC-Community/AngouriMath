@@ -16581,6 +16581,44 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A whole power of a quotient with a symbol in it, written as the quotient of the powers:
+        /// <c>(c/(a + c u^2))^2</c> is <c>c^2/(a + c u^2)^2</c>, exact for a whole power. That is how
+        /// the substitution <c>u = x^2</c> writes <c>x/(a + c x^4)^2</c>, having simplified
+        /// <c>1/(a/c + u^2)^2</c>, and the table reads the quotient of the powers and not the power
+        /// of the quotient: <c>c^2/(a + c x^2)^2</c> was answered in a few milliseconds where
+        /// <c>(c/(a + c x^2))^2</c> went to parts and was declined after twenty-six seconds, and
+        /// <c>x/(a + c x^4)^2</c> was answered after forty, by another route. With numbers only it
+        /// is answered as it is already. Only a quotient of two polynomials in <paramref name="x"/>:
+        /// the hyperbolic functions arrive as quotients of exponentials, and the imaginary tangent's
+        /// sum as <c>A e^(i z)/cos(z)</c>, and written apart those went to slower routes --
+        /// <c>cosh(c + d x)/(a + b tanh(c + d x)^2)</c> from 17 ms to past five seconds. And only with
+        /// a monomial left above the bar, the table's <c>x^m/(a + b x^n)^p</c>: a sum there is
+        /// multiplied out by the rational rules, and the folded <c>tanh(a + 2 ln(x))^2</c>,
+        /// <c>((e^(2a) x^4 - 1)/(e^(2a) x^4 + 1))^2</c>, went from five seconds to forty-five that way.
+        /// Asked as the same question.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </summary>
+        internal static Entity? SolveByDistributingWholePowersOfQuotients(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var distributed = expr.Replace(node =>
+                node is Powf(Divf(var above, var below) quotient, Number.Integer power) && quotient.ContainsNode(x)
+                    && quotient.Vars.Any(symbol => symbol != x)
+                    && IsAPolynomialIn(above, x) && IsAPolynomialIn(below, x)
+                    && IsAMonomialIn(power.EInteger.Sign > 0 ? above : below, x)
+                    ? power.EInteger.Sign > 0
+                        ? MathS.Pow(above, power) / MathS.Pow(below, power)
+                        : MathS.Pow(below, Number.Integer.Create(power.EInteger.Negate())) / MathS.Pow(above, Number.Integer.Create(power.EInteger.Negate()))
+                    : node);
+            return distributed == expr ? null : Integration.ComputeAsTheSameQuestion(distributed, x, integrateByParts);
+
+            static bool IsAPolynomialIn(Entity expr, Entity.Variable x)
+                => TreeAnalyzer.TryGetPolynomial(expr, x, out var terms)
+                   && terms.Keys.All(power => power.Sign >= 0) && terms.Values.All(coefficient => !coefficient.ContainsNode(x));
+            static bool IsAMonomialIn(Entity expr, Entity.Variable x)
+                => TreeAnalyzer.TryGetPolynomial(expr, x, out var terms) && terms.Count == 1;
+        }
+
+        /// <summary>
         /// A polynomial in <c>x</c> times a rational function of exponentials of <c>x</c>,
         /// by parts against the whole rational function: <c>x tanh(x)^2</c> is
         /// <c>x ((e^(2x) - 1)/(e^(2x) + 1))^2</c>, whose antiderivative under <c>u = e^(2x)</c> is
