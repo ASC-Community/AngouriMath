@@ -8400,6 +8400,51 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power of the cotangent that is not whole below the bar of an integrand with the
+        /// tangent of the same argument in it, written as a power of the tangent above it:
+        /// <c>1/cot(z)^p = K tan(z)^p</c> with <c>K = 1/(cot(z)^p tan(z)^p)</c>, which is 1
+        /// wherever the tangent is positive and a constant on every interval where it keeps its
+        /// sign, so it stands in front of the answer, the way Rubi writes it.
+        /// </summary>
+        /// <remarks>
+        /// <c>1/(cot(x)^(7/2) (a + b tan(x))^(3/2))</c> was declined while
+        /// <c>tan(x)^(7/2)/(a + b tan(x))^(3/2)</c> was answered: the tangent substitution
+        /// writes the cotangent as <c>1/tan</c>, and a power of <c>1/u</c> that is not whole below
+        /// the bar is read by no rule. Only below the bar: above it the substitution's
+        /// <c>(1/u)^p</c> is read, and <c>cot(x)^(3/2)/(a + b tan(x))</c>, answered in four
+        /// seconds so, ran past a minute as <c>tan(x)^(-3/2)</c>, while
+        /// <c>cot(x)^(7/2) sqrt(a + b tan(x))</c>, declined in a second, took a hundred to be.
+        /// And only beside the tangent; a power of the cotangent alone keeps the answer it had.
+        /// Rubi's 4.3.2.1 and 4.3.3.1.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingAPowerOfTheCotangentInTheTangent(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Cotanf))
+                return null;
+            Entity? power = null;
+            Entity? argument = null;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+                if (underneath && factor is Powf(Cotanf(var cotangentArgument), var exponent) && cotangentArgument.ContainsNode(x)
+                    && exponent.Evaled is Number.Rational fraction && fraction is not Number.Integer)
+                {
+                    if (power is not null)
+                        return null;
+                    (power, argument) = (factor, cotangentArgument);
+                }
+            if (power is not Powf(var cotangent, var p) || argument is null)
+                return null;
+            // The cotangent nowhere else, and the tangent somewhere: the power is then all of
+            // the cotangent there is, and the integrand is the tangent substitution's.
+            var tangent = MathS.Tan(argument);
+            if (expr.Nodes.Count(node => node == cotangent) != 1 || !expr.ContainsNode(tangent))
+                return null;
+            var rewritten = expr.Replace(node => node == power ? MathS.Pow(tangent, (-p).InnerSimplified) : node);
+            var constant = power * MathS.Pow(tangent, p);
+            return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts)?.Pipe(answer => answer / constant);
+        }
+
+        /// <summary>
         /// An integrand that is a function of <c>tan(x)</c> and of nothing else, integrated by
         /// the substitution <c>u = tan(x)</c>, under which <c>dx</c> is <c>du/(1 + u^2)</c>.
         /// </summary>

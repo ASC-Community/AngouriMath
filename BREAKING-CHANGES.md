@@ -802,6 +802,23 @@ rule that does the same for a polynomial under a square root, whose answers are 
 | `"1/sqrt(a*cot(x)^2)".Integrate("x")` | `-sgn(tan(x)) ln(1/sqrt(1 + abs(tan(x))^2))/sqrt(a)` | `sgn(cot(x)) ln(1 + tan(x)^2)/(2 sqrt(a))` |
 | `"(b*tan(x)^2)^(5/2)".Integrate("x")` | `sgn(tan(x)) b^(5/2) ((abs(tan(x))^2)^2/2 - abs(tan(x))^2 + ln(abs(tan(x))^2 + 1))/2` | the same with `tan(x)` for `abs(tan(x))` |
 
+### A power of the cotangent that is not whole below the bar is integrated beside the tangent
+
+**Answers where there were none.** `1/(cot(x)^(7/2) (a + b tan(x))^(3/2))` was declined while
+`tan(x)^(7/2)/(a + b tan(x))^(3/2)` was answered: the substitution `u = tan(x)` wrote the cotangent
+as `1/u`, and nothing read a power of `1/u` that is not whole below the bar. Such a power is written
+as the tangent's above it now, `1/cot(x)^p = tan(x)^p/K`, with `K = cot(x)^p tan(x)^p` dividing the
+answer: `K` is 1 where the tangent is positive and a constant on every interval where it keeps its
+sign, so the answer holds where the tangent is negative too. Only below the bar and beside the
+tangent; a power of the cotangent above it, or alone, keeps its answer. Rubi's 4.3.2.1 and 4.3.3.1
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(cot(x)^(7/2)*(a + b*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `sqrt(tan(x))` and `sqrt(a + b tan(x))`, over `K` |
+| `"1/(cot(x)^(5/2)*(a + i*a*tan(x))^(5/2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `sqrt(tan(x))/sqrt(1 + i tan(x))`, over `K` |
+| `"(A + B*tan(x))/(cot(x)^(3/2)*(a + i*a*tan(x)))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `sqrt(tan(x))`, over `K` |
+
 ### A fractional power of a product of trigonometric functions keeps its sign
 
 **Wrong answers, silent.** The `sin^p cos^q` reader took a power of a product with an even
