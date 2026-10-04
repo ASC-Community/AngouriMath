@@ -8436,7 +8436,7 @@ namespace AngouriMath.Functions.Algebra
             var notWhole = false;
             Entity constant = Number.Integer.One;
             Entity varying = Number.Integer.One;
-            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            foreach (var (factor, underneath) in ThroughWholePowersOfProducts(FactorsOfTheIntegrand(expr)))
             {
                 if (!factor.ContainsNode(x))
                 {
@@ -8506,6 +8506,28 @@ namespace AngouriMath.Functions.Algebra
             return constant * varying * answer / form;
         }
 
+
+        /// <summary>
+        /// <paramref name="factors"/> with a whole power of a product read as the product of the
+        /// powers, a negative one on the other side of the bar: <c>1/(cos(x)^(7/2) sqrt(sin(x)))</c>
+        /// comes back from the polynomial term's <c>c/g</c> as <c>(cos(x)^(7/2) sqrt(sin(x)))^(-1)</c>,
+        /// one factor that is no function's power, and the half-angle substitution searched it for
+        /// twenty seconds before the tangent's form was reached.
+        /// </summary>
+        private static IEnumerable<(Entity Factor, bool Underneath)> ThroughWholePowersOfProducts(IEnumerable<(Entity Factor, bool Underneath)> factors)
+        {
+            foreach (var (factor, underneath) in factors)
+            {
+                if (factor is not Powf(Mulf product, Number.Integer { EInteger: var power }) || power.IsZero)
+                {
+                    yield return (factor, underneath);
+                    continue;
+                }
+                var magnitude = Number.Integer.Create(power.Abs());
+                foreach (var child in Mulf.LinearChildren(product))
+                    yield return (magnitude == Number.Integer.One ? child : MathS.Pow(child, magnitude), power.Sign < 0 ? !underneath : underneath);
+            }
+        }
         /// <summary>
         /// An integrand that is a function of <c>tan(x)</c> and of nothing else, integrated by
         /// the substitution <c>u = tan(x)</c>, under which <c>dx</c> is <c>du/(1 + u^2)</c>.
