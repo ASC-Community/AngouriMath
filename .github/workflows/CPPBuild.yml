@@ -5,7 +5,7 @@ name: 'C++ Build'
 # 2026-01-02) this workflow ran zero times, while three commits touching the very directories it
 # names were merged. It is the same defect that silenced Benchmark.yml for ninety-eight PRs --
 # see the comment at the top of that file, and
-# https://github.com/AngouriMath/AngouriMath/issues/775.
+# https://github.com/asc-community/AngouriMath/issues/775.
 #
 # The kernel is in the list because the exported native library is compiled from it, so a kernel
 # change is exactly what can break this build; and this file is in the list so that a change to

@@ -407,6 +407,22 @@ namespace AngouriMath.Extensions
         public static Entity Factorize(this string expr) => expr.ToEntity().Factorize();
 
         /// <summary>
+        /// Parses the given expression and writes it as a single fraction: one numerator over one
+        /// denominator, nothing cancelled. See <see cref="Entity.AsSingleFraction"/>.
+        /// </summary>
+        /// <returns>The expression as one fraction, or unchanged where it has no division in it</returns>
+        /// <example>
+        /// <code>
+        /// Console.WriteLine("a + b/c".AsSingleFraction());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// (a * c + b) / c
+        /// </code>
+        /// </example>
+        public static Entity AsSingleFraction(this string expr) => expr.ToEntity().AsSingleFraction();
+
+        /// <summary>
         /// Subsitutes a variable by replacing all its occurances with the given value
         /// </summary>
         /// <param name="expr">The expression where to substitute the variables</param>
