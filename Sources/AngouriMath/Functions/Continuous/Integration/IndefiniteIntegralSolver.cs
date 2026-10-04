@@ -21972,6 +21972,113 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// Half-odd powers of <c>a ± i a sinh(y)</c> beside anything in the hyperbolic functions of
+        /// <c>y</c>, by the half angle at which they are squares: <c>1 + i sinh(y)</c> is
+        /// <c>(cosh(y/2) + i sinh(y/2))^2</c>, so <c>sqrt(a + i a sinh(y))</c> is
+        /// <c>sqrt(a) (cosh(y/2) + i sinh(y/2))</c> times a constant on every interval where both
+        /// are continuous. The rest of the integrand is written in the half angle, and the question
+        /// asked again in <c>x</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>x^3 sqrt(a + i a sinh(e + f x))</c> and the rest of the 47 of 6.1.1 and 6.1.5
+        /// were declined or searches past the budget: the half angle of
+        /// <see cref="SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare"/> reads
+        /// <c>a ± a cosh(y)</c>, and <c>1 + i sinh(y)</c> is the square of a complex function rather
+        /// than of a real one.
+        /// </para>
+        /// <para>
+        /// The constant is not written: the answer is the antiderivative of the rewritten integrand
+        /// times each power as written over the form it was rewritten to, a quotient whose
+        /// logarithmic derivative is zero, so it is constant wherever it is continuous and the
+        /// answer holds on every such interval, whatever <c>a</c> is.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAHalfOddPowerOfOnePlusAnImaginaryHyperbolicSine(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var s = Variable.CreateUnique(expr, "s_hyp");
+            var c = Variable.CreateUnique(expr, "c_hyp");
+            if (ReadTheHyperbolicFunctions(expr, x, s, c) is not var (read, argument))
+                return null;
+            var half = (argument / 2).InnerSimplified;
+            var sinhHalf = MathS.Hyperbolic.Sinh(half);
+            var coshHalf = MathS.Hyperbolic.Cosh(half);
+            Entity constant = Number.Integer.One;
+            var found = false;
+            var rewritten = read.Replace(node =>
+            {
+                if (node is not Powf(var radicand, Number.Rational exponent) || exponent is Number.Integer
+                    || !exponent.ERational.Denominator.Equals(EInteger.FromInt32(2))
+                    || !radicand.ContainsNode(s) || radicand.ContainsNode(c)
+                    || ReadAsOnePlusMinusAnImaginarySine(radicand, s) is not var (a, plus))
+                    return node;
+                found = true;
+                var root = plus ? coshHalf + MathS.i * sinhHalf : coshHalf - MathS.i * sinhHalf;
+                var written = MathS.Pow(a, exponent) * MathS.Pow(root, Number.Integer.Create(exponent.ERational.Numerator));
+                var asItIs = MathS.Pow(radicand.Substitute(s, MathS.Hyperbolic.Sinh(argument)), exponent);
+                constant = constant * asItIs / written;
+                return written;
+            });
+            if (!found)
+                return null;
+            var inX = rewritten.Substitute(c, 2 * MathS.Sqr(coshHalf) - 1).Substitute(s, 2 * sinhHalf * coshHalf);
+            if (inX.ContainsNode(s) || inX.ContainsNode(c))
+                return null;
+            if (Integration.ComputeAsTheSameQuestion(inX, x, integrateByParts) is not { } result
+                || result.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return constant * result;
+        }
+
+        /// <summary>
+        /// <paramref name="radicand"/> read as <c>a (1 ± i s)</c> for the hyperbolic sine
+        /// <paramref name="sine"/>: the constant <c>a</c>, and whether the imaginary unit comes
+        /// with a plus. Null for anything else.
+        /// </summary>
+        private static (Entity Constant, bool Plus)? ReadAsOnePlusMinusAnImaginarySine(Entity radicand, Entity sine)
+        {
+            Entity a = Number.Integer.Zero;
+            Entity? b = null;
+            foreach (var term in Sumf.LinearChildren(radicand))
+            {
+                if (!term.ContainsNode(sine))
+                {
+                    a += term;
+                    continue;
+                }
+                if (b is not null)
+                    return null;
+                Entity coefficient = Number.Integer.One;
+                var seen = false;
+                foreach (var factor in Mulf.LinearChildren(term))
+                {
+                    if (factor == sine && !seen)
+                        seen = true;
+                    else if (!factor.ContainsNode(sine))
+                        coefficient *= factor;
+                    else
+                        return null;
+                }
+                if (!seen)
+                    return null;
+                b = coefficient;
+            }
+            if (b is null)
+                return null;
+            a = a.InnerSimplified;
+            if (a.Evaled is Number.Complex { IsZero: true })
+                return null;
+            static bool IsZero(Entity value) => value.InnerSimplified.Evaled is Number.Complex { IsZero: true }
+                || value.Simplify().Evaled is Number.Complex { IsZero: true };
+            if (IsZero(b - MathS.i * a))
+                return (a, true);
+            if (IsZero(b + MathS.i * a))
+                return (a, false);
+            return null;
+        }
+
+        /// <summary>
         /// A sum every term of which carries the same power of one linear form in
         /// <paramref name="x"/>, written as that power times the sum of the rest:
         /// <c>x cosh(x)^(3/2) - x sqrt(cosh(x))/3</c> is <c>x (cosh(x)^(3/2) - sqrt(cosh(x))/3)</c>,
