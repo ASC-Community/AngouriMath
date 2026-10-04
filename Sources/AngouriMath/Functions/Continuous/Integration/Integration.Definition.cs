@@ -985,6 +985,9 @@ namespace AngouriMath.Functions.Algebra
             if (expr is Entity.Sumf or Entity.Minusf
                 && (answer = IndefiniteIntegralSolver.SolveByGatheringACommonPolynomialFactorOfASum(expr, x, integrateByParts)) is { })
                 return answer;
+            // A power of the secant that is not whole beside the cosine, written as the cosine's
+            // with the constant that takes in front, which the substitutions below read.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfTheSecantInTheCosine(expr, x, integrateByParts)) is { }) return answer;
             // The half-angle substitution goes *after* linearity, and that is not a preference.
             // It fires on anything built from sines and cosines, and it answers `cos(x) + 1` with
             // a correct expression in tan(x/2) some forty characters long where splitting the sum
