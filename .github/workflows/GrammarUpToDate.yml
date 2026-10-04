@@ -12,7 +12,7 @@ name: 'Grammar Up To Date'
 #
 # Measured before writing this: a full regeneration on 4b2c104b reproduced the committed files
 # byte for byte, so the check starts from a clean baseline rather than from a diff nobody can fix.
-# https://github.com/AngouriMath/AngouriMath/issues/898
+# https://github.com/asc-community/AngouriMath/issues/898
 
 on:
   push:

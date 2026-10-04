@@ -9,7 +9,7 @@ name: 'Kernel Benchmark Across Key Commits'
 # So this measures a list of commits in one run, on one machine, with one benchmark. That is the
 # comparison the per-commit gate cannot make.
 #
-# https://github.com/AngouriMath/AngouriMath/issues/529
+# https://github.com/asc-community/AngouriMath/issues/529
 #
 # Weekly rather than daily, and by hand whenever it is wanted. #529 asks for daily; a run is about
 # eight minutes per commit, so a five-entry list is most of an hour of runner time, and there is
