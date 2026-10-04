@@ -7,6 +7,7 @@
 
 using System;
 using AngouriMath.Core.Exceptions;
+using AngouriMath.Core.Multithreading;
 using PeterO.Numbers;
 
 namespace AngouriMath.Functions
@@ -88,8 +89,16 @@ namespace AngouriMath.Functions
             }
         }
         /// <summary><paramref name="expr"/> is NEITHER <see cref="Sumf"/> NOR <see cref="Minusf"/></summary>
+        /// <remarks>
+        /// Checks for cancellation on every call, as the other steps that can run long do: an
+        /// expansion of a product of sums is bounded by
+        /// <see cref="MathS.Settings.MaxExpansionTermCount"/> only once its terms are counted, and
+        /// the products before that can take seconds a computation under a budget does not have.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
         internal static List<Entity>? SmartExpandOver(Entity expr, Func<Entity, bool> conditionForUniqueTerms)
         {
+            MultithreadingFunctional.ExitIfCancelled();
             var newChildren = new List<Entity>();
             switch (expr)
             {
