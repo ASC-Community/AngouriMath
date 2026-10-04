@@ -919,6 +919,9 @@ namespace AngouriMath.Functions.Algebra
             // A power of the cotangent that is not whole beside the tangent, written as the
             // tangent's with the constant that takes in front, which the substitution below reads.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfTheCotangentInTheTangent(expr, x, integrateByParts)) is { }) return answer;
+            // A difference of a function and its reciprocal's partner, `csc(z) - sin(z)`, as the
+            // quotient of powers it is, for the rule after it.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingADifferenceOfReciprocalFunctionsAsAQuotient(expr, x, integrateByParts)) is { }) return answer;
             // A product of powers of the trigonometric functions of one argument, some not whole,
             // whose powers of the sine and cosine add up to an even number: the tangent's form
             // times a constant, which the substitution below reads.
