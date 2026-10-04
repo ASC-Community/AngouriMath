@@ -9549,9 +9549,9 @@ namespace AngouriMath.Functions.Algebra
                         - (k + n + 2) * d / ((k + 1) * determinant) * raised[k + 1];
             }
             Entity answer = Number.Integer.Zero;
-            foreach (var (power, coefficient) in inT)
+            foreach (var pair in inT)
             {
-                var k = m + power.ToInt32Checked();
+                var (k, coefficient) = (m + pair.Key.ToInt32Checked(), pair.Value);
                 if (!raised.TryGetValue(k, out var integral))
                 {
                     var question = k == 0 ? MathS.Pow(second, n) : MathS.Pow(first, k) * MathS.Pow(second, n);
