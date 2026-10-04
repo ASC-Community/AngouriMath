@@ -731,6 +731,10 @@ namespace AngouriMath.Functions.Algebra
             // degree-8 polynomial by expanding, both right and only one worth reading. Three
             // tests pinned exactly that and caught this when the split was put in front of the
             // substitution wholesale. The expanding call stays where it was, below.
+            // A whole power below -1 of a linear beside a power that is not whole of another, by the
+            // recurrence that raises the whole power to -1: closed, where the substitution for the
+            // root makes a rational function over a power of a symbolic quadratic.
+            if ((answer = IndefiniteIntegralSolver.SolveANegativePowerOfALinearBesideAPowerOfAnotherByTheRecurrence(expr, x, integrateByParts)) is { }) return answer;
             // A product of powers times a sum that is the derivative of the product with some
             // of the powers raised by one -- `e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))` -- read off
             // the sum, for symbolic exponents too. Before the split, which loses it.

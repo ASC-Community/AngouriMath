@@ -989,6 +989,24 @@ arctangent it is ([#718](https://github.com/asc-community/AngouriMath/issues/718
 | `"(A + B*x + C*x^2)*sqrt(c + d*x)/((a + b*x)^3*sqrt(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | the roots over powers of `a + b x`, a logarithm, and an arctangent |
 | `"x^2*sqrt(a + 2*x)*sqrt(c - 3*x)".ToEntity().Integrate("x")` | `integral(...)` | a cubic times the two roots, and an arctangent of `sqrt(6)/2 sqrt(a + 2 x)/sqrt(c - 3 x)` |
 
+### A negative power of a linear beside a root of another is integrated by the recurrence on the power
+
+**Answers where there were none, and faster ones, written differently.** `1/((a + b x)^4 sqrt(c + d x))`
+was declined by 2.5.0, and the unreleased master answered it in fourteen seconds, by the substitution
+for the root, over a power of a quadratic with symbols in it; with a cubic above it, past a minute.
+A whole power `m <= -2` of one linear beside a power that is not whole of another, times a
+polynomial, is integrated now by the recurrence
+`int L1^m L2^n = L1^(m + 1) L2^(n + 1)/((m + 1) D) - (m + n + 2) d/((m + 1) D) int L1^(m + 1) L2^n`,
+`D = b c - a d`, down to `int L2^n/L1`, the polynomial written in powers of `L1` first. The
+answers are the same functions as master's where master gave one, written as powers of the two
+linears ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((a + b*x)^4*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `a/b + x` beside `sqrt(c + d x)`, and the arctangent or logarithm `1/((a + b x) sqrt(c + d x))` integrates to |
+| `"(p + q*x + r*x^2 + s*x^3)/((a + b*x)^5*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | the same, term by term |
+| `"x/((a + b*x)^4*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+
 ### A polynomial over a power of a linear beside the root of a quadratic is integrated
 
 `P(x) Q^(m/2)/(g + h x)^k`, a polynomial over a power of a linear beside a half-odd power of a

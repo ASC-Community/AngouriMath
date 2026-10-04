@@ -9123,6 +9123,154 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A whole power <c>m &lt;= -2</c> of a linear beside a power that is not whole of another,
+        /// times a polynomial: <c>1/((a + b x)^4 sqrt(c + d x))</c>,
+        /// <c>(A + B x + C x^2)/((a + b x)^3 (c + d x)^(3/2))</c>. The polynomial is written in powers
+        /// of the first linear, and each negative power is raised to <c>-1</c> by the recurrence
+        /// <c>int L1^m L2^n = L1^(m + 1) L2^(n + 1)/((m + 1) D) - (m + n + 2) d/((m + 1) D) int L1^(m + 1) L2^n</c>,
+        /// <c>L1 = a + b x</c>, <c>L2 = c + d x</c>, <c>D = b c - a d</c>; what is left are the
+        /// questions <c>int L2^n/L1</c> and <c>int L1^k L2^n</c> for <c>k &gt;= 0</c>, which the
+        /// integrator answers in a step.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The recurrence is the derivative of <c>L1^(m + 1) L2^(n + 1)</c>, which is
+        /// <c>L1^m L2^n ((m + 1) D + (m + n + 2) d L1)</c>, read back. Under <c>v = sqrt(c + d x)</c>
+        /// the same integrand is a rational function over a power of a quadratic with symbols in
+        /// it, and the reduction of that took four seconds at the square and twenty at the fourth
+        /// power; and the partial fractions of a rational function beside a root are terms of
+        /// exactly this shape, so it is their cost too.
+        /// </para>
+        /// <para>
+        /// A closed reduction to smaller questions of another shape, so at any depth.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveANegativePowerOfALinearBesideAPowerOfAnotherByTheRecurrence(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            Entity constant = Number.Integer.One;
+            var linears = new List<(Entity Base, Entity Exponent)>();
+            Entity polynomial = Number.Integer.One;
+            // The factors with their exponents, a whole power of a product read through: the question
+            // comes back as `((a/b + x)^4 sqrt(c + d x))^(-1)` once a constant is out of the bar.
+            var factors = new List<(Entity Base, Entity Exponent)>();
+            void Gather(Entity node, int times)
+            {
+                switch (node)
+                {
+                    case Mulf(var left, var right):
+                        Gather(left, times);
+                        Gather(right, times);
+                        break;
+                    case Divf(var numerator, var denominator):
+                        Gather(numerator, times);
+                        Gather(denominator, -times);
+                        break;
+                    case Powf(Mulf or Divf or Powf, Number.Integer whole) when whole.EInteger.CanFitInInt32() && System.Math.Abs(whole.EInteger.ToInt32Checked()) <= MaximumRecurrenceDepth:
+                        Gather(((Powf)node).Base, times * whole.EInteger.ToInt32Checked());
+                        break;
+                    case Powf(var powerBase, var power):
+                        factors.Add((powerBase, times == 1 ? power : (power * times).InnerSimplified));
+                        break;
+                    default:
+                        factors.Add((node, Number.Integer.Create(times)));
+                        break;
+                }
+            }
+            Gather(expr, 1);
+            foreach (var (@base, exponent) in factors)
+            {
+                if (!@base.ContainsNode(x))
+                {
+                    constant *= MathS.Pow(@base, exponent);
+                    continue;
+                }
+                if (exponent.ContainsNode(x))
+                    return null;
+                if (TreeAnalyzer.TryGetPolyLinear(@base, x, out var slope, out _) && !TreeAnalyzer.IsZero(slope))
+                {
+                    var index = linears.FindIndex(pair => pair.Base == @base);
+                    if (index >= 0)
+                        linears[index] = (@base, (linears[index].Exponent + exponent).InnerSimplified);
+                    else
+                        linears.Add((@base, exponent));
+                    continue;
+                }
+                if (exponent is not Number.Integer { EInteger.Sign: > 0 } whole || !whole.EInteger.CanFitInInt32())
+                    return null;
+                polynomial *= whole == Number.Integer.One ? @base : MathS.Pow(@base, whole);
+            }
+            // The whole power below the bar, the power that is not whole, and the linears that are
+            // whole powers above it, which belong to the polynomial.
+            (Entity Base, int Power)? below = null;
+            (Entity Base, Entity Exponent)? beside = null;
+            foreach (var (@base, exponent) in linears)
+            {
+                if (exponent is Number.Integer whole && whole.EInteger.CanFitInInt32())
+                {
+                    var power = whole.EInteger.ToInt32Checked();
+                    if (power >= 0)
+                        polynomial *= power == 1 ? @base : MathS.Pow(@base, power);
+                    else if (power <= -2 && power >= -MaximumRecurrenceDepth && below is null)
+                        below = (@base, power);
+                    else
+                        return null;
+                }
+                else if (beside is null && exponent is not Number.Integer)
+                    beside = (@base, exponent);
+                else
+                    return null;
+            }
+            if (below is not var (first, m) || beside is not var (second, n))
+                return null;
+            if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var b, out var a) || !TreeAnalyzer.TryGetPolyLinear(second, x, out var d, out var c))
+                return null;
+            var determinant = (b * c - a * d).InnerSimplified;
+            if (determinant.Evaled is Number.Complex { IsZero: true })
+                return null;
+            // The polynomial in powers of the first linear: x = (t - a)/b.
+            var t = Variable.CreateUnique(expr, "t_linear");
+            if (!TreeAnalyzer.TryGetPolynomial(polynomial.Substitute(x, (t - a) / b), t, out var inT)
+                || inT.Keys.Any(power => power.Sign < 0 || !power.CanFitInInt32()))
+                return null;
+            // int L1^k L2^n for k from -1 down to m, each from the one above it.
+            var lowest = m + inT.Keys.Min(power => power.ToInt32Checked());
+            var raised = new Dictionary<int, Entity>();
+            if (lowest <= -1)
+            {
+                if (Integration.ComputeIndefiniteIntegral(MathS.Pow(second, n) / first, x, integrateByParts) is not { } overTheFirst
+                    || overTheFirst.Nodes.Any(node => node is Integralf))
+                    return null;
+                raised[-1] = overTheFirst;
+                for (var k = -2; k >= lowest; k--)
+                    raised[k] = MathS.Pow(first, k + 1) * MathS.Pow(second, n + 1) / ((k + 1) * determinant)
+                        - (k + n + 2) * d / ((k + 1) * determinant) * raised[k + 1];
+            }
+            Entity answer = Number.Integer.Zero;
+            foreach (var (power, coefficient) in inT)
+            {
+                var k = m + power.ToInt32Checked();
+                if (!raised.TryGetValue(k, out var integral))
+                {
+                    var question = k == 0 ? MathS.Pow(second, n) : MathS.Pow(first, k) * MathS.Pow(second, n);
+                    if (Integration.ComputeIndefiniteIntegral(question, x, integrateByParts) is not { } answered
+                        || answered.Nodes.Any(node => node is Integralf))
+                        return null;
+                    integral = answered;
+                }
+                answer += coefficient.InnerSimplified * integral;
+            }
+            return constant * answer;
+        }
+
+        /// <summary>
+        /// The most negative whole power
+        /// <see cref="SolveANegativePowerOfALinearBesideAPowerOfAnotherByTheRecurrence"/> takes down
+        /// the recurrence: each step is one term more in the answer.
+        /// </summary>
+        private const int MaximumRecurrenceDepth = 12;
+
+        /// <summary>
         /// An integrand holding a fractional power of something <b>linear</b> in the variable,
         /// turned into a rational function by <c>u^q = a*x + b</c>.
         /// </summary>
