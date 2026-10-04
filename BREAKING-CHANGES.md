@@ -146,6 +146,23 @@ the division's; with it on, the rounding is the setting's own and stays
 | `"(-60.5)!"` at 30 digits, downcasting off | `5.86118478907722232671451280188E-81` | `2.93059239453861116335725639905E-81` |
 | `"abs(75 + 316.22776601683796i)"`, downcasting off | `325` | `325.000000000000026076735749…` |
 
+### A rational function with symbols in it beside a root of a linear is split into partial fractions first
+
+**Answers where there were none.** `1/(x (1 + x^2) sqrt(a + b x))` was declined, while
+`1/(x sqrt(a + b x))` and `x/((1 + x^2) sqrt(a + b x))`, its two partial fractions beside the root,
+were each answered: under `v = sqrt(a + b x)` it is a rational function over a sextic with symbols in
+it, which nothing factors. A rational function with symbols in it and two or more factors below the bar,
+beside a power that is not whole of a linear, is now split over its factors as written -- the whole part
+of the power among them, so that each term stands over a root -- and integrated term by term. It is what
+the tangent substitution makes of Rubi's 4.3.2.1, `cot(x)/sqrt(a + b tan(x))`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x*(1 + x^2)*sqrt(a + b*x))".ToEntity().Integrate("x")` | `integral(...)` | a piecewise of arctangents and a logarithm in `sqrt(a + b x)` |
+| `"cot(x)/sqrt(a + b*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the same in `tan(x)` |
+| `"cot(x)^2/(a + b*tan(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same, beside a power of `a + b tan(x)` |
+
 ### A quotient of polynomials is split into coprime blocks before a root is peeled off
 
 `SolveByPartialFractions` tried `TrySplitOffRationalRoot` before `TrySplitIntoCoprimeParts`. Both
