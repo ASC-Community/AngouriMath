@@ -42,6 +42,31 @@ namespace AngouriMath.Functions
             _ => expr
         };
 
+        /// <summary>
+        /// Whether <c>(c / a)^d</c> may be written <c>c^d * a^(-d)</c> whatever <c>a</c> is.
+        /// </summary>
+        /// <remarks>
+        /// For a whole <c>d</c> it is a quotient multiplied by itself, and holds wherever
+        /// <c>a</c> is not zero. For a rational <c>d</c> with an odd denominator it holds over a
+        /// positive <c>c</c>, because a negative base takes the real root there and real roots
+        /// multiply: <c>(1/(-8))^(1/3)</c> is <c>-1/2</c>, and so is <c>(-8)^(-1/3)</c>. For any
+        /// other <c>d</c> a negative <c>a</c> moves the branch -- <c>(1/(-2))^(1/2)</c> is
+        /// <c>0.707i</c> and <c>(-2)^(-1/2)</c> is <c>-0.707i</c> -- and a negative or complex
+        /// <c>c</c> does the same to the odd root, so the rule refuses there rather than assume
+        /// the sign of <c>a</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/1734
+        /// </remarks>
+        internal static bool AReciprocalPowerSplits(Number c, Number d) =>
+            d is Integer || IsWholeOrAnOddRoot(d) && c is Real { IsPositive: true };
+
+        /// <summary>
+        /// A whole number, or a rational whose denominator is odd: an exponent under which a
+        /// negative base takes its real root, so that powers of it combine as they do on the
+        /// positive axis.
+        /// </summary>
+        internal static bool IsWholeOrAnOddRoot(Number n) =>
+            n is Integer || n is Rational r && !r.ERational.Denominator.IsEven;
+
         [AddressableRules]
         internal static Entity PowerRules(Entity x) => x switch
         {
@@ -198,10 +223,16 @@ namespace AngouriMath.Functions
             Powf(var any1, Integer(-1)) => 1 / any1,
 
             // (a / {})^b * {} = a^b * {}^(1-b)
-            Mulf(Powf(Divf(Number const1, var any1), Number const2), var any1a) when any1 == any1a =>
+            //
+            // Splitting the power of the quotient is (c / a)^d = c^d * a^(-d), which is not true
+            // on the whole plane: see AReciprocalPowerSplits. sqrt(1/x) * sqrt(x) came back as 1,
+            // and at x = -2 it is -1.
+            Mulf(Powf(Divf(Number const1, var any1), Number const2), var any1a)
+                when any1 == any1a && AReciprocalPowerSplits(const1, const2) =>
                 new Powf(const1, const2) * new Powf(any1, 1 - const2),
             Mulf(Powf(Divf(Number const1, var any1), Number const2), Powf(var any1a, Number const3))
-                when any1 == any1a => new Powf(const1, const2) * new Powf(any1, const3 - const2),
+                when any1 == any1a && AReciprocalPowerSplits(const1, const2) && (const2 is Integer || IsWholeOrAnOddRoot(const3))
+                => new Powf(const1, const2) * new Powf(any1, const3 - const2),
 
             // {1} / {2} / {2}
             Divf(Divf(var any1, var any2), var any2a) when any2 == any2a =>
