@@ -343,6 +343,7 @@ AngouriMath.Core.Transformations.Soundness.value__ : System.Int32
 AngouriMath.Core.Transformations.Transformation.Apply(AngouriMath.Entity) : AngouriMath.Core.Transformations.TransformationResult
 AngouriMath.Core.Transformations.Transformation.ApplyCore(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.Core.Transformations.Transformation.ApplyOrKeep(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Core.Transformations.Transformation.AsSingleFraction { } : AngouriMath.Core.Transformations.Transformation
 AngouriMath.Core.Transformations.Transformation.Canonicalization { } : AngouriMath.Core.Transformations.Transformation
 AngouriMath.Core.Transformations.Transformation.CanonicalizationOverGraph(AngouriMath.Core.Budgets.WorkBudget) : AngouriMath.Core.Transformations.Transformation
 AngouriMath.Core.Transformations.Transformation.CanonicalizationOverGraph(AngouriMath.Core.Budgets.WorkBudget, AngouriMath.Core.Transformations.RewriteRuleGrowth) : AngouriMath.Core.Transformations.Transformation
@@ -2786,6 +2787,7 @@ AngouriMath.Entity.Arccotan() : AngouriMath.Entity
 AngouriMath.Entity.Arcsec() : AngouriMath.Entity
 AngouriMath.Entity.Arcsin() : AngouriMath.Entity
 AngouriMath.Entity.Arctan() : AngouriMath.Entity
+AngouriMath.Entity.AsSingleFraction() : AngouriMath.Entity
 AngouriMath.Entity.Canonicalize() : AngouriMath.Entity
 AngouriMath.Entity.CanonicalizeAsRationalFunction() : AngouriMath.Entity
 AngouriMath.Entity.Ceil() : AngouriMath.Entity
@@ -2934,6 +2936,7 @@ AngouriMath.Entity.op_Multiply(AngouriMath.Entity, AngouriMath.Entity) : Angouri
 AngouriMath.Entity.op_Subtraction(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.Entity.op_UnaryNegation(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.Entity.op_UnaryPlus(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Extensions.AngouriMathExtensions.AsSingleFraction(System.String) : AngouriMath.Entity
 AngouriMath.Extensions.AngouriMathExtensions.Compile(System.String, AngouriMath.Core.Compilation.IntoLinq.CompilationProtocol, System.Type, System.Collections.Generic.IEnumerable<System.ValueTuple<System.Type,AngouriMath.Entity+Variable>>) : TDelegate
 AngouriMath.Extensions.AngouriMathExtensions.Compile(System.String, AngouriMath.Entity+Variable) : Func<TIn1,TOut>
 AngouriMath.Extensions.AngouriMathExtensions.Compile(System.String, AngouriMath.Entity+Variable, AngouriMath.Entity+Variable) : Func<TIn1,TIn2,TOut>

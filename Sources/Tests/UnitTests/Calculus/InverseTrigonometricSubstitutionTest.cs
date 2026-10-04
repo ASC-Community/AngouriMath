@@ -216,5 +216,20 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("x/e^(2*i*arctan(1 + 2*x))", new[] { -1.6, -0.4, 0.3, 1.1, 2.4 })]
         public void AnExponentialOfTheInverseIsAlgebraic(string integrand, double[] points)
             => DifferentiatesBack(integrand, points);
+
+        /// <summary>
+        /// To a power that is not whole, <c>e^(n i arctan(L))</c> is one power of a quotient of
+        /// linears, <c>((1 + i L)/(1 - i L))^(n/2)</c> for a real <c>L</c>, which the substitution
+        /// for such a power reads, where <c>(1 + i L)^n (1 + L^2)^(-n/2)</c> is two radicals of
+        /// different orders: Rubi's 5.3.6.
+        /// </summary>
+        [Theory]
+        [InlineData("e^(3/2*i*arctan(2*x))*x^2", new[] { -1.6, -0.4, 0.3, 1.1, 2.4 })]
+        [InlineData("e^(3/2*i*arctan(2*x))/x^4", new[] { -1.6, -0.4, 0.3, 1.1, 2.4 })]
+        [InlineData("x^3/e^(3/2*i*arctan(2*x))", new[] { -1.6, -0.4, 0.3, 1.1, 2.4 })]
+        [InlineData("e^(1/3*i*arctan(x))*x", new[] { -1.6, -0.4, 0.3, 1.1, 2.4 })]
+        [InlineData("e^(3/2*i*arctan(1 + 2*x))*x^2", new[] { -1.6, -0.4, 0.3, 1.1, 2.4 })]
+        public void ToAPowerThatIsNotWhole(string integrand, double[] points)
+            => DifferentiatesBack(integrand, points);
     }
 }
