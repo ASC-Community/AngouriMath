@@ -21,19 +21,19 @@ namespace AngouriMath.Tests.Calculus
     public sealed class PowersOfOnePlusAndMinusASineIntegralTest
     {
         [Theory]
-        [InlineData("(a + a*sin(e + f*x))^m*sqrt(c - c*sin(e + f*x))")]
-        [InlineData("(a + a*sin(e + f*x))^m*(c - c*sin(e + f*x))^(5/2)*(p + q*sin(e + f*x)^2)")]
-        [InlineData("cos(e + f*x)^2*(a + a*sin(e + f*x))^m/sqrt(c - c*sin(e + f*x))")]
-        [InlineData("(g*cos(e + f*x))^(1 - 2*m)*(a + a*sin(e + f*x))^m*(c - c*sin(e + f*x))^(m - 1)")]
-        [InlineData("(a + a*sin(e + f*x))^m*(c - c*sin(e + f*x))^(-1 - m)")]
-        [InlineData("(a - a*sin(e + f*x))^m*(c + c*sin(e + f*x))^n*(b*(m - n) + b*(1 + m + n)*sin(e + f*x))")]
-        [InlineData("(a + a*cos(e + f*x))^m*sqrt(c - c*cos(e + f*x))")]
+        [InlineData("(a + a*sin(h + f*x))^m*sqrt(c - c*sin(h + f*x))")]
+        [InlineData("(a + a*sin(h + f*x))^m*(c - c*sin(h + f*x))^(5/2)*(p + q*sin(h + f*x)^2)")]
+        [InlineData("cos(h + f*x)^2*(a + a*sin(h + f*x))^m/sqrt(c - c*sin(h + f*x))")]
+        [InlineData("(g*cos(h + f*x))^(1 - 2*m)*(a + a*sin(h + f*x))^m*(c - c*sin(h + f*x))^(m - 1)")]
+        [InlineData("(a + a*sin(h + f*x))^m*(c - c*sin(h + f*x))^(-1 - m)")]
+        [InlineData("(a - a*sin(h + f*x))^m*(c + c*sin(h + f*x))^n*(b*(m - n) + b*(1 + m + n)*sin(h + f*x))")]
+        [InlineData("(a + a*cos(h + f*x))^m*sqrt(c - c*cos(h + f*x))")]
         public void ThroughTheSine(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
             Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.9).Substitute("c", 0.7)
-                .Substitute("e", 0.4).Substitute("f", 1.3).Substitute("g", 0.8).Substitute("m", 0.37)
+                .Substitute("h", 0.4).Substitute("f", 1.3).Substitute("g", 0.8).Substitute("m", 0.37)
                 .Substitute("n", 1.21).Substitute("p", 1.1).Substitute("q", 0.6);
             var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
             var original = Pinned(integrand.ToEntity());
