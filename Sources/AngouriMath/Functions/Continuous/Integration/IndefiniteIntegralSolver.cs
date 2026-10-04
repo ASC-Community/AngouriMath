@@ -17035,6 +17035,44 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A half-odd power of a constant over a polynomial whose sign changes, among the factors
+        /// of the integrand, written apart with the factor that keeps it right on both sides of the
+        /// polynomial's zeros: for a real <c>Q</c> other than zero, <c>(A/Q)^r</c> is
+        /// <c>K Q^(-r)</c> with <c>K = (A/Q)^r Q^r</c>, whose derivative is zero wherever it has one,
+        /// and for a positive number <c>A</c> that is <c>A^r</c> times the sign of <c>Q</c>, the
+        /// root of a negative being <c>i</c> times the root of its modulus on both sides of the bar.
+        /// </summary>
+        /// <remarks>
+        /// <c>sqrt(1/(1 - x^2))</c> is <c>sgn(1 - x^2)/sqrt(1 - x^2)</c>, the arcsine's derivative
+        /// where it is real, and was declined, with every such power over a polynomial that is not
+        /// positive: the reading that writes a power of a quotient apart does so only where it is.
+        /// Late in the chain, after the substitutions, which answer some of these without the
+        /// factor -- <c>x sqrt(1/(4 - x^2))</c> is <c>-(1/(4 - x^2))^(-1/2)</c> -- and asked as the
+        /// same question, as the sign taken out above is.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingAHalfOddPowerOfAReciprocalWithItsSign(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (underneath || factor is not Powf(var @base, Number.Rational exponent)
+                    || !exponent.ERational.Denominator.Equals(EInteger.FromInt32(2)) || !@base.ContainsNode(x))
+                    continue;
+                var (above, below) = Functions.SingleQuotient.Of(@base);
+                if (below == Number.Integer.One || above.ContainsNode(x) || !below.ContainsNode(x)
+                    || !TreeAnalyzer.TryGetPolynomial(below, x, out var read) || read.Count == 0
+                    || read.Keys.Max()!.CompareTo(EInteger.FromInt32(4)) > 0 || IsPositiveForReal(below, x))
+                    continue;
+                var positive = above.Evaled is Number.Real { IsPositive: true };
+                var inFront = positive ? MathS.Signum(below) : factor * MathS.Pow(below, exponent);
+                var replacement = positive ? MathS.Pow(above, exponent) * MathS.Pow(below, -exponent) : MathS.Pow(below, -exponent);
+                var written = expr.Replace(node => node == factor ? replacement : node);
+                return Integration.ComputeAsTheSameQuestion(written, x, integrateByParts) is { } answer ? inFront * answer : null;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// <c>x^(n - 1) g(x^n)</c> with a symbolic <c>n</c>, which is <c>g(u)/n</c> under
         /// <c>u = x^n</c>: the power in front is the derivative of the power inside up to the
         /// constant <c>n</c>, and the rest mentions <c>x</c> only as <c>x^n</c>. Rubi's 6.5.2 and

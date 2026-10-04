@@ -1160,6 +1160,9 @@ namespace AngouriMath.Functions.Algebra
             // A rational function with symbols in it beside a root of a linear, split into partial
             // fractions first, each term the question of one factor beside the root.
             if ((answer = IndefiniteIntegralSolver.SolveARationalFunctionBesideARootOfALinearSplitFirst(expr, x, integrateByParts)) is { }) return answer;
+            // A half-odd power of a constant over a polynomial of either sign, written apart with
+            // its sign in front. After the substitutions, which answer some of these without it.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAHalfOddPowerOfAReciprocalWithItsSign(expr, x, integrateByParts)) is { }) return answer;
             // The sign of a real-valued factor is constant between its zeros, and goes in
             // front of the antiderivative of the rest. After every rule that reads the sign
             // where it stands: `cos(x) sgn(sin(x))` is `|sin(x)|` by the substitution, and
