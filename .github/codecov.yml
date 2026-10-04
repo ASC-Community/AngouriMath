@@ -13,7 +13,7 @@ coverage:
 # exactly one operating system of its matrix (csharp from windows, fsharp and interactive
 # from ubuntu), so on any run where that leg is skipped an undeclared flag reports as
 # missing rather than unchanged, and the report reads as a coverage drop that did not
-# happen. https://github.com/AngouriMath/AngouriMath/issues/397
+# happen. https://github.com/asc-community/AngouriMath/issues/397
 flags:
   csharp:
     paths:
