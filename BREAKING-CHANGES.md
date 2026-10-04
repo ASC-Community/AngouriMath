@@ -195,6 +195,21 @@ answer on the far side of a root gets a real expression where it used to get a c
 | `1/(x*(-4+x^2)^4)` | 8,472 ms | 1,878 ms |
 | `1/((1+x)^3*(2+x)^3)` | 1,343 ms | 492 ms |
 
+### A whole power of a sum of two square roots below the bar is rationalised
+
+**Answers where there were none.** `x/(sqrt(a + b x) + sqrt(c + b x))^3` was declined, while the
+first power of such a sum below the bar is multiplied above and below by its conjugate, the product
+of the pair being the difference of the radicands. A whole power is multiplied by the same power of
+the conjugate now; an even power over a constant difference is left as it was, since its conjugate
+brings the root of the product of the radicands with it, and those were answered as written. Rubi's
+1.3.2 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x/(sqrt(a + b*x) + sqrt(c + b*x))^3".ToEntity().Integrate("x")` | `integral(...)` | powers of the two roots over `(a - c)^3` |
+| `"1/(sqrt(a + b*x) + sqrt(a + c*x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same, with logarithms and arctangents |
+| `"x^3/(sqrt(a + b*x) + sqrt(a + c*x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same; 10 s on the unreleased master, a tenth of one now |
+
 ### Two square roots of linears with one slope are rationalised together
 
 `sqrt(L1)` and `sqrt(L2)` with `L1 - L2` a constant are rational in their sum
