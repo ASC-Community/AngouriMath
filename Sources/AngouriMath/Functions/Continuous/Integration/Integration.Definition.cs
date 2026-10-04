@@ -784,6 +784,9 @@ namespace AngouriMath.Functions.Algebra
             // is `x^2/(L^2 sqrt(q))` cancelled, and was five terms over `L^5 (1 + L sqrt(q))`
             // each searched for seconds when the reduction reached it first.
             if ((answer = IndefiniteIntegralSolver.SolveByCancellingWithFunctionsAsIndeterminates(expr, x, integrateByParts)) is { }) return answer;
+            // A quotient by the square of a base with a function in it, by parts against the base's
+            // reciprocal where the base's derivative makes the rest exact.
+            if ((answer = IndefiniteIntegralSolver.SolveByPartsAgainstTheReciprocalOfASquaredBase(expr, x)) is { }) return answer;
             // A polynomial over a power of a linear and something that is not a polynomial,
             // the polynomial written in powers of the linear at its root: the part the power
             // divides goes over the rest alone. Before the split, so that the whole polynomial

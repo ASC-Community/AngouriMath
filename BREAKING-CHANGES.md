@@ -838,6 +838,21 @@ but `sqrt(q)^2 = q` ([#1598](https://github.com/asc-community/AngouriMath/issues
 | `"1/sqrt(-x^2 + i)".Integrate("x")` | `-arcsin(-2x/sqrt(4i)) + C` | `ln(-2x + 2i sqrt(-x^2 + i))/i + C`, an antiderivative as before, in the logarithm |
 | `"1/(sqrt(x)*sqrt(1 + i*x))".Integrate("x")`, and Rubi 4.3.2.1's `sqrt(tan(c + d x))/(a + i a tan(c + d x))^(5/2)` | `integral(...)` | the antiderivative |
 
+### A quotient by the square of a base is integrated by parts against the base's reciprocal
+
+**Answers where there were none.** `x^2/(a x cos(a x) - sin(a x))^2` was declined, with the rest of
+Rubi's 4.7.7 over the square of `a x cos(a x) - sin(a x)` or `cos(a x) + a x sin(a x)`. A quotient
+`N/(M v^2)` by the square of a base with a function of `x` in it is `g v'/v^2` with `g = N/(M v')`, and
+`v'/v^2` is the derivative of `-1/v`: its integral is `-g/v` plus the integral of `g'/v`, taken where
+the base's derivative is one term and `v` cancels from `g'/v`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^2/(a*x*cos(a*x) - sin(a*x))^2".ToEntity().Integrate("x")` | `integral(...)` | `x/(a^2 sin(a x) (a x cos(a x) - sin(a x))) - cot(a x)/a^3` |
+| `"sin(a*x)^2/(a*x*cos(a*x) - sin(a*x))^2".ToEntity().Integrate("x")` | `integral(...)` | a quotient by `a x cos(a x) - sin(a x)` and `1/(a^2 x)` |
+| `"sin(a*x)^3/(x*(a*x*cos(a*x) - sin(a*x))^2)".ToEntity().Integrate("x")` | `integral(...)` | the same with the sine integral `Si(a x)` |
+
 ### Trigonometric functions of multiples of one linear argument are written in it
 
 `csc(a + b x) csc(2a + 2b x)^2` was left unevaluated, and `csc(1 + x) csc(2 + 2x)^2` ran twenty
