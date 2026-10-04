@@ -721,6 +721,9 @@ namespace AngouriMath.Functions.Algebra
             // of the powers raised by one -- `e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))` -- read off
             // the sum, for symbolic exponents too. Before the split, which loses it.
             if ((answer = IndefiniteIntegralSolver.SolveAsTheDerivativeOfAProductOfPowers(expr, x)) is { }) return answer;
+            // Powers of two linears whose exponents sum to a whole number below -2, beside a polynomial of
+            // low degree, by t = L1/L2: a power of t beside a polynomial. The rule above reads the sum -2.
+            if ((answer = IndefiniteIntegralSolver.SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(expr, x)) is { }) return answer;
             // A rational function of x and of a tower of exponentials and logarithms over it,
             // by the Risch-Norman ansatz: a rational function of the same plus logarithms of
             // the denominator's factors, the coefficients unknown and solved for. Before the

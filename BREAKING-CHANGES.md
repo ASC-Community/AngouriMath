@@ -729,6 +729,24 @@ in both quadratics, the cube's coefficients grow past what the reduction takes, 
 | `"(7 + 13*x)/((5 + x + 2*x^2)^3*sqrt(2 + x + 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative |
 | `"sqrt(a + a*sec(x))/(c + d*sec(x))^2".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 
+### Powers of two linears whose exponents sum to a whole number below `-2` are integrated
+
+**Answers where there were none.** `(a + b x)^m (c + d x)^(-3 - m)`, `x^(n - 4)/(a + b x)^n` and
+the rest of Rubi's `(a + b x)^m (c + d x)^n` problems whose exponents sum to a whole number `-k`
+below `-2`, beside a polynomial of degree at most `k - 2`, were declined; the sum `-2` alone was
+answered. Under `t = (a + b x)/(c + d x)` each is a power of `t` beside a polynomial in `t`, so the
+antiderivative is the two powers as written times a polynomial in `x`, exact wherever the
+integrand is defined and taking each `m + i` it divides by to be nonzero, as the integrator does
+everywhere. Numeric exponents that sum so go the same way, so an answer master already gave for
+one, `(a + b x)^(5/2)/(c + d x)^(11/2)`, is written so now, the same function
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a + b*x)^m*(c + d*x)^(-3 - m)".ToEntity().Integrate("x")` | `integral(...)` | the two powers times `-(d (a + b x)^2 (c + d x)/(m + 2) - b (a + b x) (c + d x)^2/(m + 1))/(a d - b c)^2` |
+| `"x^(n - 4)/(a + b*x)^n".ToEntity().Integrate("x")` | `integral(...)` | the two powers times a cubic in `x` and `a + b x`, over `a^3` |
+| `"(a + b*x)^(5/2)/(c + d*x)^(11/2)".ToEntity().Integrate("x")` | `integral(...)` | the two powers times `-(2 d (a + b x)^2 (c + d x)/9 - 2 b (a + b x) (c + d x)^2/7)/(a d - b c)^2` |
+
 ### A polynomial beside the square roots of two linears with symbols in them is integrated
 
 `P(x) sqrt(c + d x) sqrt(e + f x)`, a polynomial beside the roots of two linears with symbols in
