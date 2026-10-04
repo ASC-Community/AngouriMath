@@ -23246,6 +23246,105 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// An exponential of a multiple of a hyperbolic sine or cosine of a linear, beside a function
+        /// of the exponentials of the linear whose quotient by the derivative of that sine or cosine
+        /// is a rational function of it: under <c>u = e^L + s e^(-L)</c>, twice the cosine or the
+        /// sine, <c>e^(n sinh(L)) cosh(L)</c> is <c>e^(n u/2)/2</c>, <c>e^(n cosh(L)) tanh(L)</c> is
+        /// <c>e^(n u/2)/u</c>, onto the exponential integral, and <c>e^(n sinh(L)) sinh(2L)</c> is
+        /// <c>u e^(n u/2)/2</c>. The substitution answers the trigonometric ones written as nodes --
+        /// <c>e^(n cos(x)) tan(x)</c> is <c>-Ei(n cos(x))</c> -- while a hyperbolic function arrives as
+        /// exponentials, and no rule read the sine or cosine in them. Rubi's 6.7.1.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </summary>
+        /// <remarks>
+        /// Every exponential of the variable but the outer one is a whole power of <c>w = e^L</c>, with
+        /// <c>L</c> the linear their exponents are whole multiples of, compared as polynomials and not
+        /// as written; the quotient is written in <c>u = w + s/w</c> by undetermined coefficients and a
+        /// check at points, or the rule declines.
+        /// </remarks>
+        internal static Entity? SolveAnExponentialOfAHyperbolicFunctionBesideItsDerivative(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            bool IsAnExponential(Entity node) => node is Powf(var b, var p) && !b.ContainsNode(x) && p.ContainsNode(x);
+            // The outer exponential, above the bar, with exponentials of the variable in its exponent.
+            Powf? outer = null;
+            Entity rest = Number.Integer.One;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!underneath && outer is null && factor is Powf(var @base, var exponent) && @base == MathS.e && exponent.Nodes.Any(IsAnExponential))
+                {
+                    outer = (Powf)factor;
+                    continue;
+                }
+                rest = underneath ? rest / factor : rest * factor;
+            }
+            if (outer is null)
+                return null;
+            // The exponentials inside it and beside it, each `e^(k L)` with one linear L.
+            var multiples = new Dictionary<Entity, ERational>();
+            Entity? unitSlope = null, unitOffset = null, unit = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (node == outer || !IsAnExponential(node) || multiples.ContainsKey(node))
+                    continue;
+                if (node is not Powf(var @base, var exponent) || @base != MathS.e
+                    || !TreeAnalyzer.TryGetPolyLinear(exponent, x, out var slope, out var offset) || TreeAnalyzer.IsZero(slope))
+                    return null;
+                if (unit is null)
+                {
+                    (unit, unitSlope, unitOffset) = (exponent, slope, offset);
+                    multiples[node] = ERational.One;
+                    continue;
+                }
+                if (Functions.PartialFractions.Bare((slope / unitSlope!).Simplify()).Evaled is not Number.Rational ratio || ratio.ERational.IsZero
+                    || !IsTheZeroPolynomial((offset - ratio * unitOffset!).InnerSimplified))
+                    return null;
+                multiples[node] = ratio.ERational;
+            }
+            if (unit is null || unitSlope is null)
+                return null;
+            var numerators = EInteger.Zero;
+            var denominators = EInteger.One;
+            foreach (var multiple in multiples.Values)
+            {
+                numerators = numerators.Gcd(multiple.Numerator.Abs());
+                denominators = denominators.Multiply(multiple.Denominator).Divide(denominators.Gcd(multiple.Denominator));
+            }
+            var step = ERational.Create(numerators, denominators);
+            if (multiples.Values.Any(multiple => multiple.Divide(step).ToLowestTerms().Numerator.Abs().CompareTo(EInteger.FromInt32(8)) > 0))
+                return null;
+            var w = Variable.CreateUnique(expr, "w_hyp");
+            Entity InW(Entity e) => e.Replace(node =>
+                node != outer && multiples.TryGetValue(node, out var multiple) ? MathS.Pow(w, Number.Integer.Create(multiple.Divide(step).ToLowestTerms().Numerator)) : node);
+            // The exponent `c (w + s/w) + d`: a multiple of the sine or the cosine in w and nothing else.
+            if (!TreeAnalyzer.TryGetPolynomial(InW(outer.Exponent), w, out var exponentRead)
+                || exponentRead.Keys.Any(degree => degree.Abs().CompareTo(EInteger.One) > 0)
+                || exponentRead.Values.Any(coefficient => coefficient.ContainsNode(x))
+                || !exponentRead.TryGetValue(EInteger.One, out var c) || !exponentRead.TryGetValue(EInteger.FromInt32(-1), out var cBelow))
+                return null;
+            int sign;
+            if (IsTheZeroPolynomial((cBelow - c).InnerSimplified))
+                sign = 1;
+            else if (IsTheZeroPolynomial((cBelow + c).InnerSimplified))
+                sign = -1;
+            else
+                return null;
+            var d = exponentRead.TryGetValue(EInteger.Zero, out var constantTerm) ? constantTerm : Number.Integer.Zero;
+            // du = slope (w - s/w) dx, with u = w + s/w and the slope that of the unit, step L.
+            var restInW = InW(rest);
+            if (restInW.ContainsNode(x))
+                return null;
+            var slopeOfW = (Number.Rational.Create(step) * unitSlope).InnerSimplified;
+            if (!TryWriteInTheReciprocalVariable(restInW / (slopeOfW * (w - Number.Integer.Create(sign) / w)), w, sign, out var u, out var inU))
+                return null;
+            var question = (MathS.Pow(MathS.e, c * u + d) * inU).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(question, u, integrateByParts) is not { } answer || answer.Nodes.Any(node => node is Integralf))
+                return null;
+            var exponentOfW = (Number.Rational.Create(step) * unit).InnerSimplified;
+            return Functions.PartialFractions.Bare(answer.InnerSimplified)
+                .Substitute(u, MathS.Pow(MathS.e, exponentOfW) + Number.Integer.Create(sign) * MathS.Pow(MathS.e, -exponentOfW));
+        }
+
+        /// <summary>
         /// A factor of <paramref name="expr"/>, read through products and quotients, that is a
         /// constant to a polynomial in <paramref name="x"/> of degree two or more, or <see langword="null"/>.
         /// </summary>

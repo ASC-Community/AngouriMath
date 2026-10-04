@@ -641,6 +641,9 @@ namespace AngouriMath.Functions.Algebra
             // An exponential of a polynomial beside the polynomial's derivative, under u = P,
             // which the substitution search does not reach: it writes the exponential apart.
             if ((answer = IndefiniteIntegralSolver.SolveByTheExponentAsTheVariable(expr, x, integrateByParts)) is { }) return answer;
+            // And an exponential of a hyperbolic sine or cosine of a linear beside a function of it
+            // over its derivative, under u = twice that sine or cosine, which arrive as exponentials.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialOfAHyperbolicFunctionBesideItsDerivative(expr, x, integrateByParts)) is { }) return answer;
             // `A + i A tan(z)` is `A e^(i z)/cos(z)`, which beside a polynomial is a shape the
             // closed rules answer, where the imaginary unit in the coefficient is read by none.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAnImaginaryTangentAsAnExponential(expr, x, integrateByParts)) is { }) return answer;

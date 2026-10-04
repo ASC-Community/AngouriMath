@@ -2385,6 +2385,23 @@ with `int F` the next power over `p^2`. Rubi's 6.1.1, 6.2.1, 6.5.1 and 6.6.1
 | `"x/sech(x)^(7/2)-5/21*x*sqrt(sech(x))".Integrate("x")` | left unevaluated | the antiderivative, over two reduction steps |
 | `"x/csch(x)^(3/2)+1/3*x*sqrt(csch(x))".Integrate("x")` | left unevaluated | the antiderivative |
 
+### An exponential of a hyperbolic sine or cosine beside a function of it over its derivative is integrated
+
+**Answers where there were none.** `e^(n cosh(a + b x)) tanh(a + b x)` is `Ei(n cosh(a + b x))/b`, as
+`e^(n cos(x)) tan(x)` is `-Ei(n cos(x))`, which was answered; the hyperbolic one was declined, after
+seconds, and so were `e^(n sinh(a + b x)) sinh(2 (a + b x))` and the same with half the argument in the
+exponent, Rubi's 6.7.1. A hyperbolic function arrives as exponentials, and the substitution that reads
+the sine or cosine as a node had none to read. Written in `w = e^L`, the integrand beside the outer
+exponential over the derivative of its sine or cosine is now asked as a rational function of
+`u = w + s/w`, twice that sine or cosine; where it is one, it is integrated in `u` and written back
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"exp(n*cosh(a + b*x))*tanh(a + b*x)".ToEntity().Integrate("x")` | `integral(...)` | `Ei(n cosh(a + b x))/b`, written as exponentials |
+| `"exp(n*sinh(a + b*x))*sinh(2*(a + b*x))".ToEntity().Integrate("x")` | `integral(...)` | elementary in `sinh(a + b x)` and its exponential |
+| `"exp(n*cosh(1/2*(a + b*x)))*sinh(a + b*x)".ToEntity().Integrate("x")` | `integral(...)` | the same in `cosh((a + b x)/2)` |
+
 ### A hyperbolic function of a logarithm is integrated, the exponent folded structurally
 
 `tanh(ln(x))` was left as written. The library spells `tanh(y)` with `e^(2y)`, so a hyperbolic
