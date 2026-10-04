@@ -872,6 +872,26 @@ the root's linear. The same where a square factor is taken out of a root: `x/(x 
 | `"1/(2+sqrt(x^2+2*x+1))".ToEntity().Integrate("x")` | `integral(...)` | `ln(x + 3)` where `x + 1 > 0`, `-ln(1 - x)` otherwise |
 | `"x/(x+sqrt(x^6))".ToEntity().Integrate("x")` | `integral(...)` | `arctan(x)` where `x > 0`, a logarithm of `(1 + x)/(1 - x)` otherwise |
 
+### A power of a quotient is split only where that keeps its branch
+
+**Wrong answers, silent.** `Simplify` wrote `(c/a)^d * a^e` as `c^d * a^(e - d)` for every numeric
+`d`, which splits the power of the quotient as `(c/a)^d = c^d a^(-d)`. That holds for a whole `d`,
+and for a rational `d` with an odd denominator over a positive `c`, where a negative base takes its
+real root; for any other `d` it moves the branch wherever `a` is negative: `(1/(-2))^(1/2)` is
+`0.707i` and `(-2)^(-1/2)` is `-0.707i`. So `sqrt(x) sqrt(1/x)` simplified to 1 where it is -1 for
+every negative `x`, and `sec(x)^(3/2) cos(x)^(3/2)`, the constant an antiderivative carries
+where the cosine is negative, to 1 where it is -1. The rewrite is made where it holds now, and the
+expression is left as written elsewhere
+([#1734](https://github.com/asc-community/AngouriMath/issues/1734)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(x)*sqrt(1/x)".Simplify()` | `1 provided not x = 0`, and it is -1 for every negative `x` | unchanged |
+| `"sqrt(1/x)*x".Simplify()` | `sqrt(x)`, its negation for every negative `x` | unchanged |
+| `"(2/x)^(1/2)*x".Simplify()` | `sqrt(2) * sqrt(x)`, its negation for every negative `x` | unchanged |
+| `"sec(x)^(3/2)*cos(x)^(3/2)".Simplify()` | `1 provided not cos(x) = 0`, and it is -1 wherever the cosine is negative | unchanged |
+| `"(1/x)^(1/3)*x^(1/3)".Simplify()` | `1 provided not x = 0` | the same: an odd root of a negative base is the real one |
+
 ### A root of an even power is the modulus, and is no longer read as the power
 
 **Wrong answers, silent.** `(u^2)^(3/2)` is `|u|^3`, and two readers took it for `u^3`: the
