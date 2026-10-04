@@ -77,6 +77,21 @@ namespace AngouriMath.Tests.Calculus
             => DifferentiatesBack(integrand, points);
 
         /// <summary>
+        /// <c>x^2</c> over the three-quarter power at the fourth root's ratio, the same two
+        /// functions' difference: for each sign of <c>b</c> with <c>a</c> positive, for <c>a</c>
+        /// negative, and with numbers. Rubi's 1.1.2.4.
+        /// </summary>
+        [Theory]
+        [InlineData("x^2/((a + b*x^2)^(3/4)*(2*a + b*x^2))", 1.3, 0.7, new[] { 0.3, 0.9, 1.7, -0.6 })]
+        [InlineData("x^2/((a + b*x^2)^(3/4)*(2*a + b*x^2))", 1.3, -0.7, new[] { 0.3, 0.9, 1.1, -0.6 })]
+        [InlineData("x^2/((a + b*x^2)^(3/4)*(2*a + b*x^2))", -1.3, 0.7, new[] { 1.5, 2.0, 2.6, -1.8 })]
+        [InlineData("x^2/((a - b*x^2)^(3/4)*(2*a - b*x^2))", 1.3, 0.7, new[] { 0.3, 0.9, 1.1, -0.6 })]
+        [InlineData("x^2/((-2 + 3*x^2)*(-1 + 3*x^2)^(3/4))", 0, 0, new[] { 0.7, 1.1, 1.9, -1.3 })]
+        [InlineData("x^2/((2 - 3*x^2)^(3/4)*(4 - 3*x^2))", 0, 0, new[] { 0.2, 0.5, 0.7, -0.4 })]
+        public void XSquaredOverTheThreeQuarterPower(string integrand, double a, double b, double[] points)
+            => DifferentiatesBack(integrand, points, ("a", a), ("b", b));
+
+        /// <summary>
         /// Across 0, where the cube root's answers are written over <c>x</c>: the value is the one
         /// quadrature gives.
         /// </summary>
