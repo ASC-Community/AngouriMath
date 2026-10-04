@@ -596,10 +596,10 @@ four points. Nothing that already had an antiderivative changes.
 folded into powers of `x`, a negative one under a root written below the bar, and the answer is in those, on
 both sides of zero and on both sides of 1, where `sinh(2 ln(x))` changes sign. Under `t = ln(x)`,
 where the rules take `e^t` to be positive, an answer of this kind is given `provided x > 0`, and
-`provided c x^n > 0` for a logarithm of `c x^n`. A constant over a power, `1/g^p`, is asked as
-`g^(-p)` at the depth it was asked at, so that the rules scoped to the question asked see it, which
-is how `1/csch(2 ln(x))^(1/2)` reaches the fold, and `1/sqrt(x + x^(3/2))` is answered on both sides
-of zero as well ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+`provided c x^n > 0` for a logarithm of `c x^n`. A constant over a power that is not whole, `1/g^p`,
+is asked as `g^(-p)` at the depth it was asked at, so that the rules scoped to the question asked see
+it, which is how `1/csch(2 ln(x))^(1/2)` reaches the fold, and `1/sqrt(x + x^(3/2))` is answered on
+both sides of zero as well ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|

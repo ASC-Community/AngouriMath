@@ -2162,13 +2162,17 @@ namespace AngouriMath.Functions.Algebra
                     // The exponent negated as a number rather than as a tree: `-power` on the
                     // node `2` is `2 * (-1)`, and `sin(x)^(2 * (-1))` is a shape the closed rule
                     // for a power of the sine does not read, so `c/sin(x)^2` went to the
-                    // half-angle substitution for what is `-c cot(x)`. And asked as the same
-                    // question, since `c/g^p` and `c g^(-p)` are one: a level down the rules
-                    // scoped to the question asked did not see it, and `1/csch(2 ln(x))^(1/2)`
-                    // reached the fold of its exponentials there and was declined, where asked
-                    // at the top it is answered.
+                    // half-angle substitution for what is `-c cot(x)`. And where the power is not
+                    // whole asked as the same question, since `c/g^p` and `c g^(-p)` are one: a
+                    // level down the rules scoped to the question asked, the ones for a root, did
+                    // not see it, and `1/csch(2 ln(x))^(1/2)` reached the fold of its exponentials
+                    // there and was declined, where asked at the top it is answered. A whole power
+                    // keeps its level: asked as the same question, `(c + d x)/(a + a tanh(e + f x))^3`
+                    // ran past the budget where it is answered in a second.
                     over is Entity.Powf(var @base, var power) ?
-                        Integration.ComputeAsTheSameQuestion(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts)?.Pipe(i => div * i) :
+                        (power is Number.Rational and not Number.Integer
+                            ? Integration.ComputeAsTheSameQuestion(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts)
+                            : Integration.ComputeIndefiniteIntegral(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts))?.Pipe(i => div * i) :
                     // A constant over a product is the reciprocal of the product, asked as the
                     // same question with the constant in front, and not the product to the
                     // power -1: `pe/(x (d + e x) sqrt(1 - c^2 x^2))` handed on as
