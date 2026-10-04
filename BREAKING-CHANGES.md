@@ -601,13 +601,16 @@ wherever the cosine is negative; they are answered with the rest now
 Rubi's 4.3.3.1 with a whole power of the tangent or cotangent beside `A + B tan` over a power of
 `a + i a tan` ran past the budget, whole powers and half-odd ones alike. With `S = a ± i a tan(z)`,
 `tan(z)` is `(S - a)/(± i a)` and `dz = c dS/(S (S - 2a))`, so each is a rational function of `S`
-beside a power of it, whose factors `S`, `S - 2a` and `S - a` have no imaginary root
+beside a power of it, whose factors `S`, `S - 2a` and `S - a` have no imaginary root. Beside a
+second such sum, `q - i q tan(z)`, which is linear in `S`, the sum under a power that is not whole is
+the variable: `(a + i a tan(z))/(q - i q tan(z))^(3/2)`, from 4.3.2.1, ran past the budget as well
 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
 | `"tan(c + d*x)^2*(k + q*tan(c + d*x))/sqrt(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `sqrt(a + i a tan(c + d x))` and, piecewise in the sign of `a`, an arctangent or a logarithm of it |
 | `"cot(c + d*x)^2*(k + q*tan(c + d*x))/(a + i*a*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | powers and logarithms of `a + i a tan(c + d x)`, of `a - i a tan(c + d x)` and of `tan(c + d x)` |
+| `"(a + i*a*tan(c + d*x))/(q - i*q*tan(c + d*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `-2 i a (q - i q tan(c + d x))^(-3/2)/(3d)`, written longer |
 
 ### A rational function with complex coefficients is integrated through its real and imaginary parts
 

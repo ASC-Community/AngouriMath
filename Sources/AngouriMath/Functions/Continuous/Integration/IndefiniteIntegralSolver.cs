@@ -23750,15 +23750,21 @@ namespace AngouriMath.Functions.Algebra
         /// integrand's own. Only whole powers of the tangent and cotangent of <c>z</c> beside it,
         /// and nothing else in x; a base standing only to positive whole powers is a polynomial in
         /// the tangent, which the rules for those answer.
+        /// </para>
+        /// <para>
+        /// Beside a second such sum of the same argument, <c>q - i q tan(z)</c>, which is linear in
+        /// the first, the one under a power that is not whole is the variable and the other a whole
+        /// power of a linear in it: <c>(a + i a tan(z))/(q - i q tan(z))^(3/2)</c>, Rubi's 4.3.2.1,
+        /// ran past the budget too.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </para>
         /// </remarks>
         internal static Entity? SolveInTheImaginarySumOfAConstantAndATangent(Entity expr, Entity.Variable x, bool integrateByParts)
         {
-            Entity? @base = null, constant = null, coefficient = null, argument = null;
+            var sums = new List<(Entity Base, Entity Constant, Entity Coefficient, Entity Argument)>();
             foreach (var node in expr.Nodes)
             {
-                if (node is not (Sumf or Minusf) || !node.ContainsNode(x) || node == @base)
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(x) || sums.Any(found => found.Base == node))
                     continue;
                 Entity sum = Number.Integer.Zero;
                 Entity? factor = null, inner = null;
@@ -23802,10 +23808,19 @@ namespace AngouriMath.Functions.Algebra
                     ratio = Functions.PartialFractions.Bare(ratio.Simplify());
                 if (ratio.Evaled != MathS.i.Evaled && ratio.Evaled != (-MathS.i).Evaled)
                     continue;
-                if (@base is not null)
-                    return null;
-                (@base, constant, coefficient, argument) = (node, sum, factor, inner);
+                sums.Add((node, sum, factor, inner));
             }
+            // Two such sums, `a + i a tan(z)` and `c - i c tan(z)`, are each linear in the other: in
+            // the one under a power that is not whole the other is a whole power of a linear, where
+            // in the other it would be the root of one. Where both or neither are, declined.
+            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == sum && p is not Number.Integer);
+            var chosen = sums.Count switch
+            {
+                1 => sums[0],
+                2 when NotWhole(sums[0].Base) != NotWhole(sums[1].Base) => NotWhole(sums[0].Base) ? sums[0] : sums[1],
+                _ => default,
+            };
+            var (@base, constant, coefficient, argument) = chosen;
             if (@base is null || constant is null || coefficient is null || argument is null
                 || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
                 || rate.Evaled is Number.Complex { IsZero: true })

@@ -14,7 +14,8 @@ namespace AngouriMath.Tests.Calculus
     /// <summary>
     /// A rational function of <c>tan(z)</c> beside a power of <c>S = a ± i a tan(z)</c>, integrated
     /// in <c>S</c>, where <c>dz = c dS/(S (S - 2a))</c>: the factors are <c>S</c>, <c>S - 2a</c> and
-    /// <c>S - a</c>, with no imaginary root among them. Rubi's 4.3.3.1.
+    /// <c>S - a</c>, with no imaginary root among them. Beside <c>q - i q tan(z)</c>, a linear in
+    /// <c>S</c>, the sum under a power that is not whole is the variable. Rubi's 4.3.3.1 and 4.3.2.1.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/718">#718</a>
     /// </summary>
     /// <remarks>Compared as complex numbers, the integrand being complex.</remarks>
@@ -27,6 +28,8 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("tan(c + d*x)^2*(k + q*tan(c + d*x))/sqrt(a + i*a*tan(c + d*x))")]
         [InlineData("(k + q*tan(c + d*x))/(a - i*a*tan(c + d*x))^(3/2)")]
         [InlineData("cot(c + d*x)^2*(k + q*tan(c + d*x))/(a + i*a*tan(c + d*x))^4")]
+        [InlineData("(a + i*a*tan(c + d*x))/(q - i*q*tan(c + d*x))^(3/2)")]
+        [InlineData("sqrt(q - i*q*tan(c + d*x))/(a + i*a*tan(c + d*x))")]
         public void IsIntegratedInTheSum(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
