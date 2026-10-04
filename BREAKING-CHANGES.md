@@ -873,6 +873,24 @@ one form across the zeros.
 | `"sqrt(a + a*sin(x))".Integrate("x")` | unevaluated (`a^2 = a^2` is not decided by evaluation) | `-2 sqrt(2a) sgn(sin(u)) cos(u)` |
 | `"sqrt(1 + sin(x))".Integrate("x")` | `-2 cos(x)/sqrt(1 + sin(x))` | unchanged, the closed rule's |
 
+### A half-odd power of the secant beside the cosine is integrated as the cosine's
+
+**Answers where there were none.** `sec(x)^(3/2)/sqrt(1 + cos(x))` was declined while
+`1/(cos(x)^(3/2) sqrt(1 + cos(x)))`, which it is wherever the cosine is positive, was answered: the
+substitutions that read a function of the cosine read the secant as `1/cos` to a whole power only.
+A half-odd power of the secant beside the cosine is written as the cosine's on the other side of
+the bar now, `sec(x)^p = K/cos(x)^p`, with `K = sec(x)^p cos(x)^p` in front of the answer: `K` is 1
+where the cosine is positive and -1 where it is negative, so the answer holds on both sides. The
+same for the cosecant beside the sine. Rubi's 4.2.2.1, 4.2.3.1 and 4.2.4.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^(3/2)/sqrt(1 + cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, times `K` |
+| `"1/((a + a*cos(x))^(7/2)*sec(x)^(7/2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, over `K` |
+| `"(A + c*cos(x)^2)*sec(x)^(11/2)*sqrt(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, times `K` |
+| `"sqrt(csc(x))*sqrt(a + a*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, times `csc(x)^(1/2) sin(x)^(1/2)` |
+
 ### Half-odd powers of `a ± a sec` and `a ± a csc` are integrated by the half-angle tangent
 
 Rubi's `(a + b sec)^m (d sec)^n` files with `a^2 = b^2` hold about a thousand problems with a
