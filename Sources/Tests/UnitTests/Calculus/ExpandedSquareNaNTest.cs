@@ -48,7 +48,8 @@ namespace AngouriMath.Tests.Calculus
         /// </summary>
         private static Entity Pin(Entity expr) => expr
             .Substitute("a", 2).Substitute("b", 3)
-            .Substitute("c", 2).Substitute("d", 3).Substitute("e", 5);
+            .Substitute("c", 2).Substitute("d", 3).Substitute("e", 5)
+            .Substitute("m", 1.7).Substitute("n", 2.9);
 
         private static void DifferentiatesBack(string integrand)
         {
@@ -123,6 +124,22 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("x^(-2)")]
         [InlineData("x^(-7)")]
         [InlineData("x^(1/2)")]
+        [InlineData("x^n")]
+        [InlineData("x^(n - 1)")]
         public void ThePowerRuleIsUnchanged(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
+        /// A symbolic exponent that is <c>-1</c> as a value, which the power rule read as written:
+        /// <c>x^(-1 - 3n + 3n)</c> is what expanding <c>x^(-1 - 3n) (a + b x^n)^3</c> leaves for its
+        /// last term, and came out as <c>x^0/0</c>, so the whole answer had no value anywhere.
+        /// Rubi's 1.1.3.2.
+        /// </summary>
+        [Theory]
+        [InlineData("x^(-1 - 3*n)*(a + b*x^n)^3")]
+        [InlineData("x^(-1 - 7*n)*(a + b*x^n)^8")]
+        [InlineData("1/(a*(b*x^m)^n)^(1/(m*n))")]
+        [InlineData("x^(-1 - 3*n + 3*n)")]
+        [InlineData("x^(-n/n)")]
+        public void AnExponentThatIsMinusOneAsAValue(string integrand) => DifferentiatesBack(integrand);
     }
 }

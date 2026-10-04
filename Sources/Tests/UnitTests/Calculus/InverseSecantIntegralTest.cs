@@ -110,6 +110,26 @@ namespace AngouriMath.Tests.Calculus
         public void ByPartsAgainstARootOfAQuartic(string integrand, double[] points) => DifferentiatesBack(integrand, points);
 
         /// <summary>
+        /// The arcsecant beside a root of <c>x^2 - 1</c>, under <c>x = sec(u)</c>: the root is
+        /// <c>tan(u) sgn(x)</c> on the arcsecant's range, and taken as <c>tan(u)</c> the answers
+        /// were right for x &gt; 1 and their derivatives the integrands' negatives for every
+        /// x &lt; -1, where the integrands are as real. Timofeev's and Charlwood's. With a linear
+        /// argument the sign is the argument's: at <c>x = -1.5</c> the sign of <c>x + 3</c> is
+        /// not the sign of <c>x</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("x*asec(x)/sqrt(-1 + x^2)", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("asec(x)*sqrt(-1 + x^2)/x^4", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("asec(x)/(-1 + x^2)^(5/2)", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("x^3*asec(x)/(-1 + x^2)^(5/2)", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("asec(x)/(x^2*sqrt(-1 + x^2))", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("(-1 + x^2)^(3/2)*asec(x)^2/x^5", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("asec(x)^3*sqrt(-1 + x^2)/x^4", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("asec(x)^2/(x*sqrt(x^2 - 1))", new[] { 1.3, 2.6, -1.3, -1.9, -2.7 })]
+        [InlineData("asec(x + 3)^2/((x + 3)*sqrt((x + 3)^2 - 1))", new[] { 0.5, -1.5, -0.5, -4.5, -6.0 })]
+        public void BesideARootOnBothIntervals(string integrand, double[] points) => DifferentiatesBack(integrand, points);
+
+        /// <summary>
         /// A non-linear argument is not this row's: <c>arcsec(x^2)</c> would want the chain rule
         /// undone first, and the table reads a linear argument only.
         /// </summary>

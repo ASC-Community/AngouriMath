@@ -4,7 +4,7 @@ name: 'Trimming & NativeAOT'
 # name lookup, and one can be introduced by a change anywhere in the kernel, by a package bump,
 # or by an SDK bump -- so there is no subset of the tree this gate could safely skip. Two
 # workflows here have already been silenced by a filter that matched nothing
-# (https://github.com/AngouriMath/AngouriMath/issues/775); an unconditional trigger cannot be.
+# (https://github.com/asc-community/AngouriMath/issues/775); an unconditional trigger cannot be.
 on:
   push:
     branches:
