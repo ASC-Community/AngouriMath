@@ -2604,6 +2604,22 @@ quadratic is. `w` is real for a positive `x`, and the answer says so, `provided 
 | `"(a^2+b^2/x^(2/5)+2*a*b/x^(1/5))^(5/2)".Integrate("x")`, Rubi 1.2.3.2 #659 | left unevaluated | an antiderivative in `x^(-1/5)`, under the same condition |
 | `"(1+2*x^(1/2)+x)^(3/2)".Integrate("x")` | left unevaluated | `2 (x/2 + x^(3/2) + 3 x^2/4 + x^(5/2)/5) provided x > 0` |
 
+### A sine or cosine of the reciprocal of a linear beside a power of it is integrated under `u = 1/L`
+
+**Answers where there were none.** `sin(a + b/x)/x^3` was declined, while under `u = 1/x` it is
+`-u sin(a + b u)`, one step by parts. A trigonometric function of `a + b/L^k`, `L` a linear, beside
+`L^m` with `m <= -3` is a polynomial in `u = 1/L` times the function, and is integrated so and written
+back. Rubi's 4.1.12 and 4.2.12, `(e x)^m (a + b sin(c + d x^n))^p` for a negative `n`. The other
+powers were answered already and are answered as before
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin(a + b/x)/x^3".ToEntity().Integrate("x")` | `integral(...)` | a sine and a cosine of `a + b/x` |
+| `"cos(a + b/x)/x^4".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"sin(a + b/x^2)/x^5".ToEntity().Integrate("x")` | `integral(...)` | the same, of `a + b/x^2` |
+| `"sin(a + b/(c + d*x))/(c + d*x)^3".ToEntity().Integrate("x")` | `integral(...)` | the same, of `a + b/(c + d x)` |
+
 ### A power of the variable times a sine or cosine of a logarithm, and a power of a monomial
 
 `x^2 sin(a + b ln(c x^n))` and `(c x^n)^b` were both left as written. Two rules, each exact:
