@@ -23726,6 +23726,82 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A half-odd power of the secant or the cosecant, in an integrand with the cosine or the
+        /// sine of the same argument in it, written as a power of the cosine or the sine:
+        /// <c>sec(z)^p = K/cos(z)^p</c> with <c>K = sec(z)^p cos(z)^p</c>, which is 1 wherever the
+        /// cosine is positive and -1 wherever it is negative, so it stands in front of the answer.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>sec(x)^(3/2)/sqrt(1 + cos(x))</c> was declined while
+        /// <c>1/(cos(x)^(3/2) sqrt(1 + cos(x)))</c>, which it is wherever the cosine is positive,
+        /// was answered: the substitutions that read a function of the cosine read the secant as
+        /// <c>1/cos</c> to a whole power only. Only beside the cosine, so that a power of the
+        /// secant with no cosine keeps the rules for the secant. Rubi's 4.2.2.1, 4.2.3.1 and
+        /// 4.2.4.2.
+        /// </para>
+        /// <para>
+        /// Only a half-odd power of the secant itself, because that is what keeps <c>K</c> real:
+        /// the integrand is then real exactly where the rewritten one is, and an answer for the
+        /// rewritten one, which holds where it is real, holds where the integrand is. A constant
+        /// inside the power, <c>sqrt(b sec(x))</c>, or a quarter makes <c>K</c> imaginary on one
+        /// side, and the integrand real where the rewritten one is not: for a negative <c>b</c>,
+        /// <c>sqrt(b sec(x))</c> is real where the cosine is negative and <c>1/sqrt(cos(x))</c>
+        /// is not, and nothing about an answer for the second says anything there.
+        /// </para>
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingAPowerOfTheSecantInTheCosine(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Secantf or Cosecantf))
+                return null;
+            var factors = FactorsOfTheIntegrand(expr);
+            var index = -1;
+            Entity? reciprocal = null;
+            Number.Rational? exponent = null;
+            for (var k = 0; k < factors.Count; k++)
+            {
+                if (factors[k].Factor is not Powf((Secantf or Cosecantf) and var found, var power)
+                    || power.Evaled is not Number.Rational fraction || fraction is Number.Integer
+                    || !fraction.ERational.Denominator.Equals(EInteger.FromInt32(2)) || !found.ContainsNode(x))
+                    continue;
+                if (index >= 0)
+                    return null;
+                (index, reciprocal, exponent) = (k, found, fraction);
+            }
+            if (index < 0 || reciprocal is null || exponent is null)
+                return null;
+            var function = reciprocal is Secantf(var argument) ? MathS.Cos(argument) : MathS.Sin(((Cosecantf)reciprocal).Argument);
+            // The reciprocal nowhere else and the function somewhere: the power is then all of
+            // the secant there is, and the rest of the integrand a function of the cosine.
+            if (expr.Nodes.Count(node => node == reciprocal) != 1 || !expr.ContainsNode(function))
+                return null;
+            var (written, underneath) = factors[index];
+            // The power is K/cos^p above the bar and cos^p/K below it. The cosine's power goes to
+            // the side where it is positive, so that the rest is one quotient as the rules read it.
+            var negative = exponent.ERational.IsNegative;
+            var raised = MathS.Pow(function, negative ? -exponent : exponent);
+            var raisedAbove = underneath != negative;
+            Entity? above = null;
+            Entity? below = null;
+            for (var k = 0; k < factors.Count; k++)
+            {
+                var (factor, side) = k == index ? (raised, !raisedAbove) : factors[k];
+                if (factor == Number.Integer.One)
+                    continue;
+                if (side)
+                    below = below is null ? factor : below * factor;
+                else
+                    above = above is null ? factor : above * factor;
+            }
+            var numerator = above ?? Number.Integer.One;
+            var rewritten = below is null ? numerator : numerator / below;
+            var constant = written * MathS.Pow(function, exponent);
+            return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts)
+                ?.Pipe(answer => underneath ? answer / constant : answer * constant);
+        }
+
+        /// <summary>
         /// A rational function of <c>sin(x)</c> and <c>cos(x)</c>, turned into a rational function
         /// of one variable by the half-angle substitution <c>t = tan(x/2)</c> and handed to the
         /// machinery for those.
