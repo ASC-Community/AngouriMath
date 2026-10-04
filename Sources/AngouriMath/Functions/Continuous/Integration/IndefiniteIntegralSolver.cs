@@ -21184,6 +21184,18 @@ namespace AngouriMath.Functions.Algebra
             });
             if (!any)
                 return null;
+            // Beside its own derivative the logarithm is a substitution's: `tan(a + i ln(x))/x` is
+            // `tan(a + i u)` in `u = ln(x)`, which the integrator answers in a closed form, where the
+            // exponentials would answer it as a piecewise in `e^(i a)`.
+            if (expr.Nodes.FirstOrDefault(node => node is Logf(var @base, var of) && @base == MathS.e && of.ContainsNode(x)) is { } logarithm)
+            {
+                Entity beside = Number.Integer.One;
+                foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+                    if (!factor.ContainsNode(logarithm))
+                        beside = underneath ? beside / factor : beside * factor;
+                if (beside.ContainsNode(x) && AreProportionalAtSampledPoints(beside, logarithm.Differentiate(x), x))
+                    return null;
+            }
             return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
         }
 
