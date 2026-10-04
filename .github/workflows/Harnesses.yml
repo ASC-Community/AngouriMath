@@ -3,7 +3,7 @@ name: Harnesses
 # Generated inputs run against the library on every change to it. Each harness exits non-zero
 # on a defect -- a value Simplify changed at a boundary, a root missing from a solution set, a
 # wrong answer to a known problem -- and its report is uploaded either way. Sources/Tests/Harnesses/README.md
-# says what each asks. https://github.com/AngouriMath/AngouriMath/issues/1256
+# says what each asks. https://github.com/asc-community/AngouriMath/issues/1256
 #
 # Path filters are globs relative to the repository root, with no leading "./": CSharpTest.yml
 # says what a leading "./" once cost.
@@ -132,7 +132,7 @@ jobs:
     - name: Check out the website
       uses: actions/checkout@v6
       with:
-        repository: AngouriMath/AngouriMathSite
+        repository: asc-community/AngouriMathSite
         path: site
 
     - name: Setup .NET 10

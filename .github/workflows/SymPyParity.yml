@@ -3,7 +3,7 @@ name: 'SymPy parity watch'
 # The comparison against SymPy is a snapshot: 80 probes over 23 areas, taken by hand, against one
 # SymPy version, and published in Sources/AngouriMath/Docs/Usage/Comparison.md. A snapshot cannot
 # tell you it has gone out of date, and this is
-# https://github.com/AngouriMath/AngouriMath/issues/746 item 73 -- "the one SymPy snapshot goes
+# https://github.com/asc-community/AngouriMath/issues/746 item 73 -- "the one SymPy snapshot goes
 # stale on its own -- it wants a scheduled re-run rather than another hand-taken snapshot".
 #
 # What runs here is the SymPy half only. The other half asks this library the same 80 questions
@@ -20,7 +20,7 @@ name: 'SymPy parity watch'
 # The path filters carry no leading "./" -- a filter is a glob relative to the repository root,
 # and "./x" matches nothing there. That defect silenced Benchmark.yml for ninety-eight merged
 # pull requests and CPPBuild.yml for its whole existence
-# (https://github.com/AngouriMath/AngouriMath/issues/775). The filters name this file and the
+# (https://github.com/asc-community/AngouriMath/issues/775). The filters name this file and the
 # probe set so that a change to either demonstrates itself on its own pull request; the weekly
 # run is what actually watches SymPy, and a schedule trigger only fires once the workflow is on
 # the default branch.

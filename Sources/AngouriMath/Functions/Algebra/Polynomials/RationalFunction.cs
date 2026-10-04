@@ -30,8 +30,8 @@ namespace AngouriMath.Functions
     /// <a href="https://github.com/asc-community/AngouriMath/issues/934">#934</a>.
     /// </para>
     /// <para>
-    /// Four steps, and only the first is new. The expression is gathered into a single
-    /// quotient — nothing else in the library does that, and without it <c>1/x + 1/y</c> and
+    /// Four steps. The expression is written as a single fraction, by the step
+    /// <see cref="Entity.AsSingleFraction"/> takes -- without it <c>1/x + 1/y</c> and
     /// <c>(x + y)/(x*y)</c> could never meet. Then the numerator and denominator are divided
     /// by their multivariate greatest common divisor, which
     /// <see cref="PolynomialGcd"/> computes and verifies. Then both are scaled so that the
@@ -40,12 +40,14 @@ namespace AngouriMath.Functions
     /// </para>
     /// <para>
     /// <b>The domain is preserved rather than assumed away.</b> Cancelling a common factor
-    /// widens the domain — <c>x/x</c> is not <c>1</c> — so where a factor of positive degree
-    /// is cancelled the answer carries the condition that it is nonzero, which is what the
-    /// library already does elsewhere and what keeps "equal trees means equal expressions"
-    /// true rather than nearly true. Gathering over a common denominator does not widen
-    /// anything: a sum is defined exactly where its terms are, and the product of the
-    /// denominators vanishes exactly where one of them does.
+    /// widens the domain — <c>x/x</c> is not <c>1</c> — and so does dividing by a quotient,
+    /// which moves its denominator into the numerator: <c>1/(1/x)</c> is not <c>x</c>. So the
+    /// answer carries the condition that neither vanishes, which is what the library already
+    /// does elsewhere and what keeps "equal trees means equal expressions" true rather than
+    /// nearly true; the condition is written canonically too, square-free and without what
+    /// the denominator already excludes. A sum is defined exactly where its terms are, and the
+    /// common denominator vanishes exactly where one of theirs does, so gathering one widens
+    /// nothing. <a href="https://github.com/asc-community/AngouriMath/issues/1618">#1618</a>
     /// </para>
     /// </remarks>
     internal static class RationalFunction
@@ -57,9 +59,10 @@ namespace AngouriMath.Functions
         private const int MaxComplexity = 256;
 
         /// <summary>
-        /// Raising to a power is where a gathered quotient explodes, so the exponent is
-        /// bounded before <see cref="MultivariatePolynomial.Power"/> is asked; that has its
-        /// own bound on the number of terms, which catches the rest.
+        /// Raising a quotient to a power is where a gathered quotient explodes, so a power of
+        /// anything but a polynomial is bounded before anything is multiplied out; a polynomial's
+        /// power has <see cref="MultivariatePolynomial.Power"/>'s own bound on the number of
+        /// terms.
         /// </summary>
         private const int MaxExponent = 32;
 
@@ -84,23 +87,24 @@ namespace AngouriMath.Functions
                 indices[variables[i]] = i;
             var variableCount = variables.Length;
 
-            if (!TryGather(expr, indices, variableCount, out var numerator, out var denominator))
+            if (!TryGather(expr, indices, variableCount, out var numerator, out var denominator, out var excluded))
                 return false;
-            // A vanishing denominator is not a rational function, and a vanishing numerator
-            // is zero however it was written.
+            // A vanishing denominator is not a rational function. A vanishing numerator is zero
+            // wherever the expression has a value: everywhere its denominator does not vanish.
             if (denominator.IsZero)
                 return false;
-            if (numerator.IsZero)
-            {
-                canonical = Integer.Create(0);
-                return true;
-            }
-
             var order = new int[variableCount];
             for (var i = 0; i < order.Length; i++)
                 order[i] = i;
+            if (numerator.IsZero)
+            {
+                if (excluded.Multiply(denominator) is not { } wholeDenominator
+                    || Conditioned(Integer.Create(0), wholeDenominator, MultivariatePolynomial.One(variableCount), order, variables) is not { } zero)
+                    return false;
+                canonical = zero;
+                return true;
+            }
 
-            var cancelled = MultivariatePolynomial.One(variableCount);
             if (variableCount > 0
                 && PolynomialGcd.Gcd(numerator, denominator, order, 0) is { } divisor
                 && !divisor.IsConstant)
@@ -115,9 +119,11 @@ namespace AngouriMath.Functions
                     || reducedBottom.Multiply(divisor) is not { } checkedBottom
                     || !checkedBottom.SameAs(denominator))
                     return false;
+                if (excluded.Multiply(divisor) is not { } withTheCancelled)
+                    return false;
                 numerator = reducedTop;
                 denominator = reducedBottom;
-                cancelled = divisor;
+                excluded = withTheCancelled;
             }
 
             // Scaled so the denominator leads with one, under the same lexicographic monomial
@@ -138,125 +144,86 @@ namespace AngouriMath.Functions
             var quotient = denominator.IsConstant
                 ? numerator.ToEntity(variables)
                 : numerator.ToEntity(variables) / denominator.ToEntity(variables);
-
-            canonical = cancelled.IsConstant
-                ? quotient
-                : new Providedf(quotient, !cancelled.ToEntity(variables).EqualTo(0));
-            return true;
+            canonical = Conditioned(quotient, excluded, denominator, order, variables);
+            return canonical is not null;
         }
 
         /// <summary>
-        /// <paramref name="expr"/> as a single quotient of polynomials, gathering a sum of
-        /// quotients over a common denominator. The denominator is never zero and never
-        /// simplified away; it is <c>1</c> for a polynomial.
+        /// <paramref name="quotient"/> with the condition that it is not at a zero of
+        /// <paramref name="excluded"/>, where the expression it came from had no value, except
+        /// where <paramref name="denominator"/> vanishing already says so; <see langword="null"/>
+        /// where a step of the arithmetic declined.
         /// </summary>
         /// <remarks>
-        /// The common denominator is the product rather than the least common multiple. Both
-        /// are correct and the product is cheaper to build; what it costs is a larger
-        /// intermediate, which the greatest common divisor then removes — so the answer is the
-        /// same and only the work in between differs.
+        /// The condition is part of the form, so it is canonical too: two expressions with the same
+        /// value and the same points where they have none have to meet. So the polynomial written
+        /// is the square-free part of <paramref name="excluded"/>, which vanishes exactly where it
+        /// does -- <c>x^2/x^2</c> and <c>x/x</c> are both <c>1 provided not x = 0</c> -- without the
+        /// factors it shares with the denominator, and with whole coprime coefficients and a
+        /// positive leading one. The square-free part is <c>E / gcd(E, dE/dx_1, …, dE/dx_n)</c>:
+        /// over the rationals a factor to the power <c>k</c> divides each derivative to the power
+        /// <c>k - 1</c>, and one of them no further.
+        /// </remarks>
+        private static Entity? Conditioned(Entity quotient, MultivariatePolynomial excluded, MultivariatePolynomial denominator,
+            IReadOnlyList<int> order, IReadOnlyList<Variable> variables)
+        {
+            if (excluded.IsConstant)
+                return excluded.IsZero ? null : quotient;
+            var repeated = excluded;
+            for (var i = 0; i < excluded.VariableCount; i++)
+                if (excluded.DegreeIn(i) > 0)
+                {
+                    if (PolynomialGcd.Gcd(repeated, excluded.DerivativeIn(i), order, 0) is not { } common)
+                        return null;
+                    repeated = common;
+                }
+            if (excluded.DivideExact(repeated) is not { } squareFree
+                || PolynomialGcd.Gcd(squareFree, denominator, order, 0) is not { } shared
+                || squareFree.DivideExact(shared) is not { } left)
+                return null;
+            return left.IsConstant
+                ? quotient
+                : new Providedf(quotient, !left.Normalized().ToEntity(variables).EqualTo(0));
+        }
+
+        /// <summary>
+        /// <paramref name="expr"/> as a single quotient of polynomials, and the polynomial whose
+        /// zeros are the other points where <paramref name="expr"/> has no value: the product of
+        /// the denominators that dividing by a quotient turned over. The denominator is never
+        /// zero and never simplified away; it is <c>1</c> for a polynomial.
+        /// </summary>
+        /// <remarks>
+        /// Gathered by <see cref="SingleQuotient.OverLeastCommonDenominator"/>, the step
+        /// <see cref="Entity.AsSingleFraction"/> takes, so that the two agree on what a single
+        /// quotient of an expression is and on where it has a value; this form is that quotient
+        /// reduced and normalised.
         /// </remarks>
         private static bool TryGather(
             Entity expr, IReadOnlyDictionary<Variable, int> indices, int variableCount,
             [NotNullWhen(true)] out MultivariatePolynomial? numerator,
-            [NotNullWhen(true)] out MultivariatePolynomial? denominator)
+            [NotNullWhen(true)] out MultivariatePolynomial? denominator,
+            [NotNullWhen(true)] out MultivariatePolynomial? excluded)
         {
-            numerator = denominator = null;
-
-            // A polynomial is its own numerator, and this is the common case, so it is tried
-            // before the expression is taken apart.
-            if (MultivariatePolynomial.TryParse(expr, indices) is { } whole)
-            {
-                numerator = whole;
-                denominator = MultivariatePolynomial.One(variableCount);
-                return true;
-            }
-
-            switch (expr)
-            {
-                case Sumf(var left, var right):
-                    return TryCombine(left, right, subtract: false, indices, variableCount,
-                        out numerator, out denominator);
-
-                case Minusf(var left, var right):
-                    return TryCombine(left, right, subtract: true, indices, variableCount,
-                        out numerator, out denominator);
-
-                case Mulf(var left, var right):
-                {
-                    if (!TryGather(left, indices, variableCount, out var leftTop, out var leftBottom)
-                        || !TryGather(right, indices, variableCount, out var rightTop, out var rightBottom))
-                        return false;
-                    if (leftTop.Multiply(rightTop) is not { } top
-                        || leftBottom.Multiply(rightBottom) is not { } bottom)
-                        return false;
-                    numerator = top;
-                    denominator = bottom;
-                    return true;
-                }
-
-                case Divf(var left, var right):
-                {
-                    if (!TryGather(left, indices, variableCount, out var leftTop, out var leftBottom)
-                        || !TryGather(right, indices, variableCount, out var rightTop, out var rightBottom))
-                        return false;
-                    // Dividing by a quotient that is identically zero is not a rational
-                    // function, and inverting it here would quietly produce one.
-                    if (rightTop.IsZero)
-                        return false;
-                    if (leftTop.Multiply(rightBottom) is not { } top
-                        || leftBottom.Multiply(rightTop) is not { } bottom)
-                        return false;
-                    numerator = top;
-                    denominator = bottom;
-                    return true;
-                }
-
-                case Powf(var @base, Integer power):
-                {
-                    var exponent = power.EInteger;
-                    if (exponent.Abs().CompareTo(EInteger.FromInt32(MaxExponent)) > 0)
-                        return false;
-                    if (!TryGather(@base, indices, variableCount, out var baseTop, out var baseBottom))
-                        return false;
-                    var magnitude = exponent.Abs().ToInt32Checked();
-                    var negative = exponent.Sign < 0;
-                    if (negative && baseTop.IsZero)
-                        return false;
-                    var top = negative ? baseBottom : baseTop;
-                    var bottom = negative ? baseTop : baseBottom;
-                    if (top.Power(magnitude) is not { } raisedTop
-                        || bottom.Power(magnitude) is not { } raisedBottom)
-                        return false;
-                    numerator = raisedTop;
-                    denominator = raisedBottom;
-                    return true;
-                }
-
-                default:
+            numerator = denominator = excluded = null;
+            foreach (var node in expr.Nodes)
+                if (node is Powf(var @base, Integer power)
+                    && power.EInteger.Abs().CompareTo(EInteger.FromInt32(MaxExponent)) > 0
+                    && MultivariatePolynomial.TryParse(@base, indices) is null)
                     return false;
+            var carried = new List<Entity>();
+            var (top, bottom) = SingleQuotient.OverLeastCommonDenominator(expr, carried);
+            if (MultivariatePolynomial.TryParse(top, indices) is not { } parsedTop
+                || MultivariatePolynomial.TryParse(bottom, indices) is not { } parsedBottom)
+                return false;
+            var product = MultivariatePolynomial.One(variableCount);
+            foreach (var turnedOver in carried)
+            {
+                if (MultivariatePolynomial.TryParse(turnedOver, indices) is not { } parsed
+                    || product.Multiply(parsed) is not { } next)
+                    return false;
+                product = next;
             }
-        }
-
-        /// <summary>
-        /// A sum or a difference of two quotients, over the product of their denominators.
-        /// </summary>
-        private static bool TryCombine(
-            Entity left, Entity right, bool subtract,
-            IReadOnlyDictionary<Variable, int> indices, int variableCount,
-            [NotNullWhen(true)] out MultivariatePolynomial? numerator,
-            [NotNullWhen(true)] out MultivariatePolynomial? denominator)
-        {
-            numerator = denominator = null;
-            if (!TryGather(left, indices, variableCount, out var leftTop, out var leftBottom)
-                || !TryGather(right, indices, variableCount, out var rightTop, out var rightBottom))
-                return false;
-            if (leftTop.Multiply(rightBottom) is not { } crossLeft
-                || rightTop.Multiply(leftBottom) is not { } crossRight
-                || leftBottom.Multiply(rightBottom) is not { } bottom)
-                return false;
-            numerator = subtract ? crossLeft.Subtract(crossRight) : crossLeft.Add(crossRight);
-            denominator = bottom;
+            (numerator, denominator, excluded) = (parsedTop, parsedBottom, product);
             return true;
         }
     }
