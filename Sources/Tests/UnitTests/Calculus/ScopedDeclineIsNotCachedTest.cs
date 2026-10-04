@@ -44,5 +44,23 @@ namespace AngouriMath.Tests.Calculus
             var asked = "cos(x)^(-3)".ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", asked.Stringize());
         }
+
+        /// <summary>
+        /// The same one level further down. The rule for a power of the variable beside a block
+        /// answers the question asked and the level below it, and declines
+        /// <c>2/(w^2 (a + b w^2) (w^4 + 1))</c> at depth three, inside the search for the first
+        /// integral; the second asks it at depth two, and the decline was held under a key that
+        /// told the top from the rest and nothing more, so the second was declined after the
+        /// first and answered on its own.
+        /// </summary>
+        [Fact]
+        public void AnIntegrandDeclinedTwoBelowIsStillAnsweredOneBelow()
+        {
+            var first = "1/(u^(3/2)*(a + b*u))/(1 + u^2)".ToEntity().Integrate("u");
+            Assert.DoesNotContain("integral(", first.Stringize());
+
+            var second = "1/((1 + u^2)*u^(3/2)*(a + b*u))".ToEntity().Integrate("u");
+            Assert.DoesNotContain("integral(", second.Stringize());
+        }
     }
 }

@@ -237,17 +237,25 @@ namespace AngouriMath.Functions.Algebra
         /// simplifying and a change count is therefore never still.
         /// </para>
         /// <para>
-        /// <b>A decline is held with the scope it was made in.</b> Five rules answer only the
-        /// question asked (<see cref="AnsweringTheQuestionAsked"/>) and decline the same
-        /// integrand one level down, so a <see langword="null"/> computed at depth two says
-        /// nothing about depth one — and once held without the scope it was served to the
-        /// top-level ask: <c>sec(x)^3</c>, tried and declined inside another rule's search, then
-        /// asked for directly and declined from the cache in two milliseconds. The key carries
-        /// the scope, and a lookup takes a decline only from its own scope and an answer from
-        /// either, since an antiderivative that was found is right wherever it is asked for.
+        /// <b>A decline is held with the scope it was made in.</b> Rules answer only the question
+        /// asked (<see cref="AnsweringTheQuestionAsked"/>), or it and one or two levels below it
+        /// (<see cref="AnsweringTheQuestionAskedOrOneBelow"/>,
+        /// <see cref="AnsweringTheQuestionAskedOrTwoBelow"/>), and decline the same integrand
+        /// deeper, so a <see langword="null"/> computed at one depth says nothing about a
+        /// shallower one. Held without the scope it was served there: <c>sec(x)^3</c>, tried and
+        /// declined inside another rule's search, then asked for directly and declined from the
+        /// cache in two milliseconds. And held with the top told only from the rest, a decline at
+        /// depth three was served at depth two: <c>1/((1 + u^2) u^(3/2) (a + b u))</c> was
+        /// answered on its own and declined after <c>1/(u^(3/2) (a + b u))/(1 + u^2)</c>, whose
+        /// search had declined <c>2/(w^2 (a + b w^2) (w^4 + 1))</c> at depth three, where the
+        /// rule for a power of the variable beside a block does not answer, and the second asks
+        /// it at depth two. The key carries the depth as far as a scope reaches,
+        /// <see cref="ScopeDepth"/>, and a lookup takes a decline only from its own depth and an
+        /// answer from any, since an antiderivative that was found is right wherever it is asked
+        /// for.
         /// </para>
         /// </remarks>
-        [System.ThreadStatic] private static Dictionary<(Entity, Entity.Variable, bool, bool), Entity?>? answered;
+        [System.ThreadStatic] private static Dictionary<(Entity, Entity.Variable, bool, int), Entity?>? answered;
 
         /// <summary>The settings <see cref="answered"/> was filled under.</summary>
         [System.ThreadStatic] private static object?[]? answeredUnder;
@@ -345,6 +353,17 @@ namespace AngouriMath.Functions.Algebra
         /// parts on a power of an inverse function, and the remainder of the step on that.
         /// </summary>
         internal static bool AnsweringTheQuestionAskedOrTwoBelow => descentDepth <= 3;
+
+        /// <summary>
+        /// The depth as far as a scope tells one depth from another: 1 for the question asked, 2
+        /// and 3 for the levels <see cref="AnsweringTheQuestionAskedOrOneBelow"/> and
+        /// <see cref="AnsweringTheQuestionAskedOrTwoBelow"/> reach, and 4 for every level past
+        /// them, where every scoped rule declines alike.
+        /// </summary>
+        private static int ScopeDepth => System.Math.Min(descentDepth, DeepestScope);
+
+        /// <summary>The deepest <see cref="ScopeDepth"/>.</summary>
+        private const int DeepestScope = 4;
 
         /// <summary>
         /// <paramref name="expr"/> integrated as a question in its own right rather than as a
@@ -485,7 +504,7 @@ namespace AngouriMath.Functions.Algebra
             // would otherwise be answered with, without the rule ever being reached to say that a
             // second pass could answer it.
             if (answer is not null && memo is not null && stamp is not null && SettingsState.StillHolds(stamp))
-                memo[(Normalized(expr, x), x, integrateByParts, true)] = answer;
+                memo[(Normalized(expr, x), x, integrateByParts, 1)] = answer;
             return answer;
         }
 
@@ -549,12 +568,13 @@ namespace AngouriMath.Functions.Algebra
             var into = answered;
             var stamp = answeredUnder;
 
-            var key = (expr, x, integrateByParts, AnsweringTheQuestionAsked);
+            var depth = ScopeDepth;
+            var key = (expr, x, integrateByParts, depth);
             if (into.TryGetValue(key, out var already))
                 return already;
-            var otherScope = (expr, x, integrateByParts, !AnsweringTheQuestionAsked);
-            if (into.TryGetValue(otherScope, out var elsewhere) && elsewhere is not null)
-                return elsewhere;
+            for (var other = 1; other <= DeepestScope; other++)
+                if (other != depth && into.TryGetValue((expr, x, integrateByParts, other), out var elsewhere) && elsewhere is not null)
+                    return elsewhere;
 
             // Whether the descent ran out *inside this computation*, which is the only truncation
             // that says anything about this key. The flag is one per thread, so it is cleared
