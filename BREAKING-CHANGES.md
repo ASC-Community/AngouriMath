@@ -595,6 +595,20 @@ wherever the cosine is negative; they are answered with the rest now
 | `"sqrt(c*sec(x))*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `e^(i x/2)` over its derivative |
 | `"(c*sec(x))^(5/2)/(a + i*a*tan(x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | the integrand times a power of `e^(i x)` |
 
+### A rational function of the tangent beside a power of `a + i a tan` is integrated in that sum
+
+**Answers where there were none.** `(A + B tan(c + d x))/sqrt(a + i a tan(c + d x))` and the rest of
+Rubi's 4.3.3.1 with a whole power of the tangent or cotangent beside `A + B tan` over a power of
+`a + i a tan` ran past the budget, whole powers and half-odd ones alike. With `S = a ± i a tan(z)`,
+`tan(z)` is `(S - a)/(± i a)` and `dz = c dS/(S (S - 2a))`, so each is a rational function of `S`
+beside a power of it, whose factors `S`, `S - 2a` and `S - a` have no imaginary root
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"tan(c + d*x)^2*(k + q*tan(c + d*x))/sqrt(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `sqrt(a + i a tan(c + d x))` and, piecewise in the sign of `a`, an arctangent or a logarithm of it |
+| `"cot(c + d*x)^2*(k + q*tan(c + d*x))/(a + i*a*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | powers and logarithms of `a + i a tan(c + d x)`, of `a - i a tan(c + d x)` and of `tan(c + d x)` |
+
 ### A rational function with complex coefficients is integrated through its real and imaginary parts
 
 **Answers where there were none.** `1/((1 + i x)^2 (1 + x^2))` was declined: the rational

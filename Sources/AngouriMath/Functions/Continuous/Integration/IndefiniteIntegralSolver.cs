@@ -23729,6 +23729,116 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A rational function of <c>tan(z)</c> beside a power of <c>S = a + c tan(z)</c> with
+        /// <c>c = ±i a</c>, below the bar or not whole, integrated in <c>S</c>: <c>tan(z)</c> is
+        /// <c>(S - a)/c</c>, and since <c>c^2 = -a^2</c>, <c>dS/dz = c sec(z)^2 = S (S - 2a)/c</c>, so
+        /// <c>dz = c dS/(S (S - 2a))</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>cot(c + d x)^3 (A + B tan(c + d x))/(a + i a tan(c + d x))^2</c> and the rest of
+        /// its 4.3.3.1 with a power of the tangent beside <c>(A + B tan)</c> over a power of
+        /// <c>a + i a tan</c> ran past the budget, whole powers and half-odd ones alike: under
+        /// <c>u = tan(z)</c> each is a rational function over <c>1 + i u</c> and <c>1 - i u</c> with
+        /// symbols in every coefficient. In <c>S</c> the factors are <c>S</c>, <c>S - 2a</c> and,
+        /// from a cotangent, <c>S - a</c>, with no imaginary root among them, and the same
+        /// integrands are a second or two; a half-odd power of <c>S</c> is a root of a linear.
+        /// </para>
+        /// <para>
+        /// Exact wherever the integrand is defined: the substitution is the identity
+        /// <c>sec(z)^2 = 1 + tan(z)^2</c> read in <c>S</c>, and the power of <c>S</c> is the
+        /// integrand's own. Only whole powers of the tangent and cotangent of <c>z</c> beside it,
+        /// and nothing else in x; a base standing only to positive whole powers is a polynomial in
+        /// the tangent, which the rules for those answer.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveInTheImaginarySumOfAConstantAndATangent(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            Entity? @base = null, constant = null, coefficient = null, argument = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(x) || node == @base)
+                    continue;
+                Entity sum = Number.Integer.Zero;
+                Entity? factor = null, inner = null;
+                var read = true;
+                foreach (var term in Sumf.LinearChildren(node))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        sum = sum == Number.Integer.Zero ? term : sum + term;
+                        continue;
+                    }
+                    if (factor is not null)
+                    {
+                        read = false;
+                        break;
+                    }
+                    Entity product = Number.Integer.One;
+                    foreach (var piece in Mulf.LinearChildren(term))
+                    {
+                        if (piece is Tanf(var y) && inner is null)
+                            inner = y;
+                        else if (!piece.ContainsNode(x))
+                            product = product == Number.Integer.One ? piece : product * piece;
+                        else
+                        {
+                            read = false;
+                            break;
+                        }
+                    }
+                    if (!read || inner is null)
+                    {
+                        read = false;
+                        break;
+                    }
+                    factor = product;
+                }
+                if (!read || factor is null || inner is null || sum == Number.Integer.Zero)
+                    continue;
+                var ratio = Functions.PartialFractions.Bare((factor / sum).InnerSimplified);
+                if (ratio.Evaled is not Number.Complex)
+                    ratio = Functions.PartialFractions.Bare(ratio.Simplify());
+                if (ratio.Evaled != MathS.i.Evaled && ratio.Evaled != (-MathS.i).Evaled)
+                    continue;
+                if (@base is not null)
+                    return null;
+                (@base, constant, coefficient, argument) = (node, sum, factor, inner);
+            }
+            if (@base is null || constant is null || coefficient is null || argument is null
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
+                || rate.Evaled is Number.Complex { IsZero: true })
+                return null;
+            // Below the bar, or to a power that is not whole: a positive whole power alone is a
+            // polynomial in the tangent.
+            var below = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr)).Denominator;
+            if (!below.Nodes.Contains(@base)
+                && !expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == @base && p is not Number.Integer))
+                return null;
+            var s = Variable.CreateUnique(expr, "s_imaginary_tangent");
+            var tangent = (s - constant) / coefficient;
+            var rewritten = expr.Replace(node => node == @base ? s : node).Replace(node => node switch
+            {
+                Tanf(var y) when y == argument => tangent,
+                Cotanf(var y) when y == argument => 1 / tangent,
+                _ => node,
+            });
+            if (rewritten.ContainsNode(x))
+                return null;
+            // No power that is not whole but of S itself: a root of the tangent is a root of
+            // `(S - a)/c` with `c` imaginary, and taken apart over the constant it changed its
+            // branch -- `cot(z)^(3/2) (A + B tan(z))/(a + i a tan(z))^2` and `tan(z)^(8/3)/(a + i a tan(z))`
+            // came back wrong at every point.
+            if (rewritten.Nodes.Any(node => node is Powf(var radicand, var power) && power is not Number.Integer && radicand != s))
+                return null;
+            var inS = (rewritten * coefficient / (s * (s - 2 * constant)) / rate).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inS, s, integrateByParts) is not { } inTermsOfS)
+                return null;
+            return inTermsOfS.Substitute(s, @base);
+        }
+
+        /// <summary>
         /// <c>A + i A tan(z)</c> is <c>A e^(i z)/cos(z)</c>, and <c>A + i A cot(z)</c> is
         /// <c>i A e^(-i z)/sin(z)</c> -- exactly, wherever the tangent is defined, since
         /// <c>cos(z) + i sin(z)</c> is <c>e^(i z)</c>. A power of one of them below the bar is

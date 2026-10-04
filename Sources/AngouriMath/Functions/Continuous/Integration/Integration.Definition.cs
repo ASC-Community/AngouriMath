@@ -675,6 +675,8 @@ namespace AngouriMath.Functions.Algebra
             // product and takes it apart, and so answers (c sec)^(5/2)/(a + i a tan)^(5/2) with the
             // wrong constant wherever the cosine is negative.
             if ((answer = IndefiniteIntegralSolver.SolveAPowerOfAnImaginaryTangentBesideAPowerOfTheSecant(expr, x, integrateByParts)) is { }) return answer;
+            // A rational function of the tangent beside a power of a + i a tan(z), in that sum.
+            if ((answer = IndefiniteIntegralSolver.SolveInTheImaginarySumOfAConstantAndATangent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAnImaginaryTangentAsAnExponential(expr, x, integrateByParts)) is { }) return answer;
             // And `A cos(z) + i A sin(z)`, which is `A e^(i z)`, where no rotation is real.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAnImaginarySumOfACosineAndASineAsAnExponential(expr, x, integrateByParts)) is { }) return answer;
