@@ -869,6 +869,8 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveSymbolicPowersOfOnePlusMinusASineThroughTheSine(expr, x, integrateByParts)) is { }) return answer;
             // And a half-odd power of a +- a sec(y), which is that square over cos(y): by the half-angle
             // tangent, in which the whole is rational beside one root.
+            // And `tan(y) tan(2y)` written `sec(2y) - 1` first, so that the rule reads one argument.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingATangentTimesThatOfItsDoubleThroughTheSecant(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant(expr, x, integrateByParts)) is { }) return answer;
             // And `a ± a cosh(y)` under a fractional power: `2a cosh(y/2)^2`, `-2a sinh(y/2)^2`.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare(expr, x, integrateByParts)) is { }) return answer;
@@ -877,6 +879,10 @@ namespace AngouriMath.Functions.Algebra
             // Several trigonometric arguments that are multiples of one linear with an offset or a
             // symbolic slope, written in that linear: before the substitution search, which reads
             // each function on its own.
+            // A cosine and a sine over a power of another such sum, through the denominator, its
+            // derivative and a constant, down to the reciprocal of the base: before the substitution
+            // search, which reads the quotient term by term.
+            if ((answer = IndefiniteIntegralSolver.SolveACosineAndASineOverAPowerOfAnother(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByWritingMultiplesOfOneLinearArgument(expr, x, integrateByParts)) is { }) return answer;
             // A constant out of a fractional power of a trigonometric factor: `sqrt(b sec(x))` is
             // `sqrt(b) sqrt(sec(x))` for a positive `b`, which meets the other powers of the
