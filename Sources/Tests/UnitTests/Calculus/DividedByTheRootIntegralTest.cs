@@ -65,5 +65,20 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("1/((a + b*x^2)^(9/2)*(1 + x^2))")]
         public void AHalfOddPowerOfASymbolicQuadratic(string integrand)
             => DifferentiatesBack(integrand, new[] { -1.3, -0.4, 0.3, 0.9, 1.7 }, ("a", 1.3), ("b", 0.7));
+
+        /// <summary>
+        /// Beside a power of x that is not one of x^n: <c>x^j</c> times a rational function of
+        /// <c>x^n</c> times <c>(a + b x^n)^(k - (j + 1)/n)</c> is <c>u^j</c> times the same in
+        /// <c>u</c>. Rubi's 1.1.3.4; each was declined. On both sides of zero, the cube root of a
+        /// negative being real.
+        /// </summary>
+        [Theory]
+        [InlineData("x/((a + b*x^3)^(2/3)*(c + d*x^3))")]
+        [InlineData("x^4/((a + b*x^3)^(2/3)*(c + d*x^3))")]
+        [InlineData("x^7/((a + b*x^3)^(2/3)*(c + d*x^3))")]
+        [InlineData("x^4*(a + b*x^3)^(1/3)/(c + d*x^3)")]
+        [InlineData("x/((1 + x^3)^(2/3)*(2 + x^3))")]
+        public void BesideAPowerOfX(string integrand)
+            => DifferentiatesBack(integrand, new[] { -2.7, -1.3, -0.6, 0.4, 1.3, 2.6 }, ("a", 2.3), ("b", 0.7), ("c", 1.3), ("d", 1.7));
     }
 }
