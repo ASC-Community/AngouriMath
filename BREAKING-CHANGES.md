@@ -577,6 +577,20 @@ that `sec(x)^2/(a + b sin(x))` is rational in them rather than declined at once
 | `"tan(x)^4/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 | `"csc(x)^2/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | `(tan(x/2)^3/12 + tan(x/2)/2 - 1/(4 tan(x/2)))/a` |
 
+### A tangent times that of its double is a secant less one
+
+**Answers where there were none.** `sec(2(a + b x))^2 sqrt(c tan(a + b x) tan(2(a + b x)))` was
+declined, with the rest of Rubi's 4.7.7 powers of `c tan(y) tan(2y)` beside the secant or cosine
+of `2y`, some after searches past the budget. `tan(y) tan(2y)` is `sec(2y) - 1`, and written so the
+integrand is in the one argument `2y`, which the half-angle tangent answers; the answer is exact
+where the integrand is real ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(2*(a + b*x))^2*sqrt(c*tan(a + b*x)*tan(2*(a + b*x)))".ToEntity().Integrate("x")` | `integral(...)` | `sgn(tan(a + b x))` times powers of `sqrt(1 - tan(a + b x)^2)` |
+| `"1/sqrt(c*tan(a + b*x)*tan(2*(a + b*x)))".ToEntity().Integrate("x")` | `integral(...)` | logarithms in `tan(a + b x)`, `sgn(tan(a + b x))` in front |
+| `"tan(x)*tan(2*x)".ToEntity().Integrate("x")` | `integral(...)` | `ln((1 + sin(2x))/(1 - sin(2x)))/4 - x` |
+
 ### A power of `a + i a tan` beside a power of the secant is integrated as an exponential
 
 **Answers where there were none.** `sqrt(a + i a tan(x))/sqrt(c sec(x))` is `sqrt(a/c) e^(i x/2)`
