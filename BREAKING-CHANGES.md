@@ -1756,6 +1756,24 @@ now, and a closed interval at one point meets the other in that point or in noth
 |---|---|---|
 | `"(3; 1) /\ [0; 5]".ToEntity().InnerSimplified` | `[0; 5]` — wrong | `{ }` |
 
+### A power of an exponential over a polynomial is integrated to the exponential integral
+
+**Answers where there were none.** `(F^(g (e + f x)))^n` with a symbol for `F` or `n` was read by no rule
+below a polynomial: `(F^x)^n/x` and Rubi's 2.2, `(a + b (F^(g (e + f x)))^n)^p/(c + d x)^m`, were
+declined. Its logarithmic derivative is the constant `n g f ln F`, so it is a constant times
+`e^(n g f ln(F) x)` wherever it is differentiable, and the answer is the exponential integral's with
+that constant written back as `(F^(g (e + f x)))^n e^(-n g f ln(F) x)`. It holds for every `F`: a
+negative one makes `(F^x)^n` differ from `F^(n x)` past each point where `F^x` crosses the negative
+axis, and the constant carries that. A whole power is `F^(n u)` exactly and is written so
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(F^x)^2/x".ToEntity().Integrate("x")` | `integral(...)` | `Ei(2 ln(F) x)` |
+| `"(F^x)^n/x".ToEntity().Integrate("x")` | `integral(...)` | `(F^x)^n e^(-n ln(F) x) Ei(n ln(F) x)` |
+| `"(a + b*(F^(g*(e + f*x)))^n)/(c + d*x)".ToEntity().Integrate("x")` | `integral(...)` | a logarithm and an exponential integral |
+| `"(a + b*(F^(g*(e + f*x)))^n)^3/(c + d*x)^3".ToEntity().Integrate("x")` | `integral(...)` | powers of `c + d x` and exponential integrals |
+
 ### An exponential of a multiple of a logarithm is integrated as the power it is
 
 `e^(k ln(q))` is `q^k` — the definition of the principal power, for every complex `q` other than

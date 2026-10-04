@@ -16016,6 +16016,66 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power of an exponential the flattening above leaves -- a symbol for the base or the
+        /// power, <c>(F^(g (e + f x)))^n</c> -- beside a polynomial below the bar. Its logarithmic
+        /// derivative is the constant <c>n g f ln F</c>, so it is <c>K e^(n g f ln(F) x)</c> with
+        /// <c>K</c> constant wherever it is differentiable; with a symbol for <c>K</c> the integrand
+        /// is one the exponential integral's rules read, and the answer is written back with
+        /// <c>K = (F^(g (e + f x)))^n e^(-n g f ln(F) x)</c>. A whole power is the exponential of
+        /// the product exactly, whatever the base, and is written so. Rubi's 2.2,
+        /// <c>(a + b (F^(g (e + f x)))^n)^p/(c + d x)^m</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </summary>
+        /// <remarks>
+        /// <c>(F^u)^n</c> is <c>F^(n u)</c> only where <c>F^u</c> is on the principal branch, which
+        /// it is for a positive <c>F</c> and need not be for a symbol; <c>K</c> carries the
+        /// difference, and the answer holds for every <c>F</c>. Only beside a polynomial below the
+        /// bar, where nothing else reads the power: above it, the rules for a polynomial times an
+        /// exponential answer it as written.
+        /// </remarks>
+        internal static Entity? SolveByWritingAPowerOfAnExponentialAsAMultipleOfOne(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            bool IsAnExponential(Entity node) => node is Powf(var b, var p) && !b.ContainsNode(x) && p.ContainsNode(x);
+            var powers = expr.Nodes.Where(node => node is Powf(Powf(var @base, var inner), var outer)
+                    && !@base.ContainsNode(x) && inner.ContainsNode(x) && !outer.ContainsNode(x)
+                    && !((@base == MathS.e || @base.Evaled is Number.Real { IsPositive: true }) && outer.Evaled is Number.Real))
+                .Distinct().ToList();
+            if (powers.Count == 0)
+                return null;
+            // A polynomial below the bar, or under a negative whole power.
+            if (!FactorsOfTheIntegrand(expr).Any(pair =>
+                    pair.Factor.ContainsNode(x) && !pair.Factor.Nodes.Any(IsAnExponential)
+                    && (pair.Underneath || pair.Factor is Powf(_, Number.Integer { IsNegative: true }))
+                    && TreeAnalyzer.TryGetPolynomial(pair.Factor is Powf(var raised, Number.Integer) ? raised : pair.Factor, x, out var read)
+                    && read.Keys.All(degree => degree.Sign >= 0)))
+                return null;
+            var back = new List<(Entity.Variable Constant, Entity Value)>();
+            var rewritten = expr;
+            foreach (var node in powers)
+            {
+                if (node is not Powf(Powf(var @base, var inner), var outer)
+                    || !TreeAnalyzer.TryGetPolyLinear(inner, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
+                    return null;
+                Entity replacement;
+                if (outer.Evaled is Number.Integer)
+                    replacement = MathS.Pow(@base, (outer * inner).InnerSimplified);
+                else
+                {
+                    var constant = Variable.CreateUnique(rewritten, "k_pow");
+                    var rate = (outer * slope * (@base == MathS.e ? Number.Integer.One : MathS.Ln(@base))).InnerSimplified;
+                    replacement = constant * MathS.Pow(MathS.e, rate * x);
+                    back.Add((constant, node * MathS.Pow(MathS.e, -rate * x)));
+                }
+                rewritten = rewritten.Replace(inside => inside == node ? replacement : inside);
+            }
+            if (Integration.ComputeAsAQuestionOfItsOwn(rewritten, x, integrateByParts) is not { } answer || answer.Nodes.Any(inside => inside is Integralf))
+                return null;
+            foreach (var (constant, value) in back)
+                answer = answer.Substitute(constant, value);
+            return answer;
+        }
+
+        /// <summary>
         /// An exponential of a multiple of a logarithm is a power of the argument:
         /// <c>e^(k ln(q))</c> is <c>q^k</c>, since <c>e^(k ln q)</c> is the definition of the
         /// principal power for every complex <c>q</c> other than zero. That is the spelling the
