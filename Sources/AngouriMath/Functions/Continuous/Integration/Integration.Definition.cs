@@ -633,6 +633,9 @@ namespace AngouriMath.Functions.Algebra
             // A power of an exponential with a positive base is the exponential of the product,
             // exactly, and only that spelling is one the exponential rules read.
             if ((answer = IndefiniteIntegralSolver.SolveByFlatteningAPowerOfAnExponential(expr, x, integrateByParts)) is { }) return answer;
+            // And any other power of an exponential beside a polynomial below the bar, as a constant
+            // multiple of an exponential wherever it is differentiable.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfAnExponentialAsAMultipleOfOne(expr, x, integrateByParts)) is { }) return answer;
             // An exponential of a quadratic in 1/L beside a power of L, onto the Gaussian under u = 1/L.
             if ((answer = IndefiniteIntegralSolver.SolveAGaussianInAReciprocal(expr, x)) is { }) return answer;
             // And a trigonometric function of the reciprocal of a linear beside a power of it, under u = 1/L.
@@ -658,6 +661,9 @@ namespace AngouriMath.Functions.Algebra
             // And either over several linears, split into partial fractions over them first, as the
             // trigonometric rule below splits.
             if ((answer = IndefiniteIntegralSolver.SolveAnExponentialOverSeveralLinears(expr, x)) is { }) return answer;
+            // And exponentials below the bar, where they are whole powers of one exponential and
+            // its powers alone are left below: `1/((c + d x)(a + a tanh(e + f x)))`.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialBelowTheBarBesideAPowerOfALinear(expr, x)) is { }) return answer;
             // And with sines and cosines beside the exponential, written as exponentials: each term
             // is then the exponential's, with a complex rate.
             if ((answer = IndefiniteIntegralSolver.SolveAnExponentialTimesATrigonometricOverLinears(expr, x)) is { }) return answer;
@@ -1030,6 +1036,10 @@ namespace AngouriMath.Functions.Algebra
             // same reciprocal: `1/(x^2 sqrt(Q))` is a polynomial over the root of the reversed
             // quadratic, which the rules for those answer.
             if ((answer = IndefiniteIntegralSolver.SolveByTheReciprocalBesideARootOfAQuadratic(expr, x, integrateByParts)) is { }) return answer;
+            // The binomial differential with a symbol in its coefficients, asked here rather than
+            // beside the one with numbers: the rules since then answer what they share with it
+            // more shortly, `1/(a - b x^4)^(1/4)` by two arctangents where this gives four terms.
+            if ((answer = IndefiniteIntegralSolver.SolveABinomialDifferentialWithSymbols(expr, x)) is { }) return answer;
             // A rational function of x and one cube root of a polynomial: no substitution
             // rationalises it, and the elementary ones are logarithms of `L - y` for linear L
             // whose cube agrees with the polynomial at the poles, found by an ansatz.
