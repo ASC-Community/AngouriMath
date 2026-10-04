@@ -85,7 +85,9 @@ namespace AngouriMath.Tests.Calculus
         /// above <c>a x = 1</c> is the product of two imaginary factors -- while the answer built
         /// for a real <c>u</c> is not its antiderivative: with <c>a = 3.1</c>, <c>c = 0.7</c> at
         /// <c>x = 0.59</c> its derivative was 14% off, and it shipped as an answer. Now it is
-        /// <c>NaN</c> there, which is no claim, and right where the condition holds.
+        /// <c>NaN</c> there, which is no claim, and right where the condition holds. Rubi's integrand
+        /// is written over each linear once before that step is reached
+        /// (<see cref="EachLinearWrittenOnceIntegralTest"/>), and is answered on both sides.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </summary>
         [Fact]
@@ -97,24 +99,57 @@ namespace AngouriMath.Tests.Calculus
             var integrand = "x * sqrt(c - a*c*x) / e^(3 * atanh(a*x))".ToEntity();
             var integral = integrand.Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
-            Assert.Contains("provided c - a * c * x >= 0", integral.Stringize());
             var pinned = integral.Substitute("C", 0).Substitute("a", 3.1).Substitute("c", 0.7);
             var derivative = pinned.Differentiate("x");
             var original = integrand.Substitute("a", 3.1).Substitute("c", 0.7);
-            // Inside the condition, a x < 1: the derivative is the integrand.
-            foreach (var at in new[] { 0.05, 0.17, 0.31 })
+            // On both sides of a x = 1: the integrand is real at 0.59 too, 3.1 * 0.59 being above 1.
+            foreach (var at in new[] { 0.05, 0.17, 0.31, 0.59, 0.9 })
             {
                 var got = derivative.Substitute("x", at).EvalNumerical();
                 var want = original.Substitute("x", at).EvalNumerical();
-                Assert.False(got.IsNaN, $"no answer at x = {at}, inside the condition");
+                Assert.True(Math.Abs((double)want.ImaginaryPart) < 1e-12, $"the integrand at x = {at} is {want}, not real");
+                Assert.False(got.IsNaN, $"no answer at x = {at}");
                 Assert.True(Math.Abs((double)(got - want).RealPart) < 1e-9 * Math.Max(1, Math.Abs((double)want.RealPart)),
                     $"d/dx of the antiderivative is {got} at x = {at}, where the integrand is {want}");
             }
-            // Beyond it the integrand is real, 3.1 * 0.59 being above 1, and the answer claims
-            // nothing rather than something wrong.
-            var outside = original.Substitute("x", 0.59).EvalNumerical();
-            Assert.True(Math.Abs((double)outside.ImaginaryPart) < 1e-12, $"the integrand at x = 0.59 is {outside}, not real");
-            Assert.True(derivative.Substitute("x", 0.59).Evaled.IsNaN, "the answer claims a derivative outside its condition");
+        }
+
+        /// <summary>
+        /// <c>e^artanh(a x) sqrt(c - a c x)</c> is real past <c>a x = 1</c> as well, where both
+        /// factors are imaginary, and there it is the negative of what it is inside. Through the
+        /// quotient of the logarithm's linears the answer was the one for inside, given
+        /// everywhere, so past <c>a x = 1</c> it was wrong by its sign: the check at sampled
+        /// points skipped the points where the derivative has no value, and those were the
+        /// points where it was wrong. Now the answer holds where it is given and says where that is.
+        /// https://github.com/asc-community/AngouriMath/issues/1655
+        /// </summary>
+        [Fact]
+        public void AnExponentialOfAnInverseTangentBesideTheRootSaysWhereItHolds()
+        {
+            var integrand = "e^atanh(a*x)*sqrt(c - a*c*x)".ToEntity();
+            var integral = integrand.Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            var pinned = integral.Substitute("C", 0).Substitute("a", 1.37).Substitute("c", 3.71);
+            var derivative = pinned.Differentiate("x");
+            var original = integrand.Substitute("a", 1.37).Substitute("c", 3.71);
+            // Inside, a x < 1: the derivative is the integrand.
+            foreach (var at in new[] { 0.29, -0.61 })
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.True(Math.Abs((double)(got - want).RealPart) < 1e-9 * Math.Max(1, Math.Abs((double)want.RealPart)),
+                    $"d/dx of the antiderivative is {got} at x = {at}, where the integrand is {want}");
+            }
+            // Past it the integrand is real, and the answer is either right or claims nothing.
+            foreach (var at in new[] { 1.43, 3.17 })
+            {
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.True(Math.Abs((double)want.ImaginaryPart) < 1e-12, $"the integrand at x = {at} is {want}, not real");
+                var got = derivative.Substitute("x", at).Evaled;
+                Assert.True(got.IsNaN || got is Entity.Number.Complex number
+                    && Math.Abs((double)(number - want).RealPart) < 1e-9 * Math.Max(1, Math.Abs((double)want.RealPart)),
+                    $"d/dx of the antiderivative is {got} at x = {at}, where the integrand is {want}");
+            }
         }
 
         /// <summary>
@@ -153,12 +188,13 @@ namespace AngouriMath.Tests.Calculus
         /// is negative. <c>sqrt(cos(x))/sqrt(1 + sec(x))</c> is real where the cosine is negative,
         /// two of its roots imaginary there; under <c>t = cos(x)</c> and <c>u = sqrt(t)</c> the
         /// product of roots below the bar was written with <c>sqrt(u^4) = u^2</c>, and the answer
-        /// was negated wherever the cosine is negative. Rubi's 4.5.1.2, and the same in <c>t</c>.
+        /// was negated wherever the cosine is negative. Rubi's 4.5.1.2. The same in <c>t</c>,
+        /// <c>sqrt(t)/(sqrt(1/t + 1) sqrt(1 - t^2))</c>, is written over each linear once and
+        /// answered on both sides (<see cref="EachLinearWrittenOnceIntegralTest"/>).
         /// https://github.com/asc-community/AngouriMath/issues/1581
         /// </summary>
         [Theory]
         [InlineData("sqrt(cos(x))/sqrt(1 + sec(x))", "provided cos(x) >= 0", new[] { 0.3, 0.9, -0.7 }, 2.4)]
-        [InlineData("sqrt(x)/(sqrt(1/x + 1)*sqrt(1 - x^2))", "provided x >= 0", new[] { 0.2, 0.5, 0.8 }, -0.6)]
         public void AnEvenRootTakenRealWithoutASignSaysWhereItHolds(string written, string condition, double[] inside, double outsideAt)
         {
             var integrand = written.ToEntity();

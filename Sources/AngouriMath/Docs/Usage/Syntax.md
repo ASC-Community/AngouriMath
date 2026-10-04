@@ -328,8 +328,9 @@ undefined at `0`; `Si(+oo)` is `pi / 2` and `Ci(+oo)` is `0`.
 
 **Calculus** — `derivative(expr, var, order)`, `integral(expr, var)`,
 `integral(expr, var, from, to)`, `limit(expr, var, dest)`, `limitleft(...)`, `limitright(...)`;
-`max(expr, var in set)` and `min` for the extremum of an expression over a set, `argmax` and
-`argmin` for the set of points where it is taken — `max(a, b)` of two values is still the larger.
+`sum(expr, var in set)` for a sum over a set; `max(expr, var in set)` and `min` for the extremum of
+an expression over a set, `argmax` and `argmin` for the set of points where it is taken —
+`max(a, b)` of two values is still the larger.
 `min(S)` with one argument that is a set is its least member, `min(x, x in S)`, and the range
 may carry conditions, `min(x, x in PP and x > 14)` being the least of `{ x in PP : x > 14 }`;
 decided for `PP`, `ZZ+`, `ZZ*` and their cuts by an interval or bounds (`min(ZZ+)` is `1`,
@@ -486,6 +487,18 @@ the index, since a product has no linearity to take a sum of terms apart with. S
 at `c = 0`, where the empty product is `1`. Where the index appears in the body the lower bound
 must be a concrete integer of at least one, `factorial` having no value at the negative integers;
 `product(k, k, 0, n)` therefore stays as written.
+
+`sum(body, name in set)` is a sum **over a set**: the body at each member of the set, each member
+counted once, added up. `sum(x^2, x in {1, 2, 3})` is `14`. A sum over the roots of a polynomial is a
+sum over its set of roots, `sum(w^2, w in { w : w^3 - 2w + 1 = 0 })`, which is `4`, and it needs no
+index and no order, a set having neither. The terms are added up where the set is finite and its
+members are known: a listed set of numbers, or roots that are rational, roots of a quadratic or roots
+of a binomial, which is checked by counting them against the polynomial's number of distinct roots.
+The roots of an irreducible cubic or quartic are not written out in radicals, which read no more
+simply than the sum. A set whose members might coincide,
+such as `{ a, b }`, and a set that is not finite are left as written. Evaluated to a number, roots
+the solver cannot write are found numerically, all of them to the working precision or none, so
+`sum(w^5, w in { w : w^5 + w + 3 = 0 })` evaluates to `-15`.
 
 **The declared name means the name, and only inside the operator that declares it.** Two names
 show this, because both mean something else in this language:

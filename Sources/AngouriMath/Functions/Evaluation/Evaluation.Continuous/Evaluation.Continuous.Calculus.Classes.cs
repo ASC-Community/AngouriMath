@@ -208,6 +208,25 @@ namespace AngouriMath
                 => Functions.ExtremumOverSet.Points(Expression, Var, Over, largest: false) ?? this;
         }
 
+        partial record SumOverSetf
+        {
+            /// <summary>
+            /// A sum over a set is a well-formed expression whatever the set, as
+            /// <see cref="Summationf"/> is whatever its bounds; adding its terms up is an
+            /// evaluation, not a claim about where it is defined.
+            /// </summary>
+            private protected override Entity IntrinsicCondition => Boolean.True;
+            /// <inheritdoc/>
+            /// <remarks>
+            /// Where the terms are not added up, the sum is still written in its simplest parts, so
+            /// that a derivative taken term by term reads as one: <c>2 y w</c> and not
+            /// <c>0 * y ^ 2 + 2 * y ^ 1 * 1 * w</c>.
+            /// </remarks>
+            protected override Entity InnerSimplify(bool isExact)
+                => Functions.SumOverSet.Value(Expression, Var, Over, isExact)
+                    ?? New(Expression.InnerSimplified, Var, Over.InnerSimplified);
+        }
+
         // TODO: rewrite this part too
         public partial record Summationf
         {

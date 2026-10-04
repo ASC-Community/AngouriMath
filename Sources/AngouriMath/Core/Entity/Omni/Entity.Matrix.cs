@@ -311,6 +311,71 @@ namespace AngouriMath
                 );
             private LazyPropertyA<Entity?> determinant;
 
+            /// <summary>
+            /// The characteristic polynomial of this square matrix, <c>det(x I - A)</c> in the
+            /// variable <paramref name="x"/>, written as a polynomial in it with each coefficient
+            /// simplified: for <c>[[a, b], [c, d]]</c> it is <c>x^2 - (a + d) x + a d - b c</c>.
+            /// <see langword="null"/> where the matrix is not square, or where <paramref name="x"/>
+            /// already occurs in it, since then the polynomial would not be one in <paramref name="x"/>.
+            /// </summary>
+            /// <remarks>
+            /// <para>
+            /// The monic one: its leading coefficient is <c>1</c>, the next is minus the trace and
+            /// the constant term is <c>(-1)^n det(A)</c>. <c>det(A - x I)</c>, the other convention,
+            /// is <c>(-1)^n</c> times it; the monic one is the one the Cayley–Hamilton theorem and
+            /// the minimal polynomial are stated with.
+            /// </para>
+            /// <para>
+            /// It is the <see cref="Determinant"/> of <c>x I - A</c>, which divides by nothing: its
+            /// entries are polynomials in <c>x</c> and the entries of <c>A</c>, and Bareiss'
+            /// elimination and Laplace expansion both leave a polynomial. Gaussian elimination would
+            /// leave its pivots, which are polynomials in <c>x</c>, as divisions, and the
+            /// characteristic polynomial -- defined everywhere -- would have no value where one of
+            /// them vanished. <a href="https://github.com/asc-community/AngouriMath/issues/381">#381</a>
+            /// </para>
+            /// </remarks>
+            /// <example>
+            /// <code>
+            /// Console.WriteLine(MathS.Matrix(new Entity[,] { { 1, 2 }, { 3, 4 } }).CharacteristicPolynomial("x"));
+            /// </code>
+            /// Prints
+            /// <code>
+            /// x ^ 2 - 5 * x - 2
+            /// </code>
+            /// </example>
+            public Entity? CharacteristicPolynomial(Variable x)
+            {
+                if (!IsSquare || ContainsNode(x))
+                    return null;
+                var shifted = MathS.Matrix(RowCount, ColumnCount, (row, column) => (row == column ? (Entity)x : 0) - this[row, column]);
+                if (shifted.Determinant is not { } shiftedDeterminant)
+                    return null;
+                // Read off power by power, so that each coefficient is simplified on its own
+                // rather than the whole left as the determinant's expansion wrote it.
+                var byPower = Functions.Algebra.AnalyticalSolving.PolynomialSolver
+                    .GatherMonomialInformation<PeterO.Numbers.EInteger, Functions.TreeAnalyzer.PrimitiveInteger>(
+                        Sumf.LinearChildren(shiftedDeterminant.Expand()), x);
+                if (byPower is null)
+                    return shiftedDeterminant;
+                Entity? polynomial = null;
+                foreach (var power in byPower.Keys.OrderByDescending(static power => power))
+                {
+                    var coefficient = byPower[power].Simplify();
+                    if (coefficient == 0)
+                        continue;
+                    Entity monomial = power.IsZero ? 1 : power.Equals(PeterO.Numbers.EInteger.One) ? x : MathS.Pow(x, Number.Integer.Create(power));
+                    // A term whose coefficient reads more simply negated is subtracted, as it is
+                    // written by hand: x^2 - 5 x, and x^2 - (a + d) x rather than + (-a - d) x.
+                    var negated = (-coefficient).Simplify();
+                    var subtracted = polynomial is not null
+                        && (coefficient is Number.Real { EDecimal.IsNegative: true } || negated.Complexity < coefficient.Complexity);
+                    var magnitude = subtracted ? negated : coefficient;
+                    var term = magnitude == 1 ? monomial : power.IsZero ? magnitude : magnitude * monomial;
+                    polynomial = polynomial is null ? term : subtracted ? polynomial - term : polynomial + term;
+                }
+                return polynomial ?? 0;
+            }
+
             /// <summary>Returns an inverse matrix if it exists</summary>
             public Matrix? Inverse => inverse.GetValue(static @this =>
             {

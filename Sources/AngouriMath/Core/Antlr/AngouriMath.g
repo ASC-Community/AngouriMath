@@ -571,7 +571,7 @@ atom returns[Entity value]
     | 'limit(' args = function_arguments ')' { Assert("limit", 3, $args.list.Count); $value = MathS.Limit($args.list[0], $args.list[1], $args.list[2]); }
     | 'limitleft(' args = function_arguments ')' { Assert("limitleft", 3, $args.list.Count); $value = MathS.Limit($args.list[0], $args.list[1], $args.list[2], AngouriMath.Core.ApproachFrom.Left); }
     | 'limitright(' args = function_arguments ')' { Assert("limitright", 3, $args.list.Count); $value = MathS.Limit($args.list[0], $args.list[1], $args.list[2], AngouriMath.Core.ApproachFrom.Right); }
-    | 'sum(' args = function_arguments ')' { Assert("sum", 4, $args.list.Count); $value = MathS.Sum($args.list[0], $args.list[1], $args.list[2], $args.list[3]); }
+    | 'sum(' args = function_arguments ')' { if ($args.list.Count == 2 && AngouriMath.Functions.ExtremumOverSet.AsRange($args.list[1]) is var (sumVar, sumOver)) $value = MathS.Sum($args.list[0], sumVar, sumOver); else { Assert("sum", 4, $args.list.Count); $value = MathS.Sum($args.list[0], $args.list[1], $args.list[2], $args.list[3]); } }
     | 'product(' args = function_arguments ')' { Assert("product", 4, $args.list.Count); $value = MathS.Product($args.list[0], $args.list[1], $args.list[2], $args.list[3]); }
     | 'signum(' args = function_arguments ')' { Assert("signum", 1, $args.list.Count); $value = MathS.Signum($args.list[0]); }
     | 'sgn(' args = function_arguments ')' { Assert("sgn", 1, $args.list.Count); $value = MathS.Signum($args.list[0]); }

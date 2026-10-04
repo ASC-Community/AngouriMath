@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+  The Model Context Protocol server that `amcli mcp` runs: newline-delimited JSON-RPC over stdio,
+  exposing the library to an agent as tools, prompts and resources. A library rather than a
+  program so that the terminal's tool is the one thing a user installs; Server.Run is the entry.
+  It builds against the library in this repository, so a change to the parser or to an answer
+  the server's selftest or its tests rely on fails here rather than after a release.
+  https://github.com/asc-community/AngouriMath/issues/1649
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AngouriMath.Mcp</RootNamespace>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Shipped inside the terminal's tool package, not as a package of its own. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="McpUnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../AngouriMath/AngouriMath.csproj" />
+  </ItemGroup>
+
+</Project>

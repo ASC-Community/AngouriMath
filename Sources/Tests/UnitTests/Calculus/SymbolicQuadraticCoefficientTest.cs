@@ -34,6 +34,7 @@ namespace AngouriMath.Tests.Calculus
     /// testing the simplifier's reach rather than the integrator's answer.
     /// </para>
     /// </remarks>
+    [Trait("Area", "Calculus")]
     public sealed class SymbolicQuadraticCoefficientTest
     {
         private const double RelativeTolerance = 1e-8;

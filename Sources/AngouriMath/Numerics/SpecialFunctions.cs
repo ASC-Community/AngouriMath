@@ -381,6 +381,120 @@ namespace AngouriMath.Numerics
         }
 
         /// <summary>
+        /// <c>x!</c>, the gamma function one along. At a whole number up to 170 it is the exact
+        /// factorial rounded once, and past 170, where a double cannot hold it, it is infinite. At a
+        /// negative whole number, one of the gamma function's poles, it is NaN, as the interpreter's
+        /// is. Elsewhere it is Lanczos's approximation with <c>g = 7</c> and nine terms, the one the
+        /// compiler has always used. Its <c>t^(z + 1/2) e^(-t)</c> is taken in logarithms, so that
+        /// it overflows only where the value does: the power alone passed the largest double just past
+        /// 141, where the factorial is about <c>2e243</c>, and the compiled factorial was NaN from
+        /// there to 170.
+        /// https://github.com/asc-community/AngouriMath/issues/1607
+        /// </summary>
+        public static NumericsComplex Factorial(NumericsComplex z)
+        {
+            if (z.Imaginary == 0)
+                return Factorial(z.Real);
+            if (IsNaN(z) || IsInfinite(z))
+                return NaN;
+            return Gamma(new NumericsComplex(z.Real + 1, z.Imaginary));
+        }
+
+        public static double Factorial(double x)
+        {
+            if (double.IsNaN(x) || double.IsNegativeInfinity(x))
+                return double.NaN;
+            if (double.IsPositiveInfinity(x))
+                return double.PositiveInfinity;
+            if (x == Math.Floor(x))
+                return x < 0 ? double.NaN : x <= 170 ? factorials[(int)x] : double.PositiveInfinity;
+            return Gamma(x + 1);
+        }
+
+        /// <summary><c>0!</c> to <c>170!</c>, each the exact integer rounded once to a double.</summary>
+        [AngouriMath.Core.ConstantField] private static readonly double[] factorials = ExactFactorials();
+
+        private static double[] ExactFactorials()
+        {
+            var table = new double[171];
+            var factorial = PeterO.Numbers.EInteger.One;
+            for (var n = 0; n <= 170; n++)
+            {
+                if (n > 0)
+                    factorial *= n;
+                table[n] = PeterO.Numbers.EFloat.FromEInteger(factorial).ToDouble();
+            }
+            return table;
+        }
+
+        [AngouriMath.Core.ConstantField] private static readonly double[] lanczos = {
+            0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+            771.32342877765313, -176.61502916214059, 12.507343278686905,
+            -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7 };
+
+        private static double Gamma(double x)
+        {
+            // The reflection formula below 1/2.
+            if (x < 0.5)
+                return Math.PI / (Math.Sin(Math.PI * x) * Gamma(1 - x));
+            x -= 1;
+            var sum = lanczos[0];
+            for (var i = 1; i < 9; i++)
+                sum += lanczos[i] / (x + i);
+            var t = x + 7.5;
+            return Math.Exp((x + 0.5) * Math.Log(t) - t + Math.Log(Math.Sqrt(2 * Math.PI) * sum));
+        }
+
+        /// <summary>
+        /// The gamma function off the real line, as the exponential of its logarithm, so that it
+        /// overflows and underflows only where the value does. The reflection formula
+        /// <c>pi/(sin(pi z) gamma(1 - z))</c> is taken in logarithms too: far from the real line
+        /// <c>sin(pi z)</c> overflows where the value it divides is tiny, and it made a NaN.
+        /// </summary>
+        private static NumericsComplex Gamma(NumericsComplex z)
+            => z.Real < 0.5
+                ? ExpTimes(Math.Log(Math.PI) - LogSine(Math.PI * z) - LogGamma(1 - z), 1)
+                : ExpTimes(LogGamma(z), 1);
+
+        /// <summary>A logarithm of the gamma function for <c>Re z &gt;= 1/2</c>, by Lanczos's approximation.</summary>
+        private static NumericsComplex LogGamma(NumericsComplex z)
+        {
+            z -= 1;
+            NumericsComplex sum = lanczos[0];
+            for (var i = 1; i < 9; i++)
+                sum += lanczos[i] / (z + i);
+            var t = z + 7.5;
+            return (z + 0.5) * NumericsComplex.Log(t) - t + NumericsComplex.Log(Math.Sqrt(2 * Math.PI) * sum);
+        }
+
+        /// <summary>
+        /// A logarithm of <c>sin w</c>. Past <c>|Im w| = 20</c> one of <c>e^(i w)</c> and
+        /// <c>e^(-i w)</c> in <c>sin w = (e^(i w) - e^(-i w))/(2 i)</c> is below <c>1e-17</c> of the
+        /// other. Its logarithm is then written out, where <c>sin w</c> itself would overflow.
+        /// </summary>
+        private static NumericsComplex LogSine(NumericsComplex w)
+        {
+            if (Math.Abs(w.Imaginary) < 20)
+                return NumericsComplex.Log(NumericsComplex.Sin(w));
+            // (i/2) e^(-i w) above the real line, and -(i/2) e^(i w) below it.
+            return w.Imaginary > 0
+                ? new NumericsComplex(w.Imaginary - Math.Log(2), Math.PI / 2 - w.Real)
+                : new NumericsComplex(-w.Imaginary - Math.Log(2), w.Real - Math.PI / 2);
+        }
+
+        /// <summary>
+        /// Euler's totient at a whole number, 0 at one that is not positive, as the interpreter has
+        /// it, and NaN at any other number, where the interpreter's is NaN too. The compiler
+        /// truncated a fraction to the whole number below it, so <c>phi(2.5)</c> was <c>phi(2)</c>.
+        /// Past <c>long</c>'s range it is NaN: the interpreter's totient cannot go there either.
+        /// https://github.com/asc-community/AngouriMath/issues/1607
+        /// </summary>
+        public static NumericsComplex Phi(NumericsComplex z) => z.Imaginary == 0 ? Phi(z.Real) : NaN;
+
+        public static double Phi(double x)
+            => x == Math.Floor(x) && x >= long.MinValue && x < long.MaxValue ? ((long)x).Phi() : double.NaN;
+
+        /// <summary>
         /// Half of <paramref name="value"/>, part by part: dividing a complex number by 2 multiplies it
         /// by the complex number 2, and an infinite part times the other's zero makes a NaN.
         /// </summary>

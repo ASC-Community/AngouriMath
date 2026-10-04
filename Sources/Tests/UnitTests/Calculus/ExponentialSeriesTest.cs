@@ -17,6 +17,7 @@ namespace AngouriMath.Tests.Calculus
     /// https://github.com/asc-community/AngouriMath/issues/1212, question I.1: a summation to
     /// +oo of a polynomial times a power over a factorial of the index is a closed form in e.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class ExponentialSeriesTest
     {
         private static void AgreesTo(string expected, Entity actual, int digits = 25)

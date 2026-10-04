@@ -23,6 +23,7 @@ namespace AngouriMath.Tests.Calculus
     /// Every answer is checked by differentiating it back and comparing at points: what
     /// matters is that it is an antiderivative, not what form it is written in.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class LinearityBeforeByPartsTest
     {
         /// <summary>

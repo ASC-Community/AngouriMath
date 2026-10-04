@@ -17,6 +17,7 @@ namespace AngouriMath.Tests.Core
     /// <c>a divides b</c>: the statement that <c>b</c> is a whole multiple of <c>a</c>, as a node
     /// of its own. https://github.com/asc-community/AngouriMath/issues/1212
     /// </summary>
+    [Trait("Area", "Core")]
     public sealed class DividesTest
     {
         [Theory]

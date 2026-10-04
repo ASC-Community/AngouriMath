@@ -13,6 +13,7 @@ using Xunit;
 
 namespace AngouriMath.Tests.Core.Transformations
 {
+    [Trait("Area", "Core")]
     public sealed class MatchedRuleTryEMatchApplyTest
     {
         private static readonly System.Func<Entity, double> Cost = AngouriMath.Core.CostModel.Default.Cost;

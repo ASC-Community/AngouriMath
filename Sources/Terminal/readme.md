@@ -27,6 +27,41 @@ To uninstall it, run
 dotnet tool uninstall --global AngouriMath.Terminal
 ```
 
+## One command, from a script
+
+With a command after it, `amcli` answers once and exits, without opening the terminal or starting
+F#, so it can sit in a pipe or a script:
+
+```
+$ amcli simp "sin(x)^2 + cos(x)^2"
+1
+$ amcli solve x "x^2 - 1 = 0"
+1
+-1
+$ echo "1 + x^2" | amcli diff x
+2 * x
+```
+
+The commands are `eval`, `simp`, `fsimp`, `diff`, `solve`, `sub`, `latex` and `info`, and
+`amcli help` says what each takes. `info` describes an expression: its variables, the derivative
+and the roots for each, and its stationary points, each classified by the second derivative
+test. An argument written as `_`, or left out, is read from stdin. The exit code
+is 0 for an answer, 1 when the input does not parse or cannot be answered, and 2 for a command
+that does not exist or is missing an argument. These are the commands of the earlier standalone
+command-line tool, with the same names and argument order.
+
+## For an agent, over MCP
+
+`amcli mcp` serves the library to an LLM agent over the Model Context Protocol, as JSON-RPC on
+stdin and stdout. Register it with a client by naming `amcli` and the argument `mcp`:
+
+```
+claude mcp add angourimath -- amcli mcp
+```
+
+`amcli mcp --selftest` checks the install. [`Sources/MCP`](../MCP/README.md) says what the server
+offers and how it is built.
+
 
 ## Earlier results
 

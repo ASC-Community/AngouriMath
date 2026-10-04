@@ -40,7 +40,15 @@ jobs:
     - name: Test if not to send
       if: ${{ matrix.os != 'windows-latest' }}
       run: |
-        dotnet test "Sources/Tests/UnitTests" -c Release -l GitHubActions /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+        dotnet test "Sources/Tests/UnitTests" -c Release -l GitHubActions -l "trx;LogFileName=results.trx" --results-directory "Sources/Tests/UnitTests/TestResults" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+
+    # Where the suite's time goes, by the Area trait every test class carries, written to the
+    # job's summary. One leg is enough to see the breakdown, and running the tool builds the
+    # library once more. https://github.com/asc-community/AngouriMath/issues/1183
+    - name: 'Time by area'
+      if: ${{ always() && matrix.os == 'ubuntu-latest' }}
+      run: dotnet run AreaTimes
+      working-directory: Sources/Utils/Utils
 
     - name: Test if to send
       if: ${{ matrix.os == 'windows-latest' }}

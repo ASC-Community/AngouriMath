@@ -33,6 +33,7 @@ namespace AngouriMath.Tests.Common
     /// change which value is taken.
     /// </para>
     /// </remarks>
+    [Trait("Area", "Common")]
     public sealed class PiecewiseReachabilityTest
     {
         [Theory]

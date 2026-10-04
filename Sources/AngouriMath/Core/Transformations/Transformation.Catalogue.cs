@@ -391,9 +391,10 @@ namespace AngouriMath.Core.Transformations
         /// </para>
         /// <para>
         /// Measured over 834 generated expressions and 2738 ordered pairs by
-        /// <c>work/canoncheck</c>: <b>idempotent, and independent of the order the operands
-        /// were written in</b>, where ordering without the leading normalisation fails 21 of
-        /// the first and <see cref="InnerSimplification"/> alone fails 2024 of the second.
+        /// <c>Sources/Tests/Harnesses/CanonCheck</c>: <b>idempotent, and independent of the order
+        /// the operands were written in</b>, where ordering without the leading normalisation
+        /// fails 18 of the first and <see cref="InnerSimplification"/> alone fails 2024 of the
+        /// second. Its <c>canoncheck-baseline.tsv</c> lists every one.
         /// </para>
         /// <para>
         /// <b>What it is not.</b> It is not a canonical form for the language — no such thing

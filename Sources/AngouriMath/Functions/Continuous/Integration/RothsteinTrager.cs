@@ -39,8 +39,10 @@ namespace AngouriMath.Functions.Algebra
     /// <c>a ± w</c> with <c>w^2</c> rational, and the gcd is computed in <c>Q(w)</c>: for
     /// <c>w</c> real the pair is two logarithms with a root in them, and for <c>w = i b</c> it
     /// is <c>a ln(P^2 + b^2 Q^2) + b LogToAtan(P, b Q)</c>, Rioboo's continuous arctangent
-    /// form. A factor of higher degree would put the residues in a field this does not do
-    /// arithmetic in, and is declined.
+    /// form. A factor of higher degree puts the residues in a field this does no arithmetic in,
+    /// and those logarithms are written as a sum over the roots of the factor of the denominator
+    /// they belong to, <c>sum(A(r)/D'(r) ln(x - r), r in { r : E(r) = 0 })</c>
+    /// (https://github.com/asc-community/AngouriMath/issues/1285).
     /// </para>
     /// <para>
     /// Bronstein, <i>Symbolic Integration I</i>, §2.2 (HermiteReduce), §2.5
@@ -64,8 +66,8 @@ namespace AngouriMath.Functions.Algebra
         /// <summary>
         /// The integral of <paramref name="numerator"/> over <paramref name="denominator"/>,
         /// both polynomials in <paramref name="x"/> with rational coefficients and the fraction
-        /// proper; <see langword="null"/> where they are not, or where a residue lies in a field
-        /// of degree above two.
+        /// proper; <see langword="null"/> where they are not, or where the answer does not
+        /// differentiate back to the integrand at the sampled points.
         /// </summary>
         internal static Entity? Integrate(Entity numerator, Entity denominator, Variable x)
         {
@@ -148,23 +150,54 @@ namespace AngouriMath.Functions.Algebra
             if (SquareFree(resultantPolynomial) is not { } residueParts)
                 return null;
 
-            // Every residue field first, and the residues only then: a residue in a field of
-            // degree above two declines the whole, and the conjugate pair of a quadratic factor
-            // beside it was twelve seconds of gcds over the extension before the quartic factor
-            // was reached and declined it.
-            var factored = new List<(IReadOnlyList<SquareFreeDecomposition.SquareFreePart> Factors, int Multiplicity)>();
+            // Every residue field first, and the residues only then. A residue in a field of degree
+            // above two is written as a sum over roots, below, and where there is one, every
+            // residue that is not rational goes into that sum with it: the conjugate pair of a
+            // quadratic factor beside a quartic one was twelve seconds of gcds over the extension,
+            // and a sum over roots needs no arithmetic in any extension at all.
+            var factors = new List<(IReadOnlyList<SquareFreeDecomposition.SquareFreePart> Factors, int Multiplicity)>();
             foreach (var part in residueParts)
             {
-                var factors = PolynomialFactorization.FactorPrimitive(ToInteger(part.Factor).PrimitivePart());
-                if (factors is null || factors.Any(irreducible => irreducible.Factor.Degree > 2))
+                if (PolynomialFactorization.FactorPrimitive(ToInteger(part.Factor).PrimitivePart()) is not { } irreducibles)
                     return null;
-                factored.Add((factors, part.Multiplicity));
+                factors.Add((irreducibles, part.Multiplicity));
+            }
+            var overRoots = factors.Any(part => part.Factors.Any(irreducible => irreducible.Factor.Degree > 2));
+            // Only once nothing else has answered the question: see
+            // Integration.SumsOverRootsAllowed. Until then this declines, as it always did.
+            if (overRoots && !Integration.SumsOverRootsAllowed)
+            {
+                Integration.ASumOverRootsWouldAnswer = true;
+                return null;
+            }
+            var factored = new List<(IReadOnlyList<SquareFreeDecomposition.SquareFreePart> Factors, int Multiplicity)>();
+            var summed = RationalPolynomial.One;
+            var summedRoots = 0;
+            foreach (var (irreducibles, multiplicity) in factors)
+            {
+                if (!overRoots)
+                {
+                    factored.Add((irreducibles, multiplicity));
+                    continue;
+                }
+                factored.Add((irreducibles.Where(irreducible => irreducible.Factor.Degree == 1).ToList(), multiplicity));
+                foreach (var irreducible in irreducibles.Where(irreducible => irreducible.Factor.Degree > 1))
+                {
+                    summed = summed.Multiply(RationalPolynomial.FromInteger(irreducible.Factor));
+                    summedRoots += irreducible.Factor.Degree * multiplicity;
+                }
             }
             Entity total = Integer.Create(0);
-            foreach (var (factors, multiplicity) in factored)
+            if (overRoots)
             {
-                var part = (Multiplicity: multiplicity, Factors: factors);
-                foreach (var irreducible in factors)
+                if (OverTheRoots(summed, summedRoots, above, below, derivative, x) is not { } sum)
+                    return null;
+                total = sum;
+            }
+            foreach (var (kept, multiplicity) in factored)
+            {
+                var part = (Multiplicity: multiplicity, Factors: kept);
+                foreach (var irreducible in kept)
                 {
                     var f = irreducible.Factor;
                     Entity? term = f.Degree switch
@@ -179,6 +212,42 @@ namespace AngouriMath.Functions.Algebra
                 }
             }
             return total;
+        }
+
+        /// <summary>
+        /// The logarithms at the poles whose residues are roots of <paramref name="residues"/>,
+        /// as a sum over those poles: <c>sum(A(r)/D'(r) ln(x - r), r in { r : E(r) = 0 })</c>,
+        /// where <c>E</c> is the factor of <c>D</c> they are the roots of. <see langword="null"/>
+        /// where <c>E</c> does not have the <paramref name="roots"/> the residues' multiplicities
+        /// count.
+        /// </summary>
+        /// <remarks>
+        /// The residue at a simple pole <c>b</c> of <c>A/D</c> is <c>A(b)/D'(b)</c>, a root of the
+        /// resultant, and <c>D'(b)</c> is not zero there. So the poles whose residues are roots of
+        /// <c>R</c> are the common roots of <c>D</c> and the polynomial <c>D'^n R(A/D')</c>, and
+        /// <c>E</c> is their gcd over the rationals: no arithmetic in the field the residues lie in
+        /// is needed. The sum is the one Rothstein–Trager's theorem writes over the roots of the
+        /// resultant, with its terms taken pole by pole. <c>E</c> has a factor of degree above two,
+        /// since a pole in a field of degree at most two has its residue there too, so the sum is
+        /// left standing rather than written out in radicals, unless each such factor is a
+        /// binomial, whose roots are written.
+        /// https://github.com/asc-community/AngouriMath/issues/1285
+        /// </remarks>
+        private static Entity? OverTheRoots(RationalPolynomial residues, int roots,
+            RationalPolynomial above, RationalPolynomial below, RationalPolynomial derivative, Variable x)
+        {
+            // D'^n R(A/D') = sum over k of r_k A^k D'^(n - k).
+            var n = residues.Degree;
+            var cleared = RationalPolynomial.Zero;
+            for (var k = 0; k <= n; k++)
+                cleared = cleared.Add(above.Pow(k).Multiply(derivative.Pow(n - k)).ScaleBy(residues[k]));
+            var poles = RationalPolynomial.FromInteger(IntegerPolynomial.Gcd(ToInteger(below), ToInteger(cleared)).PrimitivePart());
+            if (poles.Degree != roots)
+                return null;
+            // The polynomials are in x alone, so any other name is free.
+            var r = MathS.Var(x.Name == "r" ? "w" : "r");
+            var summand = above.ToEntity(r) / derivative.ToEntity(r) * MathS.Ln(x - r);
+            return MathS.Sum(summand, r, new Set.ConditionalSet(r, poles.ToEntity(r).Equalizes(Integer.Zero)));
         }
 
         /// <summary><c>c ln(gcd(D, A - c D'))</c> for a rational residue <paramref name="c"/>.</summary>

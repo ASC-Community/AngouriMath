@@ -103,6 +103,8 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("e^(-x^2)/x^2")]
         [InlineData("e^(x^2)/x^4")]
         [InlineData("3*x^6*e^(-2*x^2)/5")]
+        [InlineData("1/(e^(x^2)*x^2)")]
+        [InlineData("1/(e^(2*x^2)*x^4)")]
         public void TheGaussianBesideAnEvenPower(string integrand) => DifferentiatesBack(integrand);
 
         /// <summary>

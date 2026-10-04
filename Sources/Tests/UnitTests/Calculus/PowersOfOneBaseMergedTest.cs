@@ -25,6 +25,7 @@ namespace AngouriMath.Tests.Calculus
     /// not run <c>PowerRules</c> at all, so even the sibling case was missed.
     /// https://github.com/asc-community/AngouriMath/issues/781
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class PowersOfOneBaseMergedTest
     {
         /// <summary>Sample points, chosen to include negative x and to avoid the zeros of sin.</summary>

@@ -18,6 +18,7 @@ namespace AngouriMath.Tests.Calculus
     /// through an antiderivative that holds the case or the step constant across them. Question
     /// I.2 of https://github.com/asc-community/AngouriMath/issues/1212, and the review of #1215.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class BreakpointIntegrationTest
     {
         // ---- a piecewise: finitely many breakpoints ---------------------------------------------

@@ -128,14 +128,21 @@ namespace AngouriMath.Tests.Calculus
         }
 
         /// <summary>
-        /// What is not this shape and must stay declined by it rather than mis-answered: a
-        /// trinomial with no rational root, which no rule reads and
-        /// <a href="https://github.com/asc-community/AngouriMath/issues/1285">#1285</a> is about.
+        /// What is not this shape is not this rule's to claim: a trinomial with no rational root.
+        /// It is answered by the sum over its roots that
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1285">#1285</a> is about,
+        /// so the answer is that sum rather than this rule's cosines of roots of unity, and it
+        /// differentiates back.
         /// </summary>
         [Theory]
         [InlineData("1/(x^3 + x + 1)")]
-        public void OutsideTheShapeNothingIsClaimed(string integrand)
-            => Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
+        public void OutsideTheShapeTheSumOverTheRootsAnswers(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.Contains(integral.Nodes, node => node is Entity.SumOverSetf);
+            Assert.DoesNotContain("cos(", integral.Stringize());
+            DifferentiatesBack(integrand);
+        }
 
         /// <summary>
         /// A repeated binomial is the Hermite reduction's first, and what that leaves over the

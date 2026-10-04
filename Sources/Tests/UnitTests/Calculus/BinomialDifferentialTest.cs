@@ -131,6 +131,37 @@ namespace AngouriMath.Tests.Calculus
         public void TheThirdCaseThroughTheReciprocal(string integrand) => DifferentiatesBack(integrand);
 
         /// <summary>
+        /// The third case's <c>u</c> has <c>b + a/x^n</c> for its <c>q</c>-th power, and written
+        /// as <c>(b + a/x^n)^(1/q)</c> it is that root for a positive <c>x</c>, and for a negative
+        /// one only where <c>q</c> is odd: <c>1/(1 + x^4)^(5/4)</c> came out as
+        /// <c>1/(1 + 1/x^4)^(1/4)</c>, which is even, and its derivative was the integrand's
+        /// negative for every negative <c>x</c>. Written as <c>(a + b x^n)^(1/q)/x^(n/q)</c> it is
+        /// right on both sides of zero under either root, and each of these is real on both.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(1 + x^4)^(5/4)")]
+        [InlineData("x^2/(1 + x^4)^(3/4)")]
+        [InlineData("x^6*(3 + 4*x^4)^(1/4)")]
+        [InlineData("x^3/(2 + x^3)^(1/3)")]
+        [InlineData("1/(2 + x^3)^(1/3)")]
+        [InlineData("(x^3 - 1)/(2 + x^3)^(1/3)")]
+        public void TheThirdCaseOnBothSidesOfZero(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            var derivative = integral.Substitute("C", 0).Differentiate("x");
+            var original = integrand.ToEntity();
+            foreach (var at in new[] { -1.1, -0.7, -0.35, 0.35, 0.83, 1.4 })
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.True(Math.Abs((double)want.ImaginaryPart) < 1e-12, $"the integrand at x = {at} is {want}, not real");
+                Assert.True(Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart) < 1e-9 * Math.Max(1, Math.Abs((double)want.RealPart)),
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+        }
+
+        /// <summary>
         /// Outside all three of Chebyshev's cases there is — and this is the part worth knowing
         /// before anyone goes looking — no elementary antiderivative at all, which he proved.
         /// These must be declined or answered by another rule, never wrong.
@@ -183,6 +214,43 @@ namespace AngouriMath.Tests.Calculus
                 var got = derivative.Substitute("x", at).EvalNumerical();
                 var want = original.Substitute("x", at).EvalNumerical();
                 Assert.True(Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart) < 1e-9,
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+        }
+
+        /// <summary>
+        /// Where the root of the quotient is not real the integrand can still be, and there an
+        /// answer from the root written apart must not stand. <c>e^atanh(x) sqrt(1 - x)</c> is
+        /// <c>sqrt((1 + x)/(1 - x)) sqrt(1 - x)</c>, and written apart as <c>sqrt(1 + x)</c> it
+        /// is the integrand only for <c>x &lt; 1</c>. Past <c>x = 1</c> it is the product of two
+        /// imaginary factors, real and of the other sign, and the answer was wrong there. Now the
+        /// answer says it holds where the root is real, and claims nothing past it.
+        /// https://github.com/asc-community/AngouriMath/issues/1664
+        /// </summary>
+        [Theory]
+        [InlineData("e^atanh(x)*(1-x)^(1/2)")]
+        [InlineData("e^atanh(x)/(1-x)^(1/2)")]
+        [InlineData("((1+x)/(1-x))^(1/2)*(1-x)^(1/2)")]
+        public void AnAnswerFromARootWrittenApartHoldsWhereItIsGiven(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            var derivative = integral.Substitute("C", 0).Differentiate("x");
+            var original = integrand.ToEntity();
+            foreach (var at in new[] { 0.29, -0.61 })
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.True(Math.Abs((double)(got - want).RealPart) < 1e-9 * Math.Max(1, Math.Abs((double)want.RealPart)),
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+            foreach (var at in new[] { 1.43, 3.17 })
+            {
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.True(Math.Abs((double)want.ImaginaryPart) < 1e-12, $"the integrand at x = {at} is {want}, not real");
+                var got = derivative.Substitute("x", at).Evaled;
+                Assert.True(got.IsNaN || got is Entity.Number.Complex number
+                    && Math.Abs((double)(number - want).RealPart) < 1e-9 * Math.Max(1, Math.Abs((double)want.RealPart)),
                     $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
             }
         }

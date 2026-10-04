@@ -31,6 +31,7 @@ jobs:
       run: |
         dotnet build Sources/Tests/InteractiveWrapperUnitTests -c Release
         dotnet build Sources/Tests/TerminalUnitTests -c Release
+        dotnet build Sources/Tests/McpUnitTests -c Release
         
     - name: Test Interactive Wrapper
       if: ${{ matrix.os != 'ubuntu-latest' }}
@@ -42,11 +43,20 @@ jobs:
       run: |
         dotnet test "Sources/Tests/TerminalUnitTests" -c Release
 
+    # The server amcli mcp runs. It builds against the library in this repository, so a change
+    # that moves an answer its documents describe, or a function the grammar gains or loses,
+    # fails here rather than after a release.
+    - name: Test MCP server
+      if: ${{ matrix.os != 'ubuntu-latest' }}
+      run: |
+        dotnet test "Sources/Tests/McpUnitTests" -c Release
+
     - name: Test with coverage
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
         dotnet test "Sources/Tests/InteractiveWrapperUnitTests" -c Release --collect:"XPlat Code Coverage" --results-directory ./coverage -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
         dotnet test "Sources/Tests/TerminalUnitTests" -c Release --collect:"XPlat Code Coverage" --results-directory ./coverage -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+        dotnet test "Sources/Tests/McpUnitTests" -c Release --collect:"XPlat Code Coverage" --results-directory ./coverage -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
     - name: 'Send to codecov'
       if: ${{ matrix.os == 'ubuntu-latest' }}

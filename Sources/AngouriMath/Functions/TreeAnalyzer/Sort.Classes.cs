@@ -201,6 +201,11 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "productf_";
         }
 
+        public partial record SumOverSetf
+        {
+            private protected override string SortHashName(SortLevel level) => "sumoversetf_";
+        }
+
         public partial record Maximumf
         {
             private protected override string SortHashName(SortLevel level) => "maximumf_";

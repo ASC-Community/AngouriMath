@@ -97,7 +97,21 @@ namespace AngouriMath.Functions.Algebra
             var simplified = coefficient.InnerSimplified;
             if (simplified == Integer.Zero)
                 return true;
-            return simplified.Evaled is Complex { IsZero: true };
+            if (simplified.Evaled is Complex { IsZero: true })
+                return true;
+            // A sum can cancel term for term where the inner simplification leaves it written
+            // out: e^(1/x) - e^(1/x) is what the constant terms of the two exponentials leave in
+            // e^x (e^(1/x + e^(-x)) - e^(1/x)), the example Gruntz's algorithm is introduced with.
+            // Collecting like terms settles that without a search. It answers 0 provided not
+            // x = 0, a zero wherever the coefficient is defined, and the condition excludes a
+            // point that says nothing about x running off to infinity -- the same reading as
+            // Gruntz.Bare's.
+            if (simplified is not (Sumf or Minusf))
+                return false;
+            var collected = Simplificator.SimplifyChildren(simplified);
+            while (collected is Providedf(var value, _))
+                collected = value;
+            return collected == Integer.Zero;
         }
 
         private static SortedDictionary<ERational, Entity> Fresh() => new();
@@ -173,8 +187,26 @@ namespace AngouriMath.Functions.Algebra
             var terms = Fresh();
             foreach (var term in Terms)
                 if (term.Key.CompareTo(e) >= 0)
-                    terms[term.Key.Subtract(e)] = (term.Value / c).InnerSimplified;
+                    // The leading coefficient over itself is 1 exactly, and is written so: the
+                    // inner simplification leaves x/x as it is, and the rest of the series is
+                    // this minus 1, where x/x - 1 would read as a term at w^0 that nothing can
+                    // tell from zero.
+                    terms[term.Key.Subtract(e)] = term.Key.CompareTo(e) == 0 ? Integer.One : (term.Value / c).InnerSimplified;
             return new AsymptoticSeries(terms, Order.Subtract(e));
+        }
+
+        /// <summary>
+        /// The series without its constant term: the series minus that term, taken off
+        /// exactly rather than subtracted, so that nothing is left at <c>w^0</c> that the zero
+        /// test would have to recognise.
+        /// </summary>
+        internal AsymptoticSeries WithoutConstant()
+        {
+            var terms = Fresh();
+            foreach (var term in Terms)
+                if (term.Key.CompareTo(ERational.Zero) != 0)
+                    terms[term.Key] = term.Value;
+            return new AsymptoticSeries(terms, Order);
         }
 
         /// <summary>
@@ -187,7 +219,7 @@ namespace AngouriMath.Functions.Algebra
             if (Normalised(out var coefficient, out var power) is not { } unit)
                 return null;
             // 1/(1 + d) = 1 - d + d^2 - ..., which terminates because d starts above w^0.
-            var rest = unit.Add(Constant(-1));
+            var rest = unit.WithoutConstant();
             var sum = Constant(1);
             var term = Constant(1);
             for (var i = 0; i < MaxExpansionTerms; i++)
@@ -212,7 +244,7 @@ namespace AngouriMath.Functions.Algebra
         internal AsymptoticSeries? Exponentiate(ERational requested)
         {
             var constant = Terms.TryGetValue(ERational.Zero, out var atZero) ? atZero : Integer.Zero;
-            var rest = Add(Constant(-constant));
+            var rest = WithoutConstant();
             if (rest.LeadingTerm() is var (_, least) && least.CompareTo(ERational.Zero) <= 0)
                 return null;
             // exp(constant) is left unexpanded on purpose: it is a coefficient, and opening
@@ -241,7 +273,7 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             var head = (MathS.Ln(coefficient) + Rational.Create(power) * logarithmOfW).InnerSimplified;
             // log(1 + d) = d - d^2/2 + d^3/3 - ...
-            var rest = unit.Add(Constant(-1));
+            var rest = unit.WithoutConstant();
             var sum = Constant(head);
             var term = Constant(1);
             for (var i = 1; i < MaxExpansionTerms; i++)
@@ -324,7 +356,7 @@ namespace AngouriMath.Functions.Algebra
             // Otherwise take the leading term out and use the binomial series on the rest.
             if (expanded.Normalised(out var coefficient, out var leading) is not { } unit)
                 return null;
-            var rest = unit.Add(Constant(-1));
+            var rest = unit.WithoutConstant();
             var sum = Constant(1);
             var term = Constant(1);
             for (var i = 1; i < MaxExpansionTerms; i++)

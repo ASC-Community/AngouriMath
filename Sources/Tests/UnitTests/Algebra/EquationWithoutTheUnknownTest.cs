@@ -19,6 +19,7 @@ namespace AngouriMath.Tests.Algebra
     /// <c>x</c> satisfies it, and every <c>x</c> does whenever the two sides happen to be
     /// equal. https://github.com/asc-community/AngouriMath/issues/278
     /// </summary>
+    [Trait("Area", "Algebra")]
     public sealed class EquationWithoutTheUnknownTest
     {
         /// <summary>

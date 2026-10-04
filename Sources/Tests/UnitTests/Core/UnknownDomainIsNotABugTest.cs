@@ -17,6 +17,7 @@ namespace UnitTests.Core
     /// this library does not have was answered with AngouriBugException, which asks them to
     /// report their own input to the issue tracker.
     /// </summary>
+    [Trait("Area", "Core")]
     public sealed class UnknownDomainIsNotABugTest
     {
         [Theory]

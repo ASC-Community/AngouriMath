@@ -655,6 +655,26 @@ namespace AngouriMath.Functions
         }
 
         /// <summary>
+        /// Whether a constant in the symbols is zero as a value, decided as
+        /// <see cref="InLowestTermsOverTheSymbols"/> decides it: over one bar, its numerator
+        /// expanded is zero as written, as a number, or at two sets of pinned symbols. A
+        /// coefficient read off a written polynomial can be zero so and not as written:
+        /// <c>-3 a^3 + 3 a^3</c>, which the expansion of <c>(-(a - a u^2) - (u^2 + 1) a)^3</c>
+        /// leaves at <c>u^6</c>, and <c>-(2 c/c - 1) + 1</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/1665
+        /// </summary>
+        internal static bool IsZeroAsAValue(Entity constant)
+        {
+            if (constant == Integer.Zero || constant.Evaled is Complex { IsZero: true })
+                return true;
+            if (!constant.Vars.Any())
+                return false;
+            var (above, _) = SingleQuotient.Of(SingleQuotient.Combine(constant).InnerSimplified);
+            var expandedAbove = Bare(above.Expand().InnerSimplified);
+            return expandedAbove == Integer.Zero || expandedAbove.Evaled is Complex { IsZero: true } || IsZeroAtPinnedSymbols(expandedAbove);
+        }
+
+        /// <summary>
         /// <paramref name="quotient"/> with the rational content of its denominator moved
         /// up: the denominator's coefficients whole and coprime with a positive leading one,
         /// and the numerator scaled by what that took out. <c>-1024/(1024 a)</c> is

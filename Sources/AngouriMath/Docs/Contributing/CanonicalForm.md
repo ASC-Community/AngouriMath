@@ -3,7 +3,7 @@
 [#746](https://github.com/asc-community/AngouriMath/issues/746) tier 1 asks for two things this
 file is: a written specification of what canonical means for each node class, and **a stated
 distinction between canonical and "simplest"**. Its item 65 says to take a position, write it down,
-and let the engine be checked against it. The checking is `work/canoncheck`, and every number below
+and let the engine be checked against it. The checking is `Sources/Tests/Harnesses/CanonCheck`, and every number below
 came out of it rather than out of an argument.
 
 Read [SimplificationContract.md](SimplificationContract.md) first if you are changing a rewrite.
@@ -60,7 +60,7 @@ Three properties, each of which a canonical form must have and none of which nee
 - **order independence** — the operands of a commutative operator may be written either way round;
 - **agreement** — two writings of one expression reach the same form.
 
-`work/canoncheck` measures all three against each candidate, comparing **entities and not printed
+`Sources/Tests/Harnesses/CanonCheck` measures all three against each candidate, comparing **entities and not printed
 strings**. The figures below are on `master` with the two defects of the following subsection fixed
 — [#929](https://github.com/asc-community/AngouriMath/issues/929) and
 [#930](https://github.com/asc-community/AngouriMath/issues/930), each landing separately. Without
@@ -269,12 +269,17 @@ The one thing it *is* required to be is sound, which is [SimplificationContract.
 
 ## 7. How this is checked
 
-`work/canoncheck`. It builds expressions by growing a small grammar, then checks idempotence and
-order independence generatively and a listed set of agreements by hand. It runs all three over each
-of the three candidate forms — `InnerSimplified`, `CanonicalOrderExact` followed by
-`InnerSimplified`, and `Simplify` — because the interesting facts are the differences between the
-columns rather than any one number. The listed pairs are each a claim this file makes or disclaims,
-so a disagreement there is a decision to take rather than necessarily a defect.
+`Sources/Tests/Harnesses/CanonCheck`. It builds expressions by growing a small grammar, then
+checks idempotence and order independence generatively and a listed set of agreements by hand. It
+runs all three over each candidate form, because the interesting facts are the differences between
+the columns rather than any one number. The candidates are `InnerSimplified`, `CanonicalOrderExact`
+followed by `InnerSimplified`, the same sort after the normalisation, and `Simplify`. The listed
+pairs are each a claim this file makes or disclaims, so a disagreement there is a decision to take
+rather than necessarily a defect.
+
+CI runs it on every change to the library. Its findings are listed in `canoncheck-baseline.tsv`
+beside it, and the run fails when that list changes, so a change to what is canonical is recorded
+in the commit that makes it.
 
 It compares entities. Nothing in it reads a printed form, which is deliberate: the associativity
 finding in §3 is invisible to a string comparison and is the single most likely thing to be got

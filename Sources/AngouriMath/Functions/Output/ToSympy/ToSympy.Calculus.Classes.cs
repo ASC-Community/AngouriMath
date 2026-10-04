@@ -21,6 +21,20 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.integrate({Expression.ToSymPy()}, {(Range is var (from, to) ? $"({Var.ToSymPy()}, {from.ToSymPy()}, {to.ToSymPy()})" : Var.ToSymPy())})";
         }
 
+        public partial record SumOverSetf
+        {
+            // SymPy's RootSum counts a repeated root as often as it is repeated, and a set counts
+            // it once, so the polynomial goes over as its square-free part.
+            internal override string ToSymPy() => Over switch
+            {
+                Set.FiniteSet finite =>
+                    $"sympy.Add(*[({Expression.ToSymPy()}).subs({Var.ToSymPy()}, member) for member in [{string.Join(", ", finite.Elements.Select(static e => e.ToSymPy()))}]])",
+                Set.ConditionalSet { Var: Variable w, Predicate: Equalsf(var left, var right) } when w == Var =>
+                    $"sympy.RootSum(sympy.sqf_part(sympy.Poly({(left - right).ToSymPy()}, {Var.ToSymPy()})), sympy.Lambda({Var.ToSymPy()}, {Expression.ToSymPy()}))",
+                _ => throw new NotSufficientlySupportedException("SymPy has no sum over a set; a listed set or the roots of a polynomial can be exported"),
+            };
+        }
+
         public partial record Maximumf
         {
             internal override string ToSymPy() =>

@@ -77,5 +77,10 @@ docsamples.md
 sympyparity.md
 egraph.md
 
+# DocSamples clones the wiki beside itself and generates a project per language there.
+Sources/Tests/Harnesses/DocSamples/wiki/
+Sources/Tests/Harnesses/DocSamples/generated/
+Sources/Tests/Harnesses/DocSamples/generated-fsharp/
+
 # Agent worktrees and local tool state.
 .claude/

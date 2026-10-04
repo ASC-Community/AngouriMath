@@ -37,7 +37,7 @@ namespace AngouriMath.Tests.Calculus
         public void TestCosCustom()
         {
             var func = MathS.Cos(MathS.Pow(x, 3));
-            var expected = -3 * MathS.Sin(MathS.Pow(x, 3)) * MathS.Sqr(x);
+            var expected = -3 * MathS.Sqr(x) * MathS.Sin(MathS.Pow(x, 3));
             var actual = func.Differentiate(x).Simplify();
             Assert.Equal(expected, actual);
         }
@@ -81,13 +81,13 @@ namespace AngouriMath.Tests.Calculus
         public void TestArc2()
         {
             var func = MathS.Arcsin(2 * x);
-            Assert.Equal(1 / MathS.Sqrt(1 - MathS.Sqr(2 * x)) * 2, func.Differentiate(x).Simplify());
+            Assert.Equal(2 / MathS.Sqrt(1 - MathS.Sqr(2 * x)), func.Differentiate(x).Simplify());
         }
         [Fact]
         public void TestArc3()
         {
             var func = MathS.Arccos(2 * x);
-            Assert.Equal((-1) / MathS.Sqrt(1 - MathS.Sqr(2 * x)) * 2, func.Differentiate(x).Simplify());
+            Assert.Equal((-2) / MathS.Sqrt(1 - MathS.Sqr(2 * x)), func.Differentiate(x).Simplify());
         }
         [Fact]
         public void TestArc4()

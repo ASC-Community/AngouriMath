@@ -21,7 +21,7 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("x2 + x", "x ^ 3 / 3 + x ^ 2 / 2 + C")]
         [InlineData("x2 - x", "C + x ^ 3 / 3 - x ^ 2 / 2")]
         [InlineData("a / x", "a * ln(abs(x)) + C")]
-        [InlineData("x cos(x)", "cos(x) + sin(x) * x + C")]
+        [InlineData("x cos(x)", "cos(x) + x * sin(x) + C")]
         [InlineData("sin(x)cos(x)", "sin(x) ^ 2 / 2 + C")]
         [InlineData("ln(x)", "x * (ln(x) - 1) + C")]
         [InlineData("log(a, x)", "C + x * (ln(x) - 1) / ln(a)")]
@@ -333,7 +333,7 @@ namespace AngouriMath.Tests.Calculus
             // ln(abs(x)) uncombined and the 2 * x outside the bracket.
             // (ln|x| - 1)^2 + 1 multiplied out is ln^2|x| - 2ln|x| + 2, which is what
             // Expand now returns, having collected the like terms it used to leave apart.
-            Assert.Equal("C + (2 + ln(abs(x)) ^ 2 + (-2) * ln(abs(x))) * x", result.Stringize());
+            Assert.Equal("C + x * (2 + ln(abs(x)) ^ 2 + (-2) * ln(abs(x)))", result.Stringize());
 
             // Verify the result by differentiation
             var derivative = result.Differentiate("x"); // TODO: Make this simplify to expr with Simplify()

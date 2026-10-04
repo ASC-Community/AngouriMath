@@ -16,6 +16,7 @@ namespace AngouriMath.Tests.Core
     /// <c>card(S)</c>: the number of elements of a set, as a node of its own.
     /// https://github.com/asc-community/AngouriMath/issues/1212
     /// </summary>
+    [Trait("Area", "Core")]
     public sealed class CardinalityTest
     {
         [Theory]

@@ -2,6 +2,9 @@
 # The .deb's version is the release's: TerminalNightly.yml passes the packages' version, read
 # from the release's tag.
 version="${TERMINAL_VERSION:?set TERMINAL_VERSION to the version to pack, such as 2.6.0}"
+# The package's modes come from the umask it is packed under: dpkg-deb refuses a control directory
+# other users cannot read, and what it installs has to be readable by them too.
+umask 022
 cd publish-output
 
 for arch in amd64 arm arm64
@@ -27,8 +30,16 @@ do
     mkdir -p ./usr/share/applications/
     cp -r ../$dotnet_arch ./usr/local/bin
     mv ./usr/local/bin/$dotnet_arch ./usr/local/bin/angourimath-terminal-data
-    echo 'cd /usr/local/bin/angourimath-terminal-data && ./AngouriMath.Terminal' > ./usr/local/bin/angourimath-terminal
+    # The arguments go through, so that `amcli simp "..."` answers once, and amcli is the same
+    # launcher under the name the dotnet tool has.
+    printf '#!/bin/sh\ncd /usr/local/bin/angourimath-terminal-data && exec ./AngouriMath.Terminal "$@"\n' > ./usr/local/bin/angourimath-terminal
     chmod +x ./usr/local/bin/angourimath-terminal
+    ln -s angourimath-terminal ./usr/local/bin/amcli
+
+    mkdir -p ./usr/share/man/man1/
+    gzip -9 -n -c ../../amcli.1 > ./usr/share/man/man1/amcli.1.gz
+    mkdir -p ./usr/share/bash-completion/completions/
+    install -m 0644 ../../amcli.bash ./usr/share/bash-completion/completions/amcli
     
     mkdir DEBIAN && cd DEBIAN
     touch control

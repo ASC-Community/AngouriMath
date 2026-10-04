@@ -26,6 +26,7 @@ namespace AngouriMath.Tests.PatternsTest
     /// the binomial case rather than introducing one, which is the half of #205 that does
     /// not need a maintainer's ruling.
     /// </remarks>
+    [Trait("Area", "PatternsTest")]
     public sealed class RationalizeDenominatorTest
     {
         private static bool IsSurd(Entity node)

@@ -264,6 +264,42 @@ namespace AngouriMath.Tests.Calculus
         public void AnImaginaryTangentBelowTheBarIsAnExponential(string integrand) => DifferentiatesBack(integrand);
 
         /// <summary>
+        /// A tangent of the same argument above the bar is written in sines and cosines, so that the
+        /// cosine the identity puts below cancels it, and what sines and cosines of it are left as
+        /// exponentials: <c>tan(z)/(A + i A tan(z))</c> is <c>sin(z) e^(-i z)/A</c>, and
+        /// <c>tan(z) cos(z) e^(-i z)/A</c> was a search past the budget with <c>z = c + d x</c>.
+        /// The symbols pinned only after integrating.
+        /// </summary>
+        [Theory]
+        [InlineData("tan(c + d*x)/(a + i*a*tan(c + d*x))")]
+        [InlineData("tan(c + d*x)^2/(a + i*a*tan(c + d*x))")]
+        [InlineData("tan(c + d*x)^3/(a + i*a*tan(c + d*x))^4")]
+        [InlineData("cot(c + d*x)/(a + i*a*cot(c + d*x))")]
+        [InlineData("1/(a + i*a*tan(c + d*x))")]
+        public void AnImaginaryTangentOfALinearWithATangentAboveTheBar(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            Assert.DoesNotContain("NaN", integral.Stringize());
+            Entity Pin(Entity e) => e.Substitute("a", 0.9).Substitute("c", 0.3).Substitute("d", 1.1);
+            var derivative = Pin(integral.Substitute("C", 0)).Differentiate("x");
+            var original = Pin(integrand.ToEntity());
+            var compared = 0;
+            foreach (var at in Points)
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                if (got.IsNaN || want.IsNaN)
+                    continue;
+                compared++;
+                var difference = Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart);
+                var scale = Math.Max(1.0, Math.Abs((double)want.RealPart) + Math.Abs((double)want.ImaginaryPart));
+                Assert.True(difference / scale < 1e-9, $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+            Assert.True(compared >= 4, $"only {compared} points could be compared for {integrand}");
+        }
+
+        /// <summary>
         /// And its sibling, <c>A cos(y) + i A sin(y)</c>, which is <c>A e^(i y)</c>: a sum of a
         /// cosine and a sine with no real rotation, since <c>A^2 + (i A)^2</c> is zero, and beside
         /// a power of the cosine an exponential times that power once written so. Rubi's 4.7.2,

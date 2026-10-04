@@ -119,6 +119,108 @@ namespace AngouriMath.Tests.Calculus
         }
 
         /// <summary>
+        /// A power of x beside a block of the third degree or more with a symbol in it, split at
+        /// the power of x: <c>1/(x (x^3 + c))</c> was declined where <c>1/(x (x^3 + 2))</c> was
+        /// answered. Rubi's <c>x^m (a + b x^n)^p</c>, by the hundred.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(x*(x^3 + c))")]
+        [InlineData("1/(x^2*(x^3 + c))")]
+        [InlineData("1/(x*(x^3 + c)^2)")]
+        [InlineData("1/(x^4*(a + b*x^3))")]
+        [InlineData("1/(x*(a + b*x^5))")]
+        [InlineData("(1 + x)/(x^2*(x^3 + c))")]
+        [InlineData("(c + d*x + e*x^2)/(x^2*(a + b*x^3))")]
+        [InlineData("(c + d*x^3 + e*x^6)/(x^4*(a + b*x^3)^2)")]
+        public void APowerOfXBesideASymbolicBlock(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("d", 1.1), ("e", 0.6));
+
+        /// <summary>
+        /// And a power of another linear beside such a block, split at its root:
+        /// <c>1/((x - c)(a + b x^3))</c> was declined, and so was the same over <c>g + h x</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("1/((x - c)*(a + b*x^3))")]
+        [InlineData("1/((x - c)^2*(a + b*x^4))")]
+        [InlineData("(1 + x)/((x + 2)^2*(a + b*x^3))")]
+        [InlineData("1/((g + h*x)*(a + b*x^3))")]
+        public void APowerOfALinearBesideASymbolicBlock(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("g", 1.1), ("h", 0.6));
+
+        /// <summary>
+        /// Blocks that are each a polynomial in one power of x past the second, split in
+        /// <c>u = x^n</c>, where they are linear: <c>1/((a + b x^3)(c + d x^3))</c> was declined.
+        /// With a power of x beside them as well, both splits in turn; and one block quadratic in
+        /// <c>u</c> is split at its two roots.
+        /// </summary>
+        [Theory]
+        [InlineData("1/((a + b*x^3)*(c + d*x^3))")]
+        [InlineData("x/((a + b*x^3)*(c + d*x^3))")]
+        [InlineData("x^4/((a + b*x^3)*(c + d*x^3))")]
+        [InlineData("1/((a + b*x^4)*(c + d*x^4))")]
+        [InlineData("1/(x^2*(a + b*x^3)*(c + d*x^3))")]
+        // One block quadratic in x^n is two at its roots.
+        [InlineData("1/(a + b*x^3 + c*x^6)")]
+        [InlineData("x/(a + b*x^3 + c*x^6)")]
+        [InlineData("(1 + x^4)/(1 + b*x^4 + x^8)")]
+        // Two blocks in x^2, which the split over written factors reads only while both are quadratic.
+        [InlineData("1/(x^4*(d + e*x^2)*(a + c*x^4))")]
+        public void SymbolicBlocksInOnePowerOfX(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("d", 1.1));
+
+        /// <summary>
+        /// The same with the block's roots complex, <c>b^2 &lt; 4 a c</c> as pinned. The split at
+        /// the roots is last, since a rule after it that branches on the sign of a root has no
+        /// branch for a complex one: the third row is answered whole by <c>v = x^2</c>, and split
+        /// first it had no value anywhere.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(a + b*x^3 + c*x^6)")]
+        [InlineData("(1 + x^4)/(1 + b*x^4 + x^8)")]
+        [InlineData("(d + e*x^4)/(x^3*(a + b*x^4 + c*x^8))")]
+        public void OneBlockWhoseRootsAreComplex(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 0.9), ("c", 1.3), ("d", 1.1), ("e", 0.6));
+
+        /// <summary>
+        /// A quotient with x below a bar inside it is written over one bar first:
+        /// <c>1/(a + b/x)</c> was declined where <c>x/(a x + b)</c> was answered, and so was the
+        /// numeric <c>1/(2 + 3/x^2)^3</c>. The power of x the bars were cleared with is taken out
+        /// of both sides again, since the rules after it read the two as coprime: Rubi's
+        /// <c>1/((a + c/x^2 + b/x) x (d + e x)^2)</c> was answered wrongly without that.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(a + b/x)")]
+        [InlineData("1/(a + b/x^2)^2")]
+        [InlineData("1/(a + b/x^3)")]
+        [InlineData("1/(2 + 3/x^2)^3")]
+        [InlineData("1/((a + c/x^2 + b/x)*x*(d + e*x)^2)")]
+        [InlineData("x^2/((a + c/x^2 + b/x)*(d + e*x)^2)")]
+        public void AQuotientWithXBelowABarInsideIt(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("d", 1.1), ("e", 0.6));
+
+        /// <summary>
+        /// A product of sums in a power of x whose exponent is a symbol, written out: each term is
+        /// a power of x, answered at once, and no rule reads the product as a polynomial.
+        /// </summary>
+        [Theory]
+        [InlineData("(a + b*x^n)*(c + d*x^n)^3")]
+        [InlineData("(c + d*x^(n - 1))*(a + b*x^n)^3")]
+        public void AProductOfSumsInASymbolicPowerOfX(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("d", 1.1), ("n", 1.3));
+
+        /// <summary>
+        /// What the splits above leave whole: a numerator that x divides as well, and a quotient
+        /// written over one bar that is not of polynomials. Split, each part would be the whole
+        /// question asked again a level down, and the rules that answer these at the top would not
+        /// be reached in the time they take there.
+        /// </summary>
+        [Theory]
+        [InlineData("(p*x^3 + q*x^4 + r*x^5)/(x*(a + b*x^2 + c*x^4)^2)")]
+        [InlineData("sec(c + d*x)^8/(a + i*a*tan(c + d*x))^4")]
+        public void WhatTheSplitsLeaveWhole(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.81), ("b", 2.18), ("c", 2.55), ("d", 1.1), ("p", 0.7), ("q", 1.07), ("r", 1.44));
+
+        /// <summary>
         /// A repeated <b>linear</b> factor is one block, <c>P/(a + b u)^k</c>, which the rule for
         /// a polynomial over a power of a linear reads; Welz's <c>1/(a + b e^(p x))^2</c> is
         /// this under <c>u = e^(p x)</c>.
@@ -277,6 +379,35 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("1/((c + d*x)*(a + b*x)*(a*g + b*g*x)^2)")]
         public void ProportionalLinearFactorsAreOneFactor(string integrand)
             => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("d", 1.1), ("g", 0.7));
+
+        /// <summary>
+        /// Written factors that share a factor, or repeat one inside, are written over what they
+        /// share, the greatest common divisors taken in every variable: Rubi's 1.2.1.2,
+        /// <c>(d + e x)^m (a d e + (c d^2 + a e^2) x + c d e x^2)^p</c>, whose quadratic is
+        /// <c>(d + e x)(a e + c d x)</c>, and the square <c>c d^2 + 2 c d e x + c e^2 x^2</c>
+        /// beside a power of its linear, or with the numerator sharing it. Each was declined or
+        /// ran past the corpus's budget.
+        /// </summary>
+        [Theory]
+        [InlineData("1/((d + h*x)*(a*d*h + (c*d^2 + a*h^2)*x + c*d*h*x^2)^2)")]
+        [InlineData("(d + h*x)^6/(a*d*h + (c*d^2 + a*h^2)*x + c*d*h*x^2)^4")]
+        [InlineData("1/((d + h*x)^2*(c*d^2 + 2*c*d*h*x + c*h^2*x^2)^3)")]
+        [InlineData("x^2/((a + b*x)*(a^2 + 2*a*b*x + b^2*x^2))")]
+        public void FactorsThatShareOneAreWrittenOverIt(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("d", 1.1), ("h", 0.7));
+
+        /// <summary>
+        /// The negative of a square, <c>-(b x^2 - 1)^2</c>, is the square with its sign in front:
+        /// a divisor is found up to a unit, and the part the split left was <c>-1</c>. Rubi's
+        /// 1.1.2.2 <c>x^4/(a + b x^2)^(3/2)</c> is this under <c>t = x/sqrt(a + b x^2)</c>, and was
+        /// answered with the wrong sign.
+        /// </summary>
+        [Theory]
+        [InlineData("(2*x^2/b - 1/b^2)/(-b^2*x^4 + 2*b*x^2 - 1)")]
+        [InlineData("x^4/(a + b*x^2)^(3/2)")]
+        [InlineData("(c + d*x^3)^2/(a + b*x^3)^(4/3)")]
+        public void TheNegativeOfASquareKeepsItsSign(string integrand)
+            => DifferentiatesBack(integrand, "x", ("a", 1.7), ("b", 2.3), ("c", 0.4), ("d", 1.1));
 
         /// <summary>
         /// A written power of a linear is integrated as the power it is: expanded,

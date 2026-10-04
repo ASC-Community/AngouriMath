@@ -179,7 +179,7 @@ namespace AngouriMath.Tests.Common
             => Assert.Equal(
                 @"lambda(x,
                     apply(
-                        (34 + sin(x)) * a,
+                        a * (34 + sin(x)),
                         x
                     )
                 )
@@ -194,7 +194,7 @@ namespace AngouriMath.Tests.Common
             );
         [Fact] public void EtaReduction7()
             => Assert.Equal(
-                @"(34 + sin(y)) * a".ToEntity(),
+                @"a * (34 + sin(y))".ToEntity(),
                 @"lambda(x,
                     apply(
                         a * (sin(y) + 34),

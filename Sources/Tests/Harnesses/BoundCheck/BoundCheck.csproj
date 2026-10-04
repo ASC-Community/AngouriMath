@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+  Does Simplify keep the value at the boundary: across a branch cut, off the real line,
+  outside a principal interval, at a pole.
+  A harness, not a test project: it is run by .github/workflows/Harnesses.yml and by hand,
+  and `dotnet test` does not pick it up. See ../README.md.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <AssemblyName>boundcheck</AssemblyName>
+    <RootNamespace>BoundCheck</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../Shared/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../AngouriMath/AngouriMath.csproj" />
+  </ItemGroup>
+</Project>

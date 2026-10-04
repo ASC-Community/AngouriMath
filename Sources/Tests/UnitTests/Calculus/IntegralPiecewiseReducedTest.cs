@@ -32,6 +32,7 @@ namespace AngouriMath.Tests.Calculus
     /// it to: it inner-simplifies its *input* and returns its output untouched, while the
     /// definite overload has always inner-simplified the antiderivative.
     /// </remarks>
+    [Trait("Area", "Calculus")]
     public sealed class IntegralPiecewiseReducedTest
     {
         /// <summary>

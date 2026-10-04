@@ -69,11 +69,31 @@ namespace AngouriMath
 
         partial record Modf
         {
-            // x % a = value has one solution per period, so inverting it means introducing
-            // an integer parameter the way the trigonometric inversions do. Until that is
-            // written the equation is left unsolved: no solutions would claim it has none.
+            // x mod a = value has one solution per period, and is solved the way the
+            // trigonometric inversions are, with a whole parameter n. The remainder is the
+            // floored one, taking the sign of the divisor -- -1 mod 4 is 3, 5 mod (-4) is -3 and
+            // 5/2 mod 2 is 1/2 -- so it takes each value in [0, a) once per period for a positive
+            // a, and each in (a, 0] for a negative one. So x = value + |a| n for every whole n
+            // where value is in that range -- the same family as value + a n, since n runs over
+            // every whole number -- and there is no x where it is not: (x mod 4) + 1 = 3 is
+            // x = 2 + 4 n, the congruence x = 2 (mod 4) written out. A divisor with x in it, or a
+            // divisor or value that is not a number, leaves the equation unsolved, which is not
+            // the same as claiming it has no solution.
+            // https://github.com/asc-community/AngouriMath/issues/1629
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
-                => null;
+            {
+                if (Divisor.ContainsNode(x)
+                    || Divisor.Evaled is not Real { IsFinite: true, IsZero: false } period
+                    || value.Evaled is not Real { IsFinite: true } remainder)
+                    return null;
+                var inRange = period.IsNegative
+                    ? (remainder.IsNegative || remainder.IsZero) && remainder > period
+                    : !remainder.IsNegative && remainder < period;
+                if (!inRange)
+                    return Enumerable.Empty<Entity>();
+                var step = period.IsNegative ? (-Divisor).InnerSimplified : Divisor;
+                return Dividend.Invert(value + step * Variable.CreateUnique(this + value, "n"), x);
+            }
         }
 
         partial record Powf
@@ -327,6 +347,13 @@ namespace AngouriMath
                     : Enumerable.Empty<Entity>()
                   : Expression.Invert(MathS.Derivative(value, Var), x)
                 : Enumerable.Empty<Entity>();
+        }
+
+        partial record SumOverSetf
+        {
+            // The unknown sits under a binder; see Summationf below.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
         }
 
         partial record Maximumf

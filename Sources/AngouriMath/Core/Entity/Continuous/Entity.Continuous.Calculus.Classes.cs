@@ -120,6 +120,29 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// A sum over a set: <c>sum(f(x), x in S)</c> is the sum of <c>f(x)</c> over the members
+        /// <c>x</c> of <c>S</c>, each counted once. A binder, like <see cref="Summationf"/>, whose
+        /// range is a set rather than two bounds, and so has no index and no order: the sum over
+        /// the roots of a polynomial is <c>sum(f(w), w in { w : p(w) = 0 })</c>, which needs no
+        /// first root.
+        /// https://github.com/asc-community/AngouriMath/issues/1285
+        /// </summary>
+        public sealed partial record SumOverSetf(Entity Expression, Entity Var, Entity Over) : CalculusOperator(Expression, Var)
+        {
+            /// <summary>The set the variable ranges over.</summary>
+            public Entity Over { get; init; } = Binding.Of(Var).In(Over);
+
+            private SumOverSetf New(Entity expression, Entity var, Entity over) =>
+                ReferenceEquals(Expression, expression) && ReferenceEquals(Var, var) && ReferenceEquals(Over, over)
+                ? this : new(expression, var, over) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) =>
+                func(New(Expression.Replace(func), Var, Over.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Expression, Var, Over };
+        }
+
+        /// <summary>
         /// A node of limit
         /// </summary>
         public sealed partial record Limitf(Entity Expression, Entity Var, Entity Destination, ApproachFrom ApproachFrom) : CalculusOperator(Expression, Var)

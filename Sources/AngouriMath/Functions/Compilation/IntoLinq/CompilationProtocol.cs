@@ -149,6 +149,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Cif   when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Ci", 1, newE.Type), newE),
                 Shif  when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Shi", 1, newE.Type), newE),
                 Chif  when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Chi", 1, newE.Type), newE),
+                Factorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Factorial", 1, newE.Type), newE),
+                Phif =>         Expression.Call(GetDef("Phi", 1, e.Type), e),
                 
                 Notf =>         Expression.Not(e),
                 

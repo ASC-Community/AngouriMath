@@ -92,7 +92,7 @@ namespace AngouriMath.Tests.Common
         /// <summary>
         /// The property that found all of this, stated over the shapes it found them in:
         /// wherever the expression and its simplification are both real, they are the same
-        /// number. <c>work/simpsweep</c> asks it of ten thousand generated expressions and
+        /// number. <c>Sources/Tests/Harnesses/SimpSweep</c> asks it of ten thousand generated expressions and
         /// went from 30 disagreements to 0 with these two rules narrowed.
         /// </summary>
         [Fact]

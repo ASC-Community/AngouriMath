@@ -6,6 +6,7 @@
 //
 
 using System;
+using System.Linq;
 using AngouriMath.Extensions;
 using Xunit;
 
@@ -34,8 +35,10 @@ namespace AngouriMath.Tests.Calculus
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
 
-            var derivative = integral.Substitute("C", 0).Differentiate("x");
+            // The integration constant is C_1 where the integrand has a coefficient named C,
+            // and zeroing C there would take the coefficient out of the answer.
             Entity original = integrand.ToEntity();
+            var derivative = (original.Vars.Any(v => v.Name == "C") ? integral : integral.Substitute("C", 0)).Differentiate("x");
             foreach (var (name, value) in pins)
             {
                 derivative = derivative.Substitute(name, value);
@@ -69,17 +72,61 @@ namespace AngouriMath.Tests.Calculus
 
         /// <summary>
         /// Two square roots of linears with symbolic coefficients, Hearn's
-        /// <c>sqrt(a + b x) sqrt(c + d x)</c>: the terms are read as written so that the cube
-        /// of the quadratic the derivative of <c>x(t)</c> carries stays a cube, and the power
-        /// of a quadratic with a symbolic leading coefficient is made monic before the
-        /// rational rules see it.
+        /// <c>sqrt(a + b x) sqrt(c + d x)</c>. Beside a polynomial they are answered by
+        /// undetermined coefficients. With a root below the bar to a higher power, the last
+        /// row, they go through the quotient of the roots: the terms are read as written so
+        /// that the power of the quadratic the derivative of <c>x(t)</c> carries stays that
+        /// power, and the power of a quadratic with a symbolic leading coefficient is made
+        /// monic before the rational rules see it.
         /// </summary>
         [Theory]
         [InlineData("sqrt(a + b*x)*sqrt(c + d*x)")]
         [InlineData("x/(sqrt(a + b*x)*sqrt(c + d*x))")]
         [InlineData("1/(sqrt(a + b*x)*sqrt(c + d*x))")]
+        [InlineData("sqrt(c + d*x)/(a + b*x)^(3/2)")]
+        // A power of x beside them: each term of the rational function in t is split on the
+        // sign of the same quantity, and their sum combines sign by sign rather than pair by pair
+        // (https://github.com/asc-community/AngouriMath/issues/718).
+        [InlineData("x*sqrt(a + b*x)*sqrt(c + d*x)")]
+        [InlineData("x^2*sqrt(a + b*x)*sqrt(c + d*x)")]
         public void SymbolicCoefficients(string integrand)
             => DifferentiatesBackPinned(integrand, new[] { 0.3, 0.9, 1.7, 2.6 }, ("a", 1.7), ("b", 2.3), ("c", 0.6), ("d", 1.1));
+
+        /// <summary>
+        /// A polynomial beside the square roots of two linears with symbols in them, Rubi's
+        /// 1.1.1.6, by undetermined coefficients: <c>U sqrt(L1) sqrt(L2)</c> and a multiple of
+        /// the integral of <c>1/(sqrt(L1) sqrt(L2))</c>. Through the quotient of the roots
+        /// the first five took more than 4 GB each. With the slopes of opposite signs the
+        /// integral left is an arctangent, and the sixth row has numbers for the slopes, so the
+        /// arctangent is written as one.
+        /// </summary>
+        [Theory]
+        [InlineData("(A + B*x + C*x^2)*sqrt(c + d*x)*sqrt(e + f*x)")]
+        [InlineData("(a + b*x)^2*(A + B*x + C*x^2)*sqrt(c + d*x)*sqrt(e + f*x)")]
+        [InlineData("(A + B*x + C*x^2)*sqrt(c + d*x)/sqrt(e + f*x)")]
+        [InlineData("(e + f*x)^3*(A + B*x + C*x^2)*sqrt(a + b*x)*sqrt(a*c - b*c*x)")]
+        [InlineData("(c + d*x)^(3/2)*sqrt(e + f*x)")]
+        [InlineData("x^2*sqrt(a + 2*x)*sqrt(c - 3*x)")]
+        [InlineData("(a + b*x)*(A + B*x + C*x^2)/(sqrt(c + d*x)*sqrt(e + f*x))")]
+        [InlineData("x*sqrt(1 + d*x)*sqrt(1 - f*x)")]
+        public void APolynomialBesideTheRootsOfTwoLinears(string integrand)
+            => DifferentiatesBackPinned(integrand, new[] { 0.3, 0.9, 1.7, 2.6 },
+                ("a", 1.3), ("b", 0.7), ("c", 1.9), ("d", 0.45), ("e", 2.3), ("f", 0.55), ("A", 1.1), ("B", -0.8), ("C", 0.35));
+
+        /// <summary>
+        /// The same over a power of a third linear, the rest of Rubi's 1.1.1.6: the terms over
+        /// its powers are reduced to the integral of <c>1/((g + h x) S)</c>, an arctangent of the
+        /// quotient of the roots, which the substitution answered by a rational function in it
+        /// past the corpus's budget or not at all.
+        /// </summary>
+        [Theory]
+        [InlineData("1/((1 + x)*sqrt(a + b*x)*sqrt(c - d*x))")]
+        [InlineData("(A + B*x + C*x^2)/((e + f*x)^2*sqrt(a + b*x)*sqrt(a*c - b*c*x))")]
+        [InlineData("(A + B*x + C*x^2)*sqrt(c + d*x)*sqrt(e + f*x)/(a + b*x)^3")]
+        [InlineData("(A + B*x + C*x^2)*sqrt(c + d*x)/((a + b*x)^4*sqrt(e + f*x))")]
+        public void OverAPowerOfAThirdLinear(string integrand)
+            => DifferentiatesBackPinned(integrand, new[] { 0.3, 0.9, 1.7, 2.6 },
+                ("a", 1.3), ("b", 0.7), ("c", 1.9), ("d", 0.45), ("e", 2.3), ("f", 0.55), ("A", 1.1), ("B", -0.8), ("C", 0.35));
 
         /// <summary>Roots of different orders sharing a common one: Timofeev's 315, a sixth root of the quotient.</summary>
         [Fact]

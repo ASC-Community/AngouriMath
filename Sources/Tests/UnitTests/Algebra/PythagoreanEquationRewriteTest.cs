@@ -26,6 +26,7 @@ namespace AngouriMath.Tests.Algebra
     /// <c>sin(x)^2 + sin(x) = 0</c> has always answered in arcsines. The mixed form simply
     /// never became one.
     /// </remarks>
+    [Trait("Area", "Algebra")]
     public sealed class PythagoreanEquationRewriteTest
     {
         /// <summary>

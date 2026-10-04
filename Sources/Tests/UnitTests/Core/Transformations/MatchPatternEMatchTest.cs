@@ -18,6 +18,7 @@ using static AngouriMath.Entity.Number;
 
 namespace AngouriMath.Tests.Core.Transformations
 {
+    [Trait("Area", "Core")]
     public sealed class MatchPatternEMatchTest
     {
         private static readonly Func<Entity, double> Cost = AngouriMath.Core.CostModel.Default.Cost;

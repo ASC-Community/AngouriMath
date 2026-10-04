@@ -73,5 +73,27 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("1/(x*ln(e^(2*(a+b*x))))")]
         [InlineData("x/ln(e^(a+b*x))")]
         public void ALogarithmOfACancellingQuotientAndALogarithmLinearInTheVariable(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
+        /// A name that is zero on the real line: <c>ln(e^x) - x</c> is zero for every real
+        /// <c>x</c>, and the answer for <c>1/(x (x + c))</c> divides by <c>c</c>, so it had no
+        /// value at any real point. The arm for <c>c = 0</c> is asked as well. Rubi's 3.5,
+        /// #192 and #226. https://github.com/asc-community/AngouriMath/issues/1666
+        /// </summary>
+        [Theory]
+        [InlineData("1/(x*ln(e^x))")]
+        [InlineData("cot(x)/ln(e^sin(x))")]
+        [InlineData("1/(x*ln(e^(2*x)))")]
+        public void ANameThatIsZeroOnTheRealLineIsAskedAboutAsZero(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
+        /// ...and only there: <c>ln(e^(2(a + b x))) - 2 b x</c> is <c>2a</c> on the real line, and
+        /// the answer for <c>atanh(tanh(x))^2</c> has a value at <c>c = 0</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(x*atanh(tanh(a+b*x)))")]
+        [InlineData("atanh(tanh(x))^2")]
+        public void ANameThatIsNotZeroOrIsHarmlessGetsNoArm(string integrand)
+            => Assert.DoesNotContain("piecewise", integrand.ToEntity().Integrate("x").Stringize());
     }
 }

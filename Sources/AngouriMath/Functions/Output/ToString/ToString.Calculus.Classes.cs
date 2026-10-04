@@ -36,6 +36,15 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        public partial record SumOverSetf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() =>
+                $"sum({Expression.Stringize()}, {Var.Stringize()} in {Over.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Maximumf
         {
             /// <inheritdoc/>

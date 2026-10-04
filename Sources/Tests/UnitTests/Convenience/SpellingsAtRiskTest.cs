@@ -35,6 +35,7 @@ namespace AngouriMath.Tests.Convenience
     /// with it.
     /// </para>
     /// </remarks>
+    [Trait("Area", "Convenience")]
     public sealed class SpellingsAtRiskTest
     {
         // `|` is an alias for `or`, so a divisibility statement is read as a disjunction.

@@ -476,6 +476,22 @@ namespace AngouriMath
         }
 #pragma warning restore IDE0054 // Use compound assignment
 
+        partial record SumOverSetf
+        {
+            /// <inheritdoc/>
+            /// <remarks>
+            /// Term by term, where the set does not depend on the variable: the derivative of a
+            /// sum of finitely many terms is the sum of their derivatives, and a sum over a set
+            /// that is not finite is not evaluated in the first place. The name the sum binds is
+            /// not a free variable of it, so nothing varies with it.
+            /// https://github.com/asc-community/AngouriMath/issues/1285
+            /// </remarks>
+            protected override Entity InnerDifferentiate(Variable variable) =>
+                Var == variable ? Integer.Zero
+                : Over.ContainsNode(variable) ? base.InnerDifferentiate(variable)
+                : New(Expression.InnerDifferentiate(variable), Var, Over);
+        }
+
         partial record Limitf
         {
             /// <inheritdoc/>
@@ -590,16 +606,20 @@ namespace AngouriMath
 
         partial record Providedf
         {
+            // Differentiated with its condition known to hold, since the derivative is claimed
+            // only there: under `x > 0`, sgn(x^(1/3) + 2) is flat, where for x < 0 the cube
+            // root is complex and nothing about it is.
             /// <inheritdoc/>
             protected override Entity InnerDifferentiate(Variable variable)
-                => Expression.InnerDifferentiate(variable).Provided(Predicate);
+                => TreeAnalyzer.Assuming(Predicate, () => Expression.InnerDifferentiate(variable)).Provided(Predicate);
         }
 
         partial record Piecewise
         {
+            // Each case with its own condition known to hold, as a `provided` is.
             /// <inheritdoc/>
             protected override Entity InnerDifferentiate(Variable variable)
-                => New(Cases.Select(c => c.New(c.Expression.InnerDifferentiate(variable), c.Predicate)));
+                => New(Cases.Select(c => c.New(TreeAnalyzer.Assuming(c.Predicate, () => c.Expression.InnerDifferentiate(variable)), c.Predicate)));
         }
 
         partial record Application

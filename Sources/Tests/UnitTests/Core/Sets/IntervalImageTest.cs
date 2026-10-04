@@ -67,7 +67,7 @@ namespace AngouriMath.Tests.Core.Sets
         [InlineData("[1; 2] / [-1; 1]")]
         [InlineData("arcsin([0; 2])")]
         [InlineData("sin([0; 1])")]
-        [InlineData("(0; 1) * k")]
+        [InlineData("k * (0; 1)")]
         [InlineData("[a; b]^2")]
         public void LeftAsWritten(string expression)
             => Assert.Equal(expression.ToEntity(), expression.ToEntity().Simplify());

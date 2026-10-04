@@ -19,12 +19,15 @@ nothing else is read:
    [`Contributing/SimplificationContract.md`](Sources/AngouriMath/Docs/Contributing/SimplificationContract.md).
    A rule states the assumptions under which it holds, or it is asserting there are none.
 
-The measurement harnesses live outside this repository, in the analysis workspace one directory up
-(`work/`): a self-verifying solver corpus, a property checker, root-completeness and
-simplification sweeps, a boundary checker, a crash harness that survives a stack overflow, and a
-checker for the documentation's code samples. Run them before claiming anything is fixed.
+Ten measurement harnesses live in `Sources/Tests/Harnesses` and run in CI on every change to the
+library: the boundary checker, root completeness, the self-verifying solver corpus, the property
+checker, the simplification sweep, the rule-set checker, a crash harness that survives a stack
+overflow, the canonical-form checker, the arm-order checker, and a checker for the code samples in
+the wiki and on the website. Each fails on a defect, or the canonical-form and arm-order checkers on
+a change to the findings they list; the README says which. The rest are still in the analysis
+workspace one directory up (`work/`). Run them before claiming anything is fixed.
 
-Inside the repository there is one measurement, and it is a *gate* rather than a harness:
+There is also a *gate*, which is not a harness:
 `Sources/Tests/UnitTests/Corpus` runs forty problems on every commit and reports **solved / unsolved
 / wrong / error / timeout**. It fails on a wrong answer, and on any case that stops matching its
 recorded verdict — including one that improves, which is a prompt to record the improvement rather

@@ -13,11 +13,12 @@
   
   <PropertyGroup>
     <!--
-    The version under development. The NuGet workflow overrides PackageVersion from the
-    release tag, so what ships is named by the tag; this is what a local build and the
-    assembly metadata carry.
+    The version under development, which a local build carries. The NuGet and terminal release
+    workflows pass the release tag's version as Version and FileVersion, so what ships carries
+    the tag in its assemblies as well as in its package's name.
+    https://github.com/asc-community/AngouriMath/issues/1678
     -->
-    <Version>2.3.0</Version>
+    <Version>2.6.0</Version>
 
     <!--
     Pinned to the major for the whole of 2.x, and deliberately not tracking Version.
@@ -36,7 +37,7 @@
     can express that. FileVersion carries the release for anyone reading file properties.
     -->
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.3.0.0</FileVersion>
+    <FileVersion>2.6.0.0</FileVersion>
 
     <Authors>WhiteBlackGoose and contributors</Authors>
     <Company>Angouri</Company>

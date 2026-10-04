@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+  Does every code sample in the wiki and on the website compile, run, and print what its page
+  says. A harness, not a test project: it is run by .github/workflows/Harnesses.yml and by hand,
+  and `dotnet test` does not pick it up. See ../README.md.
+
+  It references no library: it generates a project per language beside it, under generated/ and
+  generated-fsharp/, which reference Sources/AngouriMath and the F# wrapper, and builds those.
+  Default compile items are off so that neither those nor the wiki clone are compiled into it.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <AssemblyName>docsamples</AssemblyName>
+    <RootNamespace>DocSamples</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Snippets.cs" />
+    <Compile Include="Generator.cs" />
+    <Compile Include="FSharpGenerator.cs" />
+    <Compile Include="Report.cs" />
+    <Compile Include="../Shared/*.cs" />
+  </ItemGroup>
+</Project>

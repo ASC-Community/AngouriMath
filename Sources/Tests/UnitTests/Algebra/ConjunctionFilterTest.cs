@@ -46,6 +46,44 @@ namespace AngouriMath.Tests.Algebra
             Assert.IsType<Set.ConditionalSet>(solved);
         }
 
+        /// <summary>
+        /// Two listed sets meet only where their members agree: <c>x = y and x = 2</c> is
+        /// <c>{ 2 }</c> at <c>y = 2</c> and empty elsewhere. It was <c>{ y }</c>, the second
+        /// equation dropped, since a member of an intersection whose membership was undecided
+        /// was kept. <see href="https://github.com/asc-community/AngouriMath/issues/1680"/>
+        /// </summary>
+        [Theory]
+        [InlineData("x = y and x = 2", 2, "{2}")]
+        [InlineData("x = y and x = 2", 0, "{}")]
+        [InlineData("x + y = 3 and x - y = 1", 1, "{2}")]
+        [InlineData("x + y = 3 and x - y = 1", 0, "{}")]
+        [InlineData("x^2 = 4 and x = y", -2, "{-2}")]
+        [InlineData("x^2 = 4 and x = y", 3, "{}")]
+        public void ListedSetsWithAParameterMeetWhereTheyAgree(string statement, int y, string expected)
+        {
+            var solved = (Set)statement.ToEntity().Solve("x").Substitute("y", y).Evaled;
+            var wanted = (Set)expected.ToEntity().Evaled;
+            Assert.Equal(Boolean.True, MathS.Sets.Subset(solved, wanted).Evaled);
+            Assert.Equal(Boolean.True, MathS.Sets.Subset(wanted, solved).Evaled);
+        }
+
+        /// <summary>
+        /// The same for the intersection itself: a member it cannot decide stays intersected
+        /// with the other set, beside the members it can.
+        /// </summary>
+        [Theory]
+        [InlineData("{ y } /\\ { 2 }", 2, "{2}")]
+        [InlineData("{ y } /\\ { 2 }", 3, "{}")]
+        [InlineData("{ y, 3 } /\\ { 3 }", 2, "{3}")]
+        [InlineData("{ 1, 2 } /\\ { 2, y }", 1, "{1, 2}")]
+        public void AnUndecidedMemberOfAnIntersectionStaysInIt(string intersection, int y, string expected)
+        {
+            var met = (Set)intersection.ToEntity().Evaled.Substitute("y", y).Evaled;
+            var wanted = (Set)expected.ToEntity().Evaled;
+            Assert.Equal(Boolean.True, MathS.Sets.Subset(met, wanted).Evaled);
+            Assert.Equal(Boolean.True, MathS.Sets.Subset(wanted, met).Evaled);
+        }
+
         /// <summary>The inner statement of injectivity, and injectivity itself, for a linear map; the quadratic is refuted by a witness.</summary>
         [Fact]
         public void InjectivityOfALinearMapIsDecided()

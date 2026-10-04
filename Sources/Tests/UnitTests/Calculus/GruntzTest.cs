@@ -28,6 +28,22 @@ namespace AngouriMath.Tests.Calculus
                 expression.ToEntity().Limit("x", destination.ToEntity()).Evaled);
 
         /// <summary>
+        /// The example the algorithm is introduced with -- Gonnet and Gruntz, <i>Limit
+        /// Computation in Computer Algebra</i>, ETH technical report 187, 1992, in Salvy's summary
+        /// of Gruntz's 1993 seminar -- where expanding in powers of <c>1/x</c> gives
+        /// <c>O(x^-k)</c> for every <c>k</c> and settles nothing. In <c>w = e^(-x)</c> it is
+        /// <c>e^(1/x) (e^w - 1)/w</c>, whose leading coefficient <c>e^(1/x)</c> tends to 1. The
+        /// series has to carry <c>1/x</c> as a parameter and see the two constant terms
+        /// <c>e^(1/x)</c> cancel. https://github.com/asc-community/AngouriMath/issues/353
+        /// </summary>
+        [Theory]
+        [InlineData("e ^ x * (e ^ (1/x + e ^ (-x)) - e ^ (1/x))", "+oo", "1")]
+        [InlineData("e ^ x * (e ^ (2/x + e ^ (-x)) - e ^ (2/x))", "+oo", "1")]
+        [InlineData("e ^ (2 * x) * (e ^ (1/x + e ^ (-2 * x)) - e ^ (1/x))", "+oo", "1")]
+        public void TheExampleTheAlgorithmIsIntroducedWith(string expression, string destination, string expected) =>
+            AssertLimit(expression, destination, expected);
+
+        /// <summary>
         /// The example the algorithm is usually shown with. Expanding the two exponentials
         /// separately gives two divergent series whose difference cancels entirely; rewriting
         /// the whole expression in w = e^(-x) gives (e^w - 1)/w, whose leading term is 1.

@@ -56,6 +56,53 @@ namespace AngouriMath.Tests.Calculus
         public void AnExponentialOfAnInverseHyperbolicCotangent(string integrand) => DifferentiatesBack(integrand);
 
         /// <summary>
+        /// With symbols for the coefficients, the substitution leaves coefficients that are zero
+        /// as values and not as written. Under the root of the quotient,
+        /// <c>e^(3 acoth(a x))/(c - a c x)^3</c> is <c>u^4 (a - a u^2)</c> over
+        /// <c>(-(a - a u^2) - (u^2 + 1) a)^3</c>, which is <c>-8 a^3</c>, and the long division
+        /// read it as a sextic with <c>-3 a^3 + 3 a^3</c> for its leading coefficient. Divided
+        /// by that, the answer was NaN. <c>e^(2 acoth(a x)) sqrt(c - a c x)/x</c> leaves
+        /// <c>((c - u^2)/c - 1)(u^2 - c)</c>, whose constant term <c>-(c/c - 1) c</c> is zero;
+        /// read as a biquadratic, one of its roots in <c>u^2</c> was too, and the answer divided
+        /// by its root. Rubi's 7.4.2, #225-#227 and #364-#365.
+        /// https://github.com/asc-community/AngouriMath/issues/1665
+        /// </summary>
+        [Theory]
+        [InlineData("e^(3*acoth(a*x))/(c-a*c*x)^3", "a=1.37,c=2.11", new[] { 1.1, 2.3, -1.4, -3.2 })]
+        [InlineData("e^(3*acoth(a*x))/(c-a*c*x)^3", "a=0.71,c=-1.9", new[] { 1.6, -2.5 })]
+        [InlineData("e^(3*acoth(a*x))/(c-a*c*x)^4", "a=1.37,c=2.11", new[] { 1.1, 2.3, -1.4 })]
+        [InlineData("e^(2*acoth(a*x))*sqrt(c-a*c*x)/x", "a=1.37,c=2.11", new[] { 0.3, -0.5, -2.0 })]
+        [InlineData("e^(2*acoth(a*x))*sqrt(c-a*c*x)/x", "a=1.37,c=-2.11", new[] { 1.5, 3.0 })]
+        [InlineData("e^(2*acoth(a*x))*sqrt(c-a*c*x)/x^2", "a=1.37,c=2.11", new[] { 0.3, -0.5, -2.0 })]
+        public void ACoefficientThatIsZeroAsAValueIsReadAsZero(string integrand, string pins, double[] points)
+        {
+            var integral = integrand.ToEntity().Integrate("x").Substitute("C", 0);
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            Assert.DoesNotContain("NaN", integral.Stringize());
+            Entity Pin(Entity e)
+            {
+                foreach (var pin in pins.Split(','))
+                {
+                    var parts = pin.Split('=');
+                    e = e.Substitute(parts[0], double.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture));
+                }
+                return e;
+            }
+            var derivative = Pin(integral).Differentiate("x");
+            var original = Pin(integrand.ToEntity());
+            foreach (var at in points)
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.False(want.IsNaN, $"the integrand {integrand} has no value at x = {at}");
+                var difference = Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart);
+                var scale = Math.Max(1.0, Math.Abs((double)want.RealPart) + Math.Abs((double)want.ImaginaryPart));
+                Assert.True(difference / scale < 1e-9,
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+        }
+
+        /// <summary>
         /// The quotient of linears under the root leaves <c>(a (1 - u^2))^5</c> below the bar in
         /// <c>u</c>, which the rational reader does not read as <c>a^5 (1 - u^2)^5</c> until it
         /// is written so: <c>x^3 sqrt((a x + 1)/(a x - 1))</c> took nine seconds through the

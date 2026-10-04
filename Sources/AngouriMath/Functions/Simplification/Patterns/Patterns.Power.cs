@@ -250,7 +250,7 @@ namespace AngouriMath.Functions
             // below is guarded for: the principal argument does not negate with its logarithm.
             // At b = -0.63, ln(1/b) is 0.462 + pi*i and -ln(b) is 0.462 - pi*i. These three were
             // applied unconditionally while their neighbours ten lines down carried a guard, and
-            // `work/rulecheck` reports them once its corpus is wide enough to build the shape.
+            // `Sources/Tests/Harnesses/RuleCheck` reports them once its corpus is wide enough to build the shape.
             //
             // The condition is the same one, and is asked through the same helper: ln(1/b) is
             // ln(1) - ln(b), so a reciprocal is the difference case with a numerator of 1. Both

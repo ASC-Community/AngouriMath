@@ -5,6 +5,7 @@
 // Website: https://am.angouri.org.
 //
 
+using System;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Number;
 
@@ -14,9 +15,10 @@ namespace AngouriMath.Functions
     {
         /// <summary>
         /// Whether the expression is real wherever it is defined, given that <paramref name="x"/>
-        /// is. A free variable is read as complex by this library, so one appearing anywhere but
-        /// under a modulus settles nothing and the answer is no. Nothing is claimed for a shape
-        /// not listed: the list costs coverage and never correctness.
+        /// is, and given what <see cref="Assuming"/> says is known to hold. A free variable is
+        /// read as complex by this library, so one appearing anywhere but under a modulus
+        /// settles nothing and the answer is no. Nothing is claimed for a shape not listed: the
+        /// list costs coverage and never correctness.
         /// </summary>
         /// <remarks>
         /// Asked by the limit reader, for which a bound or an oscillation is a fact about a real
@@ -53,6 +55,12 @@ namespace AngouriMath.Functions
                 case Powf(var constantBase, var exponent) when !constantBase.ContainsNode(x)
                         && IsARealNumber(constantBase.Evaled) && ((Complex)constantBase.Evaled).RealPart.IsPositive:
                     return IsRealValued(exponent, x);
+                // So is a base that what is known keeps positive: x ^ (1/3) under `x > 0`. Only a
+                // strict bound is read as one, so the base is positive on an open set around the
+                // point, which is what a derivative needs.
+                case Powf(var @base, var exponent) when assumed is { } known
+                        && PredicateEntailment.Entails(known, new Greaterf(@base, Integer.Zero)):
+                    return IsRealValued(@base, x) && IsRealValued(exponent, x);
                 case Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf
                      or Arctanf or Arccotanf or Signumf or Erff or Erfcf or Erfif or Eif or Sif or Shif:
                     return IsRealValued(expr.DirectChildren[0], x);
@@ -61,6 +69,32 @@ namespace AngouriMath.Functions
                     return true;
                 default:
                     return false;
+            }
+        }
+
+        /// <summary>
+        /// What is known to hold wherever the expression being read has a value, or
+        /// <see langword="null"/>: the condition of the <c>provided</c>, or of the piecewise
+        /// case, being differentiated. Thread-static, as the limit machinery's approach is, and
+        /// swapped rather than set, so a nested one restores the outer.
+        /// </summary>
+        [ThreadStatic] private static Entity? assumed;
+
+        /// <summary>
+        /// Runs <paramref name="work"/> with <paramref name="condition"/> known to hold, as well
+        /// as whatever was known already.
+        /// </summary>
+        internal static T Assuming<T>(Entity condition, Func<T> work)
+        {
+            var outer = assumed;
+            assumed = outer is null ? condition : outer & condition;
+            try
+            {
+                return work();
+            }
+            finally
+            {
+                assumed = outer;
             }
         }
 

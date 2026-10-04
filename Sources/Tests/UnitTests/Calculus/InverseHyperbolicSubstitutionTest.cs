@@ -20,6 +20,7 @@ namespace AngouriMath.Tests.Calculus
     /// of it, which the exponential rules read: <c>x arsinh(a x)</c> is <c>u sinh(2u)/(2a^2)</c>.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/718">#718</a>
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class InverseHyperbolicSubstitutionTest
     {
         private static void DifferentiatesBack(string integrand, double[] points)

@@ -124,5 +124,18 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("tan(x)^4/(a+b*csc(x))")]
         [InlineData("sin(x)^2/(a+b*cos(x))")]
         public void TheNeighboursStayAnswered(string integrand) => AnswersAndDifferentiatesBack(integrand);
+
+        /// <summary>
+        /// The same integrand with `1 + x^2` written either way round. The Hermite reduction's
+        /// system took its rows in the order its dictionaries met the powers, which is the
+        /// spelling's, and with `(1 + x^2)^3` below the bar the solution came out in coefficients
+        /// of the thirty-sixth degree in the symbols that nothing cancelled: forty seconds of
+        /// declining their logarithmic part before the answer, where `(x^2 + 1)^3` took one.
+        /// </summary>
+        [Theory]
+        [InlineData("x/((1+x^2)^3*(2*a*x+b*(x^2+1)))")]
+        [InlineData("x/((x^2+1)^3*(2*a*x+b*(x^2+1)))")]
+        [InlineData("4*x*(1-x^2)^2/((1+x^2)^3*(2*a*x+b*(1+x^2)))")]
+        public void EitherSpellingOfOnePlusTheSquare(string integrand) => AnswersAndDifferentiatesBack(integrand);
     }
 }

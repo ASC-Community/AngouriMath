@@ -140,15 +140,101 @@ namespace AngouriMath
         private Entity CombinedCaseByCase(Piecewise a, Piecewise b,
             Func<Entity, Entity, Entity?> operation, Func<Entity, Entity, Entity, Entity> defaultCtor, bool isExact)
         {
-            var cases = new List<Providedf>();
+            // Every pair of cases, in order, and its conjunction; the expressions are combined only
+            // for the pairs that are kept.
+            var pairs = new List<(Providedf First, Providedf Second, Entity Predicate, Entity? Undecided)>();
             foreach (var (c1, c2) in (a.Cases, b.Cases).EachForEach())
             {
                 var predicate = (c1.Predicate & c2.Predicate).InnerSimplified;
                 if (predicate == Boolean.False)
                     continue;
-                cases.Add((ExpandOnTwoArguments(c1.Expression, c2.Expression, operation, defaultCtor, isExact), predicate).ToProvided());
+                switch (Contradiction(predicate))
+                {
+                    case (true, _):
+                        continue;
+                    case (false, var quantity):
+                        pairs.Add((c1, c2, predicate, quantity));
+                        break;
+                }
             }
+            // A pair that asks a quantity to be both positive and negative is false for a real
+            // one and undecided off the real line, where it would stop the cases after it from
+            // being reached. It goes only where every later pair tests that quantity too: those
+            // are each false or undecided off the real line, never true, so nothing it stopped
+            // is reached without it. A sum of piecewises split on the sign of `d/f` -- the
+            // integrator's answer for `x sqrt(1 + d x) sqrt(1 + f x)` -- otherwise doubled its
+            // cases with every term: 32,769 for six terms of `t^k/(d - f t^2)^4`.
+            // https://github.com/asc-community/AngouriMath/issues/718
+            var keep = new bool[pairs.Count];
+            for (var i = pairs.Count - 1; i >= 0; i--)
+                keep[i] = pairs[i].Undecided is not { } quantity
+                    || !Enumerable.Range(i + 1, pairs.Count - i - 1).All(later => !keep[later] || TestsTheSignOf(pairs[later].Predicate, quantity));
+            var cases = new List<Providedf>();
+            for (var i = 0; i < pairs.Count; i++)
+                if (keep[i])
+                    cases.Add((ExpandOnTwoArguments(pairs[i].First.Expression, pairs[i].Second.Expression, operation, defaultCtor, isExact), pairs[i].Predicate).ToProvided());
             return MathS.Piecewise(cases);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="predicate"/>, a conjunction, asks one quantity <c>q</c> to be
+        /// zero and not zero, or zero and of a sign -- false for every value, complex or not -- in
+        /// <c>Always</c>; and otherwise the quantity it asks to be both positive and negative,
+        /// which is false for a real one and undecided off the real line, or null. A quantity is
+        /// read up to a constant factor, which only the direction of a sign depends on:
+        /// <c>f = 0</c> and <c>not 2 f = 0</c> contradict each other.
+        /// </summary>
+        private static (bool Always, Entity? Undecided) Contradiction(Entity predicate)
+        {
+            var tests = new List<(Entity Quantity, int Relation)>();
+            foreach (var conjunct in Conjuncts(predicate))
+                if (SignTest(conjunct) is { } test)
+                    tests.Add(test);
+            Entity? undecided = null;
+            for (var i = 0; i < tests.Count; i++)
+                for (var j = i + 1; j < tests.Count; j++)
+                {
+                    if (tests[i].Quantity != tests[j].Quantity)
+                        continue;
+                    var (r1, r2) = (tests[i].Relation, tests[j].Relation);
+                    // 0 is "= 0", 2 is "not = 0", 1 and -1 the signs.
+                    if (r1 == 0 && r2 != 0 || r2 == 0 && r1 != 0)
+                        return (true, null);
+                    if (r1 * r2 == -1)
+                        undecided = tests[i].Quantity;
+                }
+            return (false, undecided);
+        }
+
+        /// <summary>Whether <paramref name="predicate"/> has a conjunct testing <paramref name="quantity"/> against zero.</summary>
+        private static bool TestsTheSignOf(Entity predicate, Entity quantity)
+            => Conjuncts(predicate).Any(conjunct => SignTest(conjunct) is var (q, relation) && q == quantity && relation != 2);
+
+        /// <summary>
+        /// A comparison of a quantity with zero as the quantity, with any constant factor taken
+        /// out, and the relation: 0 for <c>= 0</c>, 2 for <c>not = 0</c>, and the sign for
+        /// <c>&gt; 0</c> and <c>&lt; 0</c>, turned by a negative factor. Null for anything else.
+        /// </summary>
+        private static (Entity Quantity, int Relation)? SignTest(Entity conjunct)
+        {
+            (Entity, int)? read = conjunct switch
+            {
+                Equalsf(var q, var zero) when zero == Integer.Zero => (q, 0),
+                Equalsf(var zero, var q) when zero == Integer.Zero => (q, 0),
+                Notf(Equalsf(var q, var zero)) when zero == Integer.Zero => (q, 2),
+                Notf(Equalsf(var zero, var q)) when zero == Integer.Zero => (q, 2),
+                Greaterf(var q, var zero) when zero == Integer.Zero => (q, 1),
+                Lessf(var zero, var q) when zero == Integer.Zero => (q, 1),
+                Lessf(var q, var zero) when zero == Integer.Zero => (q, -1),
+                Greaterf(var zero, var q) when zero == Integer.Zero => (q, -1),
+                _ => null,
+            };
+            if (read is not var (quantity, relation))
+                return null;
+            // The constant factor out: `4 f (-d)` is `f (-d)`, and `2 f` is `f`.
+            if (quantity is Mulf(Real factor, var rest) && !factor.IsZero)
+                (quantity, relation) = (rest, relation is 1 or -1 && factor.IsNegative ? -relation : relation);
+            return (quantity, relation);
         }
 
         private Entity ExpandOnOneArgument(Entity expr, Func<Entity, Entity?> operation, Func<Entity, Entity, Entity> defaultCtor, bool isExact,

@@ -20,6 +20,7 @@ namespace AngouriMath.Tests.Calculus
     /// with the wrong answer: a zero times a complex infinity evaluated to 0, a complex infinity
     /// did not count as infinite, and the descent's unread 0 / abs(0) was returned as NaN.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class ModulusPhaseTest
     {
         private static readonly Variable x = MathS.Var("x");

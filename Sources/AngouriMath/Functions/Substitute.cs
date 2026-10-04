@@ -637,6 +637,20 @@ namespace AngouriMath
             }
         }
 
+        partial record SumOverSetf
+        {
+            /// <inheritdoc/>
+            // The variable is bound; renamed first, as a summation's index is.
+            public override Entity Substitute(Entity x, Entity value)
+            {
+                if (this == x)
+                    return value;
+                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
+                var renamed = Expression.Substitute(Var, replacement).Substitute(x, value).Substitute(replacement, Var);
+                return New(renamed, Var, Over.Substitute(x, value));
+            }
+        }
+
         partial record Maximumf
         {
             /// <inheritdoc/>

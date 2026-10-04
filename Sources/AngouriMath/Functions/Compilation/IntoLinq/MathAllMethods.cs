@@ -288,8 +288,17 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static int Min(int a, int b) => Math.Min(a, b);
         public static BigInteger Min(BigInteger a, BigInteger b) => BigInteger.Min(a, b);
 
-        // The special functions, in double precision as the kernels define them.
-        // https://github.com/asc-community/AngouriMath/issues/1607
+        // Euler's totient: exact over the integers, and over Complex and double a value at a whole
+        // number and NaN at any other. https://github.com/asc-community/AngouriMath/issues/1607
+        public static System.Numerics.Complex Phi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Phi(a);
+        public static double Phi(double a) => AngouriMath.Numerics.SpecialFunctions.Phi(a);
+        public static float Phi(float a) => (float)AngouriMath.Numerics.SpecialFunctions.Phi(a);
+        public static long Phi(long a) => a.Phi();
+        public static int Phi(int a) => (int)((long)a).Phi();
+        public static BigInteger Phi(BigInteger a) => PeterO.Numbers.EInteger.FromBytes(a.ToByteArray(), littleEndian: true).Phi().ToBigInteger();
+
+        // The special functions, in double precision as the kernels define them, and the factorial,
+        // the gamma function one along. https://github.com/asc-community/AngouriMath/issues/1607
         public static System.Numerics.Complex Erf(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erf(a);
         public static double Erf(double a) => AngouriMath.Numerics.SpecialFunctions.Erf(a);
         public static System.Numerics.Complex Erfc(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erfc(a);
@@ -308,6 +317,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static double Shi(double a) => AngouriMath.Numerics.SpecialFunctions.Shi(a);
         public static System.Numerics.Complex Chi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Chi(a);
         public static double Chi(double a) => AngouriMath.Numerics.SpecialFunctions.Chi(a);
+        public static System.Numerics.Complex Factorial(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Factorial(a);
+        public static double Factorial(double a) => AngouriMath.Numerics.SpecialFunctions.Factorial(a);
 
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
@@ -459,6 +470,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("Round", 1, typeof(long)), Def<long>(a => Round(a)) },
             { ("Round", 1, typeof(int)), Def<int>(a => Round(a)) },
             { ("Round", 1, typeof(BigInteger)), Def<BigInteger>(a => Round(a)) },
+            { ("Phi", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Phi(a)) },
+            { ("Phi", 1, typeof(double)), Def<double>(a => Phi(a)) },
+            { ("Phi", 1, typeof(float)), Def<float>(a => Phi(a)) },
+            { ("Phi", 1, typeof(long)), Def<long>(a => Phi(a)) },
+            { ("Phi", 1, typeof(int)), Def<int>(a => Phi(a)) },
+            { ("Phi", 1, typeof(BigInteger)), Def<BigInteger>(a => Phi(a)) },
             { ("Erf", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Erf(a)) },
             { ("Erf", 1, typeof(double)), Def<double>(a => Erf(a)) },
             { ("Erfc", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Erfc(a)) },
@@ -477,6 +494,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("Shi", 1, typeof(double)), Def<double>(a => Shi(a)) },
             { ("Chi", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Chi(a)) },
             { ("Chi", 1, typeof(double)), Def<double>(a => Chi(a)) },
+            { ("Factorial", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Factorial(a)) },
+            { ("Factorial", 1, typeof(double)), Def<double>(a => Factorial(a)) },
         };
 
         // An expression tree is how C# spells "the MethodInfo of this method" without a string:

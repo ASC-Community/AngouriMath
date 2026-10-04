@@ -209,9 +209,12 @@ namespace AngouriMath.Tests.Calculus
             }
         }
 
-        // What is out of reach is a denominator that does not factor over Q and is not a
-        // biquadratic either -- an odd power puts it past the step that factors over the reals.
-        // Recorded so the boundary is visible rather than inferred from an absence.
+        // A denominator that does not factor over Q and is not a biquadratic either -- an odd
+        // power puts it past the step that factors over the reals -- has its logarithms in a sum
+        // over its roots (https://github.com/asc-community/AngouriMath/issues/1285). What is out
+        // of reach is the same denominator with a symbol among its coefficients, which the sum
+        // is not written for. Recorded so the boundary is visible rather than inferred from an
+        // absence.
         //
         // x^2/(x^4 + 1) was the first entry here, on the grounds that x^4 + 1 is irreducible
         // over Q and only factors once real coefficients are allowed. Allowing them is what the
@@ -221,7 +224,16 @@ namespace AngouriMath.Tests.Calculus
         [Theory]
         [InlineData("1 / (x ^ 4 + x + 1)")]
         [InlineData("1 / (x ^ 4 + x ^ 3 + 1)")]
-        public void ADenominatorThatDoesNotFactorIsStillDeclined(string integrand) =>
+        public void ADenominatorThatDoesNotFactorIsASumOverItsRoots(string integrand)
+        {
+            Assert.Contains(integrand.ToEntity().Integrate("x").Nodes, node => node is Entity.SumOverSetf);
+            AssertIsAntiderivative(integrand, 0.3, 1.7, 3.2, -2.4);
+        }
+
+        [Theory]
+        [InlineData("1 / (x ^ 4 + a * x + 1)")]
+        [InlineData("1 / (x ^ 3 + x + a)")]
+        public void ADenominatorWithASymbolThatDoesNotFactorIsStillDeclined(string integrand) =>
             Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
     }
 }

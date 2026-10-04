@@ -23,6 +23,7 @@ namespace AngouriMath.Tests.Calculus
     /// gathering of two powers of one base turns <c>e^x * e^(-x)</c> into exactly this
     /// shape -- but the defect predates it and is reachable by writing the exponent out.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class ConstantRateIntegrandTest
     {
         /// <summary>

@@ -61,6 +61,12 @@ namespace AngouriMath.Functions.Algebra
             Entity.Erff(var arg) => arg,
             Entity.Erfcf(var arg) => arg,
             Entity.Erfif(var arg) => arg,
+            Entity.Eif(var arg) => arg,
+            Entity.Lif(var arg) => arg,
+            Entity.Sif(var arg) => arg,
+            Entity.Cif(var arg) => arg,
+            Entity.Shif(var arg) => arg,
+            Entity.Chif(var arg) => arg,
             Entity.Arcsinf(var arg) => arg,
             Entity.Arccosf(var arg) => arg,
             Entity.Arctanf(var arg) => arg,
@@ -226,9 +232,13 @@ namespace AngouriMath.Functions.Algebra
                 power = inverted ? -n.EInteger.ToInt32Checked() : n.EInteger.ToInt32Checked();
                 return true;
             }
-            if (!inverted && gaussian is null && factor is Entity.Powf(var @base, _) exponential && !@base.ContainsNode(x))
+            // Below the bar too, as the exponential of the negated exponent: `1/(e^(b^2 x^2) x^2)` is
+            // `e^(-b^2 x^2)/x^2`, and it is how by parts writes the factor beside `erf(b x)` in
+            // `erf(b x)/(e^(b^2 x^2) x^2)`, which was declined for want of its integral.
+            // https://github.com/asc-community/AngouriMath/issues/1501
+            if (gaussian is null && factor is Entity.Powf(var @base, var exponent) exponential && !@base.ContainsNode(x))
             {
-                gaussian = exponential;
+                gaussian = inverted ? new Entity.Powf(@base, -exponent) : exponential;
                 return true;
             }
             // A sum, or a whole power of one, taken as it is: read as a polynomial only once a
@@ -344,6 +354,36 @@ namespace AngouriMath.Functions.Algebra
                 TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) =>
                     (arg * MathS.Erfi(arg) - MathS.Pow(MathS.e, MathS.Sqr(arg)) / MathS.Sqrt(MathS.pi)) / a,
 
+            // And the exponential, logarithmic, trigonometric and hyperbolic integrals, by parts
+            // against 1 the same way: each derivative is elementary and cancels the u the
+            // integrated 1 leaves beside it. int Ei(u) = u Ei(u) - e^u, int li(u) = u li(u) -
+            // Ei(2 ln u), int Si(u) = u Si(u) + cos(u), int Ci(u) = u Ci(u) - sin(u),
+            // int Shi(u) = u Shi(u) - cosh(u) and int Chi(u) = u Chi(u) - sinh(u).
+            // https://github.com/asc-community/AngouriMath/issues/1501
+            Entity.Eif(var arg) when
+                TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) =>
+                    (arg * MathS.Ei(arg) - MathS.Pow(MathS.e, arg)) / a,
+
+            Entity.Lif(var arg) when
+                TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) =>
+                    (arg * MathS.Li(arg) - MathS.Ei(2 * MathS.Ln(arg))) / a,
+
+            Entity.Sif(var arg) when
+                TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) =>
+                    (arg * MathS.Si(arg) + MathS.Cos(arg)) / a,
+
+            Entity.Cif(var arg) when
+                TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) =>
+                    (arg * MathS.Ci(arg) - MathS.Sin(arg)) / a,
+
+            Entity.Shif(var arg) when
+                TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) =>
+                    (arg * MathS.Shi(arg) - MathS.Hyperbolic.Cosh(arg)) / a,
+
+            Entity.Chif(var arg) when
+                TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) =>
+                    (arg * MathS.Chi(arg) - MathS.Hyperbolic.Sinh(arg)) / a,
+
             Entity.Absf(var arg) when
                 TreeAnalyzer.TryGetPolyLinear(arg, x, out var a, out _) => // ∫ |ax + b| dx = sgn(ax + b) * (ax + b)^2 / (2a)
                     MathS.Signum(arg) * MathS.Pow(arg, 2) / (2 * a),
@@ -440,10 +480,11 @@ namespace AngouriMath.Functions.Algebra
                         / (rate * rate + frequency * frequency),
 
             // ∫ sqrt(ax^2 + bx + c) dx, which is one integration by parts away from the
-            // reciprocal form below and is written in terms of it.
+            // reciprocal form below and is written in terms of it. Not of a square, as below.
             Entity.Powf(var radicand, Entity.Number.Rational(Entity.Number.Integer(1), Entity.Number.Integer(2))) when
                 TreeAnalyzer.TryGetPolyQuadratic(radicand, x, out var qa, out var qb, out var qc)
                 && qa.Evaled is Entity.Number.Complex { IsZero: false }
+                && !IndefiniteIntegralSolver.IsAPerfectSquareDiscriminant(qa, qb, qc)
                     => IntegrateRootOfQuadratic(qa, qb, qc, radicand, x),
 
             // ∫ k / (x^2 * sqrt(ax^2 + c)) dx, the shape a trigonometric substitution is
@@ -456,10 +497,17 @@ namespace AngouriMath.Functions.Algebra
 
             // ∫ k / sqrt(ax^2 + bx + c) dx -- the arcsine and logarithm forms. Without
             // these, 1/sqrt(1 - x^2) had no antiderivative at all.
+            // Not of a square: its root is the modulus of a linear, `sqrt(a (x + h)^2)` being
+            // `sqrt(a) |x + h|`, which the rule for a root of a perfect square writes. Here the
+            // arcsine divides by the root of the discriminant, zero, and the logarithm is of
+            // `2a (x + h) + 2a |x + h|`, zero beyond the root: `1/sqrt(x^2 + 2x + 1)` was
+            // `ln(0)` for every x below -1, and `1/sqrt(-a^2 - 2abx - b^2 x^2)` NaN everywhere.
+            // https://github.com/asc-community/AngouriMath/issues/1670
             Entity.Divf(var numerator,
                         Entity.Powf(var radicand, Entity.Number.Rational(Entity.Number.Integer(1), Entity.Number.Integer(2)))) when
                 !numerator.ContainsNode(x)
                 && TreeAnalyzer.TryGetPolyQuadratic(radicand, x, out var ra, out var rb, out var rc)
+                && !IndefiniteIntegralSolver.IsAPerfectSquareDiscriminant(ra, rb, rc)
                     => IntegrateOverRootOfQuadratic(numerator, ra, rb, rc, radicand, x),
 
             // ∫ (px + q)/(ax^2 + bx + c) dx. Only the constant numerator was covered, so
@@ -1086,6 +1134,14 @@ namespace AngouriMath.Functions.Algebra
             if (power < 2)
                 return null;
 
+            // An improper fraction comes down to the first power with a numerator of the second
+            // degree, and is declined there, after a division at every power above it: declined
+            // before the first. With symbols in the quadratic each division is a simplification
+            // of every coefficient.
+            if (TreeAnalyzer.TryGetPolynomial(numerator, x, out var terms) && terms.Count > 0
+                && terms.Keys.Max()!.CompareTo(EInteger.FromInt32(2 * power)) >= 0)
+                return null;
+
             var division = TreeAnalyzer.PolynomialLongDivision(numerator, quadratic, genericCase: true, inTermsOf: x);
             if (division is null)
                 return null;
@@ -1102,6 +1158,15 @@ namespace AngouriMath.Functions.Algebra
             var remainder = Functions.PartialFractions.Bare((numerator - quotient * quadratic).InnerSimplified);
             if (remainder.ContainsNode(x) && !TreeAnalyzer.TryGetPolyLinear(remainder, x, out _, out _))
                 remainder = Functions.PartialFractions.Bare((numerator - quotient * quadratic).Expand().InnerSimplified);
+            // The division writes the quotient's coefficients simplified, and the quadratic is
+            // subtracted as it is written, so a term the division took away can come back as the
+            // difference of two spellings of one value: `x^4` over `1/(-b + a) + x^2` left
+            // `(1/(a - b) - 1/(-b + a)) x^2`, and the reduction declined where over `1/(a - b) + x^2`
+            // it answered. The remainder the division reports over the divisor has no such term.
+            if (remainder.ContainsNode(x) && !TreeAnalyzer.TryGetPolyLinear(remainder, x, out _, out _)
+                && division.Value.Remainder is Entity.Divf(var reportedAbove, var reportedBelow) && reportedBelow == quadratic
+                && (!reportedAbove.ContainsNode(x) || TreeAnalyzer.TryGetPolyLinear(reportedAbove, x, out _, out _)))
+                remainder = Functions.PartialFractions.Bare(reportedAbove.InnerSimplified);
             // The remainder of a division by a quadratic is linear or a constant; one that
             // still has the variable to a higher power -- the division declined in its own
             // way, on `csch(29/10 + 13/10 x)^3 (17/10 + 23/10 sech(...)^2)^3` through the

@@ -237,7 +237,7 @@ from. A change of *form* is therefore not a failure and only a change of *value*
 lets the corpus stay useful while printed output moves.
 
 **It is a gate and not a harness.** It is small and takes about a second, because everything in the
-suite is paid for on every commit. The harnesses in `work/` are where a measurement generates its own
+suite is paid for on every commit. The harnesses in `Sources/Tests/Harnesses` are where a measurement generates its own
 inputs, takes minutes, and gets read by a person; the two are not substitutes, and a finding from a
 harness that is worth keeping belongs in the corpus as a new problem.
 
@@ -734,6 +734,19 @@ triaged, every issue is on one, and the milestone says what kind of change it is
   A Goal with no last piece to aim at is on Guiding principles
   ([#1511](https://github.com/asc-community/AngouriMath/pull/1511#issuecomment-5858231058)).
 - A proposal without `Accepted` is on Future until it is decided: a version would decide it.
+- **A parent is never due before its children.** Milestones run through the versions in order,
+  then Future, then Guiding principles, and a parent issue's is never earlier than any child's:
+  when a child moves later than its parent, the parent moves with it
+  ([#718](https://github.com/asc-community/AngouriMath/issues/718#issuecomment-5910345918)). The
+  rule runs one way. Bringing work *earlier* is a scheduling decision, not a consequence of it:
+  the integration work under #233 goes to `2.6.0` because calculus comes first, being the
+  door to university mathematics and beyond
+  ([#1626](https://github.com/asc-community/AngouriMath/pull/1626#issuecomment-5911144638)), and
+  #718, a parent with no last piece to aim at, is on Guiding principles. And "under" is
+  GitHub's sub-issue relationship, not prose: an issue that belongs under another is linked in the
+  turn it is filed, and a comment says "under" only once the link is there
+  ([#718](https://github.com/asc-community/AngouriMath/issues/718#issuecomment-5910315961)) --
+  the tree is what the backlog is read by, and a word in a comment is invisible to it.
 
 An issue you open has its type and its milestone from the moment it is filed, which the reply
 that triages someone else's issue does for theirs. `gh issue create --milestone` sets the one;
@@ -741,6 +754,13 @@ the type needs a second call, since `gh issue create` has no flag for it:
 
 ```
 gh api -X PATCH repos/asc-community/AngouriMath/issues/<n> -f type=Bug   # Bug, Feature, Maintenance or Goal
+```
+
+and a sub-issue link takes the child's id rather than its number:
+
+```
+gh api -X POST repos/asc-community/AngouriMath/issues/<parent>/sub_issues \
+  -F sub_issue_id=$(gh api repos/asc-community/AngouriMath/issues/<child> --jq .id)
 ```
 
 When a PR merges, check its issue's milestone still describes where the change lands — a fix
@@ -801,6 +821,7 @@ are short, and a stale one is worse than none — if you change what a file desc
 | [`Contributing/Packaging.md`](Sources/AngouriMath/Docs/Contributing/Packaging.md) | which capabilities ship in the kernel package and which ship separately, and the four checkable clauses that decide. Read it before anything large lands in the kernel |
 | [`WhatsNew/version_performance_control.md`](Sources/AngouriMath/Docs/WhatsNew/version_performance_control.md) | the inter-version performance table, how to add a column, and when the CI performance baseline may be updated |
 | `Sources/Analyzers/` | the custom analyzers, including the static-field one behind `[ConstantField]` |
+| [`Sources/MCP/README.md`](Sources/MCP/README.md) | the MCP server `amcli mcp` runs: what it offers an agent, and the invariants that look arbitrary in it and are not |
 
 Anything added for the library's own purposes is not `public` — see
 [`Contributing/coding_rules.md`](Sources/AngouriMath/Docs/Contributing/coding_rules.md). Nothing
@@ -838,22 +859,22 @@ whatever else it delivered:
 3. **Correctness coverage grows with the surface.** Each new layer adds ways to be wrong that the one
    below could not express.
 
-So the release checklist is: the suite and the harnesses in `work/` green, a `BREAKING-CHANGES.md`
+So the release checklist is: the suite and the harnesses in `Sources/Tests/Harnesses` green, a `BREAKING-CHANGES.md`
 entry for every changed answer measured on real builds, **a performance column measured against the
 previous one on the same machine**, a version number that does not contradict #746, **the
 integration work of [#718](https://github.com/asc-community/AngouriMath/issues/718) properly done
 for the release that claims it** — `2.6.0` is not cut while a Rubi family it promised is half
-landed — and **three other repositories brought to the release**, none of which is carried by
-anything here:
+landed — and **the MCP server and two other repositories brought to the release**:
 
-- [AngouriMathMCP](https://github.com/asc-community/AngouriMathMCP), the server that exposes the
-  library to an agent. It has to expose what the release added, and its documentation is where an
-  agent learns *how a problem is put to the library* — which nodes to build for a question, which
-  operation to invoke, and how to read the answer back out of the nodes. That documentation is as
-  much a deliverable as the operation (the maintainer's words on
-  [#1409](https://github.com/asc-community/AngouriMath/issues/1409)); write it there, or in this
-  repository's `Docs/Usage` and the website, and check at every release that the MCP still says
-  what the library does.
+- the MCP server, `amcli mcp`, in [`Sources/MCP`](Sources/MCP), which exposes the library to an
+  agent. It was asc-community/AngouriMathMCP, now archived. It builds against the library here and
+  its tests run in CI, so its code keeps up, but it has to expose what the release added. Its
+  documentation, `Sources/MCP/README.md`, is where an agent learns *how a problem is put to the
+  library* — which nodes to build for a question, which operation to invoke, and how to read the
+  answer back out of the nodes. That documentation is as much a deliverable as the operation (the
+  maintainer's words on [#1409](https://github.com/asc-community/AngouriMath/issues/1409)); write it
+  there, or in this repository's `Docs/Usage` and the website, and check at every release that the
+  MCP still says what the library does.
 - [CSharpMath](https://github.com/verybadcat/CSharpMath), for the round trip of `Latexize` — see
   *The standard command wins* above. If a PR there from an earlier release is still unmerged, add
   to it rather than opening a second.

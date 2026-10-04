@@ -413,6 +413,13 @@ namespace AngouriMath.Functions.Algebra
         [System.ThreadStatic] private static bool descentTruncated;
 
         /// <summary>
+        /// Marks what is being worked out as declined for the scope it was asked in rather than
+        /// for its mathematics, as running out of descent is, so that the decline is not
+        /// remembered: the same question asked where that scope does not bind may be answered.
+        /// </summary>
+        internal static void DeclinedForItsScope() => descentTruncated = true;
+
+        /// <summary>
         /// The integrals this thread is part-way through, so that asking for one again while it is
         /// still being worked out is recognised as a cycle rather than followed round again.
         /// </summary>
@@ -446,13 +453,53 @@ namespace AngouriMath.Functions.Algebra
                 descentTruncated = true;
                 return null;
             }
-            if (descentDepth == 0)
+            if (descentDepth != 0)
+                return ComputeIndefiniteIntegralGuarded(expr, x, integrateByParts);
+            descentTruncated = false;
+            inProgress?.Clear();
+            ASumOverRootsWouldAnswer = false;
+            var answer = ComputeIndefiniteIntegralGuarded(expr, x, integrateByParts);
+            if (answer is not null || !ASumOverRootsWouldAnswer || SumsOverRootsAllowed)
+                return answer;
+            // Once more with sums over roots, and with a memo of its own, since the first pass
+            // remembered every one of those rational functions as declined. Last, and only where
+            // nothing else answered: asked with the rest, a sum over roots answered each of
+            // Jeffrey's three terms, where the whole is one arctangent the rational integrator
+            // writes when it is asked the whole.
+            // https://github.com/asc-community/AngouriMath/issues/1285
+            var (memo, stamp) = (answered, answeredUnder);
+            SumsOverRootsAllowed = true;
+            answered = null;
+            descentTruncated = false;
+            inProgress?.Clear();
+            try
             {
-                descentTruncated = false;
-                inProgress?.Clear();
+                answer = ComputeIndefiniteIntegralGuarded(expr, x, integrateByParts);
             }
-            return ComputeIndefiniteIntegralGuarded(expr, x, integrateByParts);
+            finally
+            {
+                SumsOverRootsAllowed = false;
+                (answered, answeredUnder) = (memo, stamp);
+            }
+            // In place of the decline the first pass remembered, which a question asked again
+            // would otherwise be answered with, without the rule ever being reached to say that a
+            // second pass could answer it.
+            if (answer is not null && memo is not null && stamp is not null && SettingsState.StillHolds(stamp))
+                memo[(Normalized(expr, x), x, integrateByParts, true)] = answer;
+            return answer;
         }
+
+        /// <summary>
+        /// Whether the rational integrator may answer with a sum over the roots of a factor of the
+        /// denominator: only in the second pass of a question nothing else answered.
+        /// </summary>
+        [System.ThreadStatic] internal static bool SumsOverRootsAllowed;
+
+        /// <summary>
+        /// Set where the rational integrator declined only because the residues lie in a field of
+        /// degree above two, which a sum over roots would have written.
+        /// </summary>
+        [System.ThreadStatic] internal static bool ASumOverRootsWouldAnswer;
 
         /// <summary>
         /// <see cref="ComputeIndefiniteIntegral"/> past its entry check: the cycle guard, the
@@ -559,6 +606,16 @@ namespace AngouriMath.Functions.Algebra
             // dropped it re-enabled integration by parts one level below the call that
             // switched it off -- which is a cycle, since by parts calls back into here.
             // `x * ln(x)` went round it until the stack ran out.
+            // A product of powers of quotients of linears with one linear in two of them, written
+            // over each linear once with the constant that takes in front. First, since it answers
+            // the question asked only, and the polynomial term below writes `1/u` as `u^(-1)` and
+            // asks that a level down: `1/(e^atanh(a x) (c - c/(a x))^(3/2))` reached it nowhere.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingEachLinearOnce(expr, x, integrateByParts)) is { }) return answer;
+            // A linear under a power inside a sum, written as the variable: `x^3/(a + b (c + d x)^3)`.
+            // Before the polynomial term, which takes the leading coefficient out of a power of
+            // the sum and writes what is left out in powers of x, where the linear is gone; and
+            // before the substitution search, which reads one function at a time.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAFunctionOfOneShiftedLinear(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveAsPolynomialTerm(expr, x, integrateByParts)) is { }) return answer;
             // A product of powers of the variable with a power of a constant multiple of it
             // among them, `(c x)^m x^n`, by the power rule with the written power kept as
@@ -576,8 +633,13 @@ namespace AngouriMath.Functions.Algebra
             // A power of an exponential with a positive base is the exponential of the product,
             // exactly, and only that spelling is one the exponential rules read.
             if ((answer = IndefiniteIntegralSolver.SolveByFlatteningAPowerOfAnExponential(expr, x, integrateByParts)) is { }) return answer;
+            // And any other power of an exponential beside a polynomial below the bar, as a constant
+            // multiple of an exponential wherever it is differentiable.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfAnExponentialAsAMultipleOfOne(expr, x, integrateByParts)) is { }) return answer;
             // An exponential of a quadratic in 1/L beside a power of L, onto the Gaussian under u = 1/L.
             if ((answer = IndefiniteIntegralSolver.SolveAGaussianInAReciprocal(expr, x)) is { }) return answer;
+            // And a trigonometric function of the reciprocal of a linear beside a power of it, under u = 1/L.
+            if ((answer = IndefiniteIntegralSolver.SolveAFunctionOfTheReciprocalOfALinear(expr, x, integrateByParts)) is { }) return answer;
             // An exponential of a multiple of a logarithm is a power of the argument, which is
             // how every inverse hyperbolic function under an exponential arrives.
             if ((answer = IndefiniteIntegralSolver.SolveByFoldingAnExponentialOfALogarithm(expr, x, integrateByParts)) is { }) return answer;
@@ -596,6 +658,15 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveAnExponentialOfALinearOverAPowerOfALinear(expr, x)) is { }) return answer;
             // And a sum of exponentials, which is how sinh and cosh arrive, onto Shi and Chi.
             if ((answer = IndefiniteIntegralSolver.SolveAHyperbolicOfALinearOverAPowerOfALinear(expr, x)) is { }) return answer;
+            // And either over several linears, split into partial fractions over them first, as the
+            // trigonometric rule below splits.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialOverSeveralLinears(expr, x)) is { }) return answer;
+            // And exponentials below the bar, where they are whole powers of one exponential and
+            // its powers alone are left below: `1/((c + d x)(a + a tanh(e + f x)))`.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialBelowTheBarBesideAPowerOfALinear(expr, x)) is { }) return answer;
+            // And with sines and cosines beside the exponential, written as exponentials: each term
+            // is then the exponential's, with a complex rate.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialTimesATrigonometricOverLinears(expr, x)) is { }) return answer;
             // Sines and cosines of a linear over a power of a linear, onto Si and Ci under u = the
             // linear, where the search would take the quotient by parts without end.
             if ((answer = IndefiniteIntegralSolver.SolveATrigonometricOfALinearOverAPowerOfALinear(expr, x)) is { }) return answer;
@@ -604,11 +675,23 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveAReciprocalOfAnInverseTrigonometricFunction(expr, x, integrateByParts)) is { }) return answer;
             // A fractional power of a perfect square is the power of the modulus, sgn(P) P^(2r).
             if ((answer = IndefiniteIntegralSolver.SolveByTakingARootOfAPerfectSquare(expr, x, integrateByParts)) is { }) return answer;
+            // And any power of a square in any power of x, as the power of its root times a factor
+            // constant where the root is not zero: `x^2 (a^2 + 2 a b x^3 + b^2 x^6)^p`.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfASquareAsAPowerOfItsRoot(expr, x, integrateByParts)) is { }) return answer;
+            // And a fractional power of a sum whose every term has x in it, the power of x taken out
+            // with the factor that is constant where it is not zero: `1/sqrt(a x^2 + b x^5)`.
+            if ((answer = IndefiniteIntegralSolver.SolveByTakingAPowerOfXOutOfAFractionalPower(expr, x, integrateByParts)) is { }) return answer;
+            // A power of a multiple of a quadratic's derivative beside a power of the quadratic is
+            // a binomial in the derivative: `(b d + 2 c d x)^m (a + b x + c x^2)^p`.
+            if ((answer = IndefiniteIntegralSolver.SolveByTheDerivativeOfAQuadraticAsTheVariable(expr, x, integrateByParts)) is { }) return answer;
             // x^(n - 1) g(x^n) with a symbolic n is g(u)/n under u = x^n.
             if ((answer = IndefiniteIntegralSolver.SolveByAPowerOfTheVariableTimesAFunctionOfItsPower(expr, x, integrateByParts)) is { }) return answer;
             // A whole power of a product of a constant and the variable, as the product of
             // the powers, which is how the inverse hyperbolic secant and cosecant arrive.
             if ((answer = IndefiniteIntegralSolver.SolveByDistributingWholePowersOfProducts(expr, x, integrateByParts)) is { }) return answer;
+            // And of quotients, which a substitution leaves where it has simplified a sum over
+            // the bar: `(c/(a + c u^2))^2` is read by nothing that reads `c^2/(a + c u^2)^2`.
+            if ((answer = IndefiniteIntegralSolver.SolveByDistributingWholePowersOfQuotients(expr, x, integrateByParts)) is { }) return answer;
             // And a fractional or symbolic power of a monomial: `(c x^n)^b` is `c^b x^(n b)`
             // for a positive `c`, on the `x > 0` where a symbolic `n` leaves the integrand real.
             if ((answer = IndefiniteIntegralSolver.SolveByDistributingAPowerOfAMonomial(expr, x, integrateByParts)) is { }) return answer;
@@ -683,6 +766,13 @@ namespace AngouriMath.Functions.Algebra
             // `x/sqrt(1 - x^4)`, which the substitution answers, and it is what by parts leaves
             // from `arcsin(x)/(1 + x^2)^(3/2)`.
             if ((answer = IndefiniteIntegralSolver.SolveByCombiningRadicals(expr, x, integrateByParts)) is { }) return answer;
+            // A polynomial beside the roots of two linears with symbols in them, which the
+            // combining above cannot sign, and over a power of one more linear:
+            // `(A + B x + C x^2) sqrt(c + d x) sqrt(e + f x)` by undetermined coefficients,
+            // where the substitution further down took gigabytes.
+            if ((answer = IndefiniteIntegralSolver.SolveAPolynomialOverAPowerOfALinearBesideTwoRoots(expr, x)) is { }) return answer;
+            // And beside the root of one quadratic: `(d + e x + f x^2) sqrt(a + c x^2)/(g + h x)^4`.
+            if ((answer = IndefiniteIntegralSolver.SolveAPolynomialOverAPowerOfALinearBesideARootOfAQuadratic(expr, x)) is { }) return answer;
             // A square root of a polynomial with a repeated factor, the factor taken out of
             // the root with its sign: `sqrt((x - 3)^2 (x + 1))` is `sgn(x - 3) (x - 3) sqrt(x + 1)`.
             if ((answer = IndefiniteIntegralSolver.SolveByTakingASquareFactorOutOfARoot(expr, x, integrateByParts)) is { }) return answer;
@@ -778,6 +868,9 @@ namespace AngouriMath.Functions.Algebra
             // the pair of exponents they are. After the reduction, because a power of the secant
             // alone is both rules' and the reduction's answer for it is shorter.
             if ((answer = IndefiniteIntegralSolver.SolveByTrigonometricPowerSubstitution(expr, x)) is { }) return answer;
+            // A power of the cotangent that is not whole beside the tangent, written as the
+            // tangent's with the constant that takes in front, which the substitution below reads.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfTheCotangentInTheTangent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTangentSubstitution(expr, x, integrateByParts)) is { }) return answer;
             // A root of a quadratic in the tangent with a linear term, rotated until it has
             // none: `1/sqrt(a + b tan(x) + c tan(x)^2)` is `1/sqrt(A + C tan(y)^2)` under
@@ -788,6 +881,8 @@ namespace AngouriMath.Functions.Algebra
             // is why the general substitution does not find it and why it pays: the integrator
             // answers an exponential times almost anything.
             if ((answer = IndefiniteIntegralSolver.SolveByLogarithmSubstitution(expr, x, integrateByParts)) is { }) return answer;
+            // And a power of x times a function of one logarithm of a monomial, under t = that logarithm.
+            if ((answer = IndefiniteIntegralSolver.SolveByAPowerAndALogarithmOfAMonomial(expr, x, integrateByParts)) is { }) return answer;
             // And the inverse trigonometric functions' own, beside the logarithm's and for the
             // same reason: `x = sin(u)` removes the `x` that substituting for `arcsin(x)` leaves.
             if ((answer = IndefiniteIntegralSolver.SolveByInverseTrigonometricSubstitution(expr, x, integrateByParts)) is { }) return answer;
@@ -828,6 +923,9 @@ namespace AngouriMath.Functions.Algebra
             // cubic. The residues decide the field the answer needs, not the roots of the
             // denominator, and the Rothstein-Trager resultant finds them.
             if ((answer = IndefiniteIntegralSolver.SolveByRothsteinTrager(expr, x)) is { }) return answer;
+            // A rational function with complex coefficients, written as its real and imaginary parts
+            // over a real denominator, which the rules above read.
+            if ((answer = IndefiniteIntegralSolver.SolveARationalFunctionWithComplexCoefficients(expr, x, integrateByParts)) is { }) return answer;
             // The tangent substitution again, and this time for a *rational* function: a repeated
             // irreducible quadratic beside a negative power of the variable is `sin^p cos^q` with
             // both exponents whole, which the recurrences close. Below partial fractions rather
@@ -899,6 +997,9 @@ namespace AngouriMath.Functions.Algebra
             // `a + b x^n`. After the quadratic, which is the case `n = 2` and answers it through
             // the trigonometric substitution -- a shorter answer than a root of a root.
             if ((answer = IndefiniteIntegralSolver.SolveABinomialDifferential(expr, x)) is { }) return answer;
+            // And a root of a quadratic binomial beside another at the ratios where the integral is
+            // elementary: `1/((1 - x^2)^(1/3) (3 + x^2))`, which is no binomial differential.
+            if ((answer = IndefiniteIntegralSolver.SolveAnEllipticLookingQuotientOfBinomials(expr, x)) is { }) return answer;
             // A rational function of x^n beside `(c + d x^n)^(k - 1/n)`, rationalised by
             // `u = x/(c + d x^n)^(1/n)`: Timofeev's `1/((1 + x^4)(2 + x^4)^(1/4))` is `1/(1 + u^4)`.
             if ((answer = IndefiniteIntegralSolver.SolveByDividingByTheRoot(expr, x)) is { }) return answer;
@@ -941,6 +1042,10 @@ namespace AngouriMath.Functions.Algebra
             // same reciprocal: `1/(x^2 sqrt(Q))` is a polynomial over the root of the reversed
             // quadratic, which the rules for those answer.
             if ((answer = IndefiniteIntegralSolver.SolveByTheReciprocalBesideARootOfAQuadratic(expr, x, integrateByParts)) is { }) return answer;
+            // The binomial differential with a symbol in its coefficients, asked here rather than
+            // beside the one with numbers: the rules since then answer what they share with it
+            // more shortly, `1/(a - b x^4)^(1/4)` by two arctangents where this gives four terms.
+            if ((answer = IndefiniteIntegralSolver.SolveABinomialDifferentialWithSymbols(expr, x)) is { }) return answer;
             // A rational function of x and one cube root of a polynomial: no substitution
             // rationalises it, and the elementary ones are logarithms of `L - y` for linear L
             // whose cube agrees with the polynomial at the poles, found by an ansatz.
@@ -997,6 +1102,11 @@ namespace AngouriMath.Functions.Algebra
             // throws away whatever structure it had: (1 + x^2)^2 is answered as a power and only
             // wants writing out if that fails.
             if ((answer = IndefiniteIntegralSolver.SolveByExpandingAPower(expr, x, integrateByParts)) is { }) return answer;
+            // And a product of such powers and sums, written out for the same reason and as late.
+            if ((answer = IndefiniteIntegralSolver.SolveByExpandingAProductOfSums(expr, x, integrateByParts)) is { }) return answer;
+            // One block quadratic in a power of x, split at its roots, which are complex where its
+            // discriminant is negative: as late, so that a rule answering the block whole goes first.
+            if ((answer = IndefiniteIntegralSolver.SolveByOneBlockInAPowerOfXAtItsRoots(expr, x, integrateByParts)) is { }) return answer;
             // The sign of a real-valued factor is constant between its zeros, and goes in
             // front of the antiderivative of the rest. After every rule that reads the sign
             // where it stands: `cos(x) sgn(sin(x))` is `|sin(x)|` by the substitution, and

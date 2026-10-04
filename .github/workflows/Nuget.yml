@@ -43,12 +43,15 @@ jobs:
 
           echo "version=$version" >> $GITHUB_OUTPUT
 
+          # Four numbers: the version without its prerelease or build suffix, and a zero.
+          echo "file_version=${version%%[-+]*}.0" >> $GITHUB_OUTPUT
+
       - name: 'Pack and publish AngouriMath'
         run: |
           cd Sources/AngouriMath
           dotnet restore AngouriMath.csproj
-          dotnet build AngouriMath.csproj -c release
-          dotnet pack AngouriMath.csproj -c release -p:PackageVersion=${{ steps.version.outputs.version }}
+          dotnet build AngouriMath.csproj -c release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
+          dotnet pack AngouriMath.csproj -c release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
           cd bin/release
           dotnet nuget push AngouriMath.${{ steps.version.outputs.version }}.nupkg --api-key ${{ secrets.NUGET_KEY }} --source nuget.org
           
@@ -56,8 +59,8 @@ jobs:
         run: |
           cd Sources/Wrappers/AngouriMath.FSharp
           dotnet restore
-          dotnet build -c Release
-          dotnet pack -c Release -p:PackageVersion=${{ steps.version.outputs.version }}
+          dotnet build -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
+          dotnet pack -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
           cd bin/Release
           dotnet nuget push AngouriMath.FSharp.${{ steps.version.outputs.version }}.nupkg --api-key ${{ secrets.NUGET_KEY }} --source nuget.org
           
@@ -65,8 +68,8 @@ jobs:
         run: |
           cd Sources/Wrappers/AngouriMath.Interactive
           dotnet restore
-          dotnet build -c Release
-          dotnet pack -c Release -p:PackageVersion=${{ steps.version.outputs.version }}
+          dotnet build -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
+          dotnet pack -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
           cd bin/Release
           dotnet nuget push AngouriMath.Interactive.${{ steps.version.outputs.version }}.nupkg --api-key ${{ secrets.NUGET_KEY }} --source nuget.org
           
@@ -74,7 +77,7 @@ jobs:
         run: |
           cd Sources/Terminal/AngouriMath.Terminal
           dotnet restore
-          dotnet build -c Release
-          dotnet pack -c Release -p:PackageVersion=${{ steps.version.outputs.version }}
+          dotnet build -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
+          dotnet pack -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
           cd bin/Release
           dotnet nuget push AngouriMath.Terminal.${{ steps.version.outputs.version }}.nupkg --api-key ${{ secrets.NUGET_KEY }} --source nuget.org

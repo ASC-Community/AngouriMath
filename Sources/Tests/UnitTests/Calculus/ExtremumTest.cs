@@ -17,6 +17,7 @@ namespace AngouriMath.Tests.Calculus
     /// <c>max(f(t), t in S)</c>, <c>min</c>, <c>argmax</c> and <c>argmin</c>: the extremum of an
     /// expression over a set, as binders. https://github.com/asc-community/AngouriMath/issues/1212
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class ExtremumTest
     {
         // The sheet's question I.6: the area of a projectile's flight is largest at pi/3.

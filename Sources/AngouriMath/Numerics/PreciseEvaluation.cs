@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PeterO.Numbers;
 using static AngouriMath.Entity;
 
@@ -75,6 +76,10 @@ namespace AngouriMath.Numerics
         // Values already worked out, by node: an expression substituted at several points shares
         // every subtree free of the point, and each of those is worked out once.
         private readonly Dictionary<Entity, PreciseComplexInterval> known = new(ByReference.Instance);
+
+        // The roots a sum over roots is working through, each under a name of its own and as the
+        // rectangle that encloses it.
+        private Dictionary<Variable, PreciseComplexInterval>? bound;
 
         // One set of contexts per precision, for the life of the process: the library's constant
         // cache and its guard-digit contexts are keyed by the context instance, so contexts
@@ -395,6 +400,10 @@ namespace AngouriMath.Numerics
 
         private PreciseComplexInterval Evaluate(Entity expr)
         {
+            // Ahead of the values remembered by node: a name bound to one root now is bound to
+            // another the next time round.
+            if (bound is not null && expr is Variable name && bound.TryGetValue(name, out var root))
+                return root;
             if (known.TryGetValue(expr, out var value))
                 return value;
             value = EvaluateNode(expr);
@@ -521,10 +530,98 @@ namespace AngouriMath.Numerics
                     return BySlope(Evaluate(argument), Number.Shi, z => Divide(Half(Subtract(Exp(z), Exp(Negate(z)))), z), cutEnd: null);
                 case Chif(var argument):
                     return BySlope(Evaluate(argument), Number.Chi, z => Divide(Half(Add(Exp(z), Exp(Negate(z)))), z), cutEnd: EDecimal.Zero);
+                // A sum over the roots of a polynomial, the form Rothstein–Trager answers in: each
+                // root enclosed, the summand worked out on its rectangle, and the terms added.
+                // https://github.com/asc-community/AngouriMath/issues/1285
+                case SumOverSetf(var summand, Variable name, Set.ConditionalSet { Var: Variable w, Predicate: Equalsf(var left, var right) }):
+                    return OverTheRoots(summand, name, left - right, w);
                 default:
                     return undefined;
             }
         }
+
+        /// <summary>
+        /// <paramref name="summand"/> added up over the roots of <paramref name="polynomial"/> in
+        /// <paramref name="w"/>, taken by <paramref name="name"/> in turn; undefined where a root
+        /// cannot be enclosed apart from the others.
+        /// </summary>
+        private PreciseComplexInterval OverTheRoots(Entity summand, Variable name, Entity polynomial, Variable w)
+        {
+            if (RootsEnclosed(polynomial, w) is not { } roots)
+                return undefined;
+            var total = Real(PreciseInterval.Exactly(EDecimal.Zero));
+            foreach (var root in roots)
+            {
+                bound ??= new();
+                var own = Variable.CreateTemp(summand.Vars.Concat(bound.Keys).Append(name));
+                bound[own] = root;
+                total = Add(total, Evaluate(summand.Substitute(name, own)));
+            }
+            return total;
+        }
+
+        /// <summary>
+        /// A rectangle about each root of <paramref name="polynomial"/> in <paramref name="w"/>,
+        /// holding that root and no other; null where the polynomial does not have rational
+        /// coefficients, or the rectangles cannot be kept apart.
+        /// </summary>
+        /// <remarks>
+        /// Durand–Kerner's approximations <c>z_k</c> at this precision, each enclosed by its
+        /// Weierstrass correction <c>w_k = p(z_k)/(a prod_{j != k} (z_k - z_j))</c>, worked out in
+        /// intervals. Every root lies in a disk about some <c>z_k - w_k</c> of radius
+        /// <c>(n - 1)|w_k|</c>, and a disk apart from the others holds exactly one (Braess and
+        /// Hadeler). That disk is inside the one of radius <c>n|w_k|</c> about <c>z_k</c>, whose
+        /// square is the rectangle, so rectangles apart from each other hold one root each.
+        /// </remarks>
+        private List<PreciseComplexInterval>? RootsEnclosed(Entity polynomial, Variable w)
+        {
+            if (AngouriMath.Functions.SumOverSet.SquareFreeParts(polynomial, w) is not { } parts)
+                return null;
+            var enclosed = new List<PreciseComplexInterval>();
+            foreach (var part in parts)
+            {
+                var p = part.Factor;
+                var n = p.Degree;
+                if (n < 1)
+                    continue;
+                if (AngouriMath.Functions.Algebra.NumericalSolving.DurandKerner.Roots(p, near) is not { } approximations
+                    || approximations.Count != n)
+                    return null;
+                var points = new PreciseComplexInterval[n];
+                for (var k = 0; k < n; k++)
+                    points[k] = new(PreciseInterval.Exactly(approximations[k].RealPart.EDecimal),
+                        PreciseInterval.Exactly(approximations[k].ImaginaryPart.EDecimal));
+                var lead = Real(PreciseInterval.Exactly(EDecimal.FromEInteger(p[n])));
+                var rectangles = new PreciseComplexInterval[n];
+                for (var k = 0; k < n; k++)
+                {
+                    var value = lead;
+                    for (var i = n - 1; i >= 0; i--)
+                        value = Add(Multiply(value, points[k]), Real(PreciseInterval.Exactly(EDecimal.FromEInteger(p[i]))));
+                    var product = lead;
+                    for (var j = 0; j < n; j++)
+                        if (j != k)
+                            product = Multiply(product, Subtract(points[k], points[j]));
+                    var correction = Divide(value, product);
+                    if (!correction.IsFinite)
+                        return null;
+                    var radius = EDecimal.FromInt32(n).Multiply(correction.Re.Magnitude.Add(correction.Im.Magnitude, up), up);
+                    var re = points[k].Re.Low;
+                    var im = points[k].Im.Low;
+                    rectangles[k] = new(new(re.Subtract(radius, down), re.Add(radius, up)), new(im.Subtract(radius, down), im.Add(radius, up)));
+                }
+                for (var j = 0; j < n; j++)
+                    for (var k = j + 1; k < n; k++)
+                        if (Overlap(rectangles[j], rectangles[k]))
+                            return null;
+                enclosed.AddRange(rectangles);
+            }
+            return enclosed;
+        }
+
+        private static bool Overlap(PreciseComplexInterval a, PreciseComplexInterval b)
+            => a.Re.Low.CompareTo(b.Re.High) <= 0 && b.Re.Low.CompareTo(a.Re.High) <= 0
+            && a.Im.Low.CompareTo(b.Im.High) <= 0 && b.Im.Low.CompareTo(a.Im.High) <= 0;
 
         /// <summary>
         /// A special function over the rectangle: its value at the middle, which the library

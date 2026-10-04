@@ -63,6 +63,65 @@ namespace AngouriMath.Tests.Calculus
             => DifferentiatesBack(integrand, AroundZero, Pins);
 
         /// <summary>
+        /// Beside a sine or a cosine of a linear, the sine and cosine are written as exponentials,
+        /// and each term is the exponential's above with a complex rate: <c>e^(2x) sin(x)/x</c> is
+        /// <c>(Ei((2 + i) x) - Ei((2 - i) x))/(2i)</c>, two conjugate terms whose sum is real.
+        /// </summary>
+        [Theory]
+        [InlineData("e^(2*x)*sin(x)/x")]
+        [InlineData("e^x*cos(x)/(1 + x)")]
+        [InlineData("x*e^x*sin(2*x)/(x - 1)")]
+        public void AnExponentialTimesASineOrCosineOverALinear(string integrand)
+            => DifferentiatesBack(integrand, AroundZero, Pins);
+
+        /// <summary>
+        /// A power of <c>x</c> times a function of a logarithm of a monomial, under
+        /// <c>t = ln(c x^n)</c>, with <c>x^(m + 1)</c> written as <c>K e^((m + 1) t/n)</c> and
+        /// <c>K = x^(m + 1) (c x^n)^(-(m + 1)/n)</c> locally constant. With an even <c>n</c> the
+        /// integrand is real at negative <c>x</c> as well, and the answer is checked there too,
+        /// where <c>ln(c x^n)</c> is not <c>ln(c) + n ln(x)</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("x*sin(ln(x))/ln(x)")]
+        [InlineData("Si(d*(a + b*ln(c*x^n)))")]
+        [InlineData("x*Ci(d*(a + b*ln(c*x^n)))")]
+        [InlineData("(k*x)^m*Ei(d*(a + b*ln(c*x^n)))")]
+        public void APowerTimesAFunctionOfALogarithmOfAMonomial(string integrand)
+            => DifferentiatesBack(integrand, new[] { -2.1, -0.7, 0.6, 1.7 },
+                ("a", "2/5"), ("b", "13/10"), ("c", "7/10"), ("d", "19/10"), ("k", "11/10"), ("m", "1/2"), ("n", "2"));
+
+        /// <summary>
+        /// Over several linears, the quotient is split into partial fractions over them first, and
+        /// each term is the question above: <c>e^x/(x (x + 1))</c> is <c>Ei(x) - Ei(x + 1)/e</c>. The
+        /// last row is what by parts leaves of <c>Ei(a + b x)/x^2</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("e^x/(x*(x + 1))")]
+        [InlineData("e^x/(x*(x - a))")]
+        [InlineData("e^x/(x^2*(x + 1))")]
+        [InlineData("x^3*e^(2*x)/((x + 1)*(x - 2))")]
+        [InlineData("e^(a + b*x)/((a + b*x)*x)")]
+        public void AnExponentialOfALinearOverSeveralLinears(string integrand)
+            => DifferentiatesBack(integrand, AroundZero, Pins);
+
+        /// <summary>
+        /// Under a substitution, what is left in x is a power of the candidate: under
+        /// <c>u = sqrt(1 - a x)/sqrt(1 + a x)</c>, <c>F^(k u)/(1 - a^2 x^2)</c> is
+        /// <c>-F^(k u)/(a u)</c>, and under <c>u = c/(a + b x)</c>, <c>F^u</c> is
+        /// <c>-c F^u/(b u^2)</c>; and beside a quadratic <c>u</c>, what is left of
+        /// <c>F^(1/u) u'/u^2</c> is <c>1/u^2</c> written otherwise. Rubi's 2.3. Every point is where
+        /// <c>|a x| &lt; 1</c>, off <c>a + b x = 0</c>, and the integrand is real.
+        /// </summary>
+        [Theory]
+        [InlineData("F^(sqrt(1 - a*x)/sqrt(1 + a*x))/(1 - a^2*x^2)")]
+        [InlineData("F^(2*sqrt(1 - a*x)/sqrt(1 + a*x))/(1 - a^2*x^2)")]
+        [InlineData("F^(3*sqrt(1 - a*x)/sqrt(1 + a*x))/(1 - a^2*x^2)")]
+        [InlineData("F^(c/(a + b*x))")]
+        [InlineData("F^(1/(a + b*x + c*x^2))*(b + 2*c*x)/(a + b*x + c*x^2)^2")]
+        public void WhatIsLeftInXIsAPowerOfTheCandidate(string integrand)
+            => DifferentiatesBack(integrand, AroundZero, Pins);
+
+        /// <summary>
         /// The Gaussian's odd negative moments end at <c>int e^(A x^2)/x = Ei(A x^2)/2</c>, and
         /// <c>x e^(-1/x^2)</c> is one of them under <c>u = 1/x</c>.
         /// </summary>
@@ -89,6 +148,7 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("(1 + x)/ln(x)")]
         [InlineData("x^2/ln(c*(d + k*x^3)^n)")]
         [InlineData("x^8/ln(c*(d + k*x^3)^n)^2")]
+        [InlineData("(k*x)^m*x/ln(b*x)")]
         public void APowerOverAPowerOfALogarithm(string integrand)
             => DifferentiatesBack(integrand, PastOne, Pins);
 

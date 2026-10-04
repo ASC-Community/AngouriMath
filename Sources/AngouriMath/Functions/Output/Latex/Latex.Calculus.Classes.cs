@@ -66,6 +66,14 @@ namespace AngouriMath
             }
         }
 
+        public partial record SumOverSetf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() =>
+                @"\sum_{" + Var.Latexize() + @" \in " + Over.Latexize() + "} "
+                + Expression.Latexize(Expression.Priority < Priority.Sum);
+        }
+
         public partial record Maximumf
         {
             /// <inheritdoc/>

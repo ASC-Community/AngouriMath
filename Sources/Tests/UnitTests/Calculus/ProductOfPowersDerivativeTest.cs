@@ -104,5 +104,30 @@ namespace AngouriMath.Tests.Calculus
         [Fact]
         public void WhatIsNotADerivativeIsDeclined()
             => Assert.Contains("integral(", "x^m*ln(x)^n*(1 + ln(x))".ToEntity().Integrate("x").Stringize());
+
+        /// <summary>
+        /// Rubi's 1.3.2, two symbolic powers of a quadratic and a cubic beside a power of x:
+        /// the sum is read as a polynomial and the constant off one monomial. It was a timeout.
+        /// </summary>
+        [Fact]
+        public void TwoSymbolicPowersOfPolynomials()
+            => DifferentiatesBackWithParametersPinned(
+                "x*(a+b*x+c*x^2)^m*(d+h*x+f*x^2+g*x^3)^n*(2*a*d+(3*b*d+3*a*h+b*d*m+a*h*n)*x+(4*c*d+4*b*h+4*a*f+2*c*d*m+b*h*m+b*h*n+2*a*f*n)*x^2+(5*c*h+5*b*f+5*a*g+2*c*h*m+b*f*m+c*h*n+2*b*f*n+3*a*g*n)*x^3+(6*c*f+6*b*g+2*c*f*m+b*g*m+2*c*f*n+3*b*g*n)*x^4+c*g*(7+2*m+3*n)*x^5)",
+                Points);
+
+        /// <summary>
+        /// Where a power is not a whole one, a product with no sum beside it, Rubi's 1.1.4.2, and
+        /// x raised from a power the integrand does not have, Rubi's 1.2.3.5.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(x^2*sqrt(a*x+b*x^4))")]
+        [InlineData("(a+b*x^n+c*x^(2*n))^p*(a+b*(1+n+n*p)*x^n+c*(1+2*n*(1+p))*x^(2*n))")]
+        public void WithoutASumOrWithXRaisedFromNothing(string integrand)
+            => DifferentiatesBackWithParametersPinned(integrand, Points);
+
+        /// <summary>A product of powers that is no such derivative is still declined: <c>sqrt(1 + x^3)</c> is elliptic.</summary>
+        [Fact]
+        public void APowerThatIsNoDerivativeIsDeclined()
+            => Assert.Contains("integral(", "sqrt(1 + x^3)".ToEntity().Integrate("x").Stringize());
     }
 }

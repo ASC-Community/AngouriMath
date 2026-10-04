@@ -42,6 +42,7 @@ namespace AngouriMath.Tests.Core
     /// concurrent read and write, which is a property of the contract rather than of any run.
     /// </para>
     /// </remarks>
+    [Trait("Area", "Core")]
     public sealed class FactorialCacheIsThreadSafeTest
     {
         /// <summary>Above anything another test is likely to have cached, so growth really runs.</summary>

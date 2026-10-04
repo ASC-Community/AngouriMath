@@ -22,6 +22,7 @@ namespace AngouriMath.Tests.Core
     /// make it safe: dropping a case that was reachable would shorten the answer and change it,
     /// and a test that only counted cases could not tell the two apart.
     /// </remarks>
+    [Trait("Area", "Core")]
     public sealed class UnreachablePiecewiseCaseTest
     {
         private static int CaseCount(Entity piecewise)

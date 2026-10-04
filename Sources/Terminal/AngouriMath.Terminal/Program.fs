@@ -5,7 +5,20 @@ open AngouriMath.Terminal.Lib.Consts
 open UserInterface
 open Spectre.Console
 open AngouriMath.Terminal.Lib.AssemblyLoadBuilder
+open AngouriMath.Terminal.Lib
 
+
+// A command on the command line answers once and exits. This comes before anything below touches
+// the console, which a pipe does not have.
+match Environment.GetCommandLineArgs() |> List.ofArray |> List.tail with
+| [] -> ()
+// The protocol is UTF-8 on the pipe whatever code page the console has, so the server is given
+// the standard streams as bytes rather than Console.In and Console.Out, which follow the code page.
+| "mcp" :: _ as args ->
+    let input = new IO.StreamReader(Console.OpenStandardInput(), Text.UTF8Encoding(false))
+    let output = new IO.StreamWriter(Console.OpenStandardOutput(), Text.UTF8Encoding(false), AutoFlush = true)
+    exit (OneShot.run args input output Console.Error)
+| args -> exit (OneShot.run args Console.In Console.Out Console.Error)
 
 // All other platforms do not support setting custom window width
 if System.OperatingSystem.IsWindows() then

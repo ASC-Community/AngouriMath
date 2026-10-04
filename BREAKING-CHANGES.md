@@ -27,17 +27,16 @@ and whatever gets decided — is
 [#1019](https://github.com/asc-community/AngouriMath/issues/1019). Deliberately not restated here,
 so that there is one list rather than two that drift apart.
 
-Measured on `281e0d0c`:
+Measured on `94ba5ff6`:
 
 | Written | Reads today as | |
 |---|---|---|
-| `2 \| 6` | `2 or 6` — a disjunction of two numbers | `\|` is an alias for `or`, and is the one spelling in the grammar that already means something *else* in mathematics: divides, "such that", "given", and the delimiter in `\|x\|` |
-| `{ x \| x > 0 }` | `{ x or x > 0 }` — a `FiniteSet` of **one** element, that element a disjunction | ordinary set-builder notation, read as a one-element set |
+| `{ x \| x > 0 }` | `{ x divides x > 0 }` — a `FiniteSet` of **one** element, that element a divisibility | ordinary set-builder notation, read as a one-element set: `\|` is divisibility now (see *`\|` is divisibility, and was disjunction* below), and on `281e0d0c` the element was the disjunction `x or x > 0` |
 | `a != b` | `a! = b` — the factorial of `a`, equated to `b` | `!=` is not a token, so the lexer takes `!` as the postfix factorial and `=` as equality ([#1225](https://github.com/asc-community/AngouriMath/issues/1225)) |
 
-All three are well-formed, silent, and unrelated to what was written. Until they are settled, write
-`or` rather than `|`, `{ x : x > 0 }` for a set builder, and `<>` rather than `!=` — each of which
-is the primary spelling anyway and is what the library prints.
+Both are well-formed, silent, and unrelated to what was written. Until they are settled, write
+`{ x : x > 0 }` for a set builder, which is what the library prints, and `<>` rather than `!=`.
+A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
@@ -197,6 +196,75 @@ rules' already
 | `"asin(sqrt(1 + x) - sqrt(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `arcsin(sqrt(1 + x) - sqrt(x))` |
 | `"x^3*atan(-sqrt(x)+sqrt(1+x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in the arctangent |
 
+### Rational functions of `x` and `x^n` with symbols in them are taken apart
+
+**Answers where there were none.** The partial fractions took apart a denominator with symbols in it
+only where its factors were linear or quadratic, so `1/(x (x^3 + c))` was declined where
+`1/(x (x^3 + 2))` was answered. Now:
+- a power of `x` beside a block `B` whose constant term is not zero is split off: the first `k`
+  terms of the power series of `N/B` at 0 are the part over `x^k`, and the rest is a polynomial
+  over `B` exactly;
+- a power of another linear `g + h x` beside such a block is split the same way at the linear's
+  root, where the coefficients of `N` and `B` are read by Taylor's formula;
+- blocks that are each a polynomial in one power `x^n` are split in `u = x^n`, where they are linear
+  or quadratic, for `n >= 3`, or `n = 2` with two blocks or more; one block quadratic in `u` is two
+  at its roots, as `a + b x^2 + c x^4` already was;
+- a quotient with `x` below a bar inside it, `1/(a + b/x)`, is written over one bar first, and the
+  power of `x` that cleared the bars is taken out of both sides again;
+- a product of sums in `x^n` with a symbol for `n` is written out, as a power of one already was.
+
+Rubi's `x^m (a + b x^n)^p` and `(a + b x^n)^p (c + d x^n)^q`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x*(x^3 + c))".Integrate("x")` | left unevaluated | `ln(x)/c - ln(c x^3 + c^2)/(3 c)` |
+| `"1/(x^4*(a + b*x^3))".Integrate("x")` | left unevaluated | `-1/(3 a x^3) - b ln(x)/a^2 + b ln(a^2 b x^3 + a^3)/(3 a^2)` |
+| `"1/(x*(a + b*x^5))".Integrate("x")` | left unevaluated | `ln(x)/a - ln(a b x^5 + a^2)/(5 a)` |
+| `"1/((x - c)*(a + b*x^3))".Integrate("x")` | left unevaluated | `ln(x - c)/(a + b c^3)`, and logarithms and an arctangent at the binomial's roots |
+| `"1/((g + h*x)*(a + b*x^3))".Integrate("x")` | left unevaluated | `h^3 ln(g + h x)/(a h^3 - b g^3)`, and the same |
+| `"1/(x^2*(x^3 + c))".Integrate("x")`, and `(c + d x + e x^2)/(x^2 (a + b x^3))` | left unevaluated | a logarithm and an arctangent in `c^(1/3)`, beside `-1/(c x)` |
+| `"1/((a+b*x^3)*(c+d*x^3))".Integrate("x")`, and `x/((a + b x^3)(c + d x^3))` | left unevaluated | logarithms and arctangents in `(-a/b)^(1/3)` and `(-c/d)^(1/3)`, over `a d - b c` |
+| `"1/((a+b*x^4)*(c+d*x^4))".Integrate("x")` | left unevaluated | arctangents and logarithms of each binomial's roots, over `a d - b c` |
+| `"1/(a+b*x^3+c*x^6)".Integrate("x")`, `(1 + x^4)/(1 + b x^4 + x^8)` | left unevaluated | the same, at the two roots of the quadratic in `x^n`, over `sqrt(b^2 - 4 a c)` |
+| `"1/(x^4*(d+e*x^2)*(a+c*x^4))".Integrate("x")` | left unevaluated | powers of `x`, an arctangent over `d + e x^2`, and the biquadratic's arctangents |
+| `"1/(a+b/x)".Integrate("x")` | left unevaluated | `x/a - b ln(a x + b)/a^2` |
+| `"1/(2+3/x^2)^3".Integrate("x")`, `1/(a + b/x^3)` | left unevaluated | an antiderivative |
+| `"(a+b*x^n)*(c+d*x^n)^3".Integrate("x")` | left unevaluated | written out, eight powers of `x` integrated: `a c^3 x + ... + b d^3 x^(4 n + 1)/(4 n + 1)` |
+
+### A whole power of a quotient with a symbol in it is integrated as the quotient of the powers
+
+**Answers where there were none, and a slowdown since 2.5.0 undone.** `(c/(a + c x^2))^2` was
+declined, after twenty-six seconds, while `c^2/(a + c x^2)^2`, the same function, was answered at
+once: the table reads the quotient of the powers and nothing read the power of the quotient. It is
+written so now wherever the quotient is of two polynomials in `x` with a symbol in them and what
+it leaves above the bar is a monomial, the table's `x^m/(a + b x^n)^p`; that is exact for a whole
+power. That is
+also how the substitution `u = x^2` writes `x/(a + c x^4)^2` since 2.5.0, having simplified
+`1/(a/c + u^2)^2`, and that integrand took twenty seconds where 2.5.0 took a tenth of one
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)`, after a minute | a quotient and an arctangent or a logarithm, by the sign of `a c` |
+| `"(1/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"(x/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"x/(a + c*x^4)^2".ToEntity().Integrate("x")` | the answer, in 0.1 s; 22 s on the unreleased master | the answer, in 0.06 s |
+
+### A polynomial with symbols in it that is a binomial or an even quartic in a shifted variable is integrated in it
+
+**Answers where there were none.** `1/(c^2 x^3 + 3 b c x^2 + 3 b^2 x + 3 a b)` was left unevaluated,
+although its denominator is `((c x + b)^3 + 3 a b c - b^3)/c`, which the rule for a binomial reads at
+once: nothing factors a polynomial with a symbol among its coefficients. A polynomial below the bar
+of the third to the sixth degree, with a symbol in it, that written in `y = x + s` with
+`s = a_(n-1)/(n a_n)` is a binomial, or a quartic even in `y`, is integrated in `y`. Rubi's 1.3.1
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(3*a*b + 3*b^2*x + 3*b*c*x^2 + c^2*x^3)".ToEntity().Integrate("x")`, and its square | `integral(...)` | two logarithms and an arctangent in `x + b/c` |
+| `"x/(a + 8*x - 8*x^2 + 4*x^3 - x^4)".ToEntity().Integrate("x")`, and `1` over it | `integral(...)` | the antiderivative in `x - 1` |
+
 ### The hyperbolic functions have antiderivatives, and so does anything rational in `e^(k x)`
 
 An integrand rational in `e^(k x)` becomes a rational function of one variable under
@@ -227,6 +295,84 @@ too. A correct antiderivative in an unhelpful form, where there was none at all.
 
 `e^(x^2)` is still declined, and correctly: its exponent is not linear and it has no elementary
 antiderivative.
+
+### A polynomial over a power of a binomial past the cube is integrated
+
+**Answers where there were none.** `P(x)/(a + b x^n)^k` with symbols in the binomial, `n >= 3`, was
+answered by the Hermite reduction for `k = 2` and `k = 3` only: from the fourth power on, its
+linear system grew past what it takes. Each monomial of `P` is now taken down a power at a time by
+the classical recurrence, `int x^m/B^j = x^(m+1)/(a n (j - 1) B^(j-1)) - (m + 1 - n (j - 1))/(a n (j - 1)) int x^m/B^(j-1)`,
+and what reaches the first power is integrated once over the binomial, at its roots of unity. The
+square and the cube keep the Hermite reduction's answers. Rubi's 1.1.3.8 `P(x) (c x)^m (a + b x^n)^p`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a + b*x^4)^4".ToEntity().Integrate("x")` | `integral(...)` | three algebraic terms over powers of the binomial, and logarithms and arctangents at its roots |
+| `"(c + d*x)/(a + b*x^4)^4".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"(c + d*x)/(a + b*x^3)^4".ToEntity().Integrate("x")` | `integral(...)` | the same at the roots of `a + b x^3` |
+| `"x^2/(a + b*x^5)^5".ToEntity().Integrate("x")` | `integral(...)` | four algebraic terms, and the integral of `x^2/(a + b x^5)` |
+
+### A polynomial over a power of a trinomial past the square is integrated
+
+`P(x)/(a + b x^n + c x^(2n))^k`, a polynomial over a power of a trinomial in `x^n` with symbols in
+it, was left unevaluated past the square, which the Hermite reduction answers in one linear solve.
+Now each monomial is taken down a power at a time by the trinomial's recurrence, two monomials a
+power up each step, and what reaches the first power is integrated once over the trinomial. Rubi's
+1.2.2.2 and 1.2.2.4 have these by the dozen
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^4/(a + b*x^2 + c*x^4)^3".ToEntity().Integrate("x")` | `integral(...)` | odd polynomials over `(a + b x^2 + c x^4)^2` and over it, and arctangents at its roots |
+| `"1/(a + b*x^2 + c*x^4)^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"x/(a + b*x^3 + c*x^6)^2".ToEntity().Integrate("x")` | `integral(...)` | a polynomial over `a + b x^3 + c x^6`, and the integral of a polynomial over it |
+
+### A polynomial over a power of one linear with a symbol in it is written in powers of the linear
+
+**Answers where there were none.** `t^9/(a + b t)^8` is a polynomial and eight powers of `1/(a + b t)`,
+and was declined by 2.5.0. On the unreleased master it was answered after forty-six seconds: divided
+out and decomposed with the symbols in it, it went round the substitution search a dozen levels deep.
+With nothing else below the bar and a symbol in the linear, the polynomial is written in powers of
+the linear at its root now, and each piece is the table's
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"t^9/(a + b*t)^8".ToEntity().Integrate("t")` | `integral(...)` | powers of `a/b + t` and a logarithm, in 0.03 s |
+| `"x^4/(a + b*sqrt(x))^8".ToEntity().Integrate("x")` | `integral(...)` | the same in `sqrt(x)`, in 0.5 s; a minute on the unreleased master |
+
+### A polynomial over a power of a quadratic with a sum of symbols in it is reduced
+
+**Answers where there were none.** The reduction of `N(x)/Q(x)^n` divides `N` by the quadratic a
+power at a time. With a sum of symbols among the quadratic's coefficients, the remainder it computed
+held the terms the division had taken away, written two ways, and read as of the second degree it
+stopped the reduction: `x^4/(d x^2 + b c - a d)^5` was declined where `x^4/(d x^2 + k)^5` was
+answered. The remainder the division reports is taken where the computed one is not linear, and an
+improper fraction is declined before the first division rather than after the last. This is what
+`t = sqrt(a + b x)` makes of Rubi's 1.1.1.2 `(a + b x)^(m/2)/(c + d x)^n`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^4/(d*x^2 + b*c - a*d)^5".ToEntity().Integrate("x")`, and `x^6` over the fourth power | `integral(...)` | the antiderivative |
+| `"(1 - b*x^2)^3/(c*(1 - b*x^2) + a*d*x^2)^3".ToEntity().Integrate("x")` | no answer within a minute | the antiderivative |
+| `"(a + b*x)^(5/2)/(c + d*x)^4".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
+
+### The Hermite reduction's system is solved in one order whatever the spelling
+
+**Faster, and not a different value.** The reduction of a rational integrand with a repeated factor
+below the bar solves one linear system for the rational part, and took its rows in the order the
+powers of `x` were met, which follows how the factors are written. With symbols in the coefficients
+the elimination's pivots followed that order, and in one order the solution came out as quotients of
+polynomials of the thirty-sixth degree in the symbols that nothing reduced:
+`x/((1 + x^2)^3 (2 a x + b (x^2 + 1)))` took 42 s, and with `(x^2 + 1)^3` below the bar 1 s. The rows
+are ordered by their power of `x` now. Where the order mattered, the antiderivative's coefficients can
+come out reduced where they were not.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x/((1 + x^2)^3*(2*a*x + b*(x^2 + 1)))".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative, in about half a second, as with `(x^2 + 1)^3` |
 
 ### A symbolic parameter no longer stops a rational integrand being integrated
 
@@ -292,6 +438,58 @@ leading coefficient once expanded, and declined: it is read expanded and bare no
 | `"sin(x)/(a+b*sin(x))^3".Integrate("x")`, Rubi's 4.1.2.1 row 242 | `integral(...)` | the antiderivative |
 | `"4*x*(1+x^2)/(a*x^2+2*b*x+a)^3".Integrate("x")` | `integral(...)` | the antiderivative |
 
+### `x^2` over a three-quarter power of a quadratic binomial beside another is integrated where that is elementary
+
+**Answers where there were none.** `x^2/((A + B x^2)^(3/4) (C + D x^2))` at `B C - 2 A D = 0`, Rubi's
+1.1.2.4, is the difference of the two functions whose sum answers `1/((A + B x^2)^(1/4) (C + D x^2))`
+at that ratio (the entry below), with another constant, and was declined. It is answered by the
+signs of `A` and `B` now, each form checked at points in its sign case
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^2/((a - b*x^2)^(3/4)*(2*a - b*x^2))".ToEntity().Integrate("x")` | `integral(...)` | an arctangent and an inverse hyperbolic tangent, by the signs of `a` and `b` |
+| `"x^2/((-2 + 3*x^2)*(-1 + 3*x^2)^(3/4))".ToEntity().Integrate("x")` | `integral(...)` | `(arctan(u) - artanh(u))/(3 sqrt(6))`, `u = sqrt(3) x/(sqrt(2) (-1 + 3 x^2)^(1/4))` |
+| `"x^2/((2 - 3*x^2)^(3/4)*(4 - 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | an arctangent and an inverse hyperbolic tangent |
+
+### A cube or fourth root of a quadratic binomial beside another is integrated where that is elementary
+
+**Answers where there were none.** `1/((A + B x^2)^(1/3) (C + D x^2))` is an elliptic integral
+except where `B C + 3 A D = 0` or `B C - 9 A D = 0`, and `1/((A + B x^2)^(1/4) (C + D x^2))` except
+where `B C - 2 A D = 0`. At those ratios it is arctangents and logarithms of quotients in the root,
+as Rubi's 1.1.2.3 gives them, and it was left unevaluated. It is answered there now, with symbols
+in the constants too: by the sign of `B/A` for the cube root, and by the signs of `A` and `B` for
+the fourth. With `A` and `B` both positive, the fourth root's answer jumps at `x = 0`, and is an
+antiderivative on each side of it, as Rubi's is
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((1 - x^2)^(1/3)*(3 + x^2))".ToEntity().Integrate("x")` | `integral(...)` | arctangents and logarithms in `x` and `(1 - x^2)^(1/3)` |
+| `"1/((1 + x^2)^(1/3)*(9 + x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same in `(1 + x^2)^(1/3)` |
+| `"1/((a + b*x^2)^(1/3)*(3*a - b*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same in `(a + b x^2)^(1/3)`, by the sign of `b/a` |
+| `"1/((a + b*x^2)^(1/3)*(9*a + b*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same, by the sign of `b/a` |
+| `"1/((a + b*x^2)^(1/4)*(2*a + b*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same in `(a + b x^2)^(1/4)`, by the signs of `a` and `b` |
+| `"1/((2 + 3*x^2)^(1/4)*(4 + 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same in `(2 + 3 x^2)^(1/4)` |
+| `"1/((-2 + 3*x^2)*(-1 + 3*x^2)^(1/4))".ToEntity().Integrate("x")` | `integral(...)` | `-(arctan(u) + artanh(u))/(2 sqrt(6))`, `u = sqrt(3) x/(sqrt(2) (-1 + 3 x^2)^(1/4))` |
+
+### The third case of a binomial differential is right for a negative `x` too
+
+**Answers where there were none.** Chebyshev's third case, `x^m (a + b x^n)^(p/q)` with
+`(m + 1)/n + p/q` whole, is integrated under `x = 1/y`, and came in after 2.5.0, which declined these.
+On the unreleased master it wrote its root back as `(b + a/x^n)^(1/q)`, which is that root for a
+positive `x`, and for a negative one only when `q` is odd: `1/(1 + x^4)^(5/4)` came out as
+`1/(1 + 1/x^4)^(1/4)`, an even function, whose derivative is the integrand's negative for every
+negative `x`. The root is written
+back as `(a + b x^n)^(1/q)/x^(n/q)` now, which has the same `q`-th power everywhere, and the answers
+are right on both sides of zero ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(1 + x^4)^(5/4)".ToEntity().Integrate("x")` | `integral(...)` | `1 / ((1 + x ^ 4) ^ (1/4) / x)`, which is `x/(1 + x^4)^(1/4)` |
+| `"x^2/(1 + x^4)^(3/4)".ToEntity().Integrate("x")` | `integral(...)` | logarithms and an arctangent of `(1 + x^4)^(1/4)/x` |
+| `"x^6*(3 + 4*x^4)^(1/4)".ToEntity().Integrate("x")` | `integral(...)` | the same in `(3 + 4 x^4)^(1/4)/x` |
+
 ### A rational function of the sine and cosine with symbols in it is integrated by the half angle
 
 `sin(x)^2/(a + b cos(x))` was left unevaluated while `sin(x)^2/(2 + 3 cos(x))` was answered. Under
@@ -309,6 +507,45 @@ that `sec(x)^2/(a + b sin(x))` is rational in them rather than declined at once
 | `"sec(x)^2/(a + b*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 | `"tan(x)^4/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 | `"csc(x)^2/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | `(tan(x/2)^3/12 + tan(x/2)/2 - 1/(4 tan(x/2)))/a` |
+
+### A rational function with complex coefficients is integrated through its real and imaginary parts
+
+**Answers where there were none.** `1/((1 + i x)^2 (1 + x^2))` was declined: the rational
+integrator reads coefficients that are rational numbers, and `i` is not one. Times the conjugate
+of its denominator over itself, `N/D = N D'/(D D')` with `D'` the polynomial whose coefficients are
+those of `D` conjugated, the denominator has rational coefficients and the numerator is `P + i S`
+with `P` and `S` rational: the integral is that of `P/(D D')` and `i` times that of `S/(D D')`. A
+product of symbols common to a polynomial's coefficients, `a + i a x`, comes out with the
+constants. The tangent substitution makes such a function of Rubi's `(a + i a tan(c + d x))^n`, by
+the hundred in its 4.3.2.1, 4.3.3.1 and 4.3.1.2; their answers are in `tan(c + d x)`, on each
+interval between the poles of the tangent, as the substitution's are
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((1 + i*x)^2*(1 + x^2))".ToEntity().Integrate("x")` | `integral(...)` | a rational function of `x` and an arctangent |
+| `"1/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same in `tan(x)` |
+| `"tan(x)^3/(a + i*a*tan(x))^4".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"(A + B*tan(x))/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"1/(a + i*a*tan(c + d*x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same in `tan(c + d x)` |
+
+### An integrand with the imaginary unit in it is not simplified by the rule that scales the variable
+
+**Answers where there were none.** The rule that scales the variable by the integrand's one symbol
+simplified the scaled integrand three times, to separate the whole power of the scale it is
+homogeneous of. With the imaginary unit beside the symbol that search ran past any budget: on the
+unreleased master `((1 + i a x)/(1 - i a x))^(-5/4)/x^2` took more than two minutes to be declined,
+and the rules after this one never had their turn on integrands that it held up. Such an integrand is
+inner-simplified now, and declined in seconds where the parts do not separate
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(c + d*x)^3/(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | logarithms of `tan((c + d x)/2) ± 1` and a quotient |
+| `"tan(c + d*x)^(8/3)/(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(c + d x)^(1/3)` |
+| `"1/(a + b*csc(c + d*x)^2)^4".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, by the signs of `a` and `b` |
+| `"x^4*e^(2*i*atan(a + b*x))".ToEntity().Integrate("x")` | `integral(...)` | a polynomial, logarithms and arctangents of `a + b x` |
+| `"sec(c + d*x)^2/(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `ln(i a d tan(c + d x) + a d)/(i a d)` | `ln(i tan(c + d x) + 1)/(i a d)`, the same up to a constant |
 
 ### `NaN` was returned as the antiderivative of something that has one
 
@@ -334,6 +571,50 @@ zero-discriminant arm, which gives the right answer.
 
 Each of these was checked by differentiating it back with the parameters pinned and comparing at
 four points. Nothing that already had an antiderivative changes.
+
+### A radical function of whole powers of `x` written through its logarithm says where its answer holds
+
+**Answers where there were none, each with the condition it holds under.** `1/csch(2 ln(x))^(1/2)`
+is `sqrt(sinh(2 ln(x)))`, which is `sqrt((x^2 - x^(-2))/2)` and real on both sides of zero; 2.5.0
+declined it. On the unreleased master it was integrated under `t = ln(x)`, where the rules take
+`e^t` to be positive, and the answer was right for a positive `x` and wrong for every negative one.
+Such an answer is given `provided x > 0` now, and `provided c x^n > 0` for a logarithm of `c x^n`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/csch(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
+| `"csch(2*ln(x))^(-3/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
+| `"1/csch(2*ln(c*x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided c x > 0` |
+| `"1/sech(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
+
+### `e^(k acoth(a x))` beside a power of `c - a c x` is integrated
+
+**Improvement, not silent.** `e^(3 acoth(a x))/(c - a c x)^3` and `e^(2 acoth(a x)) sqrt(c - a c x)/x`
+were left unevaluated. The radical substitution leaves coefficients that are zero as values and not
+as written, `-6 a^3 + 6 a^3` and `1/c c - 1`, and the long division and the rule for a biquadratic
+read them as nonzero. They are now decided over one bar, expanded, and at pinned symbols. Rubi's
+7.4.2 ([#1665](https://github.com/asc-community/AngouriMath/issues/1665)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^(3*acoth(a*x))/(c-a*c*x)^3".Integrate("x")`, and over `(c - a c x)^4` | left unevaluated | an antiderivative in `sqrt((a x + 1)/(a x - 1))` |
+| `"e^(2*acoth(a*x))*sqrt(c-a*c*x)/x".Integrate("x")`, and over `x^2` | left unevaluated | an antiderivative in `sqrt(c - a c x)`, by cases on the sign of `c` |
+
+### `e^(n i arctan(a x))` to a power that is not whole is integrated
+
+**Answers where there were none.** `e^(n i arctan(L))` is written algebraically, as
+`(1 + i L)^n (1 + L^2)^(-n/2)`, and for an `n` that is not whole those are two radicals of different
+orders that nothing reads: `x^2 e^(3/2 i arctan(a x))` was left unevaluated. For such an `n` it is
+written `((1 + i L)/(1 - i L))^(n/2)`, the same on the principal branch for a real `L`, one power of a
+quotient of linears, which the substitution for that reads. Rubi's 5.3.6
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^(3/2*i*arctan(a*x))*x^2".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `((1 + i a x)/(1 - i a x))^(1/4)` |
+| `"x^3/e^(3/2*i*arctan(a*x))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"e^(1/3*i*arctan(x))*x".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `((1 + i x)/(1 - i x))^(1/6)` |
 
 ### `NaN` again, from an exponent that was read as written rather than as a number
 
@@ -364,6 +645,24 @@ read as though it were not.
 Each of these was checked by differentiating it back with the parameters pinned and comparing at
 four points. The Rubi sample is unchanged at 231 of 463 with no wrong answers, so nothing that
 already had an antiderivative moves.
+
+### `NaN` a fourth time, from an exponent that is `-1` only as a value
+
+**A wrong answer.** `x^(-1 - 3n) (a + b x^n)^3` came back as a sum whose last term was `x^0/0`, so
+that it had no value anywhere, and `x^(-n/n)` as `NaN + C`. Expanded, the integrand's last term is
+`x^(-1 - 3n + 3n)`, which is `x^(-1)` for every `n`; `InnerSimplified` keeps `-3n + 3n` as two
+terms, and the power rule, which reads `-1` once the exponent is a number (the entry above), read
+this one as written and divided by its zero. It asks whether the exponent plus one vanishes as a
+value now, and gives the logarithm where it does. A symbolic exponent that is `-1` for one value
+only is the power rule's as before. Rubi's 1.1.3.2 has four of these
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^(-1 - 3*n)*(a + b*x^n)^3".ToEntity().Integrate("x")` | three powers and `x^0/0`, no value anywhere | the three powers and `b^3 ln(x)` |
+| `"x^(-1 - 3*n + 3*n)".ToEntity().Integrate("x")` | `x^(-1 - 3n + 3n + 1)/(-1 - 3n + 3n + 1)`, no value anywhere | `ln(x)` |
+| `"x^(-n/n)".ToEntity().Integrate("x")` | `NaN` | `ln(x)` |
+| `"1/(a*(b*x^m)^n)^(1/(m*n))".ToEntity().Integrate("x")` | `integral(...)` | `(a b^n)^(-1/(m n)) ln(x)`, provided `b > 0` and `a b^n > 0` |
 
 ### `NaN` a third time, from a quadratic with a coefficient off the real line
 
@@ -399,6 +698,41 @@ one reads a numeric slope, and writes an offset out by the addition formula, whi
 | `"csc(1+x)*csc(2+2*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `cos(1 + x)` |
 | `"sin(a+b*x)^3/sin(2*a+2*b*x)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(a + b x)` |
 
+### A function of one linear under a power inside a sum is written in that linear
+
+`x^3/(a + b (c + d x)^3)` was left unevaluated, and `(c + d x)^4/(a + b (c + d x)^3)` ran for more
+than eighty seconds. Written in `x`, the sum is a polynomial whose roots are those of a binomial
+moved and scaled, which the partial fractions do not read. Where one linear `c + d x` stands under
+the powers inside sums, and `x` elsewhere only in sums, products and powers, the integrand is
+written in `u = c + d x` first. Rubi's 1.1.3.2, 1.2.3.2 and 1.3.1 write whole sections so
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^3/(a + b*(c + d*x)^3)".ToEntity().Integrate("x")` | `integral(...)` | powers and logarithms of `c + d x` and of a quadratic in it, and an arctangent |
+| `"(c + d*x)^4/(a + b*(c + d*x)^3)".ToEntity().Integrate("x")` | ran for more than eighty seconds | `(c + d x)^2/(2 b)`, and the same logarithms and arctangent |
+| `"(c*m + d*m*x)^3/(a + b*(c + d*x)^3)^2".ToEntity().Integrate("x")` | `integral(...)` | `m^3` times a rational function of `c + d x`, the logarithms and the arctangent |
+| `"(c + d*x)^4/(a + b*(c + d*x)^2 + k*(c + d*x)^4)^2".ToEntity().Integrate("x")` | `integral(...)` | a rational function of `c + d x` and arctangents |
+
+### A root of a square inside a sum is integrated on each side of the square's zero
+
+**Answers where there were none.** `1/(1 + (x^2)^(3/2))` is `1/(1 + x^3)` for a positive `x` and
+`1/(1 - x^3)` for a negative one; 2.5.0 declined it. The unreleased master wrote the root as
+`sgn(x) x^3` and took the sign out in front of the integral, which holds for a factor of the
+integrand and not inside a sum, and its answer was the first one's on both sides of zero. A sign
+goes in front only where every occurrence of the root is a factor now; otherwise the integrand is
+integrated with the sign 1 and with it -1, and the answer is the piecewise of the two on the sign of
+the root's linear. The same where a square factor is taken out of a root: `x/(x + sqrt(x^6))` is
+`1/(1 + x^2)` for a positive `x` and `1/(1 - x^2)` for a negative one, and was `sgn(x) arctan(x)`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(1+(x^2)^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | the integral of `1/(1 + x^3)` where `x > 0`, of `1/(1 - x^3)` otherwise |
+| `"1/(1+sqrt(x^2))".ToEntity().Integrate("x")` | `integral(...)` | `ln(x + 1)` where `x > 0`, `-ln(1 - x)` otherwise |
+| `"1/(2+sqrt(x^2+2*x+1))".ToEntity().Integrate("x")` | `integral(...)` | `ln(x + 3)` where `x + 1 > 0`, `-ln(1 - x)` otherwise |
+| `"x/(x+sqrt(x^6))".ToEntity().Integrate("x")` | `integral(...)` | `arctan(x)` where `x > 0`, a logarithm of `(1 + x)/(1 - x)` otherwise |
+
 ### A root of an even power is the modulus, and is no longer read as the power
 
 **Wrong answers, silent.** `(u^2)^(3/2)` is `|u|^3`, and two readers took it for `u^3`: the
@@ -433,6 +767,23 @@ either now; and the secant quotient was simplified to `cos/(b^(5/2) d)` through
 `(1/cos)^(3/2) = cos^(-3/2)`, which is wrong for every negative cosine and cancelled against the
 same wrong step on the denominator. On the 1774-problem independent suites this is 1707 to 1705, the two `asin` rows, with the sign error gone.
 
+### A power of x comes out of a fractional power of a sum whose every term has it
+
+`(a x^j + b x^n)^p` with a fractional `p`, the power of x common to every term inside the power,
+was integrated only where the sum factored over the rationals. Now `x^j` comes out:
+`(a x^j + b x^n)^p` is `K x^(j p) (a + b x^(n - j))^p` with `K = (a x^j + b x^n)^p / (x^(j p) (a + b x^(n - j))^p)`,
+which is constant wherever x and the sum are not zero and goes in front of the integral. For an even
+whole `j` and a whole `j p` it is `sgn(x)^(j p)`. An odd whole `j` out of a sum of whole powers is
+left as it was, since the sum is real on both sides of 0 and `x^(j p)` is not. Rubi's 1.1.4.2 and
+1.1.4.3, `(c x)^m (a x^j + b x^n)^p` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/sqrt(a*x^2 + b*x^5)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(x)` times the integral of `1/(x sqrt(a + b x^3))` |
+| `"x*sqrt(x^2*(a + b*x^3))".ToEntity().Integrate("x")` | `(a + b x^3)^(3/2)/(9/2 b)`, wrong where `x < 0` | `sgn(x) (a + b x^3)^(3/2)/(9/2 b)` |
+| `"1/(x*sqrt(b*x^(2/3) + a*x))".ToEntity().Integrate("x")` | `integral(...)` | `K` times an antiderivative in `sqrt(b + a x^(1/3))` |
+| `"x/sqrt(1 + 1/(c*x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(x) (x sqrt(x^2 + 1/c^2)/2 - ln(2 x + 2 sqrt(x^2 + 1/c^2))/(2 c^2))`, for any `c` but 0 |
+
 ### A rational function of a sine over a symbolic quadratic in it is integrated over the two roots
 
 **Improvement, not silent.** `sin(x)/(a + b sin(x) + c sin(x)^2)` and everything rational in
@@ -458,6 +809,23 @@ poles of `tan(x/2)`, as every half-angle answer.
 | `"1/(a+b*cos(x)+c*cos(x)^2)".Integrate("x")` | unevaluated | the cosine form |
 | `"csc(x)^2/(a-a*sin(x)^2)".Integrate("x")` | unevaluated | `-cot(x)/a` and two terms rational in `tan(x/2)` |
 
+### A rational function of the sine and cosine with symbols in it is no longer simplified under the half angle
+
+**Answers where there were none.** Under `t = tan(x/2)` the integrand was simplified before it was
+integrated, and with symbols in it the simplifier's search grew past any budget:
+`sec(x)^2/(a + b cos(x))^3` spent about forty seconds in it and `sec(x)^2/(a + b cos(x))^4` more than two minutes,
+where integrating what it returned takes a tenth of a second. A rational function of `t` with a
+symbol in it is now put over one bar with its whole powers of products written as products of
+powers, and not simplified further; one without a symbol, or with a root of `t` in it, is
+simplified as before
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^2/(a + b*cos(x))^3".ToEntity().Integrate("x")` | `integral(...)` | a piecewise antiderivative in `tan(x/2)` |
+| `"sec(x)^2/(a + b*cos(x))^4".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"sec(c + d*x)^2/(a + b*cos(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | the same in `tan((c + d x)/2)` |
+
 ### A linear over a quadratic beside the root of another quadratic is integrated
 
 `(g + h x)/(A sqrt(B))`, `A` and `B` two different quadratics, was left unevaluated wherever a
@@ -479,6 +847,97 @@ taken apart into pieces each closed the same way
 | `"(2 + x)/((2 + 4*x - 3*x^2)*(1 + 3*x + 2*x^2)^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative |
 | `"1/((x^2 + 1)*sqrt(x^2 + x + 1))".ToEntity().Integrate("x")` | `integral(...)` | a logarithm and an arctangent |
 
+### A rational function of `x^n` beside a power of `x` and the root of a binomial is integrated
+
+**Answers where there were none.** `x/((a + b x^3)^(2/3) (c + d x^3))` and `x^4 (a + b x^3)^(1/3)/(c + d x^3)`,
+Rubi's 1.1.3.4, were declined, while the same without the power of `x` in front was answered under
+`u = x/(a + b x^n)^(1/n)`. That substitution takes `x^j (a + b x^n)^(k - (j + 1)/n)` beside a rational
+function of `x^n` to `u^j` times a rational function of `u`, for any `j` below `n`, and is taken for
+those now. Each answer holds on both sides of zero, an odd root of a negative being real here
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x/((a + b*x^3)^(2/3)*(c + d*x^3))".ToEntity().Integrate("x")` | `integral(...)` | logarithms and an arctangent of `x (a + b x^3)^(-1/3)` |
+| `"x^4*(a + b*x^3)^(1/3)/(c + d*x^3)".ToEntity().Integrate("x")` | `integral(...)` | the same, beside a rational function of it |
+| `"x/((1 + x^3)^(2/3)*(2 + x^3))".ToEntity().Integrate("x")` | `integral(...)` | the same with numbers |
+
+### A rational function of the tangent of a linear argument with symbols in it is not simplified under the linear substitution
+
+**Answers where there were none.** The substitution search reaches `tan(g + h x)` through `u = g + h x`,
+and simplified the quotient of the integrand by `h` in `u` before asking for its integral: with the
+nine symbols of Rubi's 4.3.4.2 in it that took about half a minute, for an expression that is the
+integrand with its argument renamed and holds nothing to simplify. Under a linear candidate, where
+the integrand in `u` is a function of the tangent alone and holds no imaginary unit, the quotient
+is handed on as it is
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a + b*tan(g + h*x))*(A + B*tan(g + h*x) + K*tan(g + h*x)^2)/(c + d*tan(g + h*x))^2".ToEntity().Integrate("x")` | `integral(...)` after 33 s | the antiderivative, in 4.5 s |
+| `"(c + d*tan(g + h*x))^3*(A + B*tan(g + h*x) + K*tan(g + h*x)^2)/(a + b*tan(g + h*x))^3".ToEntity().Integrate("x")` | no answer within a minute and a half | the antiderivative, in 18 s |
+
+### A rational function of `x^n` beside a power of a symbolic binomial is integrated without a search
+
+**Answers where there were none.** A rational function of `x^n` beside `(c + d x^n)^(k - 1/n)` is a
+rational function of `u = x/(c + d x^n)^(1/n)`, and the integrand in `u` was simplified before it
+was integrated. With symbols in it the search for a simpler form grew with the power of the
+binomial: `1/((a + b x^2)^(5/2) (1 + x^2))` took 5 s on the unreleased master, the `7/2` power ran
+past 30 s, and both were declined on 2.5.0. What the search found was the factor the substitution
+leaves on both sides of the bar, which is cancelled as it is written now, the other factors left as
+they are written ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((a + b*x^2)^(5/2)*(1 + x^2))".ToEntity().Integrate("x")` | `integral(...)` | powers of `x/sqrt(a + b x^2)`, and an arctangent or a logarithm by the sign of `a - b`, in 0.6 s |
+| `"1/((a + b*x^2)^(7/2)*(1 + x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same, in 0.7 s |
+| `"1/((a + b*x^2)^(9/2)*(1 + x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same, in 1 s |
+| `"x^2/((a + b*x^2)^(7/2)*(c + d*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same by the sign of `c (a d - b c)`, in 1 s |
+
+### A binomial differential with symbols in it, or a power of `x` that is not whole, is integrated
+
+**Answers where there were none.** Chebyshev's theorem says when `x^m (a + b x^n)^(p/q)` has an
+elementary antiderivative, and it is about the exponents only. The rule for it read whole `m` and
+`n` and rational numbers for `a` and `b`, and declined the rest. It reads rational `m` and `n` and
+anything free of `x` for `a` and `b` now, and a power of a multiple of `x`, `(c x)^(5/2)`, as
+`x^(5/2)` times `(c x)^(5/2)/x^(5/2)`, which is constant on either side of zero. Where `m + 1 +
+n (p/q + 1)` is zero the answer is the one product of powers it is. With a symbol in the
+coefficients the rule is asked after the rules for a root of a quadratic and for a rational
+function of `x^n` beside the root of its binomial, which answer what they share with it more
+shortly. Rubi's 1.1.2.2 and 1.1.3.2, `(c x)^m (a + b x^n)^p`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^2/(a + b*x^4)^(3/4)".ToEntity().Integrate("x")` | `integral(...)` | logarithms and an arctangent of `(a + b x^4)^(1/4)/x` |
+| `"x^6*(a + b*x^4)^(1/4)".ToEntity().Integrate("x")` | `integral(...)` | the same, beside a rational function of it |
+| `"x^(7/3)*(a + b*x^2)^(1/3)".ToEntity().Integrate("x")` | `integral(...)` | a rational function, two logarithms and an arctangent of `(a + b x^2)^(1/3)/x^(2/3)`, written in `x^(1/3)` |
+| `"(c*x)^(5/2)/(a - b*x^2)^(3/4)".ToEntity().Integrate("x")` | `integral(...)` | `(c x)^(5/2)/x^(5/2)` times the same in `(a - b x^2)^(1/4)/x^(1/2)` |
+| `"(a - b*x^2)^(1/4)/(c*x)^(15/2)".ToEntity().Integrate("x")` | `integral(...)` | powers of `(a - b x^2)^(1/4)/(c x)^(1/2)` |
+
+Of Rubi's 3,163 problems in those two files with an answer in functions the library has, 96 more
+are answered than on the unreleased master, and none fewer. Nine that the unreleased master answered
+are written otherwise: a rule ahead of this one takes the integrand apart and asks a sub-integral
+that this one answers now, so the rule ahead finishes where it used to decline. Four of the nine come
+out shorter and five longer -- `1/((c x)^(5/3) (a + b x^2)^(2/3))` was
+`-3/(2 a) x (c x)^(-5/3) (a + b x^2)^(1/3)` there, and is the same function written in `x^(1/3)`.
+2.5.0 declined all nine.
+
+### A power of a multiple of a quadratic's derivative beside a power of the quadratic is a binomial
+
+**Improvement, not silent.** `(b d + 2 c d x)^m (a + b x + c x^2)^p`, with a power that is not whole,
+was declined or ran out of time. Under `t = b d + 2 c d x` the quadratic is
+`(t^2/d^2 - (b^2 - 4 a c))/(4 c)`, so the integrand is a binomial in `t`. That binomial is asked with
+its constant term named by a symbol of its own, since with `a - b^2/(4 c)` written in it the rules for
+a binomial ran out of time too. Rubi's 1.2.1.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a+b*x+c*x^2)^(3/2)/(b*d+2*c*d*x)^3".Integrate("x")` | `integral(...)` | the antiderivative |
+| `"(a+b*x+c*x^2)^(1/2)/(b*d+2*c*d*x)^7".Integrate("x")` | `integral(...)` | the antiderivative |
+| `"(b*d+2*c*d*x)^(5/2)/(a+b*x+c*x^2)^3".Integrate("x")` | `integral(...)` | the antiderivative |
+
 ### A polynomial over a power of a quadratic beside the root of another is integrated
 
 `P/(A^k sqrt(B))`, `A` and `B` two different quadratics and `k` at least two, was left
@@ -495,6 +954,57 @@ in both quadratics, the cube's coefficients grow past what the reduction takes, 
 | `"(g + h*x)/((d + k*x + f*x^2)^2*sqrt(a + b*x + c*x^2))".ToEntity().Integrate("x")` | `integral(...)` | a linear times the root over the quadratic, and two arctangents |
 | `"(7 + 13*x)/((5 + x + 2*x^2)^3*sqrt(2 + x + 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative |
 | `"sqrt(a + a*sec(x))/(c + d*sec(x))^2".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
+
+### A polynomial beside the square roots of two linears with symbols in them is integrated
+
+`P(x) sqrt(c + d x) sqrt(e + f x)`, a polynomial beside the roots of two linears with symbols in
+them or over their product, was left unevaluated, and so was the same over a power of a third
+linear. These are Rubi's 1.1.1.6, `P(x) (a + b x)^m (c + d x)^n (e + f x)^p`. They are now
+integrated by undetermined coefficients. The answer is a rational function times the two roots,
+a logarithm of their quotient, and an arctangent of the quotient where a third linear is below
+the bar. Where the slopes are numbers of opposite signs, the logarithm is written as the
+arctangent it is ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(c + d*x)*sqrt(e + f*x)".ToEntity().Integrate("x")` | `integral(...)` | `(x/2 + (d e + c f)/(4 d f)) sqrt(c + d x) sqrt(e + f x)`, and a logarithm in `sqrt(f/d) sqrt(c + d x)/sqrt(e + f x)` |
+| `"(A + B*x + C*x^2)*sqrt(c + d*x)*sqrt(e + f*x)".ToEntity().Integrate("x")` | `integral(...)` | a cubic times the two roots, and the same logarithm |
+| `"(A + B*x + C*x^2)*sqrt(c + d*x)/((a + b*x)^3*sqrt(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | the roots over powers of `a + b x`, a logarithm, and an arctangent |
+| `"x^2*sqrt(a + 2*x)*sqrt(c - 3*x)".ToEntity().Integrate("x")` | `integral(...)` | a cubic times the two roots, and an arctangent of `sqrt(6)/2 sqrt(a + 2 x)/sqrt(c - 3 x)` |
+
+### A polynomial over a power of a linear beside the root of a quadratic is integrated
+
+`P(x) Q^(m/2)/(g + h x)^k`, a polynomial over a power of a linear beside a half-odd power of a
+quadratic `Q`, was left unevaluated wherever the linear was below the bar to a power past the
+first, and with a symbol in the linear or in `Q` even to the first. These are Rubi's 1.2.1.9, and
+with a constant or linear `P`, 1.2.1.2 to 1.2.1.4. They are now integrated by undetermined
+coefficients, as the roots of two linears are. The answer is a rational function times `sqrt(Q)`,
+a logarithm or an arcsine by the sign of the leading coefficient of `Q`, and a logarithm or an
+arctangent by the sign of `Q` at the linear's root. Where the linear shares a root with `Q`, there
+is no third term. Without the linear, the answers are as they were
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((g + h*x)*sqrt(a + c*x^2))".ToEntity().Integrate("x")` | `integral(...)` | a logarithm in `(a h - c g x)/(sqrt(a h^2 + c g^2) sqrt(a + c x^2))` where `a h^2 + c g^2 > 0`, and an arctangent where it is negative |
+| `"(d + k*x + f*x^2)*sqrt(a + c*x^2)/(g + h*x)^4".ToEntity().Integrate("x")` | `integral(...)` | powers of `1/(g + h x)` times `sqrt(a + c x^2)`, a logarithm or an arcsine, and the same as above |
+| `"(2 + x + 3*x^2 - x^3 + 5*x^4)*sqrt(3 - x + 2*x^2)/(5 + 2*x)^5".ToEntity().Integrate("x")` | `integral(...)` | powers of `1/(5 + 2 x)` times the root, and two logarithms |
+| `"(A + B*x + F*x^2)*sqrt(d^2 - m^2*x^2)/(d + m*x)^2".ToEntity().Integrate("x")` | `integral(...)` | a rational function times the root, and an arcsine |
+| `"sqrt(1 - x^2)/(1 + x)^2".ToEntity().Integrate("x")` | `integral(...)` | `-2 sqrt(1 - x^2)/(1 + x) + arcsin(-x)` |
+| `"sqrt(x^2 + 1)/x^2".ToEntity().Integrate("x")` | `integral(...)` | `-sqrt(x^2 + 1)/x + ln(2 sqrt(x^2 + 1) + 2 x)` |
+
+### A power of the quadratic below the bar beside its root is integrated
+
+And with a power of the quadratic below the bar beside its root, `P(x)/((g + h x)^k Q^(n + 1/2))`,
+which was left unevaluated as well. The answer is powers of `1/(g + h x)` and linears over powers
+of `Q`, times `sqrt(Q)`, and the same two integrals that are not algebraic
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((x + 2)^2*(x^2 + 1)^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | `((4 + 3 x)/(25 (x^2 + 1)) - 1/(25 (x + 2))) sqrt(x^2 + 1)`, and a logarithm in `(2 - 4 x)/(2 sqrt(5) sqrt(x^2 + 1))` |
+| `"(1 + 3*x + 4*x^2)/((1 + 2*x)^3*(2 + 3*x^2)^(5/2))".ToEntity().Integrate("x")` | `integral(...)` | linears over `(2 + 3 x^2)^2` and `2 + 3 x^2` and powers of `1/(1 + 2 x)`, times the root, and a logarithm |
+| `"(d + k*x + f*x^2)/((g + h*x)^2*(a + c*x^2)^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | the same in the symbols, and a logarithm or an arctangent by the sign of `a h^2 + c g^2` |
 
 ### A function comes out of a fractional power of its even power with its sign
 
@@ -517,6 +1027,23 @@ rule that does the same for a polynomial under a square root, whose answers are 
 | `"(a*sin(x)^2)^(5/2)".Integrate("x")` | `sgn(sin(x)) a^(5/2) (...)` in `(1 - abs(sin(x))^2)^(1/2)` over `sgn(cos(x))` | `sgn(sin(x)) a^(5/2) (2 cos(x)^3/3 - cos(x) - cos(x)^5/5)` |
 | `"1/sqrt(a*cot(x)^2)".Integrate("x")` | `-sgn(tan(x)) ln(1/sqrt(1 + abs(tan(x))^2))/sqrt(a)` | `sgn(cot(x)) ln(1 + tan(x)^2)/(2 sqrt(a))` |
 | `"(b*tan(x)^2)^(5/2)".Integrate("x")` | `sgn(tan(x)) b^(5/2) ((abs(tan(x))^2)^2/2 - abs(tan(x))^2 + ln(abs(tan(x))^2 + 1))/2` | the same with `tan(x)` for `abs(tan(x))` |
+
+### A power of the cotangent that is not whole below the bar is integrated beside the tangent
+
+**Answers where there were none.** `1/(cot(x)^(7/2) (a + b tan(x))^(3/2))` was declined while
+`tan(x)^(7/2)/(a + b tan(x))^(3/2)` was answered: the substitution `u = tan(x)` wrote the cotangent
+as `1/u`, and nothing read a power of `1/u` that is not whole below the bar. Such a power is written
+as the tangent's above it now, `1/cot(x)^p = tan(x)^p/K`, with `K = cot(x)^p tan(x)^p` dividing the
+answer: `K` is 1 where the tangent is positive and a constant on every interval where it keeps its
+sign, so the answer holds where the tangent is negative too. Only below the bar and beside the
+tangent; a power of the cotangent above it, or alone, keeps its answer. Rubi's 4.3.2.1 and 4.3.3.1
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(cot(x)^(7/2)*(a + b*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `sqrt(tan(x))` and `sqrt(a + b tan(x))`, over `K` |
+| `"1/(cot(x)^(5/2)*(a + i*a*tan(x))^(5/2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `sqrt(tan(x))/sqrt(1 + i tan(x))`, over `K` |
+| `"(A + B*tan(x))/(cot(x)^(3/2)*(a + i*a*tan(x)))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `sqrt(tan(x))`, over `K` |
 
 ### A fractional power of a product of trigonometric functions keeps its sign
 
@@ -551,6 +1078,23 @@ power of the variable every term holds comes out the same way.
 | `"sec(x)^2/(a + a*csc(x))".Integrate("x")` | unevaluated | in `tan(x/2)`, over `a` |
 | `"x^2/((a*x + a)*(1 - x^2))".Integrate("x")` | unevaluated | the partial fractions over `(x + 1)^2 (1 - x)`, over `a` |
 | `"cot(x)^3/(a + b*csc(x))".Integrate("x")` | unevaluated | `-1/(b sin(x)) - a ln(sin(x))/b^2 + (b^2 - a^2) ln(a sin(x) + b)/(a b^2)`, once `a u^4 + b u^3` is read as `u^3 (a u + b)` |
+
+### Symbolic factors of a denominator that share a factor are written over it
+
+**Improvement, not silent.** Partial fractions over factors with symbols in them read the written
+factors as coprime and squarefree, and the refactoring after them reads rational coefficients only.
+A quadratic that shares a root with a linear beside it, or that is a square, was read as an
+irreducible quadratic and declined. The written factors are now taken apart over their greatest
+common divisors, in every variable, with one another and each with its derivative, and a factor
+shared with the numerator is cancelled. Rubi's 1.2.1.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((d+e*x)*(a*d*e+(c*d^2+a*e^2)*x+c*d*e*x^2)^2)".Integrate("x")` | unevaluated | the partial fractions over `(d + e x)^3 (a e + c d x)^2` |
+| `"(d+e*x)^6/(a*d*e+(c*d^2+a*e^2)*x+c*d*e*x^2)^4".Integrate("x")` | no answer in 90 s | the antiderivative of `(d + e x)^2/(a e + c d x)^4` |
+| `"1/((d+e*x)^2*(c*d^2+2*c*d*e*x+c*e^2*x^2)^3)".Integrate("x")` | unevaluated | `-1/(7 c^3 e^8 (d/e + x)^7)` |
+| `"x^2/((a+b*x)*(a^2+2*a*b*x+b^2*x^2))".Integrate("x")` | unevaluated | the partial fractions over `(a + b x)^3` |
 
 ### Fractional powers of `a ± a sin` are integrated by the half angle at which they are squares
 
@@ -594,6 +1138,26 @@ its sign on its own, so an answer through two says `provided cos(y) >= 0`
 | `"1/(sec(x)^(3/2)*sqrt(1 + sec(x)))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative through a root of `1 + tan(x/2)^2` |
 | `"sqrt(a - a*sec(x))".ToEntity().Integrate("x")` | `integral(...)` | a logarithm in `tan(x/2)`, times `sgn(tan(x/2))` |
 | `"sqrt(1 + csc(x))".ToEntity().Integrate("x")` | `integral(...)` | an arctangent in `tan(pi/4 - x/2)` |
+
+### An even power of the secant or the cosecant under a root is written in the tangent
+
+**Answers where there were none.** `sqrt(a + b csc(x)^2)`, `(a + b sec(x)^2)^(3/2)` and their kin,
+Rubi's 4.5.7 and 4.6.7, were declined, while `sqrt(a + b tan(x)^2)` and `sqrt(a + b cot(x)^2)` were
+answered through `u = tan(x)`. That substitution writes an even power of the secant or the
+cosecant in the tangent, `sec^2 = 1 + tan^2` and `csc^2 = (1 + tan^2)/tan^2`, but went on to do so
+only where the tangent, or a sine or a cosine under a root, was already in the integrand. An even
+power of the secant or the cosecant under a root goes on now too. The cosecant's answers carry
+`sgn(tan(x))`, from the root of `1/tan(x)^2`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + b*csc(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | arctangents in `sqrt((a + b) tan(x)^2 + b)`, times `sgn(tan(x))` |
+| `"(a + b*csc(c + d*x)^2)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same in `tan(c + d x)` and an algebraic part, by the signs of `a` and `b` |
+| `"sqrt(a + b*sec(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | arctangents in `tan(x)/sqrt(a + b (1 + tan(x)^2))` |
+| `"1/sqrt(a + b*sec(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | an arctangent or a logarithm in the same, by the sign of `a` |
+| `"sqrt(1 + csc(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | logarithms and an arctangent in `sqrt(2 tan(x)^2 + 1)`, times `sgn(tan(x))` |
+| `"1/sqrt(-1 + csc(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(tan(x)) ln(1 + tan(x)^2)/2` |
 
 ### A partial-fraction coefficient with symbols in it is in lowest terms, its rational content included
 
@@ -653,6 +1217,42 @@ reached 3^12 cases and 8 GB inside integration by parts
 | `(q = 0 and not q = 0).Evaled` | as written | `False` |
 | `(x < 0 and x = 0).Simplify()` | `False provided x in RR` | `False` — the condition was over-strong, one conjunct is false wherever `x` is |
 | `(x > 0 and x > 0).Evaled` | `x > 0` | `x > 0` (unchanged) |
+
+### Two piecewises split on one quantity combine sign by sign
+
+A sum or product of two piecewises still joins every case's condition to every other's, and now
+drops two more kinds of pair. A quantity is read up to a constant factor, so `f = 0 and not 2 f = 0`
+is `False`. And `q > 0 and q < 0`, which is `NaN` off the real line rather than `False`, goes where
+every case after it tests `q` too: off the real line each of those is false or undecided, so no case
+it was keeping from being reached could be. Where a later case tests something else it stays. Sums
+of the answers the radical substitution gives for `x sqrt(1 + d x) sqrt(1 + f x)` had reached
+32,769 cases ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `piecewise(1 provided q = 0, 2 provided q > 0, 3 provided q < 0) + piecewise(10 provided q = 0, 20 provided q > 0, 30 provided q < 0)`, `.InnerSimplified` | nine cases | three: `11 provided q = 0`, `22 provided q > 0`, `33 provided q < 0` |
+| `piecewise(1 provided f = 0, 2 provided not 2 * f = 0) + piecewise(10 provided 3 * f = 0, 20 provided not f = 0)`, `.InnerSimplified` | four cases | two |
+| the same with a third case `provided p > 0` in each | nine cases | nine, unchanged |
+| `"x*sqrt(1 + d*x)*sqrt(1 + f*x)".Integrate("x")`, and with `x^2`, or `A + B x + K x^2`, for `x` | left unevaluated | the antiderivative, a piecewise of three cases |
+
+### A union with an empty interval is the other set
+
+**Wrong answer fixed.** Two intervals were joined wherever one ended where the other began, before
+either was asked whether it was empty. `[1; 0]` is empty, and it ends at 0 where `[0; 1]` begins,
+so `[0; 1] \/ [1; 0]` was joined into `{ 1 }`, and `[3; 1] \/ [1; 2]` into `[3; 2]`, which is
+empty. An empty interval now adds nothing. With ends that are not numbers either interval may be
+empty -- `[a; b]` is, when `a` is above `b` -- so two such intervals are no longer joined unless an
+end is infinite, and `[a; b] \/ [b; c]`, which was `[a; c]`, is left as written.
+[#1634](https://github.com/asc-community/AngouriMath/issues/1634). Both columns measured on a
+build, `v2.5.0` against this change.
+
+| `"….".ToEntity().Simplify()` of | Was (2.5.0) | Is |
+|---|---|---|
+| `[0; 1] \/ [1; 0]` | `{ 1 }` — wrong | `[0; 1]` |
+| `[3; 1] \/ [1; 2]` | `[3; 2]`, which is empty — wrong | `[1; 2]` |
+| `[a; b] \/ [b; a]` | `{ b }` — wrong | `[a; b] \/ [b; a]` |
+| `[a; b] \/ [b; c]` | `[a; c]` — wrong where `a > b` or `b > c` | `[a; b] \/ [b; c]` |
+| `(-oo; x] \/ [x; +oo)` | `RR` | `RR` (unchanged: neither can be empty) |
 
 ### `ZZ*` and `ZZ+` are the non-negative and the positive integers
 
@@ -778,6 +1378,32 @@ quotient or whole power with a matrix in it to GenericTensor's operation of that
 | `"[[x, 2 x], [x + 1, x^2]]".ToEntity().Compile<double, GenTensor<double, DoubleOperations>>("x")` | `UncompilableNodeException` | a delegate; at `3` the matrix `[[3, 6], [4, 9]]` |
 | `"A * B".ToEntity().Compile<GenTensor<…>, GenTensor<…>, GenTensor<…>>("A", "B")` | `UncompilableNodeException` | the matrix product |
 | `"[[1, 0]] * [[a, b], [c, d]] * [[0], [1]]".ToEntity().Compile<double, double, double, double, double>("a", "b", "c", "d")` | `2` at `(1, 2, 3, 4)` — simplified to the scalar first | unchanged |
+### A product is written letters before functions
+
+`Simplify` wrote `y * sin(x)` as `sin(x) * y` and `x * e^x` as `e ^ x * x`: a product came out in
+the order the simplifier sorts by, which puts a sine before every letter. By hand the number comes
+first, then the letters and their powers, then the functions: DLMF 5.5.1 is `Γ(z + 1) = z Γ(z)`,
+and ISO 80000-2 lets a function's argument go without parentheses (`sin nπ`), so a letter written
+after a function reads as part of its argument. The answer of `Simplify` is now written that way:
+the number, the letters and their powers, then everything else -- a function, an exponential such
+as `e^x` or `2^n`, a sum -- each kind in the order it had, with a leading number taken into a
+quotient over a number (`2 / s`, not `2 * 1 / s`). Only the answer is reordered: the simplifier
+still sorts a sine before a letter, because the rules that combine factors meet them as neighbours
+in that order, and `InnerSimplified` and `Differentiate` return that order as before.
+[#1628](https://github.com/asc-community/AngouriMath/issues/1628), Algebrite's issue 29 from
+[#180](https://github.com/asc-community/AngouriMath/issues/180). Both columns measured on a build,
+`v2.5.0` against this change.
+
+| `"….".ToEntity().Simplify()` of | Was (2.5.0) | Is |
+|---|---|---|
+| `sin(x) * y` | `sin(x) * y` | `y * sin(x)` |
+| `x * e ^ x` | `e ^ x * x` | `x * e ^ x` |
+| `2 * sin(x) * y` | `2 * sin(x) * y` | `2 * y * sin(x)` |
+| `a / sin(x)` | `csc(x) * a` | `a * csc(x)` |
+| `a * log(x) + y * sin(x)` | `sin(x) * y + a * log(10, x)` | `y * sin(x) + a * log(10, x)` |
+| `2 * x * sin(x) * cos(x)` | `sin(2 * x) * x` | `x * sin(2 * x)` |
+| `derivative(arcsin(2 * x), x)` | `1 / sqrt(1 - (2 * x) ^ 2) * 2` | `2 / sqrt(1 - (2 * x) ^ 2)` |
+
 ### `π` is `pi` and the script `ℯ` is `e`
 
 `π` (U+03C0) was a free variable, a Greek letter like any other, so `sin(π)` did not simplify; the
@@ -845,6 +1471,27 @@ and `13` is not, every `n` from `24` is `4 a + 9 b` and `23` is not
 | `exists a in ZZ* : exists b in ZZ* : 13 = 3 a + 8 b` | `UnhandledParseException` (left as written when quantifiers arrived) | `False` |
 | `forall n in ZZ : n >= 14 implies (exists a in ZZ* : exists b in ZZ* : n = 3 a + 8 b)` | `UnhandledParseException` (left as written when quantifiers arrived) | `True` |
 
+### An equation in a remainder is solved to its whole family
+
+`f mod a = r` has one solution per period, and the solver had no way to write that. On 2.5.0
+`(x mod 4) + 1 = 3` answered `{ }` -- no solution, for an equation with infinitely many. Where
+the numeric fallback reached it, it answered with the few solutions it found in its window:
+`(2x + 1) mod 4 = 3` was `{ -5, -3, -1, 1, 3, 5 }`, and 7 is a solution as well. The remainder
+is now inverted the way the trigonometric functions are, with a whole parameter: `f = r + a n`
+where `r` is a value the floored remainder takes -- `[0, a)` for a positive `a`, `(a, 0]` for a
+negative one -- and no solution where it is not. A divisor or value that is not a number is left
+unsolved.
+[#1629](https://github.com/asc-community/AngouriMath/issues/1629), Algebrite's issue 87 from
+[#180](https://github.com/asc-community/AngouriMath/issues/180). Both columns measured on a build,
+`v2.5.0` against this change.
+
+| `"….".ToEntity().Solve("x")` of | Was (2.5.0) | Is |
+|---|---|---|
+| `(x mod 4) + 1 = 3` | `{ }` | `{ 2 + 4 * n_1 }` |
+| `(2x + 1) mod 4 = 3` | `{ -5, -3, -1, 1, 3, 5 }`, six of infinitely many | `{ (3 + 4 * n_1 - 1) / 2 }`, every odd number |
+| `x mod (-4) = -1` | `{ }` | `{ -1 + 4 * n_1 }` |
+| `x mod 4 = 5` | `{ }` | `{ }` (unchanged: modulo 4 the remainder never takes 5) |
+
 ### The modulus of a whole number is a whole number
 
 With the facts in scope making `s` a whole number, `|s| in ZZ` and `|s| in ZZ*` are `True`, and
@@ -909,6 +1556,44 @@ and this is the same answer reached through the even root
 |---|---|---|
 | `"sqrt(x)/(sqrt(1/x + 1)*sqrt(1 - x^2))".Integrate("x")` | `integral(...)` | an antiderivative in `sqrt(x)`, `provided x >= 0` |
 
+### A product of powers of quotients of linears is written over each linear once
+
+**Improvement, not silent.** `e^atanh(a x) sqrt(c - c/(a x))` is
+`sqrt((1 + a x)/(1 - a x)) sqrt(c (a x - 1)/(a x))`, in which the linear `1 - a x` stands twice, under
+two roots, and the substitution search took one root at a time and ran out of time. The integrand is
+now written over each linear once, `K sqrt(a x + 1)/sqrt(x)`, where `K` is the integrand over that
+product: its logarithmic derivative is zero, so it is constant on every interval where it is defined,
+and it stands in front of the answer as Rubi's does. Each sign the linears take where the integrand is
+real is an arm of a piecewise, saying where it holds. Rubi's 7.3.6 and 7.4.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^atanh(a*x)*sqrt(c-c/(a*x))".Integrate("x")` | left unevaluated | the antiderivative, a piecewise with an arm for each interval where it is real |
+| `"1/(e^atanh(a*x)*(c-c/(a*x))^(3/2))".Integrate("x")` | left unevaluated | the same |
+| `"e^(2*acoth(a*x))/(c-c/(a^2*x^2))^2".Integrate("x")` | left unevaluated | `K` times the antiderivative of `x^4/((a x + 1)(a x - 1)^3)` |
+| `"x*sqrt(c - a*c*x)/e^(3*atanh(a*x))".Integrate("x")` | left unevaluated | the antiderivative on both sides of `a x = 1`, where `master` gave one `provided c - a c x >= 0` |
+| `"sqrt(x)/(sqrt(1/x + 1)*sqrt(1 - x^2))".Integrate("x")` | left unevaluated | the antiderivative on both sides of `x = 0`, where `master` gave one `provided x >= 0` |
+
+### A quadratic that shares a root with a linear beside it is written over it
+
+**Answers where there were none.** In Rubi's 1.2.1.2 and 1.2.1.4 a quadratic under a root stands
+beside a power of a linear that divides it: `a d h + (c d^2 + a h^2) x + c d h x^2` is
+`(d + h x)(a h + c d x)`. Nothing split a quadratic with symbols in it over a root it shares, so it
+was read as irreducible and the integral was declined or ran out of time. A quadratic beside a
+linear under a root now takes the linear's root where it vanishes there, and its other root by
+the sum of the two. Each linear is then written once, as in the entry above
+([#718](https://github.com/asc-community/AngouriMath/issues/718)), and the two roots of the shared
+linear are one whole power of it. That is done only where it leaves two linears or fewer. Beside a
+whole power of the linear, as in `(d + h x)^3 sqrt(a d h + ...)`, or beside a third linear, as in
+`x sqrt(a d h + ...)/(d + h x)`, the quadratic is read whole, as before.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(d + h*x)^(7/2)/(a*d*h + (c*d^2 + a*h^2)*x + c*d*h*x^2)^(3/2)".Integrate("x")` | left unevaluated | `K` times a sum of powers of `sqrt(a h + c d x)`, `provided a h + c d x >= 0` |
+| `"(d + h*x)^(3/2)*(a*d*h + (c*d^2 + a*h^2)*x + c*d*h*x^2)^(1/2)".Integrate("x")` | left unevaluated | `K` times a polynomial in `sqrt(a h + c d x)`, `provided a h + c d x >= 0` |
+| `"sqrt(d + h*x)/sqrt(a*d*h + (c*d^2 + a*h^2)*x + c*d*h*x^2)".Integrate("x")` | left unevaluated | `K` times `2 sqrt(a h + c d x)/(c d)`, `provided a h + c d x >= 0` |
+
 ### The inverse hyperbolic tangent's answer is given on its domain, and says so
 
 `1/((1 - a^2 x^2)^(5/2) artanh(a x))` was left unevaluated, although the substitution `a x = tanh(u)`
@@ -926,6 +1611,33 @@ answer is still declined, and a route that answers everywhere can. Rubi's 7.3.4
 | `"1/((1-a^2*x^2)^(3/2)*atanh(a*x))".ToEntity().Integrate("x")` | `integral(...)` | `Chi(u)/a provided 1 - (a x)^2 > 0` |
 | `"x/((1-a^2*x^2)^(3/2)*atanh(a*x)^2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `Chi`, `provided 1 - (a x)^2 > 0` |
 | `"x*atanh(a*x)^3/(1-a^2*x^2)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided 1 - (a x)^2 > 0` |
+
+### `e^atanh(a x)` beside a half-integer power of a linear is integrated where its answer holds
+
+**Improvement, not silent.** `e^atanh(a x) (c - a c x)^p` for a half-integer `p` was left
+unevaluated. Past `a x = 1` both factors are imaginary and their product is real, and the answers
+the rules give have the other sign there, so each now says where it holds rather than claiming the
+whole line. Rubi's 7.3.6 ([#1655](https://github.com/asc-community/AngouriMath/issues/1655),
+[#1664](https://github.com/asc-community/AngouriMath/issues/1664)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^atanh(a*x)*sqrt(c - a*c*x)".Integrate("x")` | `integral(...)` | `2 (c (1 + a x))^(3/2)/(3 a c) provided c - a c x >= 0`, up to the form |
+| `"e^atanh(x)*sqrt(1 - x)".Integrate("x")` | `integral(...)` | `(1 + x)^(3/2)/(3/2) provided (1 + x)/(1 - x) >= 0` |
+| `"e^atanh(x)/sqrt(1 - x)".Integrate("x")` | `integral(...)` | an antiderivative, `provided (1 + x)/(1 - x) >= 0` |
+
+### A logarithm of `e^x` named as a linear is asked about where the name is zero
+
+**Improvement, not silent.** `1/(x ln(e^x))` was left unevaluated. The integrator names `ln(e^x)`
+as `x + c` and answers the generic case, which divides by `c`; on the real line `ln(e^x)` is `x`,
+so `c` is zero there. The case `c = 0` is now asked as well, and is the answer's first arm. Rubi's
+3.5 and 7.3.7 ([#1666](https://github.com/asc-community/AngouriMath/issues/1666)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x*ln(e^x))".Integrate("x")` | `integral(...)` | `-1/x` where `ln(e^x) - x = 0`, the generic answer elsewhere |
+| `"cot(x)/ln(e^sin(x))".Integrate("x")` | `integral(...)` | `-1/sin(x)` where `ln(e^sin(x)) - sin(x) = 0`, the generic answer elsewhere |
+| `"1/atanh(tanh(a + b*x))".Integrate("x")` | no answer in 30 s | `ln(2 (a + b x))/b` where the name is zero, the generic answer elsewhere |
 
 ### A zero imaginary part is on the real axis, whatever its sign
 
@@ -1080,6 +1792,24 @@ now, and a closed interval at one point meets the other in that point or in noth
 |---|---|---|
 | `"(3; 1) /\ [0; 5]".ToEntity().InnerSimplified` | `[0; 5]` — wrong | `{ }` |
 
+### A power of an exponential over a polynomial is integrated to the exponential integral
+
+**Answers where there were none.** `(F^(g (e + f x)))^n` with a symbol for `F` or `n` was read by no rule
+below a polynomial: `(F^x)^n/x` and Rubi's 2.2, `(a + b (F^(g (e + f x)))^n)^p/(c + d x)^m`, were
+declined. Its logarithmic derivative is the constant `n g f ln F`, so it is a constant times
+`e^(n g f ln(F) x)` wherever it is differentiable, and the answer is the exponential integral's with
+that constant written back as `(F^(g (e + f x)))^n e^(-n g f ln(F) x)`. It holds for every `F`: a
+negative one makes `(F^x)^n` differ from `F^(n x)` past each point where `F^x` crosses the negative
+axis, and the constant carries that. A whole power is `F^(n u)` exactly and is written so
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(F^x)^2/x".ToEntity().Integrate("x")` | `integral(...)` | `Ei(2 ln(F) x)` |
+| `"(F^x)^n/x".ToEntity().Integrate("x")` | `integral(...)` | `(F^x)^n e^(-n ln(F) x) Ei(n ln(F) x)` |
+| `"(a + b*(F^(g*(e + f*x)))^n)/(c + d*x)".ToEntity().Integrate("x")` | `integral(...)` | a logarithm and an exponential integral |
+| `"(a + b*(F^(g*(e + f*x)))^n)^3/(c + d*x)^3".ToEntity().Integrate("x")` | `integral(...)` | powers of `c + d x` and exponential integrals |
+
 ### An exponential of a multiple of a logarithm is integrated as the power it is
 
 `e^(k ln(q))` is `q^k` — the definition of the principal power, for every complex `q` other than
@@ -1167,6 +1897,23 @@ of [#1409](https://github.com/asc-community/AngouriMath/issues/1409) — is `Tru
 | `"x^2 = 4 and not x = 2".Solve("x")` | `{ x : x ^ 2 = 4 and not x = 2 }` | `{ -2 }` |
 | `"x^2 = 4 and x > 0".Solve("x")` | `{ 2 }` | `{ 2 }` — unchanged, both sides being settled |
 | `"x^6 + x*y + 1 = 0 and x - 1 = 0".Solve("x")` | `{ x : … }`, as written | unchanged |
+
+### An undecided member of an intersection stays in it, and a conjunction keeps its second equation
+
+**Wrong answers, silent.** A member of a listed set whose membership in the other set could not be
+decided was kept in their intersection unconditionally: `{ y } /\ { 2 }` was `{ y }`, which is
+wrong at every `y` but 2. `Solve` meets the solution sets of a conjunction's two sides, so an
+equation with a parameter in it was dropped: `x = y and x = 2` solved to `{ y }`. Such a member now
+stays intersected with the other set, beside the members that are decided
+([#1680](https://github.com/asc-community/AngouriMath/issues/1680)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"{ y } /\ { 2 }".ToEntity().Evaled` | `{ y } \/ {  }` | `{ y } /\ { 2 }` |
+| `"{ y, 3 } /\ { 3 }".ToEntity().Evaled` | `{ y } \/ { 3 }` | `{ 3 } \/ { y } /\ { 3 }` |
+| `"x = y and x = 2".Solve("x")` | `{ y } \/ {  }`, which is `{ 1 }` at `y = 1` | `{ y } /\ { 2 }`, which is empty at `y = 1` |
+| `"x + y = 3 and x - y = 1".Solve("x")` | `{ 3 - y } \/ {  }` | `{ 3 - y } /\ { 1 + y }`: `{ 2 }` at `y = 1`, and empty elsewhere |
+| `"x^2 = 4 and x = y".Solve("x")` | `{ 2, -2 } \/ {  }` | `{ 2, -2 } /\ { y }` |
 ### `image` and `preimage` of a set under an expression
 
 `image(f(x), x in A)` is `{ f(x) : x in A }` — `union({f(x)}, x in A)` — listed over a listed
@@ -1395,6 +2142,21 @@ below are one indeterminate. Rubi's 7.5.1 and 7.6.1
 | `"x^2 * asech(c * x)".ToEntity().Integrate("x")` | `integral(...)`, the same | an antiderivative |
 | `"x / sqrt(1 + 1/(c*x)^2)".ToEntity().Integrate("x")` | `integral(x / sqrt(1 + 1 / (c * x) ^ 2), x)` | an antiderivative, `provided c^2 > 0` |
 
+### A conditional expression is differentiated where its condition holds
+
+**Answers where there were none.** `F provided P` is differentiated with `P` known to hold, and
+so is each case of a piecewise. Under a strict bound such as `x > 0`, a root of `x` is real, so
+the sign, the modulus, `max` and `min` of an expression in it are differentiated as on the real
+line, where without the bound they are left as written: for `x < 0` the roots are complex. The
+answer is still claimed only where `P` holds.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sgn(x^(1/3) + 2) provided x > 0".ToEntity().Differentiate("x")` | `derivative(sgn(x ^ (1/3) + 2), x) provided x > 0` | `0 provided x > 0 and not x ^ (1/3) + 2 = 0` |
+| `"abs(sqrt(x) - 1) provided x > 0".ToEntity().Differentiate("x")` | `derivative(abs(sqrt(x) - 1), x) provided x > 0` | `sgn(sqrt(x) - 1) * 1/2 * x ^ (-1/2) provided x > 0 and not sqrt(x) - 1 = 0` |
+| `"max(sqrt(x), 1) provided x > 0".ToEntity().Differentiate("x")` | `derivative(max(sqrt(x), 1), x) provided x > 0` | `(1/2 * x ^ (-1/2) + sgn(sqrt(x) - 1) * 1/2 * x ^ (-1/2)) / 2 provided x > 0 and not sqrt(x) - 1 = 0` |
+| `"piecewise(abs(sqrt(x) - 1) provided x > 0, 0)".ToEntity().Differentiate("x")` | `piecewise((derivative(abs(sqrt(x) - 1), x)) provided (x > 0), 0 provided True)` | the same with that case's derivative written out |
+
 ### `arsech` and `arcsch` below the bar are integrated
 
 `1/(x^2 (a + b arcsch(c x)))` and `1/(x^4 (a + b arsech(c x)))` were left unevaluated. The
@@ -1608,6 +2370,82 @@ the ends are about, `n >= 0`. With two names it is left as it was, `n >= m - 1`
 |---|---|---|
 | `"sum(2 k + 1, k, 0, n - 1)".Simplify()` | `piecewise((2 * n + (n - 1) ^ 2 - 1) provided (n - 1 >= -1), 0 provided True)` | `piecewise((n ^ 2) provided (n >= 0), 0 provided True)` |
 
+### A sum over a set: `sum(f, x in S)`
+
+`sum` took a range and nothing else, so a sum over a set had no spelling: `sum(f, x in S)` was a
+parse error asking for the four arguments of the range form. `SumOverSetf` reads the second
+argument as `variable in set` and binds the variable over the term and the set, as `max(f, t in S)`
+does: spelt `sum(f, x in S)`, printed `\sum_{x \in S} f` in LaTeX, and built by
+`MathS.Sum(f, x, S)`. The range form `sum(f, k, from, to)` is untouched. A sum over the roots of a
+polynomial is a sum over its set of roots, `sum(f(w), w in { w : p(w) = 0 })`, with no index and no
+order.
+
+The terms are added up where the set is finite and its members are known: a listed set of numbers,
+distinct by value, and the roots of a polynomial where every one is rational, a root of a quadratic
+or a root of a binomial. That is checked by counting them against the degree of the square-free
+part, so a root the solver missed leaves the sum as written rather than one term short. The roots of
+an irreducible cubic or quartic are not written out in radicals, which read no more simply than the
+sum. Evaluated to a number, the roots it cannot
+write are found to the working precision by the Durand–Kerner iteration, all of them or none. A set
+with a symbol among its members, whose members may coincide, and a set that is not finite are left
+as written. [#1285](https://github.com/asc-community/AngouriMath/issues/1285). Both columns
+measured on a build, `v2.5.0` against this change.
+
+| | Was (2.5.0) | Is |
+|---|---|---|
+| `"sum(x^2, x in {1, 2, 3})".ToEntity()` | `FunctionArgumentCountException`: *sum should have exactly 4 arguments but 2 arguments are provided* | `14` once simplified |
+| `"sum(w^2, w in { w : w^3 - 2w + 1 = 0 })".ToEntity().Simplify()` | the same exception | `4` |
+| `"sum(w^5, w in { w : w^5 + w + 3 = 0 })".ToEntity().Evaled` | the same exception | `-15`, from the five roots found numerically |
+| `"sum(k, k in ZZ intersect [1; 10])".ToEntity().Simplify()` | the same exception | `55`, as `sum(k, k, 1, 10)` is |
+| `"sum(x, x in {a, b})".ToEntity().Simplify()` | the same exception | `sum(x, x in { a, b })`, since `a` and `b` may be equal |
+| `"sum(k, k, 1, 10)".ToEntity().Simplify()` | `55` | the same |
+
+### A condition on a name a binder binds stays in the binder
+
+**Fix.** `DomainCondition` conjoined every child's condition, a binder's body included, so a
+summation's, a product's or a definite integral's condition named its index as though it were free,
+and a sum over a set's did the same: the product rule leaves `0 * sum(...)`, which keeps it, and the
+derivative of `2 sum(ln(x - w), w in { w : w^3 + w + 1 = 0 })` was `… provided not x - w = 0`, which
+`EvalNumerical` could not decide. The condition is required at every value the name ranges over
+now: a conjunction over a few numbers, a resultant over the roots of a polynomial, and `forall`
+over the range otherwise. It is not left out, which would give `0 * sum(1/(k - x), k, 1, n)` a value
+at `x = 1` ([#1632](https://github.com/asc-community/AngouriMath/issues/1632)). A definite integral's
+condition is required between its limits, in either order. That is sufficient for a value and not
+necessary: `ln(t)` over `[0; 1]` converges, to -1, and its condition reads it as undefined, since the
+integrand has none at 0. Nothing is given a value it does not have that way. The integral itself,
+where it is worked out, is not affected.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sum(1/(k - x), k, 1, 3)".ToEntity().DomainCondition` | `not k - x = 0` | `not 1 - x = 0 and not 2 - x = 0 and not 3 - x = 0` |
+| `"sum(1/(k - x), k, 1, n)".ToEntity().DomainCondition` | `not k - x = 0` | `forall k in { k : k in ZZ and 1 <= k and k <= n } : not k - x = 0` |
+| `"integral(1/(t - x), t, 0, 1)".ToEntity().DomainCondition` | `not t - x = 0` | `forall t in [0; 1] : not t - x = 0` |
+
+### A rational function whose residues are of degree three or more is integrated over its poles
+
+**Wider.** The logarithmic part of a rational integral is a logarithm at each pole, weighted by the
+residue there. Where the residues are rational or roots of a quadratic they were written out, as
+logarithms and arctangents. Where they lie in a field of degree three or more, the rational
+integrator declined, and `1/(x^3 + x + 1)` was left unevaluated. It is written now as a sum over the
+poles, `sum(A(r)/D'(r) ln(x - r), r in { r : E(r) = 0 })`, with the node above: `E` is the factor
+of the denominator whose poles have those residues, the gcd of `D` and `D'^n R(A/D')` over the
+rationals. The integrand of [#1285](https://github.com/asc-community/AngouriMath/issues/1285),
+`sqrt(x)/(1 + x + x^4)`, is `2u^2/(1 + u^2 + u^8)` under `u = sqrt(x)`, and is answered through it.
+
+**Only where nothing else answers.** The integral is asked again with sums over roots allowed once
+the whole of it has come back unevaluated, so an integrand another rule writes in closed form keeps
+that form. Asked with the other rules, the sum answered each of Jeffrey's three terms of
+`(-1 + 4 cos(x) + 5 cos(x)^2)/(-1 - 4 cos(x) - 3 cos(x)^2 + 4 cos(x)^3)` with a sum over the roots of
+a sextic, where the whole is one arctangent. A denominator with a symbol among its coefficients is
+still declined. Both columns measured on a build, `v2.5.0` against this change.
+
+| | Was (2.5.0) | Is |
+|---|---|---|
+| `"1/(x^3 + x + 1)".Integrate("x")` | `integral(1 / (x ^ 3 + x + 1), x)` | `sum(1 / (3 * r ^ 2 + 1) * ln(x - r), r in { r : r ^ 3 + r + 1 = 0 }) + C` |
+| `"sqrt(x)/(1 + x + x^4)".Integrate("x")` | `integral(sqrt(x) / (1 + x + x ^ 4), x)` | `sum(2 * r ^ 2 / (8 * r ^ 7 + 2 * r) * ln(x ^ (1/2) - r), r in { r : r ^ 8 + r ^ 2 + 1 = 0 }) + C` |
+| `"1/(1 - x^4 + x^8)".Integrate("x")` | `integral(1 / (1 - x ^ 4 + x ^ 8), x)` | `sum(1 / (8 * r ^ 7 + (-4) * r ^ 3) * ln(x - r), r in { r : r ^ 8 + -r ^ 4 + 1 = 0 }) + C` |
+| `"1/(x^4 + a*x + 1)".Integrate("x")` | `integral(1 / (x ^ 4 + a * x + 1), x)` | the same |
+
 ### `(a + b asech(c x))/(d + e x)^2` is integrated, and a root written apart with `|x|` no longer needs a parity
 
 Rubi's 7.5.1 with a symbolic linear below the bar ran for ten minutes without an answer. By
@@ -1701,6 +2539,21 @@ and in no release -- and is `sgn(u) u/(u^2 - 1)`
 | `"(pe*x)^(-1+n)/(a+b*sech(c+d*x^n))^2".Integrate("x")` | left unevaluated | the antiderivative, by cases on `a` and `b` |
 | `"1/sqrt(1+csch(x)^2)".Integrate("x")` | left unevaluated | `-sgn(tanh(x)) ln(tanh(x)^2 - 1)/2`, in exponentials |
 | `"x^4/sech(2*ln(c*x))^(1/2)".Integrate("x")` | left unevaluated | `sgn(x) (1 + c^4 x^4)^(3/2)/(6 sqrt(2) c^5)` up to the form, `provided c^4 > 0` |
+
+### A product of powers is read as its own raised product's derivative without a sum beside it
+
+**Improvement, not silent.** An integrand that is a constant times the derivative of its powers
+with some of them raised by one is answered by that product. The rule wanted a sum beside the powers
+and a power of `x` among them, and read the sum's quotient through `f'/f`, which with two symbolic
+powers of polynomials ran past a minute. Where a power is not a whole one it now reads a product
+with no sum, and `x` raised from no power at all, and the sum as a polynomial
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x^2*sqrt(a*x+b*x^4))".Integrate("x")` | left unevaluated | `-2 sqrt(a x + b x^4)/(3 a x^2)` |
+| `"(a+b*x^n+c*x^(2*n))^p*(a+b*(1+n+n*p)*x^n+c*(1+2*n*(1+p))*x^(2*n))".Integrate("x")`, Rubi's 1.2.3.5 | no answer in 30 s | `x (a + b x^n + c x^(2 n))^(p + 1)` |
+| Rubi 1.3.2's `x (a + b x + c x^2)^m (d + e x + f x^2 + g x^3)^n` times the sum its derivative leaves | no answer in 90 s | `x^2 (a + b x + c x^2)^(m + 1) (d + e x + f x^2 + g x^3)^(n + 1)` |
 
 ### A root of a rational function of `coth(x)` is integrated by the hyperbolic half-angle
 
@@ -1862,6 +2715,27 @@ rule answers, where the imaginary unit in the coefficient is read by nothing els
 | `"x/(2+2*i*tan(x))".Integrate("x")` | left unevaluated | the antiderivative |
 | `"(c+d*x)/(a+i*a*tan(pe+f*x))".Integrate("x")` | left unevaluated | the antiderivative |
 
+### A tangent above an imaginary tangent below is written in sines and cosines, and those as exponentials
+
+**Answers where there were none.** `tan(c + d x)/(a + i a tan(c + d x))` ran past the corpus's budget
+and `1/(a + i a tan(c + d x))` was declined. With `A + i A tan(z)` below the bar written as
+`A e^(i z)/cos(z)`, a tangent of `z` above it stayed one, so `tan(z) cos(z)` was handed on as
+written, and with `z = c + d x` the phase was expanded into `sin(c)` and `cos(c)` beside `d x`. The
+tangent or cotangent above is written in sines and cosines now, what the identity puts below
+cancels against it, and the sines and cosines of `z` that are left are written as the exponentials
+they are, so that the whole is a rational function of `e^(i z)`. Only where nothing of `x` stands
+beside them but exponentials of linears and polynomials in `x`: `sec(z)^8/(a + i a tan(z))^4` and
+`sqrt(tan(z))/(a + i a tan(z))^(5/2)` are read through the tangent as before. Rubi's 4.3.2.1 and
+4.4.2.1 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"tan(c+d*x)/(a+i*a*tan(c+d*x))".Integrate("x")` | `integral(...)` | `x` and `e^(-2 i (c + d x))`, over `a` |
+| `"1/(a+i*a*tan(c+d*x))".Integrate("x")` | `integral(...)` | the same |
+| `"tan(c+d*x)^3/(a+i*a*tan(c+d*x))^4".Integrate("x")` | `integral(...)` | `x` and powers of `e^(-2 i (c + d x))` |
+| `"cot(c+d*x)/(a+i*a*cot(c+d*x))".Integrate("x")` | `integral(...)` | `x` and `e^(2 i (c + d x))` |
+| `"tan(c+d*x)^2/(a+i*a*tan(c+d*x))".Integrate("x")` | `integral(...)` | a power of `e^(-i (c + d x))` and logarithms of `e^(+/-2 i (c + d x)) + 1` |
+
 ### A symbolic constant factor no longer stops the rounds of parts
 
 `F^(c (a + b x)) sin(d + pe x)^3` was left as written. The exponent's constant part becomes a
@@ -1959,6 +2833,73 @@ here that writes one does: left inside, a rule below differentiated it, and
 | `"(A+B*x)*(d+pe*x)/(a^2+2*a*b*x+b^2*x^2)^(5/2)".Integrate("x")` | left unevaluated | the antiderivative, `provided b^2 > 0` |
 | `"sqrt(a^2+2*a*b*x+b^2*x^2)*sqrt(c+pe*x+d*x^2)".Integrate("x")` | left unevaluated | the antiderivative |
 | `"(a^2+2*a*b*x+b^2*x^2)^(5/2)".Integrate("x")` | the antiderivative, through the substitution search | `sgn(a + b x) (a + b x)^6 |b|^5/(6 b)` up to the form |
+
+### Any power of a square written out is the power of its root, in any power of `x`
+
+**Answers where there were none.** A square written out, `A + B w + C w^2` with `B^2 = 4 A C`,
+was read as the modulus of its root only under half an odd power, and only in a whole power of
+`x`. A symbolic power, `(a^2 + 2 a b x + b^2 x^2)^p`, or a power such as `3/4`, was declined, and
+so was the square in `x^n` or in `x^(1/3)`. Now the power of the square is the power of its root
+`L = w + B/(2 C)` times `(A + B w + C w^2)^p / L^(2p)`. That factor is constant wherever `L` is
+not zero, and it goes in front of the integral. These are Rubi's 1.2.1.2, 1.2.2.2 and 1.2.3.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^2*(a^2 + 2*a*b*x^3 + b^2*x^6)^p".Integrate("x")` | left unevaluated | `(a^2 + 2 a b x^3 + b^2 x^6)^p (x^3 + a/b)/(3 (2 p + 1))`, as that factor times a power of `x^3 + a/b` |
+| `"(a + b*x)*(d + e*x)^3*(a^2 + 2*a*b*x + b^2*x^2)^p".Integrate("x")` | left unevaluated | the factor times powers of `x + a/b` |
+| `"(a^2 + 2*a*b*x^2 + b^2*x^4)^(3/4)".Integrate("x")` | left unevaluated | the factor times the antiderivative of `(x^2 + a/b)^(3/2)` |
+| `"x*sqrt(a^2 + 2*a*b*x^n + b^2*x^(2*n))".Integrate("x")` | left unevaluated | `sqrt(a^2 + 2 a b x^n + b^2 x^(2n))/(x^n + a/b)` times `a x^2/(2 b) + x^(n + 2)/(n + 2)` |
+| `"x*(a^2 + 2*a*b*x^(1/3) + b^2*x^(2/3))^p".Integrate("x")` | left unevaluated | the factor times powers of `x^(1/3) + a/b` |
+
+### The root of a quadratic that is a square is the modulus of a linear, and was read as any quadratic
+
+**Wrong answers, silent.** The table's entry for `k/sqrt(Q)` and `sqrt(Q)` reads a quadratic by the
+sign of its leading coefficient: an arcsine over the root of the discriminant, or the logarithm of
+`2 a x + b + 2 sqrt(a) sqrt(Q)`. Where `Q` is a square the discriminant is zero, and that logarithm
+is of zero beyond the root. So `1/sqrt(x^2 + 2x + 1)` had no value for any `x < -1`, where it is
+`1/|x + 1|`, and with a negative leading coefficient there was no value anywhere. The root of a
+square is now the modulus of its linear, `sqrt(a (x + h)^2) = sqrt(a) |x + h|`, for a leading
+coefficient of either sign ([#1670](https://github.com/asc-community/AngouriMath/issues/1670)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/sqrt(x^2+2*x+1)".Integrate("x")` | `ln(2 x + 2 + 2 sqrt(x^2 + 2 x + 1))`, `ln(0)` for every `x < -1` | `sgn(x + 1) ln(x + 1)` |
+| `"sqrt(x^2+2*x+1)".Integrate("x")` | `(2 x + 2) sqrt(x^2 + 2 x + 1)/4 provided not 2 x + 2 + 2 sqrt(x^2 + 2 x + 1) = 0`, which says nothing for `x <= -1` | `sgn(x + 1) (x^2/2 + x)` |
+| `"1/sqrt(-4-4*x-x^2)".Integrate("x")`, and `sqrt(-4 - 4 x - x^2)` | `NaN` | `sgn(x + 2) ln(i x + 2 i)/i`, and `i sgn(x + 2) (x^2/2 + 2 x)` |
+| `"1/sqrt(-a^2-2*a*b*x-b^2*x^2)".Integrate("x")` | a piecewise whose arcsine divides by `sqrt(0)`, `NaN` for every real `b` but zero | a logarithm over `sqrt(-b^2)`, `provided b^2 > 0` |
+| `"1/(x*sqrt(a^2+2*a*b*x+b^2*x^2))".Integrate("x")`, the same with `-a^2 - 2 a b x - b^2 x^2`, or with `d + e x` for `x` | left unevaluated | the antiderivative, `provided b^2 > 0` |
+
+### A root of a square in a fractional power of `x` is the modulus of a linear in that power
+
+**Answers where there were none.** A sum of powers of `x` that are whole multiples of one
+fractional `k`, such as `a^2 + 2 a b x^(1/3) + b^2 x^(2/3)`, is read as a polynomial in `w = x^k`,
+and the root of a square in it as the modulus of a linear in `w`, as the root of a square
+quadratic is. `w` is real for a positive `x`, and the answer says so, `provided x > 0`. Rubi's
+1.2.3.2 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a^2+2*a*b*x^(1/3)+b^2*x^(2/3))".Integrate("x")` | left unevaluated | `sgn(x^(1/3) + a/b) sqrt(b^2) (3/4 x^(4/3) + a/b x) provided x > 0 and b^2 > 0` |
+| `"1/sqrt(a^2+b^2*x+2*a*b*sqrt(x))".Integrate("x")` | left unevaluated | `sgn(sqrt(x) + a/b) (2 sqrt(x) - 2 a/b ln(a/b + sqrt(x)))/sqrt(b^2)`, under the same condition |
+| `"(a^2+b^2/x^(2/5)+2*a*b/x^(1/5))^(5/2)".Integrate("x")`, Rubi 1.2.3.2 #659 | left unevaluated | an antiderivative in `x^(-1/5)`, under the same condition |
+| `"(1+2*x^(1/2)+x)^(3/2)".Integrate("x")` | left unevaluated | `2 (x/2 + x^(3/2) + 3 x^2/4 + x^(5/2)/5) provided x > 0` |
+
+### A sine or cosine of the reciprocal of a linear beside a power of it is integrated under `u = 1/L`
+
+**Answers where there were none.** `sin(a + b/x)/x^3` was declined, while under `u = 1/x` it is
+`-u sin(a + b u)`, one step by parts. A trigonometric function of `a + b/L^k`, `L` a linear, beside
+`L^m` with `m <= -3` is a polynomial in `u = 1/L` times the function, and is integrated so and written
+back. Rubi's 4.1.12 and 4.2.12, `(e x)^m (a + b sin(c + d x^n))^p` for a negative `n`. The other
+powers were answered already and are answered as before
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin(a + b/x)/x^3".ToEntity().Integrate("x")` | `integral(...)` | a sine and a cosine of `a + b/x` |
+| `"cos(a + b/x)/x^4".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"sin(a + b/x^2)/x^5".ToEntity().Integrate("x")` | `integral(...)` | the same, of `a + b/x^2` |
+| `"sin(a + b/(c + d*x))/(c + d*x)^3".ToEntity().Integrate("x")` | `integral(...)` | the same, of `a + b/(c + d x)` |
 
 ### A power of the variable times a sine or cosine of a logarithm, and a power of a monomial
 
@@ -2148,6 +3089,214 @@ multiple of it, `(d - c^2 d x^2)^(3/2)`, is written over it the same way, with
 Rubi's 5.1.4, 5.1.5, 5.2.4 and 5.2.5, all 504 problems that count: 405 to 463, no row lost, 77
 timeouts to 19.
 
+### The special functions are integrated by parts, and so is what leads to one
+
+Integration by parts differentiates each of the nine special functions now, where it meets one
+beside a power of `x`, as it does a logarithm or an inverse trigonometric function: each has an
+elementary derivative. `Ei`, `li`, `Si`, `Ci`, `Shi` and `Chi` of a linear argument are integrated
+alone, against 1, as `erf` already was
+([#1501](https://github.com/asc-community/AngouriMath/issues/1501)). An integrand holding one of
+these functions had no reading in 2.5.0, which the entries for the functions themselves record. An
+elementary integrand whose antiderivative is reached through one is answered where it was not:
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a+b*ln(c*x^n))/(x^2*(d+e*ln(f*x^m)))".Integrate("x")`, Rubi's 3.1.5 row 213 | `integral(...)` | an antiderivative in `Ei`, provided `f > 0` and `e^d f^e > 0` |
+
+### A negative power of the variable is not a polynomial to integration by parts
+
+`MathS.TryPolynomial` reads `x^(-1)` as a monomial of degree -1, and integration by parts against a
+polynomial differentiated it until it reached `0`, which a negative power never does:
+`e^(2x) x^(-1)` ran the process out of memory, where `e^(2x)/x` is `Ei(2x)`
+([#1646](https://github.com/asc-community/AngouriMath/issues/1646)). By parts takes a polynomial
+with no negative degree now, and past it, the power is the factor differentiated, which leaves the
+quotient the exponential integral rules read. Only what ran away or ran out of time changes: Rubi's
+independent suites and its families 2, 4 and 8 are answered as they were.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^(2*x)*x^(-1)".Integrate("x")` | out of memory: `OutOfMemoryException` under a 2 GB heap | `1 / x * e ^ (2 * x) / 2 - -1/2 * (-1 / x * e ^ (2 * x) + 2 * Ei(2 * x)) + C`, which is `Ei(2 * x) + C` |
+| `"e^x*x^(-2)".Integrate("x")` | `integral(e ^ x * x ^ (-2), x)` | `e ^ x * -1 / x - -Ei(x) + C` |
+
+### A special function beside its derivative is a substitution
+
+`e^(c - b^2 x^2) erf(b x)^n`, `Ei(b x) e^(b x)/x` and `Si(b x) sin(b x)/x` are each a power of a
+special function beside its derivative, and `u = erf(b x)`, `u = Ei(b x)` or `u = Si(b x)` writes
+them as a power of `u`. None of the nine special functions was a candidate for that substitution.
+Each is one now, as the logarithm is, wherever its derivative can be the differential
+([#1501](https://github.com/asc-community/AngouriMath/issues/1501)). An integrand holding one of
+these functions had no reading in 2.5.0, which the entries for the functions themselves record, and
+no integrand without one changes: Rubi's independent suites and a sample of its families 1 to 7,
+2726 problems, are answered alone as they were.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^(c - b^2*x^2)*erf(b*x)".Integrate("x")` | `UnrecognizedFunctionParseException`: there is no function `erf` | `e ^ c * pi ^ (1/2) * erf(b * x) ^ 2 / 2 / (2 * b) + C` |
+| `"e^(b*x)*Ei(b*x)/x".Integrate("x")` | `Ei * e ^ (b * x) + C`, with `Ei` a variable | `Ei(b * x) ^ 2 / 2 + C` |
+| `"Si(b*x)*sin(b*x)/x".Integrate("x")` | `Si * -cos(b * x) + C`, with `Si` a variable | `Si(b * x) ^ 2 / 2 + C` |
+
+### A square of a special function, and one beside a power of `x` and its elementary derivative, are integrated by parts
+
+`x Si(b x) sin(b x)` was left unevaluated where `Si(b x) sin(b x)` was not: by parts it is
+`Si(b x)` against `x sin(b x)`, whose integral needs parts of its own, and the integral of that
+factor was taken with parts off. It is integrated by the polynomial's parts now, beside a special
+function of a linear argument, and what is left, `sin(b x)/x` times sines and cosines, by parts in
+turn. A square of one of `b x` is two rounds of parts, and what the first round leaves comes back
+as one product over a sum -- `(b x Ei(b x) - e^(b x)) e^(b x)/(b x)` for `Ei(b x)^2` -- that no rule
+reads whole: its terms are asked one at a time now
+([#1501](https://github.com/asc-community/AngouriMath/issues/1501)). An integrand holding one of
+these functions had no reading in 2.5.0, which the entries for the functions themselves record, and
+no integrand without one changes: Rubi's independent suites and a sample of its families 1 to 7,
+2726 problems, are answered alone as they were.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x*Si(b*x)*sin(b*x)".Integrate("x")` | a polynomial in a variable `Si` | an antiderivative in `Si(b x)`, `Ci(2 b x)` and `ln(x)` |
+| `"Ei(b*x)^2".Integrate("x")` | `Ei * (b * x) ^ 3 / 3 / b + C`, with `Ei` a variable | an antiderivative in `Ei(b x)` and `Ei(2 b x)` |
+| `"x*erf(b*x)^2".Integrate("x")` | `UnrecognizedFunctionParseException`: there is no function `erf` | an antiderivative in `erf(b x)` |
+
+### A constant of integration is matched to a linear divisor with a symbol in it
+
+By parts against a polynomial chooses the polynomial's antiderivative so that what the other
+factor's derivative divides by divides it too, and that was done only where the division left a
+number over. `a + b x` leaves a symbol: `x^2/2` over `a + b x` leaves `a^2/(2 b^2)`, so the
+remainder of `x Shi(a + b x)^2` kept `x^2/(a + b x)` and nothing read it. The antiderivative less
+its value at `-a/b` is taken now, written as `a + b x` times the quotient, so that the linear
+cancels in the remainder ([#1501](https://github.com/asc-community/AngouriMath/issues/1501)).
+`x Shi(a + b x)^2`, `x Chi(a + b x)^2` and `x Ei(a + b x)^2` are answered. An integrand holding one of
+these functions had no reading in 2.5.0, which the entries for the functions themselves record, and
+no integrand without one changes: Rubi's independent suites and a sample of its families 1 to 7
+are answered alone as they were. Where by parts already answered a special function of `a + b x`
+beside a power of `x`, the answer is written with the same constant: `x Ei(a + b x)` now reads
+`Ei(a + b x) (a + b x)(x/(2b) - a/(2b^2)) - ...`, the same function as before.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x*Shi(a+b*x)^2".Integrate("x")` | `a ^ 2 * Shi * x ^ 2 / 2 + a * b * 2 * Shi * x ^ 3 / 3 + b ^ 2 * Shi * x ^ 4 / 4 + C`, with `Shi` a variable | an antiderivative in `Shi(a + b x)` and `Ei(2 (a + b x))`, `Ei(-2 (a + b x))` |
+| `"x*Ei(a+b*x)^2".Integrate("x")` | `a ^ 2 * Ei * x ^ 2 / 2 + a * b * 2 * Ei * x ^ 3 / 3 + b ^ 2 * Ei * x ^ 4 / 4 + C`, with `Ei` a variable | an antiderivative in `Ei(a + b x)` and `Ei(2 (a + b x))` |
+
+### A square of a special function of a shifted argument is integrated by parts
+
+The remainder of a special function's square was asked term by term only for an argument `b x`.
+For `a + b x`, the remainder divided by the linear until the constant of integration was matched to
+it; with that matched, the terms are the case without the offset, and the asking is offered for any
+linear argument ([#1501](https://github.com/asc-community/AngouriMath/issues/1501)). The exception
+is an error function beside anything but itself, whose derivative is a Gaussian of the shifted
+argument, so a polynomial beside it stays in every term: `(c + d x) erf(a + b x)^2` is still
+declined. An integrand holding one of these functions had no reading in 2.5.0, which the entries for
+the functions themselves record, and no integrand without one changes: Rubi's independent suites and
+a sample of its families 1 to 7 are answered alone as they were.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"Shi(a+b*x)^2".Integrate("x")` | `Shi * (a + b * x) ^ 3 / 3 / b + C`, with `Shi` a variable | an antiderivative in `Shi(a + b x)`, `Ei(2 (a + b x))` and `Ei(-2 (a + b x))` |
+| `"x^2*Ei(a+b*x)^2".Integrate("x")` | `a ^ 2 * Ei * x ^ 3 / 3 + a * b * 2 * Ei * x ^ 4 / 4 + b ^ 2 * Ei * x ^ 5 / 5 + C`, with `Ei` a variable | an antiderivative in `Ei(a + b x)` and `Ei(2 (a + b x))` |
+| `"erf(a+b*x)^2".Integrate("x")` | `UnrecognizedFunctionParseException`: there is no function `erf` | an antiderivative in `erf` |
+
+### A logarithm of `x` is matched to a logarithm of a multiple of `x` below the bar
+
+By parts on `li(b x)/x` takes the antiderivative of `1/x`, and with `ln(x)` the remainder was
+`b ln(x)/ln(b x)`, which nothing read. `ln(b x)` is as much an antiderivative of `1/x`, and taken so,
+the logarithm the derivative of `li(b x)` divides by cancels: `li(b x)/x` is `li(b x) ln(b x) - b x`
+([#1501](https://github.com/asc-community/AngouriMath/issues/1501)). `li` had no reading in 2.5.0,
+which its own entry records, and no integrand without it changes: Rubi's independent suites, its
+family 3 at twenty a file and a sample of the others are answered alone as they were.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"li(b*x)/x".Integrate("x")` | `li * b * x + C`, with `li` a variable | `li(b * x) * ln(b * x) - b * x + C` |
+
+### A special function of a logarithm of a monomial is integrated, through `Ei` of a complex argument
+
+`(e x)^m Si(d (a + b ln(c x^n)))` is by parts against `(e x)^m`, and what is left is a power of `x`
+times `sin(d (a + b ln(c x^n)))/(a + b ln(c x^n))`. Two rules were missing on the way
+([#1501](https://github.com/asc-community/AngouriMath/issues/1501)):
+
+- **A function of one logarithm of a monomial.** A power of `x` times `G(ln(c x^n))` is integrated
+  under `t = ln(c x^n)`, with `x^(m + 1)` written as `K e^((m + 1) t/n)` and
+  `K = x^(m + 1) (c x^n)^(-(m + 1)/n)`, whose derivative is 0 wherever it is defined. That is an
+  antiderivative wherever the integrand is real. For an even `n` that includes negative `x`, where
+  `ln(c x^n)` is not `ln(c) + n ln(x)`. By parts leaves `(d x)^m x/ln(b x)` of `(d x)^m li(b x)`,
+  and this rule answers it with `Ei((m + 2) ln(b x))`.
+- **An exponential beside a sine or cosine, over linears.** Each sine and cosine is written as
+  exponentials, and each term is the exponential integral of a complex argument. The two conjugate
+  terms add up to a real value.
+
+Both columns measured on a build, `v2.5.0` against this change.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^(2*x)*sin(x)/x".Integrate("x")` | `integral(e ^ (2 * x) * sin(x) / x, x)` | `(-1/2 * i) * Ei((2 + i) * x) + 1/2 * i * Ei((2 - i) * x) + C` |
+| `"x*sin(ln(x))/ln(x)".Integrate("x")` | `integral(x * sin(ln(x)) / ln(x), x)` | `(-1/2 * i) * Ei((2 + i) * ln(x)) + 1/2 * i * Ei((2 - i) * ln(x)) + C` |
+| `"cos(a+b*ln(c*x^n))^2".Integrate("x")` | `integral(cos(a + b * ln(c * x ^ n)) ^ 2, x)` | an antiderivative in `sin` and `cos` of `2 (a + b ln(c x^n))`, beside `x (c x^n)^(-1/n)` |
+
+### Exponentials below the bar beside a power of a linear are integrated to the exponential integral
+
+**Answers where there were none.** `1/(x e^(2x))` was declined where `e^(-2x)/x` was answered, and so
+were `1/((c + d x)(a + a tanh(e + f x)))` and its powers, Rubi's 6.3.1, and the same with `coth`, 6.4.1:
+the rules for an exponential over a linear read it above the bar. Written in the exponential every
+other one is a whole power of, exponentials whose denominator is then a power of that one alone are a
+sum of its powers -- `1/(1 + tanh(z))` is `(1 + e^(-2z))/2` -- and each term over the linear is an
+exponential integral. Where anything else stays below the bar, `1/(x (1 + e^x))`, the integral is not
+of this kind and is declined as before ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x*exp(2*x))".ToEntity().Integrate("x")` | `integral(...)` | `Ei(-2 x)` |
+| `"1/(x*(1 + tanh(x)))".ToEntity().Integrate("x")` | `integral(...)` | `ln(x)/2 + Ei(-2 x)/2` |
+| `"1/((c + d*x)*(a + a*tanh(e + f*x)))".ToEntity().Integrate("x")` | `integral(...)` | a logarithm and an exponential integral |
+| `"1/((c + d*x)^2*(a + a*coth(e + f*x))^3)".ToEntity().Integrate("x")` | `integral(...)` | powers of `c + d x` and exponential integrals |
+
+### An exponential or a hyperbolic function over several linears is split into partial fractions over them
+
+`e^x/(x (x + 1))` was left unevaluated, where `e^x/x` and `e^x/(x + 1)` were each answered with
+the exponential integral: the rule for an exponential of a linear over a power of a linear read
+one linear below the bar, and the rule for `sinh` and `cosh` did the same. The quotient is split
+into partial fractions over its linears now, as the rule for a sine or a cosine already split it,
+and each term is the one-linear question: `e^x/(x (x + 1))` is `Ei(x) - Ei(x + 1)/e`. It is also
+what by parts leaves of `Ei(a + b x)/x^2`, `e^(a + b x)/((a + b x) x)`
+([#1501](https://github.com/asc-community/AngouriMath/issues/1501)). The rule for a sine or a cosine
+declined a polynomial over linears with a symbol among their coefficients, `x sin(x)/((c + d x)(x - 2))`,
+for dividing a fraction that was proper already; neither rule divides one now. Both columns
+measured on a build, `v2.5.0` against this change.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"e^x/(x*(x+1))".Integrate("x")` | `integral(e ^ x / (x * (x + 1)), x)` | `Ei(x) + -1 / e * Ei(x + 1) + C` |
+| `"sinh(x)/(x*(x+1))".Integrate("x")` | `integral((e ^ x - e ^ (-x)) / 2 / (x * (x + 1)), x)` | `1/2 * (2 * Shi(x) + ((-1) / e + e) * Chi(x + 1) + ((-1) / e - e) * Shi(x + 1)) + C` |
+| `"x^3*e^(2*x)/((x+1)*(x-2))".Integrate("x")` | `integral(x ^ 3 * e ^ (2 * x) / ((x + 1) * (x - 2)), x)` | `e ^ (2 * x) * (-1/4 + 1/2 * x) + e ^ (2 * x) / 2 + 1/3 * e ^ (-2) * Ei(2 * (x + 1)) + 8/3 * e ^ 4 * Ei(2 * (x - 2)) + C` |
+| `"x*sin(x)/((c+d*x)*(x-2))".Integrate("x")` | `integral(x * sin(x) / ((c + d * x) * (x - 2)), x)` | in `Si` and `Ci` of `(c + d x)/d` and `x - 2` |
+
+### An exponential, hyperbolic or trigonometric function over a quadratic or a binomial is split at its roots
+
+**Answers where there were none.** `sin(c + d x)/(a + b x^2)` was answered, the rule for a sine or a
+cosine writing the quadratic as its leading coefficient times the linears of its two roots, and
+`cosh(c + d x)/(a + b x^2)` was declined, as was `e^x/(x^2 + x + 1)`: the rule for an exponential or
+`sinh` and `cosh` over several linears read linears only. It writes a quadratic the same way now,
+and both rules write a binomial `a + b x^3` or `a + b x^4` as the linears of its roots,
+`(a/b)^(1/n)` times the n-th roots of -1. The roots are complex where the discriminant is negative,
+and the integrals at conjugate arguments add up to a real answer. An exponential that is not of a linear is not split:
+`sinh(sqrt((1 - a x)/(1 + a x)))/(1 - a^2 x^2)` is still answered whole, by its substitution. And
+both rules divided a numerator past the degree by the linears of the roots, which with a symbol in
+the quadratic left a remainder in the squares of its roots that nothing read: `x^2 sin(c + d x)/(a + b x^2)`
+was declined. They divide by the denominator as it is written now. Rubi's 6.2.2,
+`(e x)^m (a + b x^n)^p cosh(c + d x)`, its 4.1.11, and exponentials in its 2.3
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"cosh(c + d*x)/(a + b*x^2)".ToEntity().Integrate("x")` | `integral(...)` | `Chi` and `Shi` of `d (x -/+ sqrt(-4 a b)/(2 b))` |
+| `"x*sinh(c + d*x)/(a + b*x^2)".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"cosh(c + d*x)/(x*(a + b*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same, and `Chi(d x)` and `Shi(d x)` |
+| `"x^3*cosh(c + d*x)/(a + b*x^2)".ToEntity().Integrate("x")` | `integral(...)` | `e^(c + d x)` and `e^(-c - d x)` times linears, and the same |
+| `"cosh(x)/(x^2 - 2)".ToEntity().Integrate("x")` | `integral(...)` | `Chi` and `Shi` of `x -/+ sqrt(2)` |
+| `"e^(c + d*x)/(a + b*x^2)".ToEntity().Integrate("x")` | `integral(...)` | `Ei` of `d (x -/+ sqrt(-4 a b)/(2 b))` |
+| `"e^x/(x^2 + x + 1)".ToEntity().Integrate("x")` | `integral(...)` | `Ei` of `x + (1 -/+ sqrt(-3))/2` |
+| `"x^2*sin(c + d*x)/(a + b*x^2)".ToEntity().Integrate("x")` | `integral(...)` | `cos(d x)` and `sin(d x)`, and `Si` and `Ci` of `d (x -/+ sqrt(-4 a b)/(2 b))` |
+| `"sin(c + d*x)/(a + b*x^3)".ToEntity().Integrate("x")` | `integral(...)` | `Si` and `Ci` of `d` times `x` less each root of `a + b x^3` |
+| `"cosh(c + d*x)/(a + b*x^3)".ToEntity().Integrate("x")` | `integral(...)` | `Chi` and `Shi` the same |
+| `"e^x/(a + b*x^4)".ToEntity().Integrate("x")` | `integral(...)` | `Ei` of `x` less each root of `a + b x^4` |
+
 ### An inverse trigonometric function below the bar is integrated to the sine and cosine integrals
 
 `1/arcsin(x)` was left unintegrated. Under the substitution that undoes the inverse function,
@@ -2165,6 +3314,24 @@ leaves are read as quotients of the sine and the cosine
 | `"x/asin(x)".Integrate("x")` | `integral(x / arcsin(x), x)` | `1/2 * Si(2 * arcsin(x)) + C` |
 | `"1/(a+b*asin(c*x))".Integrate("x")` | `integral(1 / (a + b * arcsin(c * x)), x)` | `Si` and `Ci` of `(a + b arcsin(c x))/b` |
 | `"x/((c+a^2*c*x^2)^2*atan(a*x))".Integrate("x")` | `integral(x / ((c + a ^ 2 * c * x ^ 2) ^ 2 * arctan(a * x)), x)` | `1/2 * Si(2 * arctan(a * x)) / (a ^ 2 * c ^ 2) + C` |
+
+### The arcsecant beside a root of `x^2 - 1` is integrated right below `-1` too
+
+**Answers where there were none.** Under `x = sec(u)`, the substitution that undoes the arcsecant,
+`sqrt(x^2 - 1)` is `|tan(u)|`, and on the arcsecant's range the tangent has the sign of `x`. It was
+written `tan(u)`, so that on the unreleased master `x arcsec(x)/sqrt(x^2 - 1)` and its kin were
+answered right for `x > 1` and with the integrand's negative for a derivative at every `x < -1`,
+where they are as real; 2.5.0 declined them. The root is `tan(u) sgn(x)` now, as the cosecant's and
+the cotangent's carry their signs, and a first power of the arcsecant beside it is by parts. The sign
+written back is the argument's, which is that of `x` only for a positive slope and no constant:
+`arcsec(x + 3)` has the sign of `x + 3` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x*asec(x)/sqrt(-1 + x^2)".ToEntity().Integrate("x")` | `integral(...)` | right for `x > 1` and for `x < -1` |
+| `"asec(x)/(x^2*sqrt(-1 + x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"asec(x)^2/(x*sqrt(x^2 - 1))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"asec(x + 3)^2/((x + 3)*sqrt((x + 3)^2 - 1))".ToEntity().Integrate("x")` | `integral(...)` | right for `x > -2` and for `x < -4` |
 
 ### A perfect square in a power of the variable is read as one
 
@@ -2357,21 +3524,43 @@ two of them, the points are samples of a continuum and not the set
 | `"floor(x)".Compile("x")`, and `ceil`, `round`, `max`, `min` | `UncompilableNodeException` | compiled |
 | `"max(x, 1)".ToEntity().Differentiate("x")` | `derivative(max(x, 1), x)` | `(1 + sgn(x - 1)) / 2 provided not x - 1 = 0` |
 
+### The compiled factorial is exact at whole numbers and finite to `170!`, and the compiled totient has no value at a fraction
+
+Both compilers now evaluate the factorial, the gamma function and Euler's totient the same way,
+and `Compile<TIn, TOut>` has a form for them where it had none
+([#1607](https://github.com/asc-community/AngouriMath/issues/1607)). The compiled factorial was
+Lanczos's approximation everywhere, and its power overflowed before the value did: from just past
+`141!`, about `2e243`, it compiled to NaN, up to `170!`. At a whole number it was off from the
+integer by a rounding, which a compilation over integers would truncate. It is now the exact
+factorial rounded once, up to `170!`; infinite past it; NaN at the negative whole numbers, the
+poles; and the same approximation elsewhere, taken in logarithms so that it overflows only where
+the value does. The compiled totient truncated a fraction to the whole number below it. There it
+now has no value, as the interpreter's has none.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x!".Compile("x").Call(4)` | `23.999999999999996` | `24` |
+| `"x!".Compile("x").Call(0)` | `0.9999999999999998` | `1` |
+| `"x!".Compile("x").Call(142)`, and on to `170` | NaN | `2.695364137888163E+245` |
+| `"phi(x)".Compile("x").Call(2.5)` | `1` | NaN |
+| `"x!".ToEntity().Compile<double, double>("x")`, and `gamma`, `phi` | `UncompilableNodeException` | compiled |
+
 ### An equation the solver cannot invert is left unsolved, not answered with no roots
 
 `x! = 6` was answered `{ }`, a claim that it has no roots, and it has 3. The solver isolates `x`
-by inverting the function around it, and for a factorial, a binomial coefficient, `mod`, `gcd`,
-`lcm`, `min`, `max`, `phi`, `prime`, the valuation, a sum, a product, a limit, a set with `x`
-inside it and a few more, the inversion had no way to write the preimage and returned none. Such
-an equation is now left unsolved, as the set of `x` for which it holds, the way a statement
-the solver has no arm for already was. Roots found beside it are kept. A value these functions
-provably never take still has no roots: the factorial is the gamma function one along, which
-has no zeros, so `x! = 0` is still `{ }`, and so is `arcsin(x) = 5`.
+by inverting the function around it, and for a factorial, a binomial coefficient, `mod` by a
+divisor that is not a number, `gcd`, `lcm`, `min`, `max`, `phi`, `prime`, the valuation, a sum,
+a product, a limit, a set with `x` inside it and a few more, the inversion had no way to write
+the preimage and returned none. Such an equation is now left unsolved, as the set of `x` for
+which it holds, the way a statement the solver has no arm for already was. Roots found beside it
+are kept. A value these functions provably never take still has no roots: the factorial is the
+gamma function one along, which has no zeros, so `x! = 0` is still `{ }`, and so is
+`arcsin(x) = 5`.
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
 | `"x! = 6".Solve("x")` | `{ }` | `{ x : x! = 6 }` |
-| `"x mod 3 = 1".Solve("x")` | `{ }` | `{ x : x mod 3 = 1 }` |
+| `"x mod a = 1".Solve("x")` | `{ }` | `{ x : x mod a = 1 }` |
 | `"gcd(x, 4) = 2".Solve("x")` | `{ }` | `{ x : gcd(x, 4) = 2 }` |
 | `"max(x, 1) = 3".Solve("x")` | `{ }` | `{ x : max(x, 1) = 3 }` |
 | `"phi(x) = 4".Solve("x")` | `{ }` | `{ x : phi(x) = 4 }` |
@@ -2612,6 +3801,25 @@ arctangent, arccotangent or arccosecant whose argument diverges, which is now an
 | `integral(1/(2 + cos(x)), x, 0, pi)` | `integral(1 / (2 + cos(x)), x, 0, pi)` | `sqrt(3) * pi / 3` |
 | `limitleft(arctan(tan(x / 2)), x, pi)` | `limitleft(arctan(tan(x / 2)), x, pi)` | `pi / 2` |
 
+### A limit at infinity whose terms cancel around a slowly varying factor is answered
+
+`lim e^x (exp(1/x + e^(-x)) - exp(1/x))` as `x → ∞` is the example Gonnet and Gruntz introduce
+their algorithm with, and the implementation left it as written. The algorithm's steps were right,
+and the series engine then read a leading term where there is none. It took a constant term off by
+subtracting it, and divided a leading coefficient by itself, which left `1/x - 1/x` and `x/x - 1` at
+`w^0`; it also did not know `e^(1/x) - e^(1/x)` for zero. The constant term is now removed exactly,
+the normalised leading coefficient is `1` exactly, and the zero test collects like terms and reads a
+conditional zero -- `0 provided not x = 0` -- as zero.
+[#353](https://github.com/asc-community/AngouriMath/issues/353). Both columns measured on a build,
+`v2.5.0` against this change.
+
+| `"….".ToEntity().Limit("x", "+oo")` of | Was (2.5.0) | Is |
+|---|---|---|
+| `e ^ x * (e ^ (1/x + e ^ (-x)) - e ^ (1/x))` | left as written | `1` |
+| `e ^ x * (e ^ (2/x + e ^ (-x)) - e ^ (2/x))` | left as written | `1` |
+| `e ^ (2 * x) * (e ^ (1/x + e ^ (-2 * x)) - e ^ (1/x))` | left as written | `1` |
+| `e ^ (x + e ^ (-x)) - e ^ x` | `1` | the same |
+
 ### With the downcasting off, integration and limits compute on exact numbers
 
 With `DowncastingEnabled` off, `1/(1 + c^2*x^2)` integrated to `NaN + C` and `limit(sin(c*x)/x, x, 0)`
@@ -2688,6 +3896,20 @@ since they are these exponentials
 | `"x^3*f^(c*(a + b*x)^2)".Integrate("x")` | `integral(x ^ 3 * f ^ (c * (a + b * x) ^ 2), x)` | the antiderivative |
 | `"(p + q*x)^2*f^(a + b*x + c*x^2)".Integrate("x")` | `integral((p + q * x) ^ 2 * f ^ (a + b * x + c * x ^ 2), x)` | the antiderivative |
 | `"x^2*sinh(a + b*x + c*x^2)".Integrate("x")` | `integral(x ^ 2 * (e ^ (a + b * x + c * x ^ 2) - e ^ (-(a + b * x + c * x ^ 2))) / 2, x)` | the antiderivative |
+
+### A Gaussian below the bar is read as the exponential of its negated exponent
+
+`e^(-x^2)/x^2` was integrated by the Gaussian's moments, and `1/(e^(x^2) x^2)`, the same function,
+was not: the rule for the moments took the exponential from above the bar only. By parts writes
+the factor beside `erf(b x)` in `erf(b x)/(e^(b^2 x^2) x^2)` the second way, and that integral was
+declined for want of it ([#1501](https://github.com/asc-community/AngouriMath/issues/1501)). Both
+columns measured on a build, `v2.5.0` against this change; `erf` had no reading in 2.5.0, which its
+own entry records.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(e^(x^2)*x^2)".Integrate("x")` | `integral(1 / (e ^ x ^ 2 * x ^ 2), x)` | `-1 / x * e ^ (-x ^ 2) + (-2) * pi ^ (1/2) / 2 * erf(x) + C` |
+| `"erf(b*x)/(e^(b^2*x^2)*x^2)".Integrate("x")` | `UnrecognizedFunctionParseException`: there is no function `erf` | an antiderivative in `erf` and `Ei(-2 b^2 x^2)` |
 
 ### An exponential of a polynomial beside the polynomial's derivative is integrated
 

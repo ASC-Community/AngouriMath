@@ -34,7 +34,7 @@ namespace AngouriMath.Tests.Calculus
     [Trait("Area", "Calculus")]
     public sealed class RothsteinTragerTest
     {
-        private static void DifferentiatesBack(string integrand, double[] points)
+        private static Entity DifferentiatesBack(string integrand, double[] points)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
@@ -59,6 +59,7 @@ namespace AngouriMath.Tests.Calculus
             }
             Assert.True(compared >= 5,
                 $"only {compared} of {points.Length} points were comparable for {integrand}");
+            return integral;
         }
 
         private static readonly double[] TheLine = { -2.3, -1.1, -0.4, 0.3, 0.9, 1.7, 2.6 };
@@ -103,13 +104,20 @@ namespace AngouriMath.Tests.Calculus
         }
 
         /// <summary>
-        /// A residue in a field of degree three is declined rather than answered in a field
-        /// this does no arithmetic in, and quickly.
+        /// A residue in a field of degree three or more puts its logarithms in a sum over the poles
+        /// it belongs to, <c>sum(A(r)/D'(r) ln(x - r), r in { r : E(r) = 0 })</c>, where these
+        /// were declined. <c>x^5 + x + 1</c> is <c>(x^2 + x + 1)(x^3 - x^2 + 1)</c>, and the
+        /// quadratic factor's residues go into the sum beside the cubic's.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1285">#1285</a>
         /// </summary>
         [Theory]
         [InlineData("1/(x^3 + x + 1)")]
+        [InlineData("x/(x^3 - x + 1)")]
         [InlineData("(x^2 + 3)/(x^5 + x + 1)")]
-        public void DeclinedWhereTheResiduesAreCubic(string integrand)
-            => Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
+        [InlineData("1/(x^5 - x + 1)")]
+        [InlineData("x^2/(x^4 + x + 1)")]
+        [InlineData("x^2/(x^4 + x^3 + 1)")]
+        public void AResidueOfDegreeThreeIsASumOverRoots(string integrand)
+            => Assert.Contains(DifferentiatesBack(integrand, TheLine).Nodes, node => node is Entity.SumOverSetf);
     }
 }

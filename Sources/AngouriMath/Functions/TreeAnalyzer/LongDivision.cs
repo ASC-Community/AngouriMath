@@ -214,6 +214,22 @@ namespace AngouriMath.Functions
             if (!replaceVars && ((maxvalQ.Vars.Any() && !genericCase) || maxvalQ.Evaled == Integer.Create(0)))
                 return null;
 
+            // A leading coefficient with a symbol in it can be zero as a value without being zero
+            // as written: `(-(a - a u^2) - (u^2 + 1) a)^3` is `-8 a^3`, and expanded it leaves
+            // `-3 a^3 + 3 a^3` at `u^6`, which nothing above collects. Divided by that, the
+            // quotient was NaN. The divisor's degree is that of its first coefficient that is
+            // not zero. https://github.com/asc-community/AngouriMath/issues/1665
+            while (maxvalQ.Vars.Any() && PartialFractions.IsZeroAsAValue(maxvalQ))
+            {
+                _ = powersOfQ.Remove(maxpowQ);
+                if (powersOfQ.Count == 0)
+                    return null;
+                maxpowQ = powersOfQ.Keys.Max() ?? throw new AngouriBugException("No null expected");
+                maxvalQ = powersOfQ[maxpowQ];
+                if (maxvalQ.Evaled == Integer.Create(0))
+                    return null;
+            }
+
             var result = new Dictionary<EDecimal, Entity>();
             // possibly very long process
             while (maxpowP.GreaterThanOrEquals(maxpowQ))

@@ -7477,6 +7477,40 @@ namespace AngouriMath
             => new Summationf(expr, var, from, to);
 
         /// <summary>
+        /// The sum of <paramref name="expr"/> over the members of <paramref name="over"/> as
+        /// <paramref name="var"/> ranges over it, each member counted once: written
+        /// <c>sum(expr, var in over)</c>. A sum over the roots of a polynomial is a sum over its
+        /// set of roots, <c>sum(f(w), w in { w : p(w) = 0 })</c>, with no index and no order.
+        /// </summary>
+        /// <param name="expr">The term, as a function of <paramref name="var"/>.</param>
+        /// <param name="var">The name that ranges over the set, bound by the sum.</param>
+        /// <param name="over">The set.</param>
+        /// <returns>
+        /// The terms added up where the set is finite and its members are known: a listed set of
+        /// numbers, or roots of a polynomial that are rational, roots of a quadratic or roots of a
+        /// binomial -- those of an irreducible cubic or quartic are kept as the sum, radicals
+        /// reading no more simply than it. Evaluated to a
+        /// number, the roots it cannot write are found numerically, all of them or none. Left as
+        /// written otherwise: a set with a symbol among its members, which may coincide, or a set
+        /// that is not finite.
+        /// </returns>
+        /// <remarks><a href="https://github.com/asc-community/AngouriMath/issues/1285">#1285</a></remarks>
+        /// <example>
+        /// <code>
+        /// using System;
+        /// using static AngouriMath.MathS;
+        ///
+        /// Console.WriteLine(Sum("w^2", "w", "{ w : w^3 - 2w + 1 = 0 }").Simplify());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// 4
+        /// </code>
+        /// </example>
+        public static Entity Sum(Entity expr, Entity var, Entity over)
+            => new SumOverSetf(expr, var, over);
+
+        /// <summary>
         /// The largest value <paramref name="expr"/> takes as <paramref name="var"/> ranges over
         /// <paramref name="over"/>, written <c>max(expr, var in over)</c>. Answered over a finite
         /// set of numbers, and over a closed interval with numeric ends for an expression whose

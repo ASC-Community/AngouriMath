@@ -36,7 +36,7 @@ namespace AngouriMath.Tests.Core
         [InlineData("binomial(n - 1, k) + binomial(n - 1, k - 1)", "binomial(n, k)")]
         [InlineData("binomial(n, n - 2)", "binomial(n, 2)")]
         [InlineData("binomial(n, n - k)", "binomial(n, k)")]
-        [InlineData("n * binomial(n - 1, k - 1)", "binomial(n, k) * k")]
+        [InlineData("n * binomial(n - 1, k - 1)", "k * binomial(n, k)")]
         [InlineData("binomial(7, 3) + binomial(7, 2)", "56")]
         public void ARewriteCollects(string input, string expected)
             => Assert.Equal(expected.ToEntity(), input.ToEntity().Simplify());

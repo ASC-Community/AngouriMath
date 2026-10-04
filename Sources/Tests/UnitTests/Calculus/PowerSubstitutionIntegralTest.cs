@@ -99,15 +99,12 @@ namespace AngouriMath.Tests.Calculus
             => DifferentiatesBack(integrand);
 
         /// <summary>
-        /// Where a fractional substitution reaches and the rest of the chain does not, as a
-        /// note rather than a pin: <c>sqrt(x)/(1 + x + x^4)</c> becomes
-        /// <c>2u^2/(1 + u^2 + u^8)</c>, whose denominator is irreducible over the rationals,
-        /// not a biquadratic and not a binomial. Its antiderivative is a sum over the eight
-        /// roots of <c>w^8 + w^2 + 1</c> of <c>w ln(sqrt(x) - w)/(4 w^6 + 1)</c>, which this
-        /// library has no node to write, and that is
-        /// <a href="https://github.com/asc-community/AngouriMath/issues/1285">#1285</a> rather
-        /// than a verdict to record here — a test that pins the decline would have to be
-        /// falsified to close the issue.
+        /// Where a fractional substitution reaches and the rational integrator then answers with
+        /// a sum over roots: <c>sqrt(x)/(1 + x + x^4)</c> becomes <c>2u^2/(1 + u^2 + u^8)</c>,
+        /// whose denominator is irreducible over the rationals, not a biquadratic and not a
+        /// binomial. Its antiderivative is a sum over the eight roots of <c>w^8 + w^2 + 1</c> of
+        /// <c>w ln(sqrt(x) - w)/(4 w^6 + 1)</c>, the form
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1285">#1285</a> asked for.
         /// </summary>
         /// <remarks>
         /// <c>sqrt(x)/(x + 1)</c> and <c>sqrt(x)/(1 + x^4)</c> were pinned here in turn, for an
@@ -115,13 +112,10 @@ namespace AngouriMath.Tests.Calculus
         /// moved up into the theory above when its rule arrived.
         /// </remarks>
         [Fact]
-        public void WhereTheChainStopsIsAnIssueNotAPin()
+        public void TheSubstitutionEndsInASumOverRoots()
         {
-            var integral = "sqrt(x)/(1 + x + x^4)".ToEntity().Integrate("x");
-            // Either answer is acceptable here: unevaluated today, and a correct antiderivative
-            // once #1285 gives it a form. What is not acceptable is a wrong one.
-            if (!integral.Stringize().Contains("integral("))
-                DifferentiatesBack("sqrt(x)/(1 + x + x^4)");
+            DifferentiatesBack("sqrt(x)/(1 + x + x^4)");
+            Assert.Contains("sqrt(x)/(1 + x + x^4)".ToEntity().Integrate("x").Nodes, node => node is Entity.SumOverSetf);
         }
 
         /// <summary>
@@ -182,12 +176,16 @@ namespace AngouriMath.Tests.Calculus
         /// step learning to factor a biquadratic denominator over the reals. A test that the
         /// substitution declines something needs an integrand nothing else answers either, or it
         /// stops testing the substitution the moment a neighbouring capability arrives. These
-        /// carry an odd power, which puts them out of reach of that step as well.
+        /// carry an odd power, which puts them out of reach of that step as well. Then
+        /// <c>x^2/(x^4 + x + 1)</c> and <c>x^2/(x^4 + x^3 + 1)</c> were answered too, as sums over
+        /// the roots of their denominators
+        /// (<see href="https://github.com/asc-community/AngouriMath/issues/1285"/>), and the
+        /// witnesses are their square roots now, elliptic integrals nothing answers.
         /// <see href="https://github.com/asc-community/AngouriMath/issues/233"/>.
         /// </remarks>
         [Theory]
-        [InlineData("x^2/(x^4 + x + 1)")]
-        [InlineData("x^2/(x^4 + x^3 + 1)")]
+        [InlineData("x^2/sqrt(x^4 + x + 1)")]
+        [InlineData("x^2/sqrt(x^4 + x^3 + 1)")]
         public void AnIntegralThisDoesNotReachIsStillDeclined(string integrand)
             => Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
 

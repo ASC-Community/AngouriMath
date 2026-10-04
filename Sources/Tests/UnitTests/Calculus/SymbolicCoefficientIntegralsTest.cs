@@ -105,6 +105,40 @@ namespace AngouriMath.Tests.Calculus
             string integrand, string coefficients, double[] points) =>
             AssertIsAntiderivative(integrand, coefficients, points);
 
+        /// <summary>
+        /// A polynomial over a power of a quadratic with a sum of symbols among its coefficients.
+        /// The reduction divides the numerator by the quadratic a power at a time, and the
+        /// remainder it took held the terms the division had taken away, written two ways:
+        /// <c>x^4/(1/(-b + a) + x^2)^3</c> was declined where <c>x^4/(1/(a - b) + x^2)^3</c> was
+        /// answered. The last row is what <c>t = sqrt(a + b x)</c> makes of it.
+        /// </summary>
+        /// <remarks>
+        /// Checked with the symbols pinned and nothing simplified: the answers are piecewises
+        /// over the sign of the quadratic's constant term, and simplifying them with the
+        /// symbols left in is what the helper above does and what these do not need.
+        /// </remarks>
+        [Theory]
+        [InlineData("x ^ 4 / (1 / (-b + a) + x ^ 2) ^ 3")]
+        [InlineData("x ^ 4 / (c / (-b * c + a * d) + x ^ 2) ^ 3")]
+        [InlineData("(1 - b * x ^ 2) ^ 3 / (c * (1 - b * x ^ 2) + a * d * x ^ 2) ^ 3")]
+        [InlineData("x ^ 4 / (d * x ^ 2 + b * c - a * d) ^ 5")]
+        [InlineData("x ^ 6 / (d * x ^ 2 + b * c - a * d) ^ 4")]
+        [InlineData("(a + b * x) ^ (5/2) / (c + d * x) ^ 4")]
+        public void APolynomialOverAPowerOfAQuadraticWithASumOfSymbolsInIt(string integrand)
+        {
+            var f = integrand.ToEntity();
+            var antiderivative = f.Integrate("x");
+            Assert.DoesNotContain("integral(", antiderivative.Stringize());
+            Entity Pin(Entity e) => e.Substitute("a", 0.7).Substitute("b", 1.3).Substitute("c", 2.1).Substitute("d", 1.9);
+            var derivative = Pin(antiderivative.Substitute("C", 0)).Differentiate("x");
+            foreach (var point in new[] { 0.3, 0.6, 0.9 })
+            {
+                var expected = Pin(f).Substitute("x", point).EvalNumerical().RealPart.EDecimal.ToDouble();
+                var actual = derivative.Substitute("x", point).EvalNumerical().RealPart.EDecimal.ToDouble();
+                Assert.Equal(expected, actual, 8);
+            }
+        }
+
         // The neighbouring shapes must keep working: a symbolic leading coefficient *with* an
         // x term never had the defect, because the a = 0 arm divides by a b that is not zero.
         [Theory]

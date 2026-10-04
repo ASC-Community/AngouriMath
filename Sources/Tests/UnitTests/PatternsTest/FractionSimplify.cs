@@ -24,7 +24,7 @@ namespace AngouriMath.Tests.PatternsTest
         [InlineData("0*(x+3)^-4", "0 provided not 3 + x = 0")]
         [InlineData("(a - 1) / (1 - b) - (1 - a) / (b - 1)", "0 provided not (b - 1) * (1 - b) = 0")] // #254
         [InlineData("(4a - 2) / (2x) + (1 - 2a) / x", "0 provided not x = 0")]
-        [InlineData("sin(a) * a * b / a", "sin(a) * b provided not a = 0")] // #311
+        [InlineData("sin(a) * a * b / a", "b * sin(a) provided not a = 0")] // #311
         [InlineData("sin(a) * cos(b) * tan(c) / (tan(c)3 * sin(a)2 * cos(b)^(-2))", "csc(a) * cos(b) ^ 3 * cotan(c) ^ 2")]
         public void TestSimplify(string testeeRaw, string expectedRaw)
         {

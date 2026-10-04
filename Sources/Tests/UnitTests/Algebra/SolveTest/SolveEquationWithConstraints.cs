@@ -56,8 +56,15 @@ namespace AngouriMath.Tests.Algebra
                 AssertRoots(eq, "x", root);
         }
 
-        [Fact(Skip = "Sets require more work")]
-        public void TestFiniteIntersection() => TestFinite("x2 = a and x = a", 1);
+        // x^2 = a and x = a holds only where a^2 = a: x = 0 at a = 0, x = 1 at a = 1, and for no
+        // x elsewhere. https://github.com/asc-community/AngouriMath/issues/1680
+        [Theory]
+        [InlineData(0, "{ 0 }")]
+        [InlineData(1, "{ 1 }")]
+        [InlineData(4, "{ }")]
+        [InlineData(-1, "{ }")]
+        public void TestFiniteIntersection(int a, string expected)
+            => Assert.Equal(expected.ToEntity().Evaled, "x2 = a and x = a".Solve("x").Substitute("a", a).Evaled);
 
         [Theory]
         [InlineData(@"x \/ { 1, 2 } = { 1, 2 }", "{ { }, { 1 }, { 2 }, { 1, 2 } }")]

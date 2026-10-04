@@ -21,6 +21,7 @@
     <Compile Include="Tests.fs" />
     <Compile Include="CompilerServiceWorksTest.fs" />
     <Compile Include="OperatorsAtThePromptTest.fs" />
+    <Compile Include="OneShotTest.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

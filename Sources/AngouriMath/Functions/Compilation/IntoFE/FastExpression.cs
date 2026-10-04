@@ -258,24 +258,7 @@ namespace AngouriMath.Core
                         stack.Push(AngouriMath.Numerics.SpecialFunctions.Chi(stack.Pop()));
                         break;
                     case InstructionType.CALL_FACTORIAL:
-                        // https://stackoverflow.com/a/15454784/5429648
-                        const int g = 7;
-                        static System.Numerics.Complex Gamma(System.Numerics.Complex z)
-                        {
-                            if (z.Real < 0.5) return System.Math.PI / (System.Numerics.Complex.Sin(System.Math.PI * z) * Gamma(1 - z));
-                            else
-                            {
-                                z -= 1;
-
-                                System.Numerics.Complex x = gammaCoeffs[0];
-                                for (var i = 1; i < g + 2; i++)
-                                    x += gammaCoeffs[i] / (z + i);
-
-                                var t = z + g + 0.5;
-                                return System.Math.Sqrt(2 * System.Math.PI) * System.Numerics.Complex.Pow(t, z + 0.5) * System.Numerics.Complex.Exp(-t) * x;
-                            }
-                        }
-                        stack.Push(Gamma(stack.Pop() + 1));
+                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Factorial(stack.Pop()));
                         break;
                     case InstructionType.CALL_SIGNUM:
                         stack.Push(stack.Pop().Signum());
@@ -284,20 +267,13 @@ namespace AngouriMath.Core
                         stack.Push(stack.Pop().Abs());
                         break;
                     case InstructionType.CALL_PHI:
-                        var n = (long) stack.Pop().Real;
-                        stack.Push(n.Phi());
+                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Phi(stack.Pop()));
                         break;
                 }
             if (stack.Count != 1)
                 throw new AngouriBugException($"Unused values remain in the stack: {stack.Count} instead of 1");
             return stack.Pop();
         }
-
-        [ConstantField] static readonly double[] gammaCoeffs = { 
-            0.99999999999980993,  676.5203681218851,     -1259.1392167224028, 
-            771.32342877765313,   -176.61502916214059,   12.507343278686905, 
-            -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7 
-                };
 
         /// <summary>Might be useful for debug if a function works too slowly</summary>
         public override string ToString() => string.Join(" \n| ", instructions);

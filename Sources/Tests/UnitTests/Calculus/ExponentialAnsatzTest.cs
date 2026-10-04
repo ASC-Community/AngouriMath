@@ -184,9 +184,20 @@ namespace AngouriMath.Tests.Calculus
         /// </summary>
         [Theory]
         [InlineData("e^(x^3)")]
-        [InlineData("e^(1/x)")]
         public void ANonElementaryOneIsDeclined(string integrand)
             => Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
+
+        /// <summary>
+        /// <c>e^(1/x)</c> has no elementary antiderivative either, and it has one in <c>Ei</c>:
+        /// <c>x e^(1/x) - Ei(1/x)</c>, found under <c>u = 1/x</c>, where what is left in x is
+        /// <c>-1/u^2</c>.
+        /// </summary>
+        [Fact]
+        public void AnExponentialOfAReciprocalIsWrittenWithEi()
+        {
+            Assert.Contains("Ei(", "e^(1/x)".ToEntity().Integrate("x").Stringize());
+            DifferentiatesBack("e^(1/x)");
+        }
 
         /// <summary>
         /// What by parts answered before keeps its form: a polynomial times an exponential is

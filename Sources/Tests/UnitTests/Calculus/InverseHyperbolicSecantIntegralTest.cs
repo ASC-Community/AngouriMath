@@ -129,12 +129,23 @@ namespace AngouriMath.Tests.Calculus
         }
 
         [Fact]
-        public void TheAnswerSaysTheParameterIsReal()
+        public void TheAnswerNeedsNoAssumptionOnTheParameter()
         {
-            // c^2 > 0 is exactly "c is real and not zero", which is what taking sqrt(c^2 x^2)
-            // for |c| |x| assumed.
+            // x^(-2) is positive for a real x, so the root of 1 + 1/(c x)^2 is the root of
+            // x^2 + 1/c^2 over |x| whatever c is: the answer holds for a c off the real line, on
+            // both sides of 0, and says nothing of c but that it is not zero.
             var integral = "x/sqrt(1 + 1/(c*x)^2)".ToEntity().Integrate("x");
-            Assert.Contains(integral.Nodes, node => node is Providedf(_, var predicate) && predicate.Nodes.Any(inner => inner == "c^2 > 0".ToEntity()));
+            Assert.DoesNotContain(integral.Nodes, node => node is Providedf(_, var predicate) && predicate.Nodes.Any(inner => inner == "c^2 > 0".ToEntity()));
+            var c = "0.7 + 0.4i".ToEntity();
+            var derivative = integral.Substitute("C", 0).Differentiate("x").Substitute("c", c);
+            var integrand = "x/sqrt(1 + 1/(c*x)^2)".ToEntity().Substitute("c", c);
+            foreach (var at in new[] { 0.5, 1.3, -0.8, -1.7 })
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = integrand.Substitute("x", at).EvalNumerical();
+                Assert.True(Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart) < 1e-9,
+                    $"d/dx of the antiderivative is {got} at x = {at}, where the integrand is {want}");
+            }
         }
     }
 }

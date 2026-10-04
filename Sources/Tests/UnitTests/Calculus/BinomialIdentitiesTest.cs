@@ -21,6 +21,7 @@ namespace AngouriMath.Tests.Calculus
     /// second form), the parallel summation (Prob 8.9.19) and Vandermonde along the upper
     /// indices (Prob 8.9.18). <see href="https://github.com/asc-community/AngouriMath/issues/1409"/>
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class BinomialIdentitiesTest
     {
         /// <summary>The closed form against the sum written out, at small bounds and one past the expansion's hundred terms.</summary>

@@ -4449,7 +4449,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 916;
 				Match(T__30);
-				 Assert("sum", 4, _localctx.args.list.Count); _localctx.value =  MathS.Sum(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2], _localctx.args.list[3]); 
+				 if (_localctx.args.list.Count == 2 && AngouriMath.Functions.ExtremumOverSet.AsRange(_localctx.args.list[1]) is var (sumVar, sumOver)) _localctx.value =  MathS.Sum(_localctx.args.list[0], sumVar, sumOver); else { Assert("sum", 4, _localctx.args.list.Count); _localctx.value =  MathS.Sum(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2], _localctx.args.list[3]); } 
 				}
 				break;
 			case 100:

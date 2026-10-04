@@ -82,6 +82,44 @@ namespace AngouriMath.Tests.Calculus
             Assert.Contains("sgn(", integrand.ToEntity().Integrate("x").Stringize());
         }
 
+        /// <summary>
+        /// The power of x common to every term of a root of a sum with symbols in it:
+        /// <c>sqrt(a x^2 + b x^5)</c> is <c>|x| sqrt(a + b x^3)</c>, and the sign of x comes out in
+        /// front where the power it leaves is odd; <c>sqrt(b x^(2/3) + a x)</c> is
+        /// <c>x^(1/3) sqrt(b + a x^(1/3))</c> times a factor that is constant where x is not zero.
+        /// Checked with the symbols pinned after integrating, on both sides of 0 where x is
+        /// under a whole power.
+        /// </summary>
+        [Theory]
+        [InlineData("1/sqrt(a*x^2 + b*x^5)", new[] { -1.1, -0.6, 0.4, 1.2, 2.3 })]
+        [InlineData("1/sqrt(x^2*(a + b*x^3))", new[] { -1.1, -0.6, 0.4, 1.2, 2.3 })]
+        [InlineData("x/(a*x^2 + b*x^3)^(3/2)", new[] { -1.5, -0.6, 0.4, 1.2, 2.3 })]
+        [InlineData("sqrt(a*x^4 + b*x^6)", new[] { -1.5, -0.6, 0.4, 1.2, 2.3 })]
+        // A fractional power of x, and the factor that is constant in front: real where x is positive.
+        [InlineData("1/(x*sqrt(b*x^(2/3) + a*x))", new[] { 0.3, 0.9, 1.7, 2.6 })]
+        [InlineData("1/(x^2*(b*x^(1/2) + a*x)^(1/2))", new[] { 0.3, 0.9, 1.7, 2.6 })]
+        public void APowerOfXComesOutOfARootWithSymbolsInIt(string integrand, double[] points)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            var derivative = integral.Substitute("C", 0).Differentiate("x").Substitute("a", 1.3).Substitute("b", 0.7);
+            var original = integrand.ToEntity().Substitute("a", 1.3).Substitute("b", 0.7);
+            var compared = 0;
+            foreach (var at in points)
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                if (got.IsNaN || want.IsNaN)
+                    continue;
+                compared++;
+                var difference = Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart);
+                var scale = Math.Max(1.0, Math.Abs((double)want.RealPart));
+                Assert.True(difference / scale < 1e-8,
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+            Assert.True(compared >= 4, $"only {compared} of {points.Length} points were comparable for {integrand}");
+        }
+
         /// <summary>Inside <c>(-1, 1)</c>, where <c>sqrt(1 - x^2)</c> is real.</summary>
         private static readonly double[] InsideTheUnitInterval = { -0.7, -0.3, 0.2, 0.55, 0.85 };
 

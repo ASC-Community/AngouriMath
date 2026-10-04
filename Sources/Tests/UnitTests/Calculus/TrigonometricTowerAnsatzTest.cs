@@ -96,7 +96,7 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("tan(x)/x")]
         [InlineData("x/sin(x)")]
         [InlineData("x*tan(x)")]
-        [InlineData("x*sin(x)/(1 + x^3)")]
+        [InlineData("x*sin(x)/(1 + x + x^3)")]
         public void ANonElementaryOneIsDeclined(string integrand)
             => Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
     }

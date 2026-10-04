@@ -18,6 +18,7 @@ namespace AngouriMath.Tests.Core
     /// does not read, and compares in three outcomes.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/1019">#1019</a>
     /// </summary>
+    [Trait("Area", "Core")]
     public sealed class IntervalEvaluationTest
     {
         [Theory]
@@ -70,6 +71,52 @@ namespace AngouriMath.Tests.Core
                 $"the {part} part of {expression}, {value}, is outside [{interval.Low:R}, {interval.High:R}]");
             var scale = System.Math.Max(1.0, interval.Magnitude);
             Assert.True(interval.High - interval.Low <= 1e-12 * scale,
+                $"the {part} part of {expression} is [{interval.Low:R}, {interval.High:R}], wider than it has to be");
+        }
+
+        /// <summary>
+        /// The special functions, from their double-precision routines. Each is allowed <c>1e-10</c>
+        /// of its value, and <c>1e-10</c> more near a zero, against a measured error of at most
+        /// <c>3e-13</c>. An argument that is itself an interval, <c>sqrt(2)</c> or <c>pi</c>, widens the
+        /// value by the most the function moves across it. A real value stays real where the
+        /// function is real, and <c>Ci(-2)</c> is <c>Ci(2) + i pi</c>.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1607">#1607</a>
+        /// </summary>
+        [Theory]
+        [InlineData("erf(1/2)")]
+        [InlineData("erf(sqrt(2))")]
+        [InlineData("erfc(3)")]
+        [InlineData("erfi(1 + i)")]
+        [InlineData("erf(2 - 3i)")]
+        [InlineData("Ei(2)")]
+        [InlineData("Ei(-3/2)")]
+        [InlineData("Ei(1 + 2i)")]
+        [InlineData("li(5)")]
+        [InlineData("li(1/3)")]
+        [InlineData("Si(pi)")]
+        [InlineData("Si(7)")]
+        [InlineData("Ci(3)")]
+        [InlineData("Ci(-2)")]
+        [InlineData("Shi(-1)")]
+        [InlineData("Chi(4)")]
+        [InlineData("erf(1/2) + Si(2) * Ei(1)")]
+        public void TheIntervalHoldsASpecialFunctionsValue(string expression)
+        {
+            var expr = expression.ToEntity();
+            var interval = IntervalEvaluation.Of(expr);
+            Assert.True(interval.HasValue, $"{expression} was not evaluated");
+            var value = expr.EvalNumerical();
+            HoldsWithin(interval!.Value.Re, value.RealPart.EDecimal, 1e-9, expression, "real");
+            HoldsWithin(interval.Value.Im, value.ImaginaryPart.EDecimal, 1e-9, expression, "imaginary");
+            if (value.ImaginaryPart.EDecimal.IsZero)
+                Assert.True(interval.Value.IsReal, $"{expression} is real, and its interval is not");
+        }
+
+        private static void HoldsWithin(Interval interval, EDecimal value, double width, string expression, string part)
+        {
+            Assert.True(EDecimal.FromDouble(interval.Low).CompareTo(value) <= 0 && EDecimal.FromDouble(interval.High).CompareTo(value) >= 0,
+                $"the {part} part of {expression}, {value}, is outside [{interval.Low:R}, {interval.High:R}]");
+            Assert.True(interval.High - interval.Low <= width * System.Math.Max(1.0, interval.Magnitude),
                 $"the {part} part of {expression} is [{interval.Low:R}, {interval.High:R}], wider than it has to be");
         }
 

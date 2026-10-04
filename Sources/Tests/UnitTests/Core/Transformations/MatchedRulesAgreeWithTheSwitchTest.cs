@@ -283,7 +283,7 @@ namespace AngouriMath.Tests.Core.Transformations
 
         /// <summary>
         /// <b>The alternation case.</b> The <c>switch</c> arm is <c>x is Sumf or Minusf</c>, which
-        /// <c>Node&lt;T&gt;</c> cannot say — and which the work-list in <c>work/rulecheck</c>
+        /// <c>Node&lt;T&gt;</c> cannot say — and which the work-list in <c>Sources/Tests/Harnesses/RuleCheck</c>
         /// recorded as needing an addition to the matcher. A typed hole with a predicate says it,
         /// and agreement over the corpus is what turns that from an argument into a fact.
         /// </summary>

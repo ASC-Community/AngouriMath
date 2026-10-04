@@ -19,6 +19,7 @@ namespace AngouriMath.Tests.Calculus
     /// <c>sum((-1)^(k - 1) k^2, k, 1, n) = (-1)^(n - 1) n (n + 1)/2</c>, is the row that asked
     /// for it. <see href="https://github.com/asc-community/AngouriMath/issues/1409"/>
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class PolynomialGeometricSeriesTest
     {
         /// <summary>The closed form against the sum written out, at a bound past the expansion's hundred terms and at small ones.</summary>

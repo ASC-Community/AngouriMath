@@ -21,6 +21,7 @@ namespace AngouriMath.Tests.Core
     /// nine, a sum of such piecewises had 3^12 cases and took 8 GB.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/1414">#1414</a>
     /// </summary>
+    [Trait("Area", "Core")]
     public sealed class ContradictoryConjunctionTest
     {
         [Theory]
@@ -73,24 +74,55 @@ namespace AngouriMath.Tests.Core
         [Fact]
         public void TwoPiecewisesOnTheSameSplitCombineCaseByCase()
         {
-            // Three matching pairs, and the two pairs of opposite strict signs, `q > 0 and q < 0`
-            // and `q < 0 and q > 0`, which are NaN rather than False off the real line and so stay
-            // (five cases, not nine). Everything else pairs an equality against a sign and is gone.
+            // The three matching pairs. A pair that pairs an equality against a sign is False and
+            // gone. The two pairs of opposite strict signs, `q > 0 and q < 0` and `q < 0 and q > 0`,
+            // are NaN rather than False off the real line, where they would stop the cases after
+            // them -- but every case after them tests q too, so none of those is true there either,
+            // and they go as well: three cases, not nine.
+            // https://github.com/asc-community/AngouriMath/issues/718
             var sum = "piecewise(1 provided q = 0, 2 provided q > 0, 3 provided q < 0) + piecewise(10 provided q = 0, 20 provided q > 0, 30 provided q < 0)".ToEntity().InnerSimplified;
-            Assert.Equal(5, CaseCount(sum));
+            Assert.Equal(3, CaseCount(sum));
             Assert.Equal(Number.Integer.Create(11), sum.Substitute("q", 0).Evaled);
             Assert.Equal(Number.Integer.Create(22), sum.Substitute("q", 1).Evaled);
             Assert.Equal(Number.Integer.Create(33), sum.Substitute("q", -1).Evaled);
+            // Off the real line it has no value, as with every pair: no case is true there.
+            Assert.IsNotType<Number.Integer>(sum.Substitute("q", "i").Evaled);
 
-            // And a chain of them stays at five cases rather than growing by a factor of three each
-            // time: the two contradictory cases absorb every further sign rather than multiplying.
+            // And a chain of them stays at three cases rather than growing by a factor of three each
+            // time.
             var chain = sum;
             for (var i = 0; i < 6; i++)
                 chain = (chain + "piecewise(1 provided q = 0, 2 provided q > 0, 3 provided q < 0)".ToEntity()).InnerSimplified;
-            Assert.Equal(5, CaseCount(chain));
+            Assert.Equal(3, CaseCount(chain));
             Assert.Equal(Number.Integer.Create(22 + 12), chain.Substitute("q", 1).Evaled);
             Assert.Equal(Number.Integer.Create(33 + 18), chain.Substitute("q", -1).Evaled);
             Assert.Equal(Number.Integer.Create(11 + 6), chain.Substitute("q", 0).Evaled);
+        }
+
+        /// <summary>
+        /// A quantity is read up to a constant factor: <c>f = 0</c> and <c>not 2 f = 0</c>
+        /// contradict each other, which is how the integrator's case for a vanishing leading
+        /// coefficient meets the cases that divide by it.
+        /// </summary>
+        [Fact]
+        public void AConstantFactorIsTheSameQuantity()
+        {
+            var sum = "piecewise(1 provided f = 0, 2 provided not 2 * f = 0) + piecewise(10 provided 3 * f = 0, 20 provided not f = 0)".ToEntity().InnerSimplified;
+            Assert.Equal(2, CaseCount(sum));
+            Assert.Equal(Number.Integer.Create(11), sum.Substitute("f", 0).Evaled);
+            Assert.Equal(Number.Integer.Create(22), sum.Substitute("f", 5).Evaled);
+        }
+
+        /// <summary>
+        /// ...and two opposite strict signs stay where a later case does not test the quantity:
+        /// off the real line that case can be true, and the undecided pair is what keeps it from
+        /// being reached.
+        /// </summary>
+        [Fact]
+        public void OppositeSignsStayWhereALaterCaseDoesNotTestTheQuantity()
+        {
+            var sum = "piecewise(1 provided q > 0, 2 provided q < 0, 3 provided p > 0) + piecewise(10 provided q < 0, 20 provided q > 0, 30 provided p > 0)".ToEntity().InnerSimplified;
+            Assert.Contains(Assert.IsType<Piecewise>(sum).Cases, @case => @case.Predicate.ToString().Contains("q > 0") && @case.Predicate.ToString().Contains("q < 0"));
         }
 
         [Fact]

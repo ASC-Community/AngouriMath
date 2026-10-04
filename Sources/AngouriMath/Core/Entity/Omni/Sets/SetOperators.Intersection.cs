@@ -12,6 +12,16 @@ namespace AngouriMath.Core.Sets
 {
     internal static partial class SetOperators
     {
+        /// <summary>
+        /// The members of <paramref name="finite"/> that are in <paramref name="set"/>, and the
+        /// intersection left as written for those whose membership is not decided.
+        /// </summary>
+        /// <remarks>
+        /// An undecided member is in the intersection only where it is in the set, so it stays
+        /// intersected with it: <c>{ y } /\ { 2 }</c> is <c>{ 2 }</c> where <c>y = 2</c> and empty
+        /// elsewhere, and was answered <c>{ y }</c> -- which made <c>x = y and x = 2</c> solve to
+        /// <c>{ y }</c>. https://github.com/asc-community/AngouriMath/issues/1680
+        /// </remarks>
         internal static Set IntersectFiniteSetAndSet(FiniteSet finite, Set set)
         {
             var fsb = new FiniteSetBuilder();
@@ -23,7 +33,10 @@ namespace AngouriMath.Core.Sets
                 else if (contains)
                     fsb.Add(elem);
             }
-            return amb.IsEmpty ? fsb.ToFiniteSet() : amb.ToFiniteSet().Unite(fsb.ToFiniteSet());
+            if (amb.IsEmpty)
+                return fsb.ToFiniteSet();
+            var undecided = new Intersectionf(amb.ToFiniteSet(), set);
+            return fsb.IsEmpty ? undecided : fsb.ToFiniteSet().Unite(undecided);
         }
 
         internal static Set IntersectIntervalAndInterval(Interval A, Interval B)

@@ -18,6 +18,7 @@ namespace AngouriMath.Tests.Calculus
     /// nth-term test, asked for on the review of
     /// https://github.com/asc-community/AngouriMath/pull/1218.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class DivergentSeriesTest
     {
         [Theory]

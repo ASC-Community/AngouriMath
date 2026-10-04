@@ -68,6 +68,61 @@ namespace AngouriMath.Tests.Calculus
             => DifferentiatesBack(integrand, AroundZero, Pins);
 
         /// <summary>
+        /// And over several linears, split into partial fractions over them first, each term the
+        /// question above.
+        /// </summary>
+        [Theory]
+        [InlineData("sinh(x)/(x*(x + 1))")]
+        [InlineData("cosh(2*x)/(x*(x + 3))")]
+        [InlineData("x*sinh(a + b*x)/((c + d*x)*(x - 2))")]
+        public void ASumOfExponentialsOverSeveralLinears(string integrand)
+            => DifferentiatesBack(integrand, AroundZero, Pins);
+
+        /// <summary>
+        /// And over a quadratic, which is the linears of its two roots, complex where its
+        /// discriminant is negative, the integrals of the two conjugate arguments adding up to a
+        /// real answer. Rubi's 6.2.2, <c>cosh(c + d x)/(a + b x^2)</c>; a numerator past the degree
+        /// is divided by the quadratic as it is written.
+        /// </summary>
+        [Theory]
+        [InlineData("cosh(c + d*x)/(a + b*x^2)")]
+        [InlineData("x^2*cosh(c + d*x)/(a + b*x^2)")]
+        [InlineData("x^3*cosh(c + d*x)/(a + b*x^2)")]
+        [InlineData("x^2*e^(c + d*x)/(a + b*x^2)")]
+        [InlineData("sinh(c + d*x)/(a - b*x^2)")]
+        [InlineData("x*sinh(c + d*x)/(a + b*x^2)")]
+        [InlineData("cosh(c + d*x)/(x*(a + b*x^2))")]
+        [InlineData("x^2*cosh(c + d*x)/(a + b*x^2)^2")]
+        [InlineData("cosh(x)/(x^2 - 2)")]
+        [InlineData("e^x/(x^2 + x + 1)")]
+        public void ASumOfExponentialsOverAQuadratic(string integrand)
+            => DifferentiatesBack(integrand, AroundZero, Pins);
+
+        /// <summary>
+        /// And over a binomial past the quadratic, <c>a + b x^3</c> or <c>a + b x^4</c>, which is the
+        /// linears of its roots, <c>(a/b)^(1/n)</c> times the n-th roots of -1.
+        /// </summary>
+        [Theory]
+        [InlineData("cosh(c + d*x)/(a + b*x^3)")]
+        [InlineData("x*cosh(c + d*x)/(a + b*x^3)")]
+        [InlineData("cosh(c + d*x)/(x*(a + b*x^3))")]
+        [InlineData("cosh(x)/(1 + x^3)")]
+        [InlineData("e^x/(a + b*x^4)")]
+        public void ASumOfExponentialsOverABinomial(string integrand)
+            => DifferentiatesBack(integrand, AroundZero, Pins);
+
+        /// <summary>
+        /// An exponential of something other than a linear is not split over the linears below
+        /// it: <c>sinh(sqrt((1 - a x)/(1 + a x)))/(1 - a^2 x^2)</c> is a substitution's, answered
+        /// whole, where each term of the split would go to the whole integrator.
+        /// </summary>
+        [Theory]
+        [InlineData("sinh(sqrt(1 - a*x)/sqrt(1 + a*x))/(1 - a^2*x^2)")]
+        [InlineData("cosh(sqrt(1 - a*x)/sqrt(1 + a*x))^3/(1 - a^2*x^2)")]
+        public void AnExponentialOfSomethingElseIsNotSplit(string integrand)
+            => DifferentiatesBack(integrand, AroundZero, Pins);
+
+        /// <summary>
         /// An inverse hyperbolic tangent below the bar, beside a whole power of <c>1 - a^2 x^2</c>:
         /// under <c>x = tanh(u)/a</c> it is a polynomial in <c>sinh(u)</c> and <c>cosh(u)</c> over
         /// a power of <c>u</c>. The quadratic reaches the substitution divided through by its

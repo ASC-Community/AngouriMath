@@ -17,6 +17,7 @@ namespace AngouriMath.Tests.Calculus
     /// geometric series, to a bound or to <c>+oo</c>. Part of question I.2 of
     /// https://github.com/asc-community/AngouriMath/issues/1212.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class GeometricSeriesTest
     {
         [Theory]

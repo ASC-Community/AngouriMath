@@ -17,6 +17,7 @@ namespace AngouriMath.Tests.Calculus
     /// https://github.com/asc-community/AngouriMath/issues/1212, question II.3: a binomial sum
     /// with a power or a trigonometric weight is the binomial theorem read backwards.
     /// </summary>
+    [Trait("Area", "Calculus")]
     public sealed class BinomialSumTest
     {
         private const string Binomial = "N! / (k! * (N - k)!)";

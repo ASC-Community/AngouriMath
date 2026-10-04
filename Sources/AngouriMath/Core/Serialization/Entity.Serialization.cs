@@ -135,6 +135,7 @@ namespace AngouriMath
         [EntityJsonConverter] partial record Sumf;
         [EntityJsonConverter] partial record Summationf;
         [EntityJsonConverter] partial record Maximumf;
+        [EntityJsonConverter] partial record SumOverSetf;
         [EntityJsonConverter] partial record Minimumf;
         [EntityJsonConverter] partial record Argmaxf;
         [EntityJsonConverter] partial record Argminf;

@@ -21,6 +21,7 @@ namespace AngouriMath.Tests.Common
     /// intersection of my own choosing was tested instead, and the maintainer said so on the
     /// issue. This pins the reporter's expression, character for character.
     /// </remarks>
+    [Trait("Area", "Common")]
     public sealed class IntervalSimplificationTest
     {
         /// <summary>

@@ -10,6 +10,7 @@
     <Compile Include="AssemblyLoadBuilder.fs" />
     <Compile Include="FSharpInteractive.fs" />
     <Compile Include="PreRunCode.fs" />
+    <Compile Include="OneShot.fs" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -70,6 +71,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Wrappers\AngouriMath.Interactive\AngouriMath.Interactive.fsproj" />
+    <ProjectReference Include="..\..\MCP\AngouriMath.Mcp\AngouriMath.Mcp.csproj" />
   </ItemGroup>
 
 </Project>

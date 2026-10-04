@@ -27,6 +27,7 @@ namespace AngouriMath.Tests.Core
     /// returning a wrong entity rather than by throwing, so those assertions count disagreements
     /// instead of stopping at the first one.
     /// </summary>
+    [Trait("Area", "Core")]
     public sealed class MatrixConcurrencyTest
     {
         private const int Matrices = 40;

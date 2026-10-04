@@ -51,8 +51,99 @@ namespace AngouriMath.Functions
             // run `x/sin(x)` for a minute where it declined in half a second.
             // https://github.com/asc-community/AngouriMath/issues/1394
             var mark = recording?.Mark() ?? 0;
-            return Noted(recording, simplified, WithoutTheConditionsItStates(simplified), "ConditionsTheExpressionStates", mark);
+            var stated = Noted(recording, simplified, WithoutTheConditionsItStates(simplified), "ConditionsTheExpressionStates", mark);
+            mark = recording?.Mark() ?? 0;
+            return Noted(recording, stated, InPrintOrder(stated), "ProductsInPrintOrder", mark);
         }
+
+        /// <summary>
+        /// The answer with each product's factors in the order a product is written by hand: the
+        /// number, then the letters and their powers, then the rest -- a function, an exponential,
+        /// a sum -- each kind in the order it had. So <c>2 y sin(x)</c> and <c>x e^x</c>, not
+        /// <c>2 sin(x) y</c> and <c>e^x x</c>: the references write it so (DLMF 5.5.1 is
+        /// <c>Γ(z + 1) = z Γ(z)</c>), and ISO 80000-2 lets a function's argument go without
+        /// parentheses, <c>sin nπ</c>, so a letter written after a function reads as part of its
+        /// argument. https://github.com/asc-community/AngouriMath/issues/1628
+        /// </summary>
+        /// <remarks>
+        /// Only the answer is put in this order. The canonical order the search sorts by puts a
+        /// sine before every letter, and the rules that combine factors are binary: they meet
+        /// <c>2 cos(x) sin(x)</c> as neighbours only because nothing sorts between them. Sorting
+        /// letters first inside the search put <c>x</c> there, so <c>2 x sin(x) cos(x)</c> no
+        /// longer became <c>x sin(2x)</c>, l'Hopital's rule saw its quotients grow a step sooner
+        /// and <c>lim 1/x^2 - 1/sin(x)^2</c> at 0 was <c>NaN</c> where it is <c>-1/3</c>. Reordering a
+        /// product changes no node count, so nothing that ranks candidates sees it, and a caller
+        /// simplifying the answer again has it sorted back before any rule reads it.
+        /// </remarks>
+        internal static Entity InPrintOrder(Entity expression)
+            => expression.Replace(static node => node is Entity.Mulf product ? FactorsInPrintOrder(product) : node);
+
+        private static Entity FactorsInPrintOrder(Entity.Mulf product)
+        {
+            // Read before anything is built: this runs on every answer, and most products are
+            // in order already.
+            var highest = 0;
+            if (InOrder(product, ref highest))
+                return product;
+            var factors = new System.Collections.Generic.List<Entity>();
+            Gather(product, factors);
+            var ordered = new System.Collections.Generic.List<Entity>(factors.Count);
+            for (var rank = 0; rank <= 2; rank++)
+                foreach (var factor in factors)
+                    if (FactorRank(factor) == rank)
+                        ordered.Add(factor);
+            // A number brought to the front of a quotient over a number is that quotient's
+            // numerator: 2 * (1 / s) is written 2 / s rather than 2 * 1 / s.
+            if (ordered.Count > 1 && ordered[0] is Entity.Number number
+                && ordered[1] is Entity.Divf(Entity.Number numerator, var divisor))
+            {
+                ordered[1] = new Entity.Divf((number * numerator).InnerSimplified, divisor);
+                ordered.RemoveAt(0);
+            }
+            Entity rebuilt = ordered[0];
+            for (var j = 1; j < ordered.Count; j++)
+                rebuilt = new Entity.Mulf(rebuilt, ordered[j]);
+            return rebuilt;
+
+            static bool InOrder(Entity node, ref int highest)
+            {
+                if (node is Entity.Mulf(var left, var right))
+                    return InOrder(left, ref highest) && InOrder(right, ref highest);
+                var rank = FactorRank(node);
+                if (rank < highest)
+                    return false;
+                highest = rank;
+                return true;
+            }
+
+            static void Gather(Entity node, System.Collections.Generic.List<Entity> into)
+            {
+                if (node is Entity.Mulf(var left, var right))
+                {
+                    Gather(left, into);
+                    Gather(right, into);
+                }
+                else
+                    into.Add(node);
+            }
+        }
+
+        /// <summary>0 for a number, 1 for a letter or a power of one, 2 for anything else.</summary>
+        /// <remarks>
+        /// A power with a number for its exponent ranks as its base, so <c>x^2</c> and
+        /// <c>sqrt(x)</c> are letters and <c>sqrt(2)</c> is a number. A letter raised to a letter
+        /// is still a power of that letter, as in <c>a x^n</c>; but <c>e</c> raised to anything
+        /// but a number is the exponential function, and so is a number raised to a letter:
+        /// <c>x e^x</c>, <c>n 2^n</c>.
+        /// </remarks>
+        private static int FactorRank(Entity factor) => factor switch
+        {
+            Entity.Number => 0,
+            Entity.Variable => 1,
+            Entity.Powf(var @base, Entity.Number) => FactorRank(@base),
+            Entity.Powf(Entity.Variable @base, _) when @base != Entity.Variable.e => 1,
+            _ => 2
+        };
 
         /// <summary>
         /// <paramref name="expression"/> with every conjunct of its condition that the

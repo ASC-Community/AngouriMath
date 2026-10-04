@@ -23,6 +23,30 @@ namespace AngouriMath.Tests.Calculus
         public void SignumHasADerivative() =>
             Assert.Equal("0 provided not x = 0".ToEntity(), "sgn(x)".ToEntity().Differentiate("x"));
 
+        // A conditional expression is differentiated where its condition holds, and under
+        // `x > 0` the roots of x are real, so the sign and the modulus of an expression in them
+        // are differentiated as on the real line. The antiderivative of a square written in
+        // x^(1/3) is `sgn(x^(1/3) + c) F(x) provided x > 0`, and could not be checked by
+        // differentiating it back while that sign's derivative was left as written.
+        [Theory]
+        [InlineData("sgn(x^(1/3) + 2) provided x > 0", "1", "0")]
+        [InlineData("abs(sqrt(x) - 1) provided x > 0", "4", "1/4")]
+        [InlineData("abs(sqrt(x) - 1) provided x > 0", "1/4", "-1")]
+        [InlineData("piecewise(abs(sqrt(x) - 1) provided x > 0, 0)", "1/4", "-1")]
+        [InlineData("max(sqrt(x), 1) provided x > 0", "4", "1/4")]
+        [InlineData("max(sqrt(x), 1) provided x > 0", "1/4", "0")]
+        public void UnderItsConditionARootIsReal(string expression, string at, string derivative) =>
+            Assert.Equal(derivative.ToEntity().Evaled, expression.ToEntity().Differentiate("x").Substitute("x", at.ToEntity()).Evaled);
+
+        // For x < 0 the roots are complex and nothing makes their sign flat. `x >= 0` does not
+        // help either: at 0 there is no interval of positive x around the point.
+        [Theory]
+        [InlineData("sgn(x^(1/3) + 2)")]
+        [InlineData("abs(sqrt(x) - 1)")]
+        [InlineData("sgn(x^(1/3) + 2) provided x >= 0")]
+        public void WithoutAStrictConditionARootIsNotReadAsReal(string expression) =>
+            Assert.Contains("derivative(", expression.ToEntity().Differentiate("x").Stringize());
+
         // The antiderivative of abs(x) is sgn(x) * x^2 / 2. Differentiating it back used to
         // produce derivative(sgn(x), x) and stop, so the answer could not be checked or
         // used numerically.

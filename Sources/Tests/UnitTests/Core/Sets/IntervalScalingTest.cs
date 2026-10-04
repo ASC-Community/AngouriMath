@@ -93,12 +93,12 @@ namespace AngouriMath.Tests.Core.Sets
                 expression.ToEntity().Simplify());
 
         /// <summary>
-        /// <b>An unknown sign is answered by not answering.</b> <c>(0; 1) * k</c> is one interval
+        /// <b>An unknown sign is answered by not answering.</b> <c>k * (0; 1)</c> is one interval
         /// when <c>k</c> is positive and the reflected one when it is negative; picking either
         /// would be choosing which, so it is left alone — which is what an unevaluated node means.
         /// </summary>
         [Theory]
-        [InlineData("(0; 1) * k")]
+        [InlineData("k * (0; 1)")]
         [InlineData("(0; 1) / k")]
         public void AnUnknownSignIsLeftAlone(string expression)
             => Assert.Equal(expression.ToEntity(), expression.ToEntity().Simplify());

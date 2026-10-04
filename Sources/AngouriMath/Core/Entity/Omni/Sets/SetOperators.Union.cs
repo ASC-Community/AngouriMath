@@ -108,9 +108,28 @@ namespace AngouriMath.Core.Sets
             return sb.IsEmpty ? set : sb.ToFiniteSet().Unite(set);
         }
 
-        // TODO: it requires cleaning
+        /// <summary>
+        /// The union of two intervals: one interval where they overlap or touch, and as written
+        /// where they do not, or where that cannot be told.
+        /// </summary>
+        /// <remarks>
+        /// An empty interval adds nothing -- one whose left end is above its right, or at it with
+        /// an end open -- so <c>[0; 1] \/ [1; 0]</c> is <c>[0; 1]</c>. Two intervals that touch are
+        /// one only when neither is empty. Touching was tested first, so <c>[1; 0]</c>, touching
+        /// <c>[0; 1]</c> at 0, was joined to it into <c>{ 1 }</c>, and <c>[a; b] \/ [b; a]</c> into
+        /// <c>{ b }</c>. Ends that are not numbers do not say whether an interval is empty, unless
+        /// the ends are one expression closed at both or one end is infinite, as in
+        /// <c>(-oo; x] \/ [x; +oo)</c>; otherwise the union is left as written.
+        /// https://github.com/asc-community/AngouriMath/issues/1634
+        /// </remarks>
         internal static Set UniteIntervalAndInterval(Interval A, Interval B)
         {
+            if (IsEmpty(A))
+                return B;
+            if (IsEmpty(B))
+                return A;
+            if (!IsNotEmpty(A) || !IsNotEmpty(B))
+                return A.Unite(B);
             if (A.Left == B.Right && (A.LeftClosed || B.RightClosed))
                 return new Interval(B.Left, B.LeftClosed, A.Right, A.RightClosed);
             if (A.Right == B.Left && (A.RightClosed || B.LeftClosed))
@@ -120,14 +139,11 @@ namespace AngouriMath.Core.Sets
                 B.Left is not Real bLeft ||
                 B.Right is not Real bRight)
                 return A.Unite(B);
-            if (aLeft == aRight && A.LeftClosed && A.RightClosed)
-                UniteFiniteSetAndSet(new FiniteSet(aLeft), B);
-            if (bLeft == bRight && B.LeftClosed && B.RightClosed)
-                UniteFiniteSetAndSet(new FiniteSet(bLeft), A);
-            if (aLeft >= aRight)
-                return B;
-            if (bLeft >= bRight)
-                return A;
+            // Neither is empty, so ends that are equal are a point closed at both.
+            if (aLeft == aRight)
+                return UniteFiniteSetAndSet(new FiniteSet(aLeft), B);
+            if (bLeft == bRight)
+                return UniteFiniteSetAndSet(new FiniteSet(bLeft), A);
             if (aLeft == bRight && !A.LeftClosed && !B.RightClosed)
                 return A.Unite(B);
             if (bLeft == aRight && !B.LeftClosed && !A.RightClosed)
@@ -150,6 +166,22 @@ namespace AngouriMath.Core.Sets
                 (bRight > aRight ? (bRight, B.RightClosed) : (aRight, A.RightClosed));
             return new Interval(left, leftClosed, right, rightClosed);
         }
+
+        /// <summary>Known to be empty: numeric ends out of order, or at one point with an end open.</summary>
+        private static bool IsEmpty(Interval interval)
+            => interval.Left is Real left && interval.Right is Real right
+               && (left > right || left == right && !(interval.LeftClosed && interval.RightClosed));
+
+        /// <summary>
+        /// Known not to be empty: numeric ends in order, the same end at both sides and closed, or
+        /// an end at an infinity, beyond any end the other side can have.
+        /// </summary>
+        private static bool IsNotEmpty(Interval interval)
+            => interval.Left is Real left && interval.Right is Real right
+                ? left < right || left == right && interval.LeftClosed && interval.RightClosed
+                : interval.Left == interval.Right
+                    ? interval.LeftClosed && interval.RightClosed
+                    : interval.Left == Real.NegativeInfinity || interval.Right == Real.PositiveInfinity;
 
         internal static Set UniteCSetAndCSet(ConditionalSet intLeft, ConditionalSet intRight)
         {

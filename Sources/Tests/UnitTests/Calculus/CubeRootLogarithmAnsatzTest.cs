@@ -112,7 +112,7 @@ namespace AngouriMath.Tests.Calculus
         /// </summary>
         [Theory]
         [InlineData("1/(x*((-1 + x)*(q - 2*q*x + x^2))^(1/3))")]
-        [InlineData("1/((3 - x^2)*(1 + x^2)^(1/3))")]
+        [InlineData("1/((3 - x^2)*(2 + x^2)^(1/3))")]
         public void DeclinedWhereTheFieldIsNotHeld(string integrand)
             => Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
     }

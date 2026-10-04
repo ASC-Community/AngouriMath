@@ -1,10 +1,11 @@
 name: 'Terminal release'
 
 # Self-contained builds of the Terminal for seven runtimes, zipped, and .debs for Linux,
-# released to AngouriMathLab alongside each release of the packages and under the same
-# version, read from the release's tag as Nuget.yml reads it. Run by hand, it builds and packs
-# without releasing unless asked to, and a pull request that touches the workflow or its
-# scripts builds and packs the same way.
+# attached to each release of the packages, whose version they carry, read from the release's
+# tag as Nuget.yml reads it. Run by hand, it builds and packs without attaching anything unless
+# asked to, and a pull request that touches the workflow or its scripts builds and packs the
+# same way. Only the job that attaches the builds can write to the repository, and it runs no
+# code from it.
 # https://github.com/asc-community/AngouriMath/issues/539
 on:
   release:
@@ -14,6 +15,8 @@ on:
       - '.github/workflows/TerminalNightly.yml'
       - 'Sources/Terminal/AngouriMath.Terminal/publish.sh'
       - 'Sources/Terminal/AngouriMath.Terminal/pack-deb-linux.sh'
+      - 'Sources/Terminal/AngouriMath.Terminal/amcli.1'
+      - 'Sources/Terminal/AngouriMath.Terminal/amcli.bash'
   workflow_dispatch:
     inputs:
       version:
@@ -21,13 +24,17 @@ on:
         type: string
         default: '0.0.0'
       release:
-        description: 'Release the build to AngouriMathLab'
+        description: 'Attach the build to the release of that version, which has to exist'
         type: boolean
         default: false
 
 jobs:
   TerminalBuild:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
 
     steps:
     - uses: actions/checkout@v6
@@ -50,8 +57,10 @@ jobs:
       run: |
         if [ "${{ github.event_name }}" = 'release' ]; then
             version="${TAG#v}"
+            tag="$TAG"
         else
             version="${ASKED:-0.0.0}"
+            tag="v$version"
         fi
         if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Error: '$version' is not a version such as 2.6.0 or 2.6.0-beta.1"
@@ -59,6 +68,7 @@ jobs:
         fi
         echo "Version: $version"
         echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
     - name: 'Build terminal'
       env:
@@ -88,13 +98,25 @@ jobs:
           angourimath-terminal-*.zip
           angourimath-terminal-*.deb
 
-    - name: 'Release'
-      if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release)
+  # Replaces an asset of the same name, so that a run repeated for one release leaves one set.
+  TerminalRelease:
+    needs: TerminalBuild
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: angourimath-terminal
+
+    - name: 'Attach to the release'
       env:
-        GH_TOKEN: ${{ secrets.LAB_ACCESS_TOKEN }}
-        VERSION: ${{ steps.version.outputs.version }}
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ needs.TerminalBuild.outputs.tag }}
       run: |
-        gh release create "v$VERSION" \
+        gh release upload "$TAG" \
         'angourimath-terminal-linux-x64.zip' \
         'angourimath-terminal-linux-arm.zip' \
         'angourimath-terminal-linux-arm64.zip' \
@@ -105,6 +127,5 @@ jobs:
         'angourimath-terminal-amd64.deb' \
         'angourimath-terminal-arm.deb' \
         'angourimath-terminal-arm64.deb' \
-        -R asc-community/AngouriMathLab \
-        -t 'AngouriMath.Terminal' \
-        -n "Expand 'assets' and choose the one for your OS"
+        -R "$GITHUB_REPOSITORY" \
+        --clobber

@@ -21,6 +21,7 @@ namespace AngouriMath.Tests.Core
     /// <c>with</c> spells its own key rather than inheriting the original's, and asking from
     /// several threads at once gives every thread the same string.
     /// </summary>
+    [Trait("Area", "Core")]
     public sealed class SortKeyCacheTest
     {
         [Theory]

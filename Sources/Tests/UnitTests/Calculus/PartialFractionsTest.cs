@@ -140,28 +140,34 @@ namespace AngouriMath.Tests.Calculus
             AssertIsAntiderivative(integrand, points);
 
         /// <summary>
-        /// What is still left unevaluated rather than answered wrongly: a denominator that is
-        /// irreducible and not biquadratic. <c>x^2/(x^4 + 1)</c> used to be on this list and is
-        /// now answered above; the step over the reals reaches a biquadratic only, so a
-        /// quartic with an odd power in it stays here. <c>1/(x^4 + 2x^2 + 1)</c> was here too,
-        /// as a power of a single irreducible with no coprime pair to split into -- it is
-        /// <c>(x^2 + 1)^2</c>, which the Hermite reduction answers once the repeated factor is
-        /// written, and the denominator is now written that way first; see
-        /// <c>RationalIntegralsTest.ARepeatedFactorTheSpellingHides</c>.
+        /// What has nothing to split into: a denominator that is irreducible and not biquadratic.
+        /// The step over the reals reaches a biquadratic only, so a quartic with an odd power in
+        /// it is answered whole, its logarithms in a sum over its roots
+        /// (<a href="https://github.com/asc-community/AngouriMath/issues/1285">#1285</a>).
+        /// <c>x^2/(x^4 + 1)</c> used to be on this list and is answered above by that step.
+        /// <c>1/(x^4 + 2x^2 + 1)</c> was here too, as a power of a single irreducible with no
+        /// coprime pair to split into -- it is <c>(x^2 + 1)^2</c>, which the Hermite reduction
+        /// answers once the repeated factor is written, and the denominator is now written that
+        /// way first; see <c>RationalIntegralsTest.ARepeatedFactorTheSpellingHides</c>.
         /// </summary>
         [Theory]
         [InlineData("1 / (x ^ 3 + x ^ 2 + x + 2)")]
         [InlineData("1 / (x ^ 4 + x ^ 3 + 1)")]
         [InlineData("1 / (x ^ 4 + x + 1)")]
-        public void WhatCannotBeSplitIsLeftAlone(string integrand) =>
-            Assert.Contains("integral(", integrand.ToEntity().Integrate("x").Stringize());
+        public void WhatCannotBeSplitIsASumOverItsRoots(string integrand)
+        {
+            Assert.Contains(integrand.ToEntity().Integrate("x").Nodes, node => node is Entity.SumOverSetf);
+            AssertIsAntiderivative(integrand, 0.3, 1.7, 3.2, -2.4);
+        }
 
         /// <summary>
-        /// The guard that keeps declining cheap, which nothing widening the split must undo:
+        /// The guard that keeps the search cheap, which nothing widening the split must undo:
         /// this factorises into <c>x^4 + x + 1</c>, an irreducible quartic with an odd power in
-        /// it that no rule reads, and the whole point of reading the factorisation is that
+        /// it that no split reads, and the whole point of reading the factorisation is that
         /// finding that out costs one factorisation rather than a search of every half of every
-        /// split.
+        /// split. The quartic's roots do answer it, but in a second pass that starts only once
+        /// the first has declined, so the first pass's decline is still inside the time asserted
+        /// here.
         /// </summary>
         /// <remarks>
         /// The integrand here used to be <c>(1 - x^4)/(1 + x^4 + x^8)</c>, whose quartic is
@@ -171,12 +177,13 @@ namespace AngouriMath.Tests.Calculus
         /// that actually reaches it.
         /// </remarks>
         [Fact]
-        public void DecliningStaysCheap()
+        public void FindingThatNothingSplitsStaysCheap()
         {
             var clock = System.Diagnostics.Stopwatch.StartNew();
             var answer = "(1 - x ^ 4) / ((1 + x ^ 2) * (x ^ 4 + x + 1))".ToEntity().Integrate("x");
-            Assert.Contains("integral(", answer.Stringize());
             Assert.True(clock.Elapsed < System.TimeSpan.FromSeconds(10), $"took {clock.Elapsed}");
+            Assert.Contains(answer.Nodes, node => node is Entity.SumOverSetf);
+            AssertIsAntiderivative("(1 - x ^ 4) / ((1 + x ^ 2) * (x ^ 4 + x + 1))", 0.3, 1.7, 3.2, -2.4);
         }
 
         /// <summary>

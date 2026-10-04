@@ -29,11 +29,11 @@ namespace AngouriMath.Tests.PatternsTest
         // [InlineData("sin(arcsin(c x) + arccos(x c) + c)2 + a + b + sin(x) + 0 + cos(c - -arcsin(c x) - -arccos(-c x * (-1)))2", "1")]
         // [InlineData("sin(arcsin(c x) + arccos(x c) + c)2 + a + b + sin(x) + 0 + cos(c - -arcsin(c x) - -arccos(-c x * (-1)))2", ") ^ 2", false)]
         [InlineData("sec(x) + a + sin(x) + c + 1 + 0 + 3 + sec(x)", "4 + 2 * sec(x) + sin(x) + a + c")]
-        [InlineData("tan(x) * a * b / c / sin(h + 0.1) * cotan(x)", "a * b / (sin(h + 1/10) * c) provided not sin(x) = 0 and not cos(x) = 0")]
-        [InlineData("sin(x) * a * b / c / sin(h + 0.1) * cosec(x)", "a * b / (sin(h + 1/10) * c) provided not sin(x) = 0")]
-        [InlineData("cos(x) * a * b / c / sin(h + 0.1) * sec(x)", "a * b / (sin(h + 1/10) * c) provided not cos(x) = 0")]
-        [InlineData("sec(x) * a * b / c / sin(h + 0.1) * cos(x)", "a * b / (sin(h + 1/10) * c) provided not cos(x) = 0")]
-        [InlineData("cosec(x) * a * b / c / sin(h + 0.1) * sin(x)", "a * b / (sin(h + 1/10) * c) provided not sin(x) = 0")]
+        [InlineData("tan(x) * a * b / c / sin(h + 0.1) * cotan(x)", "a * b / (c * sin(h + 1/10)) provided not sin(x) = 0 and not cos(x) = 0")]
+        [InlineData("sin(x) * a * b / c / sin(h + 0.1) * cosec(x)", "a * b / (c * sin(h + 1/10)) provided not sin(x) = 0")]
+        [InlineData("cos(x) * a * b / c / sin(h + 0.1) * sec(x)", "a * b / (c * sin(h + 1/10)) provided not cos(x) = 0")]
+        [InlineData("sec(x) * a * b / c / sin(h + 0.1) * cos(x)", "a * b / (c * sin(h + 1/10)) provided not cos(x) = 0")]
+        [InlineData("cosec(x) * a * b / c / sin(h + 0.1) * sin(x)", "a * b / (c * sin(h + 1/10)) provided not sin(x) = 0")]
         public void Test(string exprRaw, string result)
         {
             var entity = exprRaw.ToEntity();

@@ -1,0 +1,155 @@
+name: Harnesses
+
+# Generated inputs run against the library on every change to it. Each harness exits non-zero
+# on a defect -- a value Simplify changed at a boundary, a root missing from a solution set, a
+# wrong answer to a known problem -- and its report is uploaded either way. Sources/Tests/Harnesses/README.md
+# says what each asks. https://github.com/asc-community/AngouriMath/issues/1256
+#
+# Path filters are globs relative to the repository root, with no leading "./": CSharpTest.yml
+# says what a leading "./" once cost.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'Sources/AngouriMath/**'
+      - 'Sources/Wrappers/AngouriMath.FSharp/**'
+      - 'Sources/Tests/Harnesses/**'
+      - '.github/workflows/Harnesses.yml'
+  pull_request:
+    paths:
+      - 'Sources/AngouriMath/**'
+      - 'Sources/Wrappers/AngouriMath.FSharp/**'
+      - 'Sources/Tests/Harnesses/**'
+      - '.github/workflows/Harnesses.yml'
+  workflow_dispatch:
+
+jobs:
+  Harnesses:
+    runs-on: ubuntu-latest
+    env:
+      HARNESS_REPORTS: ${{ github.workspace }}/harness-reports
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.x'
+        dotnet-quality: 'preview'
+
+    - name: Build
+      run: |
+        dotnet build -c Release Sources/Tests/Harnesses/BoundCheck
+        dotnet build -c Release Sources/Tests/Harnesses/RootCheck
+        dotnet build -c Release Sources/Tests/Harnesses/CasBench
+        dotnet build -c Release Sources/Tests/Harnesses/PropCheck
+        dotnet build -c Release Sources/Tests/Harnesses/SimpSweep
+        dotnet build -c Release Sources/Tests/Harnesses/RuleCheck
+        dotnet build -c Release Sources/Tests/Harnesses/CanonCheck
+        dotnet build -c Release Sources/Tests/Harnesses/Confluence
+
+    # One step each, every one run whatever the one before did, so a red run names the harness.
+    - name: BoundCheck
+      run: dotnet Sources/Tests/Harnesses/BoundCheck/bin/Release/net10.0/boundcheck.dll
+
+    - name: RootCheck
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/RootCheck/bin/Release/net10.0/rootcheck.dll
+
+    - name: CasBench
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/CasBench/bin/Release/net10.0/casbench.dll
+
+    - name: PropCheck
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/PropCheck/bin/Release/net10.0/propcheck.dll
+
+    - name: SimpSweep
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/SimpSweep/bin/Release/net10.0/simpsweep.dll
+
+    - name: RuleCheck
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/RuleCheck/bin/Release/net10.0/rulecheck.dll
+
+    # These two report findings by design and fail when their committed list of them changes.
+    - name: CanonCheck
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/CanonCheck/bin/Release/net10.0/canoncheck.dll
+
+    - name: Confluence
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/Confluence/bin/Release/net10.0/confluence.dll
+
+    - name: Reports
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: harness-reports
+        path: harness-reports
+
+  # A job of its own: one child process per case is minutes rather than seconds, and running it
+  # beside the others keeps them quick.
+  CrashCheck:
+    runs-on: ubuntu-latest
+    env:
+      HARNESS_REPORTS: ${{ github.workspace }}/harness-reports
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.x'
+        dotnet-quality: 'preview'
+
+    - name: Build
+      run: dotnet build -c Release Sources/Tests/Harnesses/CrashCheck
+
+    - name: CrashCheck
+      run: dotnet Sources/Tests/Harnesses/CrashCheck/bin/Release/net10.0/crashcheck.dll
+
+    - name: Report
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: crashcheck-report
+        path: harness-reports
+
+  # A job of its own: it checks the website out beside the library, clones the wiki, and builds a
+  # project per language from their samples.
+  DocSamples:
+    runs-on: ubuntu-latest
+    env:
+      HARNESS_REPORTS: ${{ github.workspace }}/harness-reports
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Check out the website
+      uses: actions/checkout@v6
+      with:
+        repository: asc-community/AngouriMathSite
+        path: site
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.x'
+        dotnet-quality: 'preview'
+
+    - name: Build
+      run: dotnet build -c Release Sources/Tests/Harnesses/DocSamples
+
+    - name: DocSamples
+      run: dotnet Sources/Tests/Harnesses/DocSamples/bin/Release/net10.0/docsamples.dll --site=site
+
+    - name: Report
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: docsamples-report
+        path: harness-reports

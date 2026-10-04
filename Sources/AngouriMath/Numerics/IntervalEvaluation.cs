@@ -8,6 +8,7 @@
 using System;
 using PeterO.Numbers;
 using static AngouriMath.Entity;
+using NumericsComplex = System.Numerics.Complex;
 
 namespace AngouriMath.Numerics
 {
@@ -382,6 +383,27 @@ namespace AngouriMath.Numerics
                     return RealOnly(Evaluate(argument), static x => (Interval.Exactly(1) / x).Acos());
                 case Arccosecantf(var argument):
                     return RealOnly(Evaluate(argument), static x => (Interval.Exactly(1) / x).Asin());
+                // The special functions, from their double-precision routines.
+                // https://github.com/asc-community/AngouriMath/issues/1607
+                case Erff(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Erf, static z => TwoOverSqrtPi * (-(z * z)).Exp(), static _ => false, static _ => true);
+                case Erfcf(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Erfc, static z => TwoOverSqrtPi * (-(z * z)).Exp(), static _ => false, static _ => true);
+                case Erfif(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Erfi, static z => TwoOverSqrtPi * (z * z).Exp(), static _ => false, static _ => true);
+                case Eif(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Ei, static z => z.Exp() / z, static z => StraddlesTheAxisLeftOf(z, 0), static _ => true);
+                case Lif(var argument):
+                    // Its cut is where the logarithm's is, and where Ei's is under it: 0 < x < 1.
+                    return Special(Evaluate(argument), SpecialFunctions.Li, static z => One / z.Log(), static z => StraddlesTheAxisLeftOf(z, 1), static x => x.Low >= 0);
+                case Sif(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Si, static z => z.Sin() / z, static _ => false, static _ => true);
+                case Cif(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Ci, static z => z.Cos() / z, static z => StraddlesTheAxisLeftOf(z, 0), static x => x.Low > 0);
+                case Shif(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Shi, static z => Sinh(z) / z, static _ => false, static _ => true);
+                case Chif(var argument):
+                    return Special(Evaluate(argument), SpecialFunctions.Chi, static z => Cosh(z) / z, static z => StraddlesTheAxisLeftOf(z, 0), static x => x.Low > 0);
                 case Absf(var argument):
                 {
                     var inner = Evaluate(argument);
@@ -521,6 +543,57 @@ namespace AngouriMath.Numerics
             if (orEqual && l.Re.Low == l.Re.High && r.Re.Low == r.Re.High && l.Re.Low == r.Re.Low)
                 return 0;
             return null;
+        }
+
+        [AngouriMath.Core.ConstantField] private static readonly ComplexInterval One = ComplexInterval.Real(Interval.Exactly(1));
+        [AngouriMath.Core.ConstantField] private static readonly ComplexInterval TwoOverSqrtPi = ComplexInterval.Real(Interval.Around(2 / Math.Sqrt(Math.PI)));
+
+        private static ComplexInterval Sinh(ComplexInterval z) => (z.Exp() - (-z).Exp()) * ComplexInterval.Real(Interval.Exactly(0.5));
+        private static ComplexInterval Cosh(ComplexInterval z) => (z.Exp() + (-z).Exp()) * ComplexInterval.Real(Interval.Exactly(0.5));
+
+        /// <summary>Whether the rectangle crosses the real axis left of <paramref name="end"/>, where a cut runs.</summary>
+        private static bool StraddlesTheAxisLeftOf(ComplexInterval z, double end)
+            => !z.IsReal && z.Im.ContainsZero && z.Re.Low < end;
+
+        /// <summary>
+        /// A special function over <paramref name="argument"/>. The value is the double-precision
+        /// routine's at the rectangle's middle. It is widened by the routine's error, and by the most
+        /// the function can move across the rectangle: the largest its derivative is there, which
+        /// these intervals bound, times the rectangle's half diagonal. The value is real where the
+        /// argument is real and <paramref name="realOn"/> says the function is real there.
+        /// </summary>
+        /// <remarks>
+        /// The routines agree with the interpreter's kernels to within <c>3e-13</c> of the value,
+        /// measured on some ten thousand points rather than proved. They are allowed <c>1e-10</c> of
+        /// the value, and <c>1e-10</c> more for a value near a zero, where a relative error means
+        /// nothing. A rectangle that straddles a cut, where the function jumps, has no enclosure
+        /// this way. It is left undecided, and the caller asks the decimal evaluation.
+        /// </remarks>
+        private static ComplexInterval Special(ComplexInterval argument, Func<NumericsComplex, NumericsComplex> function,
+            Func<ComplexInterval, ComplexInterval> derivative, Func<ComplexInterval, bool> straddlesACut, Func<Interval, bool> realOn)
+        {
+            if (!argument.IsFinite || straddlesACut(argument))
+                return Undefined;
+            var middle = new NumericsComplex(argument.Re.Middle, argument.Im.Middle);
+            var value = function(middle);
+            if (!Interval.IsFiniteDouble(value.Real) || !Interval.IsFiniteDouble(value.Imaginary))
+                return Undefined;
+            var reach = Math.Max(argument.Re.High - middle.Real, middle.Real - argument.Re.Low);
+            var imReach = Math.Max(argument.Im.High - middle.Imaginary, middle.Imaginary - argument.Im.Low);
+            var radius = Interval.Up(Math.Sqrt(reach * reach + imReach * imReach));
+            var spread = 0.0;
+            if (radius > 0)
+            {
+                var slope = derivative(argument);
+                if (!slope.IsFinite)
+                    return Undefined;
+                spread = Interval.Up(Interval.Up(slope.Magnitude) * radius);
+            }
+            var error = Interval.Up(1e-10 * (Math.Sqrt(value.Real * value.Real + value.Imaginary * value.Imaginary) + 1) + spread);
+            var re = new Interval(Interval.Down(value.Real - error), Interval.Up(value.Real + error));
+            if (argument.IsReal && realOn(argument.Re))
+                return ComplexInterval.Real(re);
+            return new(re, new Interval(Interval.Down(value.Imaginary - error), Interval.Up(value.Imaginary + error)));
         }
 
         /// <summary>A function read on real arguments only, in this pilot.</summary>

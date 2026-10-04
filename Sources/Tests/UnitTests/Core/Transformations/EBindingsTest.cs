@@ -10,6 +10,7 @@ using Xunit;
 
 namespace AngouriMath.Tests.Core.Transformations
 {
+    [Trait("Area", "Core")]
     public sealed class EBindingsTest
     {
         [Fact]

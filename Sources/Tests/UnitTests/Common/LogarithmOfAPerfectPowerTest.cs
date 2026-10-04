@@ -18,6 +18,7 @@ namespace AngouriMath.Tests.Common
     /// a logarithm of a rational literal that is a perfect power takes the exponent out, which
     /// is longer on its own and is what lets two logarithms of related literals collect.
     /// </summary>
+    [Trait("Area", "Common")]
     public sealed class LogarithmOfAPerfectPowerTest
     {
         [Theory]

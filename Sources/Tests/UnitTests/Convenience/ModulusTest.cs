@@ -195,14 +195,16 @@ namespace AngouriMath.Tests.Convenience
             Assert.Equal(1.5, "x mod y".ToEntity().Compile<double, double, double>("x", "y")(7.5, 2), 9);
 
         /// <summary>
-        /// x mod a = value has one solution per period, so answering it means introducing an
-        /// integer parameter the way the trigonometric inversions do. Until that is written the
-        /// equation is left unsolved, as the set of x for which it holds. This asserted the
-        /// empty set, which claims there is no such x, and 4 is one. Pinned so that whoever
-        /// writes the inversion sees this change.
+        /// x mod a = value has one solution per period, and is answered the way the
+        /// trigonometric inversions are, with a whole parameter: x mod 3 = 1 is x = 1 + 3 n,
+        /// which is 4 at n = 1. https://github.com/asc-community/AngouriMath/issues/1629
         /// </summary>
         [Fact]
-        public void SolvingIsNotClaimed() =>
-            Assert.IsType<Entity.Set.ConditionalSet>(("x mod 3".ToEntity() - 1).SolveEquation("x"));
+        public void SolvingGivesEverySolution()
+        {
+            var solution = Assert.Single(Assert.IsType<Entity.Set.FiniteSet>(("x mod 3".ToEntity() - 1).SolveEquation("x")).Elements);
+            var parameter = Assert.Single(solution.Vars);
+            Assert.Equal((Entity)4, solution.Substitute(parameter, 1).Evaled);
+        }
     }
 }
