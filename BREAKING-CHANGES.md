@@ -503,6 +503,23 @@ read them as nonzero. They are now decided over one bar, expanded, and at pinned
 | `"e^(3*acoth(a*x))/(c-a*c*x)^3".Integrate("x")`, and over `(c - a c x)^4` | left unevaluated | an antiderivative in `sqrt((a x + 1)/(a x - 1))` |
 | `"e^(2*acoth(a*x))*sqrt(c-a*c*x)/x".Integrate("x")`, and over `x^2` | left unevaluated | an antiderivative in `sqrt(c - a c x)`, by cases on the sign of `c` |
 
+### A trigonometric function of an imaginary multiple of a logarithm is integrated in exponentials
+
+**Answers where there were none.** `tan(a + i ln(x))` and `sin(a + ln(c x^2) sqrt(-1/4))` were
+declined: the closed form for a power of the variable times a sine or cosine of a logarithm divides
+by `(m + 1)^2 + B^2`, which an imaginary `B` can make zero, and Rubi's 4.7.5 is built on exactly
+that. `e^(i (a + b ln(u)))` is `e^(i a)` times a real power of `u` when `b` is imaginary, so each
+such function is a sum or quotient of powers of `u`, and is written so now when `b` is an imaginary
+number; the zero is a power `1/x`, whose integral is a logarithm. A symbolic `b`,
+`sqrt(-1/n^2)`, is left alone, since whether the zero is there turns on the sign of `n`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"tan(a + i*ln(x))".ToEntity().Integrate("x")` | `integral(...)` | a rational function of `x` and `e^(i a)`, with a logarithm |
+| `"sin(a + ln(c*x^2)*sqrt(-1/4))".ToEntity().Integrate("x")` | `integral(...)` | powers of `x` and `c x^2` and a logarithm, through `e^(i a)` |
+| `"1/cos(a - 2*i*ln(c*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | an arctangent and a logarithm of a root, through `e^(i a)` |
+
 ### `NaN` again, from an exponent that was read as written rather than as a number
 
 **A wrong answer, and a second one of the same kind.** `(a^2 + 2abx^2 + b^2x^4)^3/x^7` came back as

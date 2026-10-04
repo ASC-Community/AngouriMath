@@ -21135,6 +21135,83 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A trigonometric function of <c>a + b ln(u)</c> with an imaginary <c>b</c>, written in
+        /// exponentials: <c>e^(i (a + b ln(u)))</c> is <c>e^(i a)</c> times the real power
+        /// <c>u^(i b)</c>, so the sine, cosine and the rest are sums and quotients of powers of
+        /// <c>u</c>, which the rules for those answer.
+        /// </summary>
+        /// <remarks>
+        /// <c>sin(a + ln(c x^2) sqrt(-1/4))</c> and <c>tan(a + i ln(x))</c> were declined: the closed
+        /// form for a power of the variable times a sine or cosine of a logarithm divides by
+        /// <c>(m + 1)^2 + B^2</c>, which an imaginary <c>B</c> makes zero, and Rubi's 4.7.5 has 62
+        /// problems built on exactly that, with <c>b = sqrt(-(m + 1)^2/n^2)</c>. In exponentials the
+        /// zero is a power of <c>x</c> that is <c>1/x</c>, and its integral a logarithm. Only for a
+        /// number: a real <c>b</c> is the closed form's, after which this is asked, and a symbolic
+        /// one, <c>sqrt(-1/n^2)</c>, makes the zero one that only a sign of <c>n</c> decides.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingATrigonometricFunctionOfAnImaginaryLogarithmInExponentials(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Logf && node.ContainsNode(x)))
+                return null;
+            var any = false;
+            var rewritten = expr.Replace(node =>
+            {
+                var (argument, kind) = node switch
+                {
+                    Sinf(var of) => (of, 0),
+                    Cosf(var of) => (of, 1),
+                    Tanf(var of) => (of, 2),
+                    Cotanf(var of) => (of, 3),
+                    Secantf(var of) => (of, 4),
+                    Cosecantf(var of) => (of, 5),
+                    _ => ((Entity?)null, -1)
+                };
+                if (argument is null || !IsLinearInALogarithmWithAnImaginaryCoefficient(argument, x))
+                    return node;
+                any = true;
+                var plus = MathS.Pow(MathS.e, MathS.i * argument);
+                var minus = MathS.Pow(MathS.e, -MathS.i * argument);
+                return kind switch
+                {
+                    0 => (plus - minus) / (2 * MathS.i),
+                    1 => (plus + minus) / 2,
+                    2 => (plus - minus) / (MathS.i * (plus + minus)),
+                    3 => MathS.i * (plus + minus) / (plus - minus),
+                    4 => 2 / (plus + minus),
+                    _ => 2 * MathS.i / (plus - minus),
+                };
+            });
+            if (!any)
+                return null;
+            return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="argument"/> is <c>a + b ln(u)</c>, with <c>u</c> the only place the
+        /// variable is and <c>b</c> an imaginary number.
+        /// </summary>
+        private static bool IsLinearInALogarithmWithAnImaginaryCoefficient(Entity argument, Entity.Variable x)
+        {
+            var logarithms = argument.Nodes
+                .Where(node => node is Logf(var @base, var of) && @base == MathS.e && of.ContainsNode(x))
+                .Distinct().ToList();
+            if (logarithms.Count != 1)
+                return false;
+            var placeholder = Variable.CreateUnique(argument, "l_log");
+            var inPlaceholder = argument.Replace(node => node == logarithms[0] ? placeholder : node);
+            if (inPlaceholder.ContainsNode(x)
+                || !TreeAnalyzer.TryGetPolyLinear(inPlaceholder, placeholder, out var coefficient, out _)
+                || TreeAnalyzer.IsZero(coefficient))
+                return false;
+            // A number, and not a symbol's: with `b = sqrt(-1/n^2)` the power of the variable this
+            // leaves is `1/x` for every positive n, which nothing reading `n` symbolically can know,
+            // and the general power's formula comes back with a zero below its bar.
+            return coefficient.Vars.Count() == 0 && coefficient.Evaled is Number.Complex number && number is not Number.Real
+                && System.Math.Abs((double)number.RealPart) < 1e-12 * System.Math.Abs((double)number.ImaginaryPart);
+        }
+
+        /// <summary>
         /// A power of the variable times a sine or cosine of a logarithm, in closed form:
         /// <c>int x^m sin(L) dx</c> is <c>x^(m + 1)((m + 1) sin(L) - B cos(L))/((m + 1)^2 + B^2)</c>
         /// whenever <c>L' = B/x</c> for a constant <c>B</c>, which <c>a + b ln(c x^n)</c> is with

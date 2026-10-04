@@ -690,6 +690,9 @@ namespace AngouriMath.Functions.Algebra
             // A power of the variable times a sine or cosine of a logarithm, where two rounds of
             // parts close on the integrand: `int x^m sin(a + b ln(c x^n))` in closed form.
             if ((answer = IndefiniteIntegralSolver.SolveAPowerTimesATrigonometricOfALogarithm(expr, x, integrateByParts)) is { }) return answer;
+            // The same with an imaginary coefficient on the logarithm, where the closed form divides
+            // by zero: in exponentials, powers of the variable.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingATrigonometricFunctionOfAnImaginaryLogarithmInExponentials(expr, x, integrateByParts)) is { }) return answer;
             // A logarithm of a quotient that cancels with the functions in it as
             // indeterminates, which is how an inverse hyperbolic function of a hyperbolic
             // one arrives: atanh(tanh(u)) is 1/2 ln(e^(2u)) once its quotient is cancelled.
