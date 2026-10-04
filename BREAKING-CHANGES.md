@@ -617,6 +617,26 @@ either now; and the secant quotient was simplified to `cos/(b^(5/2) d)` through
 `(1/cos)^(3/2) = cos^(-3/2)`, which is wrong for every negative cosine and cancelled against the
 same wrong step on the denominator. On the 1774-problem independent suites this is 1707 to 1705, the two `asin` rows, with the sign error gone.
 
+### Symbolic powers of `a ± a sin` beside a power of the cosine are integrated through the sine
+
+**Answers where there were none.** `(a + a sin(e + f x))^m sqrt(c - c sin(e + f x))` and its kin,
+Rubi's `(a + b sin)^m (c + d sin)^n` files with `a^2 = b^2`, `c^2 = d^2` and a symbolic exponent,
+were declined or past the budget. `(1 + sin(y))(1 - sin(y))` is `cos(y)^2`, so under `u = sin(y)`
+each such power, a power of `g cos(y)` beside them and `dy` itself are powers of `1 + u` and
+`1 - u`, up to a factor constant on each interval, and the rest is asked in `u`; the cosine's the
+same way. The answer is the antiderivative in `u` times that factor, the powers as written over
+the form they were rewritten to. Where the question in `u` is `(1 + u)^A (1 - u)^B` with `A + B`
+a whole number below `-2` it is declined still
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a + a*sin(e + f*x))^m*sqrt(c - c*sin(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `(1 + sin(e + f x))/(f (m + 1/2) cos(e + f x))`, written unreduced |
+| `"cos(e + f*x)^2*(a + a*sin(e + f*x))^m/sqrt(c - c*sin(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `(1 + sin(e + f x))/(f (m + 3/2) cos(e + f x))`, written unreduced |
+| `"(g*cos(e + f*x))^(1 - 2*m)*(a + a*sin(e + f*x))^m*(c - c*sin(e + f*x))^(m - 1)".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `-(1 - sin(e + f x)) ln(1 - sin(e + f x))/(f cos(e + f x))` |
+| `"(a + a*sin(e + f*x))^m*(c - c*sin(e + f*x))^(-1 - m)".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `(1 + sin(e + f x))(1 - sin(e + f x))/(f (1 + 2 m) cos(e + f x))`, written unreduced |
+| `"(a + a*cos(e + f*x))^m*sqrt(c - c*cos(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `-(1 + cos(e + f x))/(f (m + 1/2) sin(e + f x))`, written unreduced |
+
 ### A power of x comes out of a fractional power of a sum whose every term has it
 
 `(a x^j + b x^n)^p` with a fractional `p`, the power of x common to every term inside the power,
