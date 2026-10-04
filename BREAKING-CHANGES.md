@@ -374,6 +374,22 @@ the linear at its root now, and each piece is the table's
 | `"t^9/(a + b*t)^8".ToEntity().Integrate("t")` | `integral(...)` | powers of `a/b + t` and a logarithm, in 0.03 s |
 | `"x^4/(a + b*sqrt(x))^8".ToEntity().Integrate("x")` | `integral(...)` | the same in `sqrt(x)`, in 0.5 s; a minute on the unreleased master |
 
+### Two roots of linears over a linear off the real line are integrated
+
+**Answers where there were none.** `1/(sqrt(x) sqrt(a + b x) (1 - i x))` was declined. The closed forms
+for two roots of linears over a third, an arctangent and a logarithm, were chosen by the sign of a
+quantity that, over a linear whose coefficients are not real, has none -- `-i a - b < 0` is NaN, the
+complex numbers not being ordered -- and on the unreleased master the answer was a piecewise on that
+sign which held at no point. Both forms use nothing about their root but `sqrt(q)^2 = q`, so either
+is an antiderivative wherever the quantity is not zero, whatever its phase, and with the imaginary
+unit in the quantity the one for a positive quantity is taken alone
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(sqrt(x)*sqrt(a + b*x)*(1 - i*x))".ToEntity().Integrate("x")` | `integral(...)` | `2 arctan(sqrt(-i a - b) sqrt(x)/sqrt(a + b x))/sqrt(-i a - b)` |
+| `"sqrt(x)*sqrt(a + b*x)/(1 + i*x)".ToEntity().Integrate("x")` | `integral(...)` | a root, a logarithm and an arctangent, piecewise in the sign of `b` |
+
 ### A polynomial over a power of a quadratic with a sum of symbols in it is reduced
 
 **Answers where there were none.** The reduction of `N(x)/Q(x)^n` divides `N` by the quadratic a
