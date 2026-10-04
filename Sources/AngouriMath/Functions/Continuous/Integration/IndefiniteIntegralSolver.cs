@@ -421,6 +421,11 @@ namespace AngouriMath.Functions.Algebra
             // no new square of a sum to take apart the same way.
             if (TreeAnalyzer.IsZero(derivative) || derivative is Sumf or Minusf)
                 return null;
+            // The ring's answer first, where it has one: `x^2/(x cos(x) - sin(x))^2` is
+            // `(x sin(x) + cos(x))/(x cos(x) - sin(x))` there, continuous across the zeros of the
+            // base's derivative, where `-g/v` and the remainder each have a pole that cancels.
+            if (SolveByTrigonometricTowerAnsatz(expr, x) is { } fromTheRing)
+                return fromTheRing;
             var (gTop, gBottom) = CancelledWithFunctionsAsIndeterminates(numerator, rest * derivative, x, expr);
             // g' over v, cancelled: (A' B - A B')/(B^2 v) for g = A/B.
             var above = (gTop.Differentiate(x) * gBottom - gTop * gBottom.Differentiate(x)).InnerSimplified;
