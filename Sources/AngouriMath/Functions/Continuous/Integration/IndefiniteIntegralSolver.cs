@@ -19282,6 +19282,98 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A rational function with symbols in it beside a power that is not whole of a linear,
+        /// <c>R(x) (a + b x)^q</c>, with two or more factors below the bar: split into partial
+        /// fractions over the factors as written, each term beside the power is the question
+        /// the rules for one factor answer. <c>1/(x (1 + x^2) sqrt(a + b x))</c> is
+        /// <c>1/(x sqrt(a + b x)) - x/((1 + x^2) sqrt(a + b x))</c>, and was declined: under
+        /// <c>v = sqrt(a + b x)</c> it is a rational function over a sextic with symbols in it,
+        /// which nothing factors, where each term above is answered at once. It is what the
+        /// tangent substitution makes of Rubi's 4.3.2.1, <c>cot(x)/sqrt(a + b tan(x))</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </summary>
+        /// <remarks>
+        /// Late, so that whatever answers the integrand whole answers first, and only with a symbol
+        /// in it: with numbers the substitution's rational function is split over the rationals.
+        /// </remarks>
+        internal static Entity? SolveARationalFunctionBesideARootOfALinearSplitFirst(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Vars.Any(symbol => symbol != x))
+                return null;
+            Entity? radicand = null;
+            var exponent = ERational.Zero;
+            Entity constant = Number.Integer.One;
+            Entity above = Number.Integer.One;
+            Entity below = Number.Integer.One;
+            var belowFactors = 0;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                if (factor is Powf(var linear, Number.Rational power) && power is not Number.Integer
+                    && TreeAnalyzer.TryGetPolyLinear(linear, x, out var slope, out _) && !TreeAnalyzer.IsZero(slope))
+                {
+                    if (radicand is not null)
+                        return null;
+                    (radicand, exponent) = (linear, underneath ? power.ERational.Negate() : power.ERational);
+                    continue;
+                }
+                // A polynomial, or a whole power of one.
+                var (@base, whole) = factor is Powf(var raised, Number.Integer n) && n.EInteger.CanFitInInt32() ? (raised, n.EInteger.ToInt32Checked()) : (factor, 1);
+                if (!TreeAnalyzer.TryGetPolynomial(@base, x, out var read) || read.Keys.Any(degree => degree.Sign < 0) || read.Values.Any(coefficient => coefficient.ContainsNode(x)))
+                    return null;
+                var written = System.Math.Abs(whole) == 1 ? @base : MathS.Pow(@base, System.Math.Abs(whole));
+                if (underneath == whole > 0)
+                {
+                    below = below == Number.Integer.One ? written : below * written;
+                    belowFactors++;
+                }
+                else
+                    above = above == Number.Integer.One ? written : above * written;
+            }
+            if (radicand is null)
+                return null;
+            // The whole part of the power goes into the rational function, and what is left of it
+            // is a root below the bar, `L^q = L^k / L^(k - q)` with `k` the least whole number past
+            // `q`: `1/(x (1 + x^2) (a + b x)^(3/2))` is split with `a + b x` among the factors and
+            // every term over `sqrt(a + b x)`, the shape the rules for one factor read.
+            var (top, bottom) = (exponent.Numerator, exponent.Denominator);
+            var wholePart = top.Sign > 0 ? top.Add(bottom).Subtract(EInteger.One).Divide(bottom) : top.Divide(bottom);
+            if (wholePart.Sign > 0)
+                above = above == Number.Integer.One ? MathS.Pow(radicand, Number.Integer.Create(wholePart)) : above * MathS.Pow(radicand, Number.Integer.Create(wholePart));
+            else if (wholePart.Sign < 0)
+            {
+                var negated = wholePart.Negate();
+                var power = negated.Equals(EInteger.One) ? radicand : MathS.Pow(radicand, Number.Integer.Create(negated));
+                below = below == Number.Integer.One ? power : below * power;
+                belowFactors++;
+            }
+            var root = MathS.Pow(radicand, Number.Rational.Create(ERational.FromEInteger(wholePart).Subtract(exponent)));
+            if (belowFactors < 2
+                || !Functions.PartialFractions.TrySplitOverWrittenFactors(above, below, x, out var decomposition))
+                return null;
+            // The split comes over the denominator's constant, which goes in front.
+            if (decomposition is Divf(var split, var over) && !over.ContainsNode(x))
+                (decomposition, constant) = (split, constant / over);
+            var terms = Sumf.LinearChildren(decomposition).Where(term => !TreeAnalyzer.IsZero(term)).ToList();
+            if (terms.Count < 2)
+                return null;
+            Entity sum = Number.Integer.Zero;
+            foreach (var term in terms)
+            {
+                var question = term / root;
+                if (Integration.ComputeIndefiniteIntegral(question, x, integrateByParts) is not { } integral
+                    || integral.Nodes.Any(node => node is Integralf))
+                    return null;
+                sum += integral;
+            }
+            return constant * sum;
+        }
+
+        /// <summary>
         /// A rational function over one block quadratic in a power of x, <c>a + b x^n + c x^(2n)</c>
         /// with a symbol in it, split at the block's roots in <c>u = x^n</c>: the single block
         /// <see cref="IntegrateOverBlocksInAPowerOfX"/> leaves to this.

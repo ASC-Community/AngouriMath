@@ -1110,6 +1110,9 @@ namespace AngouriMath.Functions.Algebra
             // One block quadratic in a power of x, split at its roots, which are complex where its
             // discriminant is negative: as late, so that a rule answering the block whole goes first.
             if ((answer = IndefiniteIntegralSolver.SolveByOneBlockInAPowerOfXAtItsRoots(expr, x, integrateByParts)) is { }) return answer;
+            // A rational function with symbols in it beside a root of a linear, split into partial
+            // fractions first, each term the question of one factor beside the root.
+            if ((answer = IndefiniteIntegralSolver.SolveARationalFunctionBesideARootOfALinearSplitFirst(expr, x, integrateByParts)) is { }) return answer;
             // The sign of a real-valued factor is constant between its zeros, and goes in
             // front of the antiderivative of the rest. After every rule that reads the sign
             // where it stands: `cos(x) sgn(sin(x))` is `|sin(x)|` by the substitution, and
