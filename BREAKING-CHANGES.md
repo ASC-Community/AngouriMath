@@ -246,6 +246,22 @@ of the third to the sixth degree, with a symbol in it, that written in `y = x + 
 | `"1/(3*a*b + 3*b^2*x + 3*b*c*x^2 + c^2*x^3)".ToEntity().Integrate("x")`, and its square | `integral(...)` | two logarithms and an arctangent in `x + b/c` |
 | `"x/(a + 8*x - 8*x^2 + 4*x^3 - x^4)".ToEntity().Integrate("x")`, and `1` over it | `integral(...)` | the antiderivative in `x - 1` |
 
+### Half-odd powers of `a + i a sinh` are integrated by the half angle at which they are squares
+
+**Answers where there were none.** `x^3 sqrt(a + i a sinh(e + f x))` was declined, with the rest of
+the 32 of Rubi's 6.1.1 and 6.1.5 that put a half-odd power of `a ± i a sinh` beside a power of `x`,
+six of them after searches past the budget. `1 + i sinh(y)` is `(cosh(y/2) + i sinh(y/2))^2`, so
+such a power is `a^p` times an odd power of `cosh(y/2) ± i sinh(y/2)`, a sum of exponentials of the
+half angle, up to a constant on every interval where both are continuous; it is integrated so now,
+and the answer is the antiderivative times the power as written over that form, which holds on every
+such interval whatever `a` is ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^3*sqrt(a + i*a*sinh(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `x` times exponentials of the half angle |
+| `"sqrt(a + i*a*sinh(e + f*x))/x".ToEntity().Integrate("x")` | `integral(...)` | exponential integrals of the half angle |
+| `"1/sqrt(a + i*a*sinh(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | arctangents and logarithms of `e^((e + f x)/2)` |
+
 ### The hyperbolic functions have antiderivatives, and so does anything rational in `e^(k x)`
 
 An integrand rational in `e^(k x)` becomes a rational function of one variable under
