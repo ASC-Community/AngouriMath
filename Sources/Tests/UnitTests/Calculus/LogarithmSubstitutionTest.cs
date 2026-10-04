@@ -30,7 +30,9 @@ namespace AngouriMath.Tests.Calculus
     /// <para>
     /// The sample points are positive, which is where an integrand built from <c>ln(x)</c> is
     /// real: <c>u = ln(x)</c> is a bijection from the positive reals onto the whole line, so the
-    /// answer holds wherever the integrand does and nothing further is assumed.
+    /// answer holds wherever the integrand does and nothing further is assumed. A radical
+    /// function of whole powers of <c>x</c> is real on both sides of zero, and is compared on
+    /// both.
     /// </para>
     /// </remarks>
     [Trait("Area", "Calculus")]
@@ -114,6 +116,37 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("ln(x)/x^2")]
         [InlineData("ln(x) + x")]
         public void TheNeighboursAreUntouched(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
+        /// A radical function of whole powers of <c>x</c> written through its logarithm, which is
+        /// real on both sides of zero: <c>sinh(2 ln(x))</c> is <c>(x^2 - x^(-2))/2</c> for a
+        /// negative <c>x</c> as well. Each answer is compared on both sides of zero and on both
+        /// sides of 1, where <c>sinh(2 ln(x))</c> changes sign, and holds at every point: the
+        /// exponentials of the logarithm are folded into powers of <c>x</c>, and the answer is in
+        /// those. Rubi's 6.5.3, 226, and 6.6.3, 188.
+        /// </summary>
+        [Theory]
+        [InlineData("1/csch(2*ln(x))^(1/2)")]
+        [InlineData("csch(2*ln(x))^(-3/2)")]
+        [InlineData("1/csch(2*ln(13/10*x))^(1/2)")]
+        [InlineData("1/sech(2*ln(x))^(1/2)")]
+        [InlineData("sqrt(sinh(2*ln(x)))")]
+        [InlineData("sqrt(cosh(2*ln(13/10*x)))")]
+        public void ARadicalFunctionOfAWholePowerOfX(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            var derivative = integral.Substitute("C", 0).Differentiate("x");
+            var original = integrand.ToEntity();
+            foreach (var at in new[] { -2.7, -1.9, -1.3, -0.7, -0.4, 0.4, 0.7, 1.3, 1.9, 2.7 })
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                var difference = Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart);
+                Assert.True(difference / Math.Max(1.0, Math.Abs((double)want.RealPart) + Math.Abs((double)want.ImaginaryPart)) < 1e-9,
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+        }
 
         /// <summary>
         /// What the read must refuse: an <c>x</c> that survives the rewrite, so the integrand is

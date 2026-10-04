@@ -53,7 +53,7 @@ You should be familiar with `git` if you want to contribute to the project. As a
 
 Adding upstream:
 ```
-git remote add upstream https://github.com/AngouriMath/AngouriMath
+git remote add upstream https://github.com/asc-community/AngouriMath
 ```
 
 Adding a branch based on AngouriMath/master to your fork:
@@ -68,7 +68,7 @@ git push --set-upstream origin my-branch
 
 ### Closing an issue
 
-One of the most valuable ways to contribute to the project is to close tickets from [issues](https://github.com/AngouriMath/AngouriMath/issues). If you wish to work on a card, open a pull request on it -- a draft is fine -- saying `Part of #n`; that is the claim, and nothing else is needed.
+One of the most valuable ways to contribute to the project is to close tickets from [issues](https://github.com/asc-community/AngouriMath/issues). If you wish to work on a card, open a pull request on it -- a draft is fine -- saying `Part of #n`; that is the claim, and nothing else is needed.
 
 Then, when you started working on it, we highly recommend opening a draft pull request as soon as possible. This will help everybody see your changes and potentially help you. Then, once PR is ready, open it and wait for a review.
 

@@ -79,5 +79,22 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("(A + B*tan(x))/(a + i*a*tan(x))^2")]
         [InlineData("1/(a + i*a*tan(c + d*x))^3")]
         public void APowerOfAPlusIATangent(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
+        /// A power of a quotient of linears with the imaginary unit in it, beside a power of x the
+        /// substitution for it does not take down to something answered. The scaling of the
+        /// variable simplified it with the symbol beside the imaginary unit, and that ran past two
+        /// minutes before the decline; it is settled in seconds now, so a regression shows as a
+        /// slow suite. Declined is a verdict, and an answer has to differentiate back.
+        /// </summary>
+        [Theory]
+        [InlineData("((1 + i*a*x)/(1 - i*a*x))^(-5/4)/x^2")]
+        [InlineData("((1 + i*a*x)/(1 - i*a*x))^(-5/4)/x^3")]
+        public void AnImaginaryMobiusPowerIsSettled(string integrand)
+        {
+            if (integrand.ToEntity().Integrate("x").Stringize().Contains("integral("))
+                return;
+            DifferentiatesBack(integrand);
+        }
     }
 }
