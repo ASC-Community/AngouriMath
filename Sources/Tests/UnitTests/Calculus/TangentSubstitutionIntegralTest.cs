@@ -235,6 +235,37 @@ namespace AngouriMath.Tests.Calculus
         public void APowerOfTheTangent(string integrand) => DifferentiatesBack(integrand);
 
         /// <summary>
+        /// A power of the cotangent that is not whole below the bar beside the tangent, which is
+        /// the tangent's power above it over <c>cot(x)^p tan(x)^p</c>, a constant on every
+        /// interval where the tangent keeps its sign. Compared where the tangent is positive and
+        /// the integrand real, and where it is negative and the integrand imaginary, which is
+        /// where the constant is what keeps the answer right: it is -1 there for an odd number of
+        /// halves and <c>i</c> for a quarter. Rubi's 4.3.2.1 and 4.3.3.1.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(cot(x)^(7/2)*(a + b*tan(x))^(3/2))")]
+        [InlineData("1/(cot(x)^(5/2)*(a + i*a*tan(x))^(5/2))")]
+        [InlineData("(A + B*tan(x))/(cot(x)^(3/2)*(a + i*a*tan(x)))")]
+        [InlineData("1/(cot(x)^(1/4)*(a + b*tan(x)))")]
+        public void APowerOfTheCotangentBelowTheBarBesideTheTangent(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            Entity Pin(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.7).Substitute("A", 0.9).Substitute("B", 1.4);
+            var derivative = Pin(integral.Substitute("C", 0).Differentiate("x"));
+            var original = Pin(integrand.ToEntity());
+            foreach (var at in new[] { -1.1, -0.4, 0.3, 0.8, 1.2 })
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                var difference = Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart);
+                var scale = Math.Max(1.0, Math.Abs((double)want.RealPart) + Math.Abs((double)want.ImaginaryPart));
+                Assert.True(difference / scale < 1e-9,
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+        }
+
+        /// <summary>
         /// What the neighbours still answer, and must go on answering the same way: the tangent
         /// itself has a rule, which is reached before this and gives the shorter form.
         /// </summary>

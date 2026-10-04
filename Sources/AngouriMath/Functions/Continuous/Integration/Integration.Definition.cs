@@ -863,6 +863,9 @@ namespace AngouriMath.Functions.Algebra
             // the pair of exponents they are. After the reduction, because a power of the secant
             // alone is both rules' and the reduction's answer for it is shorter.
             if ((answer = IndefiniteIntegralSolver.SolveByTrigonometricPowerSubstitution(expr, x)) is { }) return answer;
+            // A power of the cotangent that is not whole beside the tangent, written as the
+            // tangent's with the constant that takes in front, which the substitution below reads.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfTheCotangentInTheTangent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTangentSubstitution(expr, x, integrateByParts)) is { }) return answer;
             // A root of a quadratic in the tangent with a linear term, rotated until it has
             // none: `1/sqrt(a + b tan(x) + c tan(x)^2)` is `1/sqrt(A + C tan(y)^2)` under
