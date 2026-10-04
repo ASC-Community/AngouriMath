@@ -12033,17 +12033,17 @@ namespace AngouriMath.Functions.Algebra
                 _ => MathS.Pow(@base, power),
             };
             Entity inT = Number.Integer.Zero;
-            foreach (var (power, coefficient) in coefficients)
+            foreach (var pair in coefficients)
             {
-                var j = power.ToInt32Checked();
-                inT += coefficient * Raised(a1 - a2 * t, j) * Raised(b2 * t - b1, k - 2 - j);
+                var j = pair.Key.ToInt32Checked();
+                inT += pair.Value * Raised(a1 - a2 * t, j) * Raised(b2 * t - b1, k - 2 - j);
             }
             if (!TreeAnalyzer.TryGetPolynomial(inT.InnerSimplified, t, out var ofT))
                 return null;
             Entity polynomialInX = Number.Integer.Zero;
-            foreach (var (power, s) in ofT)
+            foreach (var pair in ofT)
             {
-                var i = power.ToInt32Checked();
+                var (i, s) = (pair.Key.ToInt32Checked(), pair.Value);
                 if (i < 0 || i > k - 2)
                     return null;
                 polynomialInX += s / (a + (i + 1)) * Raised(first, i + 1) * Raised(second, k - 1 - i);
