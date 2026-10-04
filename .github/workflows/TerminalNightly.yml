@@ -6,7 +6,7 @@ name: 'Terminal release'
 # asked to, and a pull request that touches the workflow or its scripts builds and packs the
 # same way. Only the job that attaches the builds can write to the repository, and it runs no
 # code from it.
-# https://github.com/AngouriMath/AngouriMath/issues/539
+# https://github.com/asc-community/AngouriMath/issues/539
 on:
   release:
     types: [published]

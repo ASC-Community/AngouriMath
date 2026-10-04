@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Ask a question
-    url: https://github.com/AngouriMath/AngouriMath/discussions/categories/q-a
+    url: https://github.com/asc-community/AngouriMath/discussions/categories/q-a
     about: Questions go to Discussions, where they are answered without becoming work items.
   - name: Share an opinion or an idea to talk over
-    url: https://github.com/AngouriMath/AngouriMath/discussions/categories/ideas
+    url: https://github.com/asc-community/AngouriMath/discussions/categories/ideas
     about: An idea that wants discussion before it is a feature request lives here.
