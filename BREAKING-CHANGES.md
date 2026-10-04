@@ -3178,6 +3178,23 @@ Both columns measured on a build, `v2.5.0` against this change.
 | `"x*sin(ln(x))/ln(x)".Integrate("x")` | `integral(x * sin(ln(x)) / ln(x), x)` | `(-1/2 * i) * Ei((2 + i) * ln(x)) + 1/2 * i * Ei((2 - i) * ln(x)) + C` |
 | `"cos(a+b*ln(c*x^n))^2".Integrate("x")` | `integral(cos(a + b * ln(c * x ^ n)) ^ 2, x)` | an antiderivative in `sin` and `cos` of `2 (a + b ln(c x^n))`, beside `x (c x^n)^(-1/n)` |
 
+### Exponentials below the bar beside a power of a linear are integrated to the exponential integral
+
+**Answers where there were none.** `1/(x e^(2x))` was declined where `e^(-2x)/x` was answered, and so
+were `1/((c + d x)(a + a tanh(e + f x)))` and its powers, Rubi's 6.3.1, and the same with `coth`, 6.4.1:
+the rules for an exponential over a linear read it above the bar. Written in the exponential every
+other one is a whole power of, exponentials whose denominator is then a power of that one alone are a
+sum of its powers -- `1/(1 + tanh(z))` is `(1 + e^(-2z))/2` -- and each term over the linear is an
+exponential integral. Where anything else stays below the bar, `1/(x (1 + e^x))`, the integral is not
+of this kind and is declined as before ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x*exp(2*x))".ToEntity().Integrate("x")` | `integral(...)` | `Ei(-2 x)` |
+| `"1/(x*(1 + tanh(x)))".ToEntity().Integrate("x")` | `integral(...)` | `ln(x)/2 + Ei(-2 x)/2` |
+| `"1/((c + d*x)*(a + a*tanh(e + f*x)))".ToEntity().Integrate("x")` | `integral(...)` | a logarithm and an exponential integral |
+| `"1/((c + d*x)^2*(a + a*coth(e + f*x))^3)".ToEntity().Integrate("x")` | `integral(...)` | powers of `c + d x` and exponential integrals |
+
 ### An exponential or a hyperbolic function over several linears is split into partial fractions over them
 
 `e^x/(x (x + 1))` was left unevaluated, where `e^x/x` and `e^x/(x + 1)` were each answered with
