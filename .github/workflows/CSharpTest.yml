@@ -4,7 +4,7 @@ name: 'C# Test'
 # That also means it cannot carry the defect that silenced the benchmark for ninety-eight
 # merged PRs -- a leading "./" in a path filter matches nothing, because filters are globs
 # relative to the repository root. Check that before adding any filter here.
-# https://github.com/AngouriMath/AngouriMath/issues/775
+# https://github.com/asc-community/AngouriMath/issues/775
 on:
   push:
     branches:
@@ -44,7 +44,7 @@ jobs:
 
     # Where the suite's time goes, by the Area trait every test class carries, written to the
     # job's summary. One leg is enough to see the breakdown, and running the tool builds the
-    # library once more. https://github.com/AngouriMath/AngouriMath/issues/1183
+    # library once more. https://github.com/asc-community/AngouriMath/issues/1183
     - name: 'Time by area'
       if: ${{ always() && matrix.os == 'ubuntu-latest' }}
       run: dotnet run AreaTimes
@@ -72,7 +72,7 @@ jobs:
 
     # The corpus gate reports solved / unsolved / wrong / error / timeout rather than pass or
     # fail, and until now those numbers existed only in this job's log, which expires. This is
-    # the artefact half of https://github.com/AngouriMath/AngouriMath/issues/746 item 36; the
+    # the artefact half of https://github.com/asc-community/AngouriMath/issues/746 item 36; the
     # per-commit history half is Sources/Tests/UnitTests/Corpus/corpus-baseline.tsv, which is
     # committed, because an artefact cannot be diffed, cannot be attributed to the commit that
     # moved a number, and expires.

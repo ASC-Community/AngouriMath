@@ -165,6 +165,96 @@ namespace AngouriMath.Core.Transformations
         }
 
         /// <summary>
+        /// Writes an expression as a single fraction, as <see cref="Entity.AsSingleFraction"/>
+        /// does: one numerator over one denominator, nothing divided inside either, and nothing
+        /// cancelled or multiplied out. Where there is no division the input comes back, and where
+        /// dividing by a fraction moves its denominator into the numerator the answer says that
+        /// denominator is nonzero.
+        /// </summary>
+        /// <remarks>
+        /// Held in a nested class for the reason <see cref="NumericContentExtraction"/> is.
+        /// </remarks>
+        public static Transformation AsSingleFraction => SingleFractionHolder.Instance;
+
+        private static class SingleFractionHolder
+        {
+            [ConstantField]
+            internal static readonly Transformation Instance = new SingleFractionTransformation();
+        }
+
+        private sealed class SingleFractionTransformation : Transformation
+        {
+            public override string Name => "single-fraction";
+            public override TransformationRelation Relation => TransformationRelation.Equivalence;
+
+            // Sound: a sum or a product of quotients is defined exactly where each quotient is,
+            // and so is the fraction it is gathered into, since nothing is cancelled. Turning a
+            // quotient over is the one step that moves a denominator out of the way:
+            // (a/b)/(c/d) is (a d)/(b c), which has a value where d is zero and the expression
+            // has none, so the answer carries `provided not d = 0`.
+            public override Soundness Soundness => Soundness.Sound;
+
+            // The two halves are tidied each on its own -- the operands put in order and like
+            // terms collected, which is Simplify's own tidying pass without its search, so
+            // `t + 1 + t^2 + 1` is `2 + t + t^2` -- and the quotient is not, so that no factor of
+            // the numerator meets one of the denominator and cancels.
+            protected override Entity? ApplyCore(Entity input)
+            {
+                // A number is already what it is; there is nothing in it to gather.
+                if (input is Entity.Number)
+                    return input;
+                // A rational number is a fraction too, as it is written: 2/3 + x/2 is (3 x + 4)/6,
+                // not (x + 4/3)/2. Inside a function's argument it folds back when its half is
+                // tidied, since the argument is not gathered.
+                var written = input.Replace(static node => node is Entity.Number.Rational { ERational: var value } and not Entity.Number.Integer
+                    ? new Entity.Divf(Entity.Number.Integer.Create(value.Numerator), Entity.Number.Integer.Create(value.Denominator))
+                    : node);
+                var carried = new List<Entity>();
+                var (numerator, denominator) = Functions.SingleQuotient.OverLeastCommonDenominator(written, carried);
+                if (denominator == Entity.Number.Integer.One && carried.Count == 0)
+                    return input;
+                var top = Tidied(numerator);
+                var bottom = Tidied(denominator);
+                var fraction = bottom == Entity.Number.Integer.One ? top : new Entity.Divf(top, bottom);
+
+                // Only what the new denominator does not already exclude: in (1/x)/(1/x), which
+                // is x/x, the x carried up is still in the denominator.
+                var nonzero = new List<Entity>();
+                foreach (var factor in carried)
+                {
+                    var tidied = Tidied(factor);
+                    if (!AlreadyNonzero(tidied, bottom) && !nonzero.Contains(tidied))
+                        nonzero.Add(tidied);
+                }
+                if (nonzero.Count == 0)
+                    return fraction;
+                var condition = !nonzero[0].EqualTo(0);
+                for (var i = 1; i < nonzero.Count; i++)
+                    condition &= !nonzero[i].EqualTo(0);
+                return new Entity.Providedf(fraction, condition);
+            }
+
+            // Simplify's tidying pass, and the neatening it ends on, which writes `x^2 + -1` as
+            // `x^2 - 1`.
+            private static Entity Tidied(Entity half)
+                => Functions.Simplificator.SimplifyChildren(half).Rewrite(RewriteRules.NumericNeat);
+
+            // Whether `denominator` being nonzero already says `factor` is: a nonzero number
+            // always is, and otherwise each factor of `factor` has to be one of the
+            // denominator's, up to a whole positive power, since a product vanishes exactly where
+            // one of its factors does and a power exactly where its base does.
+            private static bool AlreadyNonzero(Entity factor, Entity denominator)
+            {
+                var excluded = Entity.Mulf.LinearChildren(denominator).Select(Base).ToList();
+                return Entity.Mulf.LinearChildren(factor).All(piece =>
+                    piece is Entity.Number.Complex { IsZero: false } || excluded.Contains(Base(piece)));
+
+                static Entity Base(Entity piece)
+                    => piece is Entity.Powf(var @base, Entity.Number.Integer power) && power.EInteger.Sign > 0 ? @base : piece;
+            }
+        }
+
+        /// <summary>
         /// The rule-based half of <see cref="FactorizationAtLevel"/>, without the polynomial
         /// layer.
         /// </summary>
