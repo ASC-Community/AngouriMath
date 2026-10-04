@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/AngouriMath/AngouriMath">
+  <a href="https://github.com/asc-community/AngouriMath">
     <img src="./.github/additional/readme/icon_white.png" alt="AngouriMath logo" width="200" height="200">
   </a>
 </p>
@@ -21,7 +21,7 @@
   <br>
   <br>
   <a href="https://dotnetfiddle.net/u901sI"><img src="https://img.shields.io/static/v1?label=Fiddle&message=Try%21&color=purple&style=flat&logo=.NET&labelColor=646"></a>
-  <a href="https://mybinder.org/v2/gh/AngouriMath/AngouriMathLab/try"><img src="https://img.shields.io/static/v1?label=Jupyter&message=Try%21&color=purple&style=flat&logo=Jupyter&labelColor=646"></a>
+  <a href="https://mybinder.org/v2/gh/asc-community/AngouriMathLab/try"><img src="https://img.shields.io/static/v1?label=Jupyter&message=Try%21&color=purple&style=flat&logo=Jupyter&labelColor=646"></a>
   <a href="https://discord.gg/YWJEX7a"><img alt="Join our Discord" src="https://img.shields.io/discord/642350046213439489?label=chat%20with%20us&logo=discord&style=flat&labelColor=474&logoColor=white&color=252"></a> 
   <a href="https://github.com/quozd/awesome-dotnet"><img src="https://awesome.re/mentioned-badge.svg"></a>
   
@@ -30,20 +30,20 @@
 <details><summary><strong>Status board</strong></summary>
 
 
-![Solution Build](https://github.com/AngouriMath/AngouriMath/actions/workflows/EverythingBuild.yml/badge.svg)
+![Solution Build](https://github.com/asc-community/AngouriMath/actions/workflows/EverythingBuild.yml/badge.svg)
 
 #### Builds and tests
 |       | Kernel/C# | F# | Interactive | C++ |
 |-------|-----------|----|-------------|-----|
-| Build | ![C#/Kernel Build](https://github.com/AngouriMath/AngouriMath/actions/workflows/CSharpBuild.yml/badge.svg) | ![F# Build](https://github.com/AngouriMath/AngouriMath/actions/workflows/FSharpBuild.yml/badge.svg) | ![Interactive Build](https://github.com/AngouriMath/AngouriMath/actions/workflows/InteractiveBuild.yml/badge.svg) | ![C++ Build](https://github.com/AngouriMath/AngouriMath/actions/workflows/CPPBuild.yml/badge.svg) | 
-| Test  | ![C# Test](https://github.com/AngouriMath/AngouriMath/actions/workflows/CSharpTest.yml/badge.svg) | ![F# Test](https://github.com/AngouriMath/AngouriMath/actions/workflows/FSharpTest.yml/badge.svg) | ![Interactive Test](https://github.com/AngouriMath/AngouriMath/actions/workflows/InteractiveTest.yml/badge.svg) | ![C++ Test](https://github.com/AngouriMath/AngouriMath/actions/workflows/CPPTest.yml/badge.svg) |
+| Build | ![C#/Kernel Build](https://github.com/asc-community/AngouriMath/actions/workflows/CSharpBuild.yml/badge.svg) | ![F# Build](https://github.com/asc-community/AngouriMath/actions/workflows/FSharpBuild.yml/badge.svg) | ![Interactive Build](https://github.com/asc-community/AngouriMath/actions/workflows/InteractiveBuild.yml/badge.svg) | ![C++ Build](https://github.com/asc-community/AngouriMath/actions/workflows/CPPBuild.yml/badge.svg) | 
+| Test  | ![C# Test](https://github.com/asc-community/AngouriMath/actions/workflows/CSharpTest.yml/badge.svg) | ![F# Test](https://github.com/asc-community/AngouriMath/actions/workflows/FSharpTest.yml/badge.svg) | ![Interactive Test](https://github.com/asc-community/AngouriMath/actions/workflows/InteractiveTest.yml/badge.svg) | ![C++ Test](https://github.com/asc-community/AngouriMath/actions/workflows/CPPTest.yml/badge.svg) |
 
 Note, that all tests and builds are tested for the following three operating systems: Windows, Ubuntu, Mac OS.
 
 #### Coverage
 | Kernel/C# | F# | C++ |
 |-----------|----|-----|
-| <a href="https://codecov.io/gh/AngouriMath/AngouriMath"><img src="https://codecov.io/gh/AngouriMath/AngouriMath/branch/master/graph/badge.svg?token=XaA0JGyNrS"/></a> | ??? | ??? |
+| <a href="https://codecov.io/gh/asc-community/AngouriMath"><img src="https://codecov.io/gh/asc-community/AngouriMath/branch/master/graph/badge.svg?token=XaA0JGyNrS"/></a> | ??? | ??? |
 
 #### Versions
 |    | Prerelease | Stable | Downloads |
@@ -53,15 +53,15 @@ Note, that all tests and builds are tested for the following three operating sys
 | Interactive | <a href="https://www.nuget.org/packages/AngouriMath.Interactive"><img alt="Nuget (with prereleases)" src="https://img.shields.io/nuget/vpre/AngouriMath.Interactive?color=blue&label=NuGet&logo=nuget&style=flat-square"></a> | <a href="https://www.nuget.org/packages/AngouriMath.Interactive"><img alt="Nuget" src="https://img.shields.io/nuget/v/AngouriMath.Interactive?color=blue&label=NuGet&logo=nuget&style=flat-square"></a> | <a href="https://www.nuget.org/packages/AngouriMath.Interactive"><img alt="Nuget" src="https://img.shields.io/nuget/dt/AngouriMath.Interactive?color=darkblue&label=Downloads&style=flat-square"></a> |
 | Experimental | <a href="https://www.nuget.org/packages/AngouriMath.Experimental"><img alt="Nuget (with prereleases)" src="https://img.shields.io/nuget/vpre/AngouriMath.Experimental?color=blue&label=NuGet&logo=nuget&style=flat-square"></a> | <a href="https://www.nuget.org/packages/AngouriMath.Experimental"><img alt="Nuget" src="https://img.shields.io/nuget/v/AngouriMath.Experimental?color=blue&label=NuGet&logo=nuget&style=flat-square"></a> | <a href="https://www.nuget.org/packages/AngouriMath.Experimental"><img alt="Nuget" src="https://img.shields.io/nuget/dt/AngouriMath.Experimental?color=darkblue&label=Downloads&style=flat-square"></a> |
 | Terminal | <a href="https://www.nuget.org/packages/AngouriMath.Terminal"><img alt="Nuget (with prereleases)" src="https://img.shields.io/nuget/vpre/AngouriMath.Terminal?color=blue&label=NuGet&logo=nuget&style=flat-square"></a> | <a href="https://www.nuget.org/packages/AngouriMath.Terminal"><img alt="Nuget" src="https://img.shields.io/nuget/v/AngouriMath.Terminal?color=blue&label=NuGet&logo=nuget&style=flat-square"></a> | <a href="https://www.nuget.org/packages/AngouriMath.Terminal"><img alt="Nuget" src="https://img.shields.io/nuget/dt/AngouriMath.Terminal?color=darkblue&label=Downloads&style=flat-square"></a> |
-| C++ | <img alt="GitHub release (latest SemVer including pre-releases)" src="https://img.shields.io/github/v/release/AngouriMath/AngouriMathLab?include_prereleases&label=GH%20Releases"> | WIP | WIP |
+| C++ | <img alt="GitHub release (latest SemVer including pre-releases)" src="https://img.shields.io/github/v/release/asc-community/AngouriMathLab?include_prereleases&label=GH%20Releases"> | WIP | WIP |
 
   
 #### Other info
 | Website | Stars | License |
 |---------|-------|---------|
-| <a href="https://am.angouri.org"><img alt="Website" src="https://img.shields.io/website?down_message=Down&label=Website&up_message=Up&url=https%3A%2F%2Fam.angouri.org&style=flat-square"></a> | <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/AngouriMath/AngouriMath?label=Stars&style=flat-square"> | <img alt="GitHub" src="https://img.shields.io/github/license/AngouriMath/AngouriMath?color=dark-green&label=License&style=flat-square"> |
+| <a href="https://am.angouri.org"><img alt="Website" src="https://img.shields.io/website?down_message=Down&label=Website&up_message=Up&url=https%3A%2F%2Fam.angouri.org&style=flat-square"></a> | <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/asc-community/AngouriMath?label=Stars&style=flat-square"> | <img alt="GitHub" src="https://img.shields.io/github/license/asc-community/AngouriMath?color=dark-green&label=License&style=flat-square"> |
 
-<a href="CONTRIBUTING.md"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/AngouriMath/AngouriMath"></a>
+<a href="CONTRIBUTING.md"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/asc-community/AngouriMath"></a>
 
 If you want, you can add a badge to your repo:
 ```
@@ -129,16 +129,16 @@ As both a demonstration sample and a convenient tool, this repository includes
 tool called AngouriMath.Terminal. It is a CLI-based program to interact with
 AngouriMath (as opposed to API-based interaction, that is, consuming it as a lib).
 
-[**[ Download ]**](https://github.com/AngouriMath/AngouriMathLab/releases)
+[**[ Download ]**](https://github.com/asc-community/AngouriMathLab/releases)
 
 Or build from sources:
 ```
-git clone https://github.com/AngouriMath/AngouriMath
+git clone https://github.com/asc-community/AngouriMath
 cd AngouriMath/Sources/Terminal/AngouriMath.Terminal
 dotnet run -c release
 ```
 
-See the online [Jupyter notebook](https://mybinder.org/v2/gh/AngouriMath/AngouriMathLab/try?filepath=HelloBook.AngouriMath.Interactive.ipynb) on
+See the online [Jupyter notebook](https://mybinder.org/v2/gh/asc-community/AngouriMathLab/try?filepath=HelloBook.AngouriMath.Interactive.ipynb) on
 how to use the F# API of AngouriMath. Note, that the C# API is still available
 via `open AngouriMath` command, then you can call the main library's methods.
 
@@ -542,7 +542,7 @@ to the project. Aside from volunteer donations, you can help developing the proj
 
 ## <a name="license"></a>License & citation
 
-<a href="./LICENSE.md"><img alt="GitHub" src="https://img.shields.io/github/license/AngouriMath/AngouriMath?color=purple&label=License&style=flat-square"></a> [![DOI](https://zenodo.org/badge/224485143.svg)](https://zenodo.org/badge/latestdoi/224485143)
+<a href="./LICENSE.md"><img alt="GitHub" src="https://img.shields.io/github/license/asc-community/AngouriMath?color=purple&label=License&style=flat-square"></a> [![DOI](https://zenodo.org/badge/224485143.svg)](https://zenodo.org/badge/latestdoi/224485143)
 
 The project is open source, but can be used in closed commercial projects. There is no restriction on it
 with the only requirement to keep the MIT license with all distributives of AngouriMath.

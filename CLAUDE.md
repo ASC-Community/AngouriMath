@@ -11,7 +11,7 @@ nothing else is read:
    on a build of each version rather than read off a diff.
 2. **Not answering is a legitimate answer; answering wrongly is not.** Unevaluated means "I could not
    settle this", `NaN` means "this does not exist", and confusing them ships a wrong answer.
-3. **Read [#746](https://github.com/AngouriMath/AngouriMath/issues/746) before a release or a
+3. **Read [#746](https://github.com/asc-community/AngouriMath/issues/746) before a release or a
    version number.** Its `v1.0`–`v9.0` are capability tiers, not shipping versions, and it names
    conditions — measured performance, deliberate package boundaries — that a release has to meet. See
    *Read the roadmap before you release anything* in AGENTS.md.

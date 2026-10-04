@@ -16,7 +16,7 @@
     The version under development, which a local build carries. The NuGet and terminal release
     workflows pass the release tag's version as Version and FileVersion, so what ships carries
     the tag in its assemblies as well as in its package's name.
-    https://github.com/AngouriMath/AngouriMath/issues/1678
+    https://github.com/asc-community/AngouriMath/issues/1678
     -->
     <Version>2.6.0</Version>
 
@@ -49,7 +49,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageReleaseNotes>See it on the website https://am.angouri.org/whatsnew</PackageReleaseNotes>
     <PackageProjectUrl>https://am.angouri.org</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/AngouriMath/AngouriMath</RepositoryUrl>
+    <RepositoryUrl>https://github.com/asc-community/AngouriMath</RepositoryUrl>
     <PackageTags>math, symbolics, latex, evaluate, evaluation, dotnet, parse, simplify, derivation, equation, calculus, symbolic algebra</PackageTags>
     
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>

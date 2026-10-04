@@ -55,6 +55,25 @@ namespace AngouriMath.Tests.Calculus
         public void ARootOfAPerfectSquareIsTheModulus(string integrand) => DifferentiatesBack(integrand);
 
         /// <summary>
+        /// A root of a square inside a sum, where its sign is a factor of nothing:
+        /// <c>1/(1 + (x^2)^(3/2))</c> is <c>1/(1 + x^3)</c> for a positive <c>x</c> and
+        /// <c>1/(1 - x^3)</c> for a negative one, each integrated on its own side of zero. With the
+        /// sign taken out in front, the answer was the first's on both sides. The same with a
+        /// square factor taken out of a root: <c>x/(x + sqrt(x^6))</c> is <c>1/(1 + x^2)</c> and
+        /// <c>1/(1 - x^2)</c>. Rubi's 1.1.3.2 and 1.3.2.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/718">#718</a>
+        /// </summary>
+        [Theory]
+        [InlineData("1/(1+(x^2)^(3/2))")]
+        [InlineData("1/(1+sqrt(x^2))")]
+        [InlineData("x/(1+(x^2)^(3/2))")]
+        [InlineData("(x^2)^(3/2)/(1+(x^2)^(3/2))")]
+        [InlineData("1/(2+sqrt(x^2+2*x+1))")]
+        [InlineData("x/(x+sqrt(x^6))")]
+        [InlineData("(x-sqrt(x^6))/(x*(1-x^4))")]
+        public void ARootOfASquareInsideASumIsIntegratedOnEachSide(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
         /// A square written with symbols: <c>a^2 + 2 a b x + b^2 x^2</c> is <c>(a + b x)^2</c>,
         /// whose discriminant <c>4a^2b^2 - 4a^2b^2</c> <see cref="Entity.InnerSimplified"/> does
         /// not collect, and whose leading coefficient <c>b^2</c> is not a number -- it is
