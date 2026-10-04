@@ -758,10 +758,17 @@ namespace AngouriMath.Functions.Algebra
             // degree-8 polynomial by expanding, both right and only one worth reading. Three
             // tests pinned exactly that and caught this when the split was put in front of the
             // substitution wholesale. The expanding call stays where it was, below.
+            // A whole power below -1 of a linear beside a power that is not whole of another, by the
+            // recurrence that raises the whole power to -1: closed, where the substitution for the
+            // root makes a rational function over a power of a symbolic quadratic.
+            if ((answer = IndefiniteIntegralSolver.SolveANegativePowerOfALinearBesideAPowerOfAnotherByTheRecurrence(expr, x, integrateByParts)) is { }) return answer;
             // A product of powers times a sum that is the derivative of the product with some
             // of the powers raised by one -- `e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))` -- read off
             // the sum, for symbolic exponents too. Before the split, which loses it.
             if ((answer = IndefiniteIntegralSolver.SolveAsTheDerivativeOfAProductOfPowers(expr, x)) is { }) return answer;
+            // Powers of two linears whose exponents sum to a whole number below -2, beside a polynomial of
+            // low degree, by t = L1/L2: a power of t beside a polynomial. The rule above reads the sum -2.
+            if ((answer = IndefiniteIntegralSolver.SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(expr, x)) is { }) return answer;
             // A rational function of x and of a tower of exponentials and logarithms over it,
             // by the Risch-Norman ansatz: a rational function of the same plus logarithms of
             // the denominator's factors, the coefficients unknown and solved for. Before the
@@ -1160,6 +1167,9 @@ namespace AngouriMath.Functions.Algebra
             // A rational function with symbols in it beside a root of a linear, split into partial
             // fractions first, each term the question of one factor beside the root.
             if ((answer = IndefiniteIntegralSolver.SolveARationalFunctionBesideARootOfALinearSplitFirst(expr, x, integrateByParts)) is { }) return answer;
+            // A half-odd power of a constant over a polynomial of either sign, written apart with
+            // its sign in front. After the substitutions, which answer some of these without it.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAHalfOddPowerOfAReciprocalWithItsSign(expr, x, integrateByParts)) is { }) return answer;
             // The sign of a real-valued factor is constant between its zeros, and goes in
             // front of the antiderivative of the rest. After every rule that reads the sign
             // where it stands: `cos(x) sgn(sin(x))` is `|sin(x)|` by the substitution, and

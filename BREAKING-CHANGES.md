@@ -264,6 +264,22 @@ Rubi's `x^m (a + b x^n)^p` and `(a + b x^n)^p (c + d x^n)^q`
 | `"1/(2+3/x^2)^3".Integrate("x")`, `1/(a + b/x^3)` | left unevaluated | an antiderivative |
 | `"(a+b*x^n)*(c+d*x^n)^3".Integrate("x")` | left unevaluated | written out, eight powers of `x` integrated: `a c^3 x + ... + b d^3 x^(4 n + 1)/(4 n + 1)` |
 
+### A half-odd power of a constant over a polynomial of either sign is integrated with its sign
+
+**Answers where there were none.** `sqrt(1/(1 - x^2))`, the arcsine's derivative where it is real,
+was declined, with every half-odd power of a constant over a polynomial whose sign changes: the
+reading that writes a power of a quotient apart does so only where the denominator is positive. For
+a real `Q` other than zero, `(A/Q)^r` is `(A/Q)^r Q^r` times `Q^(-r)`, the first factor's derivative
+being zero wherever it has one, and for a positive number `A` that factor is `A^r sgn(Q)`. The power
+is written so, after the substitutions, and the factor goes in front of the answer
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(1/(1 - x^2))".ToEntity().Integrate("x")` | `integral(...)` | `sgn(1 - x^2) arcsin(x)` |
+| `"(1/(1 - x^2))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(1 - x^2) x/sqrt(1 - x^2)` |
+| `"(c/(a + b*x^2))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `(c/(a + b x^2))^(3/2) (a + b x^2)^(3/2) x/(a sqrt(a + b x^2))` |
+
 ### A whole power of a quotient with a symbol in it is integrated as the quotient of the powers
 
 **Answers where there were none, and a slowdown since 2.5.0 undone.** `(c/(a + c x^2))^2` was
@@ -1183,6 +1199,24 @@ in both quadratics, the cube's coefficients grow past what the reduction takes, 
 | `"(7 + 13*x)/((5 + x + 2*x^2)^3*sqrt(2 + x + 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative |
 | `"sqrt(a + a*sec(x))/(c + d*sec(x))^2".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 
+### Powers of two linears whose exponents sum to a whole number below `-2` are integrated
+
+**Answers where there were none.** `(a + b x)^m (c + d x)^(-3 - m)`, `x^(n - 4)/(a + b x)^n` and
+the rest of Rubi's `(a + b x)^m (c + d x)^n` problems whose exponents sum to a whole number `-k`
+below `-2`, beside a polynomial of degree at most `k - 2`, were declined; the sum `-2` alone was
+answered. Under `t = (a + b x)/(c + d x)` each is a power of `t` beside a polynomial in `t`, so the
+antiderivative is the two powers as written times a polynomial in `x`, exact wherever the
+integrand is defined and taking each `m + i` it divides by to be nonzero, as the integrator does
+everywhere. Numeric exponents that sum so go the same way, so an answer master already gave for
+one, `(a + b x)^(5/2)/(c + d x)^(11/2)`, is written so now, the same function
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a + b*x)^m*(c + d*x)^(-3 - m)".ToEntity().Integrate("x")` | `integral(...)` | the two powers times `-(d (a + b x)^2 (c + d x)/(m + 2) - b (a + b x) (c + d x)^2/(m + 1))/(a d - b c)^2` |
+| `"x^(n - 4)/(a + b*x)^n".ToEntity().Integrate("x")` | `integral(...)` | the two powers times a cubic in `x` and `a + b x`, over `a^3` |
+| `"(a + b*x)^(5/2)/(c + d*x)^(11/2)".ToEntity().Integrate("x")` | `integral(...)` | the two powers times `-(2 d (a + b x)^2 (c + d x)/9 - 2 b (a + b x) (c + d x)^2/7)/(a d - b c)^2` |
+
 ### A polynomial beside the square roots of two linears with symbols in them is integrated
 
 `P(x) sqrt(c + d x) sqrt(e + f x)`, a polynomial beside the roots of two linears with symbols in
@@ -1199,6 +1233,24 @@ arctangent it is ([#718](https://github.com/asc-community/AngouriMath/issues/718
 | `"(A + B*x + C*x^2)*sqrt(c + d*x)*sqrt(e + f*x)".ToEntity().Integrate("x")` | `integral(...)` | a cubic times the two roots, and the same logarithm |
 | `"(A + B*x + C*x^2)*sqrt(c + d*x)/((a + b*x)^3*sqrt(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | the roots over powers of `a + b x`, a logarithm, and an arctangent |
 | `"x^2*sqrt(a + 2*x)*sqrt(c - 3*x)".ToEntity().Integrate("x")` | `integral(...)` | a cubic times the two roots, and an arctangent of `sqrt(6)/2 sqrt(a + 2 x)/sqrt(c - 3 x)` |
+
+### A negative power of a linear beside a root of another is integrated by the recurrence on the power
+
+**Answers where there were none, and faster ones, written differently.** `1/((a + b x)^4 sqrt(c + d x))`
+was declined by 2.5.0, and the unreleased master answered it in fourteen seconds, by the substitution
+for the root, over a power of a quadratic with symbols in it; with a cubic above it, past a minute.
+A whole power `m <= -2` of one linear beside a power that is not whole of another, times a
+polynomial, is integrated now by the recurrence
+`int L1^m L2^n = L1^(m + 1) L2^(n + 1)/((m + 1) D) - (m + n + 2) d/((m + 1) D) int L1^(m + 1) L2^n`,
+`D = b c - a d`, down to `int L2^n/L1`, the polynomial written in powers of `L1` first. The
+answers are the same functions as master's where master gave one, written as powers of the two
+linears ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((a + b*x)^4*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `a/b + x` beside `sqrt(c + d x)`, and the arctangent or logarithm `1/((a + b x) sqrt(c + d x))` integrates to |
+| `"(p + q*x + r*x^2 + s*x^3)/((a + b*x)^5*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | the same, term by term |
+| `"x/((a + b*x)^4*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | the same |
 
 ### A polynomial over a power of a linear beside the root of a quadratic is integrated
 
