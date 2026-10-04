@@ -8,7 +8,7 @@
 # the snapshot was taken from.
 #
 # Exit code 1 means the snapshot no longer describes SymPy, and a human has to re-take it.
-# https://github.com/AngouriMath/AngouriMath/issues/746 item 73.
+# https://github.com/asc-community/AngouriMath/issues/746 item 73.
 
 import json
 import os

@@ -1031,6 +1031,10 @@ namespace AngouriMath.Functions.Algebra
             // same reciprocal: `1/(x^2 sqrt(Q))` is a polynomial over the root of the reversed
             // quadratic, which the rules for those answer.
             if ((answer = IndefiniteIntegralSolver.SolveByTheReciprocalBesideARootOfAQuadratic(expr, x, integrateByParts)) is { }) return answer;
+            // The binomial differential with a symbol in its coefficients, asked here rather than
+            // beside the one with numbers: the rules since then answer what they share with it
+            // more shortly, `1/(a - b x^4)^(1/4)` by two arctangents where this gives four terms.
+            if ((answer = IndefiniteIntegralSolver.SolveABinomialDifferentialWithSymbols(expr, x)) is { }) return answer;
             // A rational function of x and one cube root of a polynomial: no substitution
             // rationalises it, and the elementary ones are logarithms of `L - y` for linear L
             // whose cube agrees with the polynomial at the poles, found by an ansatz.

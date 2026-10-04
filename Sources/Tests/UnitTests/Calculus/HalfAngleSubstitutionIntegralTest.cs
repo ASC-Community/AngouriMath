@@ -235,12 +235,29 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("sec(x)^2/(a + b*cos(x))")]
         [InlineData("tan(x)^4/(a + a*cos(x))")]
         [InlineData("csc(x)^2/(a + a*cos(x))")]
-        public void ARationalFunctionWithSymbolsForCoefficients(string integrand)
+        public void ARationalFunctionWithSymbolsForCoefficients(string integrand) => DifferentiatesBackWithSymbols(integrand);
+
+        /// <summary>
+        /// A power of <c>a + b cos(x)</c> past the square beside a power of the secant. The
+        /// substitution's integrand in <c>t</c> is not simplified where a symbol is in it:
+        /// simplified, it took 43 s at the cube and more than two minutes at the fourth power,
+        /// where integrating it takes a tenth of a second.
+        /// </summary>
+        [Theory]
+        [InlineData("sec(x)^2/(a + b*cos(x))^3")]
+        [InlineData("sec(x)^2/(a + b*cos(x))^4")]
+        [InlineData("sec(c + d*x)^2/(a + b*cos(c + d*x))^4")]
+        [InlineData("sec(x)/(a + b*cos(x))^3")]
+        [InlineData("1/(cos(x)*(a + b*cos(x))^2)")]
+        public void APowerOfALinearInTheCosineBesideASecant(string integrand) => DifferentiatesBackWithSymbols(integrand);
+
+        private static void DifferentiatesBackWithSymbols(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
-            var derivative = integral.Substitute("C", 0).Differentiate("x").Substitute("a", 1.7).Substitute("b", 0.6);
-            var original = integrand.ToEntity().Substitute("a", 1.7).Substitute("b", 0.6);
+            Entity Pin(Entity e) => e.Substitute("a", 1.7).Substitute("b", 0.6).Substitute("c", 0.3).Substitute("d", 1.1);
+            var derivative = Pin(integral.Substitute("C", 0).Differentiate("x"));
+            var original = Pin(integrand.ToEntity());
             var compared = 0;
             foreach (var at in Points)
             {
