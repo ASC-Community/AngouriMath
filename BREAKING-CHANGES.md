@@ -707,6 +707,21 @@ interval between the poles of the tangent, as the substitution's are
 | `"(A + B*tan(x))/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"1/(a + i*a*tan(c + d*x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same in `tan(c + d x)` |
 
+### A cosine and a sine over a power of another such sum are integrated through its derivative
+
+**Answers where there were none.** `sin(x)/(a + b cos(x) + c sin(x))` was declined, with the rest of
+Rubi's 4.7.7 quotients of `A + B cos(x) + C sin(x)` by a whole power of `a + b cos(x) + c sin(x)`,
+the squares and cubes after searches past the budget. The numerator is a multiple of the
+denominator, one of its derivative and a constant, and each power of the denominator is brought
+down to its reciprocal by an identity of derivatives; the reciprocal is answered as before
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin(x)/(a + b*cos(x) + c*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | `c x/(b^2 + c^2) - b ln(a + b cos(x) + c sin(x))/(b^2 + c^2)` and a multiple of the reciprocal's antiderivative |
+| `"1/(a + b*cos(x) + c*sin(x))^2".ToEntity().Integrate("x")` | `integral(...)` | `(b sin(x) - c cos(x))/(a + b cos(x) + c sin(x))` less `a` times the reciprocal's antiderivative, over `b^2 + c^2 - a^2` |
+| `"(k + p*cos(x) + q*sin(x))/(a + b*cos(x) + c*sin(x))^3".ToEntity().Integrate("x")` | `integral(...)` | powers of the denominator and the reciprocal's antiderivative |
+
 ### An integrand with the imaginary unit in it is not simplified by the rule that scales the variable
 
 **Answers where there were none.** The rule that scales the variable by the integrand's one symbol
