@@ -376,20 +376,23 @@ improper fraction is declined before the first division rather than after the la
 | `"(1 - b*x^2)^3/(c*(1 - b*x^2) + a*d*x^2)^3".ToEntity().Integrate("x")` | no answer within a minute | the antiderivative |
 | `"(a + b*x)^(5/2)/(c + d*x)^4".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
 
-### An integral is answered whatever was integrated before it
+### A decline is held at the depth it was made at
 
-**Answers where there were none, depending on what came before.** The integrator remembers what
-it has worked out, declines included, and a rule may answer the question asked and the level or two
-below it and decline the same integrand deeper. A decline made at depth three was held under a key
-that told the question asked from the rest and nothing more, and was served at depth two, where the
-rule answers: `1/((1 + u^2) u^(3/2) (a + b u))` was answered on its own and declined after
-`1/(u^(3/2) (a + b u))/(1 + u^2)` had been integrated on the same thread. A decline is held at the
-depth it was made at now, and an answer at every depth
+**Answers where there were none.** The integrator remembers what it has worked out, declines
+included, and a rule may answer the question asked and the level or two below it and decline the
+same integrand deeper. A decline made at depth three was held under a key that told the question
+asked from the rest and nothing more, and was served at depth two: the search for
+`1/(x^(3/2) (a + c x^4))` declines the root's substitution `2/(w^2 (a + c w^8))` at depth three and
+asks it again at depth two, and the integral was declined. The memo is kept per thread, so a decline
+made deeper in one integral was served the same way to the next. A decline is held at the depth it
+was made at now, and an answer at every depth
 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
-| `"1/((1 + u^2)*u^(3/2)*(a + b*u))".ToEntity().Integrate("u")`, after `"1/(u^(3/2)*(a + b*u))/(1 + u^2)"` | `integral(...)` | an antiderivative in `sqrt(u)`, with arctangents and logarithms |
+| `"1/(x^(3/2)*(a + c*x^4))".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
+| `"1/((a + b/x^3)*x^5)".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
+| `"1/(x^(7/2)*(a + b*x^2 + c*x^4))".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
 
 ### The Hermite reduction's system is solved in one order whatever the spelling
 

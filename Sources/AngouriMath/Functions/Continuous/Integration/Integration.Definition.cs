@@ -245,14 +245,12 @@ namespace AngouriMath.Functions.Algebra
         /// shallower one. Held without the scope it was served there: <c>sec(x)^3</c>, tried and
         /// declined inside another rule's search, then asked for directly and declined from the
         /// cache in two milliseconds. And held with the top told only from the rest, a decline at
-        /// depth three was served at depth two: <c>1/((1 + u^2) u^(3/2) (a + b u))</c> was
-        /// answered on its own and declined after <c>1/(u^(3/2) (a + b u))/(1 + u^2)</c>, whose
-        /// search had declined <c>2/(w^2 (a + b w^2) (w^4 + 1))</c> at depth three, where the
-        /// rule for a power of the variable beside a block does not answer, and the second asks
-        /// it at depth two. The key carries the depth as far as a scope reaches,
-        /// <see cref="ScopeDepth"/>, and a lookup takes a decline only from its own depth and an
-        /// answer from any, since an antiderivative that was found is right wherever it is asked
-        /// for.
+        /// depth three was served at depth two: the search for <c>1/(x^(3/2) (a + c x^4))</c>
+        /// declines the root's substitution <c>2/(w^2 (a + c w^8))</c> at depth three and asks it
+        /// again at depth two, and the integral was declined. The key carries the depth as far as
+        /// a scope reaches, <see cref="ScopeDepth"/>, and a lookup takes a decline only from its
+        /// own depth and an answer from any, since an antiderivative that was found is right
+        /// wherever it is asked for.
         /// </para>
         /// </remarks>
         [System.ThreadStatic] private static Dictionary<(Entity, Entity.Variable, bool, int), Entity?>? answered;
