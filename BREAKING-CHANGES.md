@@ -523,6 +523,20 @@ antiderivative on each side of it, as Rubi's is
 | `"1/((2 + 3*x^2)^(1/4)*(4 + 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same in `(2 + 3 x^2)^(1/4)` |
 | `"1/((-2 + 3*x^2)*(-1 + 3*x^2)^(1/4))".ToEntity().Integrate("x")` | `integral(...)` | `-(arctan(u) + artanh(u))/(2 sqrt(6))`, `u = sqrt(3) x/(sqrt(2) (-1 + 3 x^2)^(1/4))` |
 
+### A power of `csc(x) - sin(x)` or `sec(x) - cos(x)` is integrated as sine and cosine powers
+
+**Answers where there were none.** `(csc(x) - sin(x))^(5/2)` was declined, with the rest of Rubi's
+4.7.7 to a power that is not whole of either difference, either way up. `csc(z) - sin(z)` is
+`cos(z)^2/sin(z)` and `sec(z) - cos(z)` is `sin(z)^2/cos(z)`; written so, the power is a product of
+powers of the sine and cosine, which are integrated through the tangent, a quotient of whole powers
+of the six functions read inside a power as it is
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(csc(x) - sin(x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | powers of `sin(x)` times `(cos(x)^2/sin(x))^(5/2)` |
+| `"1/(sec(x) - cos(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | a root of `cos(x)` with a logarithm and an arctangent, times `(sin(x)^2/cos(x))^(-3/2)` |
+
 ### A product of powers of the trigonometric functions, some not whole, is integrated as sine and cosine powers
 
 **Answers where there were none.** `(a sin(x))^(5/2) sqrt(b sec(x))` was declined, and so were

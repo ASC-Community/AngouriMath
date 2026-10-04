@@ -904,6 +904,9 @@ namespace AngouriMath.Functions.Algebra
             // A product of powers of the trigonometric functions of one argument, some not whole,
             // whose powers of the sine and cosine add up to an even number: the tangent's form
             // times a constant, which the substitution below reads.
+            // A difference of a function and its reciprocal's partner, `csc(z) - sin(z)`, as the
+            // quotient of powers it is, for the rule below.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingADifferenceOfReciprocalFunctionsAsAQuotient(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveAProductOfPowersOfTrigonometricFunctionsThroughTheTangent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTangentSubstitution(expr, x, integrateByParts)) is { }) return answer;
             // A root of a quadratic in the tangent with a linear term, rotated until it has

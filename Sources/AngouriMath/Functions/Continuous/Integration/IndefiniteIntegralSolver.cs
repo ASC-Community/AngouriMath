@@ -8854,33 +8854,36 @@ namespace AngouriMath.Functions.Algebra
                 var (@base, power) = factor is Powf(var b, var p) && p.Evaled is Number.Rational r
                     ? (b, r)
                     : (factor, (Number.Rational)Number.Integer.One);
-                // A constant multiple of a function, and a whole power of one inside the power:
-                // `(b tan(z)^3)^(3/2)`.
-                if (@base is Mulf(var left, var right))
-                    @base = !left.ContainsNode(x) ? right : !right.ContainsNode(x) ? left : @base;
-                if (@base is Powf(var inner, Number.Integer innerPower))
-                    (@base, power) = (inner, (Number.Rational)(power * innerPower));
                 if (underneath)
                     power = (Number.Rational)(-power);
                 if (power is not Number.Integer)
                     notWhole = true;
-                // The powers of the sine and of the cosine each function is.
-                (Entity Of, int OnSine, int OnCosine)? read = @base switch
-                {
-                    Sinf(var of) => (of, 1, 0),
-                    Cosf(var of) => (of, 0, 1),
-                    Tanf(var of) => (of, 1, -1),
-                    Cotanf(var of) => (of, -1, 1),
-                    Secantf(var of) => (of, 0, -1),
-                    Cosecantf(var of) => (of, -1, 0),
-                    _ => null
-                };
-                if (read is null || argument is not null && argument != read.Value.Of)
+                // Inside the power, a constant multiple of a product and quotient of whole powers of
+                // the functions: `(b tan(z)^3)^(3/2)`, and `(cos(z)^2/sin(z))^(5/2)`, which is how
+                // `(csc(z) - sin(z))^(5/2)` is written.
+                if (!TryReadAMonomialInTheTrigonometricFunctions(@base, x, out var parts))
                     return null;
-                var (functionOf, onSine, onCosine) = read.Value;
-                argument = functionOf;
-                sine = (Number.Rational)(sine + power * onSine);
-                cosine = (Number.Rational)(cosine + power * onCosine);
+                foreach (var (function, times) in parts)
+                {
+                    // The powers of the sine and of the cosine each function is.
+                    (Entity Of, int OnSine, int OnCosine)? read = function switch
+                    {
+                        Sinf(var of) => (of, 1, 0),
+                        Cosf(var of) => (of, 0, 1),
+                        Tanf(var of) => (of, 1, -1),
+                        Cotanf(var of) => (of, -1, 1),
+                        Secantf(var of) => (of, 0, -1),
+                        Cosecantf(var of) => (of, -1, 0),
+                        _ => null
+                    };
+                    if (read is null || argument is not null && argument != read.Value.Of)
+                        return null;
+                    var (functionOf, onSine, onCosine) = read.Value;
+                    argument = functionOf;
+                    var weight = (Number.Rational)(power * Number.Integer.Create(times));
+                    sine = (Number.Rational)(sine + weight * onSine);
+                    cosine = (Number.Rational)(cosine + weight * onCosine);
+                }
             }
             if (argument is null || !notWhole
                 || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
@@ -8913,6 +8916,87 @@ namespace AngouriMath.Functions.Algebra
             return constant * varying * answer / form;
         }
 
+
+        /// <summary>
+        /// A difference of a trigonometric function and its reciprocal's partner written as the
+        /// quotient it is: <c>csc(z) - sin(z)</c> is <c>cos(z)^2/sin(z)</c> and <c>sec(z) - cos(z)</c>
+        /// is <c>sin(z)^2/cos(z)</c>, so that a power of either is a product of powers of the sine
+        /// and cosine; the integrand so written is asked as the same question.
+        /// </summary>
+        /// <remarks>
+        /// <c>(csc(x) - sin(x))^(5/2)</c> was declined, with the rest of Rubi's 4.7.7 to a power that
+        /// is not whole of either difference, either way up. As the quotient it is a product of
+        /// powers of the sine and cosine, which the rule beside it reads through the tangent.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingADifferenceOfReciprocalFunctionsAsAQuotient(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var rewritten = expr.Replace(node =>
+            {
+                if (!node.ContainsNode(x))
+                    return node;
+                // Each term a signed function: `csc(z)`, `-sin(z)`, `-1 * cos(z)`.
+                (Entity Function, int Sign) Signed(Entity term, int sign) => term switch
+                {
+                    Mulf(Number.Integer { EInteger: var one }, var f) when one.Equals(EInteger.FromInt32(-1)) => (f, -sign),
+                    Mulf(var f, Number.Integer { EInteger: var one }) when one.Equals(EInteger.FromInt32(-1)) => (f, -sign),
+                    _ => (term, sign)
+                };
+                List<(Entity Function, int Sign)>? signed = node switch
+                {
+                    Minusf(var minuend, var subtrahend) => new() { Signed(minuend, 1), Signed(subtrahend, -1) },
+                    Sumf(var left, var right) when left is not (Sumf or Minusf) && right is not (Sumf or Minusf) => new() { Signed(left, 1), Signed(right, 1) },
+                    _ => null
+                };
+                if (signed is null)
+                    return node;
+                var (first, second) = (signed[0], signed[1]);
+                if (first.Sign == second.Sign)
+                    return node;
+                var (positive, negative) = first.Sign > 0 ? (first.Function, second.Function) : (second.Function, first.Function);
+                return (positive, negative) switch
+                {
+                    (Cosecantf(var a), Sinf(var b)) when a == b => MathS.Pow(MathS.Cos(a), 2) / MathS.Sin(a),
+                    (Sinf(var a), Cosecantf(var b)) when a == b => -MathS.Pow(MathS.Cos(a), 2) / MathS.Sin(a),
+                    (Secantf(var a), Cosf(var b)) when a == b => MathS.Pow(MathS.Sin(a), 2) / MathS.Cos(a),
+                    (Cosf(var a), Secantf(var b)) when a == b => -MathS.Pow(MathS.Sin(a), 2) / MathS.Cos(a),
+                    _ => node
+                };
+            });
+            return rewritten == expr ? null : Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
+        }
+
+        /// <summary>
+        /// <paramref name="expr"/> read as a constant times a product of whole powers of the six
+        /// trigonometric functions, each with how many times it divides or multiplies; false where
+        /// anything else holds <paramref name="x"/>.
+        /// </summary>
+        private static bool TryReadAMonomialInTheTrigonometricFunctions(Entity expr, Entity.Variable x, out List<(Entity Function, int Times)> parts)
+        {
+            var read = new List<(Entity Function, int Times)>();
+            parts = read;
+            return Read(expr, 1);
+
+            bool Read(Entity e, int times)
+            {
+                switch (e)
+                {
+                    case var constant when !constant.ContainsNode(x):
+                        return true;
+                    case Mulf(var left, var right):
+                        return Read(left, times) && Read(right, times);
+                    case Divf(var above, var below):
+                        return Read(above, times) && Read(below, -times);
+                    case Powf(var inner, Number.Integer { EInteger: var power }) when power.CanFitInInt32():
+                        return Read(inner, times * power.ToInt32Unchecked());
+                    case Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf:
+                        read.Add((e, times));
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
 
         /// <summary>
         /// <paramref name="factors"/> with a whole power of a product read as the product of the
