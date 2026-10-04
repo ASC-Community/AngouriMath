@@ -688,6 +688,19 @@ read them as nonzero. They are now decided over one bar, expanded, and at pinned
 | `"e^(3*acoth(a*x))/(c-a*c*x)^3".Integrate("x")`, and over `(c - a c x)^4` | left unevaluated | an antiderivative in `sqrt((a x + 1)/(a x - 1))` |
 | `"e^(2*acoth(a*x))*sqrt(c-a*c*x)/x".Integrate("x")`, and over `x^2` | left unevaluated | an antiderivative in `sqrt(c - a c x)`, by cases on the sign of `c` |
 
+### Two tangents of arguments a constant apart are written apart
+
+**Answers where there were none.** `tan(a + b x) tan(c + b x)` was declined, with the secants,
+cotangents and cosecants the same way and the products whose arguments add to a constant, Rubi's
+4.7.7. By the addition formulas each such product is the functions of the two arguments apart:
+`tan(A) tan(B) = cot(A - B) (tan(A) - tan(B)) - 1` and its kin, for `A - B` or `A + B` a constant
+that is not a multiple of `pi` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"tan(a + b*x)*tan(c + b*x)".ToEntity().Integrate("x")` | `integral(...)` | `cot(a - c) (ln(cos(c + b x)) - ln(cos(a + b x)))/b - x` |
+| `"sec(c - b*x)*sec(a + b*x)".ToEntity().Integrate("x")` | `integral(...)` | `csc(a + c) (ln(cos(c - b x)) - ln(cos(a + b x)))/b` |
+
 ### A trigonometric function of an imaginary multiple of a logarithm is integrated in exponentials
 
 **Answers where there were none.** `tan(a + i ln(x))` and `sin(a + ln(c x^2) sqrt(-1/4))` were
