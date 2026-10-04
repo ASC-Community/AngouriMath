@@ -558,6 +558,24 @@ that `sec(x)^2/(a + b sin(x))` is rational in them rather than declined at once
 | `"tan(x)^4/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 | `"csc(x)^2/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | `(tan(x/2)^3/12 + tan(x/2)/2 - 1/(4 tan(x/2)))/a` |
 
+### A power of `a + i a tan` beside a power of the secant is integrated as an exponential
+
+**Answers where there were none.** `sqrt(a + i a tan(x))/sqrt(c sec(x))` is `sqrt(a/c) e^(i x/2)`
+wherever the cosine is positive, and was declined, with every other pair of such powers, one of them
+not whole, whose exponents add up to a whole number: Rubi's 4.3.1.2 has 43 of them. `a + i a tan(z)` is
+`a sec(z) e^(i z)` on the real line, so the integrand is a constant on every interval where it is
+continuous times a power of the secant and an exponential, which in `w = e^(i z)` is rational in a root
+of `w`. Three of the 43, `(c sec(x))^p/(a + i a tan(x))^p` for `p` a half, three halves and five, were
+answered on the unreleased master through the power of a product taken apart, wrong by a constant
+wherever the cosine is negative; they are answered with the rest now
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + i*a*tan(x))/sqrt(c*sec(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `2/i`, through `e^(i x)` |
+| `"sqrt(c*sec(x))*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `e^(i x/2)` over its derivative |
+| `"(c*sec(x))^(5/2)/(a + i*a*tan(x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | the integrand times a power of `e^(i x)` |
+
 ### A rational function with complex coefficients is integrated through its real and imaginary parts
 
 **Answers where there were none.** `1/((1 + i x)^2 (1 + x^2))` was declined: the rational
