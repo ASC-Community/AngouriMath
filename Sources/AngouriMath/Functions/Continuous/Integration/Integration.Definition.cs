@@ -656,6 +656,9 @@ namespace AngouriMath.Functions.Algebra
             // And either over several linears, split into partial fractions over them first, as the
             // trigonometric rule below splits.
             if ((answer = IndefiniteIntegralSolver.SolveAnExponentialOverSeveralLinears(expr, x)) is { }) return answer;
+            // And exponentials below the bar, where they are whole powers of one exponential and
+            // its powers alone are left below: `1/((c + d x)(a + a tanh(e + f x)))`.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialBelowTheBarBesideAPowerOfALinear(expr, x)) is { }) return answer;
             // And with sines and cosines beside the exponential, written as exponentials: each term
             // is then the exponential's, with a complex rate.
             if ((answer = IndefiniteIntegralSolver.SolveAnExponentialTimesATrigonometricOverLinears(expr, x)) is { }) return answer;

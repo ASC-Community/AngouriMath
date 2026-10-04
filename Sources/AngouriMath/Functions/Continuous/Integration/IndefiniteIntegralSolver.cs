@@ -5310,6 +5310,141 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// Exponentials of one linear below the bar, beside polynomials of <c>x</c> with one below
+        /// the bar: in <c>w</c>, the exponential every other is a whole power of, the exponentials
+        /// are a rational function of <c>w</c>, and where that is a sum of whole powers of <c>w</c>
+        /// -- its denominator in lowest terms a power of <c>w</c> alone -- each term is an
+        /// exponential of a linear over the polynomials, which
+        /// <see cref="SolveAnExponentialOfALinearOverAPowerOfALinear"/> answers onto the exponential
+        /// integral. <c>1 + tanh(z)</c> is <c>2 e^(2z)/(e^(2z) + 1)</c>, so
+        /// <c>1/((c + d x)(a + a tanh(e + f x)))</c> is <c>(1 + e^(-2(e + f x)))/(2 a (c + d x))</c>.
+        /// Rubi's 6.3.1 and 6.4.1, <c>(c + d x)^m (a + a tanh(e + f x))^n</c> and the same with
+        /// <c>coth</c>, for a negative <c>m</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </summary>
+        /// <remarks>
+        /// The rules for an exponential over a linear read it above the bar: <c>e^(-2x)/x</c> was
+        /// answered and <c>1/(x e^(2x))</c> declined. Where the denominator keeps a factor other
+        /// than <c>w</c> after cancelling, <c>1/(x (1 + e^x))</c>, the integral is neither elementary
+        /// nor an exponential integral, and this declines.
+        /// </remarks>
+        internal static Entity? SolveAnExponentialBelowTheBarBesideAPowerOfALinear(Entity expr, Entity.Variable x)
+        {
+            bool IsAnExponential(Entity node) => node is Powf(var b, var p) && !b.ContainsNode(x) && p.ContainsNode(x);
+            if (!expr.Nodes.Any(node => node is Divf(_, var below) && below.Nodes.Any(IsAnExponential)
+                    || node is Powf(var raised, Number.Integer { IsNegative: true }) && raised.Nodes.Any(IsAnExponential)))
+                return null;
+            Entity constant = Number.Integer.One;
+            Entity aboveX = Number.Integer.One;
+            Entity belowX = Number.Integer.One;
+            Entity exponentials = Number.Integer.One;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                if (factor.Nodes.Any(IsAnExponential))
+                {
+                    exponentials = underneath ? exponentials / factor : exponentials * factor;
+                    continue;
+                }
+                // A polynomial, or a whole power of one, above or below the bar.
+                var (@base, power) = factor is Powf(var raised, Number.Integer whole) && whole.EInteger.CanFitInInt32() && !whole.EInteger.IsZero
+                    ? (raised, whole.EInteger.ToInt32Checked()) : (factor, 1);
+                if (underneath)
+                    power = -power;
+                if (!TreeAnalyzer.TryGetPolynomial(@base, x, out var read) || read.Keys.Any(degree => degree.Sign < 0) || read.Values.Any(coefficient => coefficient.ContainsNode(x)))
+                    return null;
+                if (power > 0)
+                    aboveX = aboveX == Number.Integer.One ? MathS.Pow(@base, power) : aboveX * MathS.Pow(@base, power);
+                else
+                    belowX = belowX == Number.Integer.One ? MathS.Pow(@base, -power) : belowX * MathS.Pow(@base, -power);
+            }
+            // Nothing of x below the bar: a polynomial beside the exponentials is the rules' by parts.
+            if (belowX == Number.Integer.One || exponentials.Complexity > 160)
+                return null;
+
+            // One base, and every exponent a rational multiple of the first, its offset included,
+            // so that w is a power of the base at that exponent and no constant is left beside it.
+            Entity? commonBase = null;
+            Entity? unit = null, unitSlope = null, unitOffset = null;
+            var multiples = new Dictionary<Entity, ERational>();
+            foreach (var node in exponentials.Nodes)
+            {
+                if (!IsAnExponential(node) || multiples.ContainsKey(node) || node is not Powf(var @base, var exponent))
+                    continue;
+                if (!TreeAnalyzer.TryGetPolyLinear(exponent, x, out var slope, out var offset) || TreeAnalyzer.IsZero(slope))
+                    return null;
+                if (commonBase is null)
+                {
+                    (commonBase, unit, unitSlope, unitOffset) = (@base, exponent, slope, offset);
+                    multiples[node] = ERational.One;
+                    continue;
+                }
+                if (@base != commonBase
+                    || Functions.PartialFractions.Bare((slope / unitSlope!).Simplify()).Evaled is not Number.Rational ratio || ratio.ERational.IsZero
+                    || !IsTheZeroPolynomial((offset - ratio * unitOffset!).InnerSimplified))
+                    return null;
+                multiples[node] = ratio.ERational;
+            }
+            if (commonBase is null || unit is null)
+                return null;
+            if (commonBase != MathS.e && (commonBase.Evaled is Number.Complex and not Number.Real || commonBase.Evaled is Number.Real { IsNegative: true } || TreeAnalyzer.IsZero(commonBase)))
+                return null;
+            var numerators = EInteger.Zero;
+            var denominators = EInteger.One;
+            foreach (var multiple in multiples.Values)
+            {
+                numerators = numerators.Gcd(multiple.Numerator.Abs());
+                denominators = denominators.Multiply(multiple.Denominator).Divide(denominators.Gcd(multiple.Denominator));
+            }
+            var step = ERational.Create(numerators, denominators);
+            if (multiples.Values.Any(multiple => multiple.Divide(step).ToLowestTerms().Numerator.Abs().CompareTo(EInteger.FromInt32(12)) > 0))
+                return null;
+            var w = Variable.CreateUnique(expr, "w_exp");
+            var inW = exponentials.Replace(node =>
+                multiples.TryGetValue(node, out var multiple) ? MathS.Pow(w, Number.Integer.Create(multiple.Divide(step).ToLowestTerms().Numerator)) : node);
+            if (inW.ContainsNode(x))
+                return null;
+
+            // A sum of whole powers of w: its denominator in lowest terms a power of w alone.
+            var (top, bottom) = Functions.SingleQuotient.Of(inW);
+            if (!TreeAnalyzer.TryGetPolynomial(bottom, w, out var below) || below.Count != 1)
+            {
+                if (!Functions.PolynomialGcd.TryCancel(top, bottom, out var cancelled, maxComplexity: 1024))
+                    return null;
+                (top, bottom) = Functions.SingleQuotient.Of(cancelled is Providedf(var inner, _) ? inner : cancelled);
+                if (!TreeAnalyzer.TryGetPolynomial(bottom, w, out below) || below.Count != 1)
+                    return null;
+            }
+            var lowest = below.Keys.Single();
+            var leading = below[lowest];
+            if (!TreeAnalyzer.TryGetPolynomial(top, w, out var above) || above.Count > 16 || TreeAnalyzer.IsZero(leading))
+                return null;
+
+            Entity sum = Number.Integer.Zero;
+            foreach (var term in above)
+            {
+                if (TreeAnalyzer.IsZero(term.Value))
+                    continue;
+                var power = term.Key.Subtract(lowest);
+                var exponential = power.IsZero ? Number.Integer.One
+                    : MathS.Pow(commonBase, (Number.Rational.Create(step.Multiply(ERational.FromEInteger(power))) * unit).InnerSimplified);
+                var question = constant * term.Value / leading * aboveX * exponential / belowX;
+                var integral = power.IsZero
+                    ? Integration.ComputeIndefiniteIntegral(question, x, false)
+                    : SolveAnExponentialOfALinearOverAPowerOfALinear(question, x) ?? SolveAnExponentialOverSeveralLinears(question, x)
+                        ?? Integration.ComputeIndefiniteIntegral(question, x, false);
+                if (integral is null || integral.Nodes.Any(node => node is Integralf))
+                    return null;
+                sum += integral;
+            }
+            return sum == Number.Integer.Zero ? null : Functions.PartialFractions.Bare(sum.InnerSimplified);
+        }
+
+        /// <summary>
         /// An exponential of a linear times sines and cosines of linears, and a polynomial, over
         /// linears: each sine and cosine is written as exponentials, <c>sin(c x) = (e^(i c x) - e^(-i c x))/(2i)</c>,
         /// the product multiplied out, and every term is an exponential of a linear with a
