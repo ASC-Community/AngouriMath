@@ -328,6 +328,23 @@ polynomial exponent in `u` now, and the question asked in `u`. Rubi's 2.3
 | `"F^(a + b/(c + d*x))/(c + d*x)".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral |
 | `"F^(a + b/(c + d*x)^3)*(c + d*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral of the cube, and the exponential |
 
+### A function of a quotient of two linears is integrated over the quotient's denominator
+
+**Answers where there were none.** `sin((a + b x)/(c + d x))` and its powers were declined, and so
+were the cosine's, the hyperbolic sine's and cosine's and the exponential of the same quotient,
+where `sin(p + k/(c + d x))` is answered in the sine and cosine integrals and `e^(p + k/(c + d x))`
+in the exponential integral. The quotient is one of those: `b/d + (a d - b c)/(d (c + d x))`, by
+polynomial division, for `d` and `a d - b c` not zero. Each such argument is written so and the
+question asked again. Rubi's 4.7.7, 6.1.5 and 6.2.5
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin((a + b*x)/(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | in the sine and cosine integrals of `(a d - b c)/(d (c + d x))` |
+| `"cos((a + b*x)/(c + d*x))^2".ToEntity().Integrate("x")` | `integral(...)` | in the sine and cosine integrals of twice that |
+| `"sinh((a + b*x)/(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | in the exponential integrals of `±(a d - b c)/(d (c + d x))` |
+| `"e^((a + b*x)/(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | in the exponential integral of `(a d - b c)/(d (c + d x))` |
+
 ### A polynomial over a power of a binomial past the cube is integrated
 
 **Answers where there were none.** `P(x)/(a + b x^n)^k` with symbols in the binomial, `n >= 3`, was

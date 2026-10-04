@@ -853,6 +853,9 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant(expr, x, integrateByParts)) is { }) return answer;
             // And `a ± a cosh(y)` under a fractional power: `2a cosh(y/2)^2`, `-2a sinh(y/2)^2`.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare(expr, x, integrateByParts)) is { }) return answer;
+            // A quotient of linears as a function's argument, written over its denominator: a
+            // constant plus a multiple of the reciprocal of a linear, which the rules read.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAQuotientOfLinearsOverItsDenominator(expr, x, integrateByParts)) is { }) return answer;
             // Several trigonometric arguments that are multiples of one linear with an offset or a
             // symbolic slope, written in that linear: before the substitution search, which reads
             // each function on its own.
