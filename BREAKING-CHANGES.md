@@ -634,6 +634,23 @@ left as it was, since the sum is real on both sides of 0 and `x^(j p)` is not. R
 | `"1/(x*sqrt(b*x^(2/3) + a*x))".ToEntity().Integrate("x")` | `integral(...)` | `K` times an antiderivative in `sqrt(b + a x^(1/3))` |
 | `"x/sqrt(1 + 1/(c*x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(x) (x sqrt(x^2 + 1/c^2)/2 - ln(2 x + 2 sqrt(x^2 + 1/c^2))/(2 c^2))`, for any `c` but 0 |
 
+### A quadratic sharing a root off the real line with a linear beside it is written over that root
+
+**Answers where there were none.** `1/((a + i a tan(x)) (c + d tan(x)))`, Rubi's 4.3.2.1, is under the
+tangent substitution a rational function over `(1 + i u)(c + d u)(1 + u^2)`, and `1 + u^2` is
+`(1 + i u)(1 - i u)`: the written factors share a linear. The splits read written factors as coprime,
+and the divisors that take shared factors apart are taken over the rationals, which the imaginary unit
+is not; it was declined, and with a square of `c + d tan(x)` it ran past a minute. With a symbol in the
+denominator, a quadratic that has a root off the real line in common with a linear beside it is now
+written as its leading coefficient times the linears of its two roots, and the shared linear taken as
+one power ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((a + i*a*tan(x))*(c + d*tan(x)))".ToEntity().Integrate("x")` | `integral(...)` | a quotient by `tan(x) - i` and logarithms |
+| `"1/((a + i*a*tan(x))^2*(c + d*tan(x)))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"1/((a + i*a*tan(x))*(c + d*tan(x))^2)".ToEntity().Integrate("x")` | `integral(...)` | the same |
+
 ### A rational function of a sine over a symbolic quadratic in it is integrated over the two roots
 
 **Improvement, not silent.** `sin(x)/(a + b sin(x) + c sin(x)^2)` and everything rational in

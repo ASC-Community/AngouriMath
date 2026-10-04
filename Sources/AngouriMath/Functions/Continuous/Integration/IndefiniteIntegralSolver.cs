@@ -696,6 +696,17 @@ namespace AngouriMath.Functions.Algebra
                     ?? Integration.ComputeIndefiniteIntegral(above / below, x, integrateByParts)) is { } overWhatTheyShare)
                 return overWhatTheyShare;
 
+            // And a linear with a root off the real line that a quadratic beside it shares, which
+            // the divisors over the rationals above cannot see: `1 + i u` beside `1 + u^2`, which is
+            // `(1 + i u)(1 - i u)`, what the tangent substitution makes of Rubi's 4.3.2.1
+            // `1/((a + i a tan(x)) (c + d tan(x)))`. The quadratic is written over the linears of
+            // its roots and the shared one taken as one power, coprime and squarefree for the
+            // splits below.
+            if (OverAComplexRootSharedWithAQuadratic(denominator, x) is { } overTheSharedRoot
+                && (SolveByPartialFractions(numerator / overTheSharedRoot, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(numerator / overTheSharedRoot, x, integrateByParts)) is { } overTheComplexRoot)
+                return overTheComplexRoot;
+
             // Written linear factors with symbols in their coefficients, two or more, one of
             // them to a power: decomposed over the written factors, the coefficients read
             // off derivatives at the roots and each a line. First, before the respellings
@@ -12332,6 +12343,72 @@ namespace AngouriMath.Functions.Algebra
                 changed = true;
             }
             return changed ? product : null;
+        }
+
+        /// <summary>
+        /// <paramref name="denominator"/> with every quadratic factor that has a root off the real line
+        /// in common with a linear factor beside it written as its leading coefficient times the
+        /// linears of its two roots, each linear with such a root written as its slope times
+        /// <c>x - r</c>, and the powers of one linear gathered into one; <see langword="null"/>
+        /// where no quadratic shares such a root. <c>(1 + i x)(1 + x^2)</c> is
+        /// <c>i (x - i)^2 (x + i)</c>.
+        /// </summary>
+        private static Entity? OverAComplexRootSharedWithAQuadratic(Entity denominator, Entity.Variable x)
+        {
+            // With numbers only, the split over the rationals and the imaginary unit answers it as
+            // it is written.
+            if (!denominator.Vars.Any(symbol => symbol != x))
+                return null;
+            var written = new List<(Entity Base, EInteger Power)>();
+            Entity constant = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = constant * factor;
+                    continue;
+                }
+                written.Add(factor is Powf(var @base, Number.Integer n) && n.EInteger.Sign > 0 ? (@base, n.EInteger) : (factor, EInteger.One));
+            }
+            // The roots of the linears that are not real, each with the linear's slope.
+            var roots = new Dictionary<Entity, (Number.Complex Root, Entity Slope)>();
+            foreach (var (@base, _) in written)
+                if (TreeAnalyzer.TryGetPolyLinear(@base, x, out var slope, out var offset) && !TreeAnalyzer.IsZero(slope)
+                    && Functions.PartialFractions.Bare((-offset / slope).Simplify()).Evaled is Number.Complex root && root is not Number.Real)
+                    roots[@base] = (root, slope);
+            if (roots.Count == 0)
+                return null;
+            var gathered = new Dictionary<Entity, EInteger>();
+            void Add(Entity @base, EInteger power) => gathered[@base] = gathered.TryGetValue(@base, out var before) ? before.Add(power) : power;
+            var shared = false;
+            foreach (var (@base, power) in written)
+            {
+                if (roots.TryGetValue(@base, out var linear))
+                {
+                    constant = constant * MathS.Pow(linear.Slope, Number.Integer.Create(power));
+                    Add((x - linear.Root).InnerSimplified, power);
+                    continue;
+                }
+                if (TreeAnalyzer.TryGetPolyQuadratic(@base, x, out var a, out var b, out var c) && !TreeAnalyzer.IsZero(a)
+                    && a.Evaled is Number.Complex && b.Evaled is Number.Complex && c.Evaled is Number.Complex
+                    && roots.Values.FirstOrDefault(candidate => (a * candidate.Root * candidate.Root + b * candidate.Root + c).Evaled is Number.Complex { IsZero: true }) is var (root, _)
+                    && root is not null)
+                {
+                    shared = true;
+                    var other = (-b / a - root).Evaled;
+                    constant = constant * MathS.Pow(a, Number.Integer.Create(power));
+                    Add((x - root).InnerSimplified, power);
+                    Add((x - other).InnerSimplified, power);
+                    continue;
+                }
+                Add(@base, power);
+            }
+            if (!shared)
+                return null;
+            Entity product = constant;
+            foreach (var pair in gathered)
+                product = product * (pair.Value.Equals(EInteger.One) ? pair.Key : MathS.Pow(pair.Key, Number.Integer.Create(pair.Value)));
+            return product;
         }
 
         /// <summary>
