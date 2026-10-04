@@ -23595,6 +23595,136 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power of <c>A + i A tan(z)</c> beside a power of the secant of the same argument, one
+        /// of them not whole and the two adding up to a whole number <c>k</c>, integrated as the
+        /// exponential it is: <c>A + i A tan(z)</c> is <c>A sec(z) e^(i z)</c> on the real line, so
+        /// <c>(A + i A tan(z))^n (c sec(z))^m</c> is a constant on every interval where it is
+        /// continuous times <c>sec(z)^k e^(i n z)</c>, which in <c>w = e^(i z)</c> is
+        /// <c>(2 w/(w^2 + 1))^k w^n</c>, and <c>dz</c> is <c>dw/(i w)</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>sqrt(a + i a tan(x))/sqrt(c sec(x))</c> is <c>sqrt(a/c) e^(i x/2)</c> wherever the
+        /// cosine is positive, and was declined, with every other power of the pair whose exponents
+        /// add up to a whole number: a root of a sum with the imaginary unit in it beside a root of the
+        /// secant is read by no rule, and <c>e^(i x/2)/cos(x)</c>, what the positive sums leave, is
+        /// declined as well. Rubi's 4.3.1.2.
+        /// </para>
+        /// <para>
+        /// The constant is not written: the answer is the integrand times the antiderivative in
+        /// <c>w</c> over what that antiderivative differentiates back to, <c>sec(z)^k (e^(i z))^n</c>
+        /// times <c>i</c> and the slope, a quotient whose logarithmic derivative is zero -- both
+        /// halves have <c>n (tan(z) + i) z'</c> -- so it is constant wherever it is continuous, and
+        /// the answer holds on every interval where the integrand is.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAPowerOfAnImaginaryTangentBesideAPowerOfTheSecant(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Secantf) || !expr.Nodes.Any(node => node is Tanf))
+                return null;
+            Entity? argument = null;
+            var plus = false;
+            Number.Rational? tangentPower = null, secantPower = null;
+            Entity constant = Number.Integer.One;
+            Entity varying = Number.Integer.One;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                varying = underneath ? varying / factor : varying * factor;
+                var (@base, power) = factor is Powf(var b, var p) && p.Evaled is Number.Rational r
+                    ? (b, r)
+                    : (factor, (Number.Rational)Number.Integer.One);
+                if (underneath)
+                    power = (Number.Rational)(-power);
+                if (TryReadAnImaginaryTangent(@base, x, out var tangentOf, out var isPlus))
+                {
+                    if (tangentPower is not null || argument is not null && argument != tangentOf)
+                        return null;
+                    (tangentPower, argument, plus) = (power, tangentOf, isPlus);
+                    continue;
+                }
+                var secant = @base switch
+                {
+                    Secantf => @base,
+                    Mulf(var left, Secantf right) when !left.ContainsNode(x) => right,
+                    Mulf(Secantf left, var right) when !right.ContainsNode(x) => left,
+                    _ => null
+                };
+                if (secant is not Secantf(var secantOf) || secantPower is not null || argument is not null && argument != secantOf)
+                    return null;
+                (secantPower, argument) = (power, secantOf);
+            }
+            if (tangentPower is null || secantPower is null || argument is null
+                || tangentPower is Number.Integer && secantPower is Number.Integer
+                || (tangentPower + secantPower) is not Number.Integer { EInteger: var whole } || !whole.CanFitInInt32()
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
+                return null;
+            var k = whole.ToInt32Checked();
+            var phase = plus ? tangentPower : (Number.Rational)(-tangentPower);
+            // In w = e^(i z): sec(z)^k e^(i n z) dz is (2 w)^k (w^2 + 1)^(-k) w^(n - 1) dw / i.
+            var w = Variable.CreateUnique(expr, "w_exp");
+            var inW = k >= 0
+                ? MathS.Pow(2, k) * MathS.Pow(w, (phase + k - 1).InnerSimplified) / MathS.Pow(MathS.Sqr(w) + 1, k)
+                : MathS.Pow(2, k) * MathS.Pow(MathS.Sqr(w) + 1, -k) * MathS.Pow(w, (phase + k - 1).InnerSimplified);
+            if (Integration.ComputeAsAQuestionOfItsOwn(inW.InnerSimplified, w, integrateByParts) is not { } inWAnswer
+                || inWAnswer.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            var exponential = MathS.Pow(MathS.e, MathS.i * argument);
+            var differentiatesBackTo = MathS.Pow(MathS.Sec(argument), k) * MathS.Pow(exponential, phase);
+            return constant * varying * inWAnswer.Substitute(w, exponential) / (MathS.i * slope * differentiatesBackTo);
+        }
+
+        /// <summary>
+        /// <c>A + i A tan(z)</c> or <c>A - i A tan(z)</c>, with a constant <c>A</c>: the argument,
+        /// and whether the imaginary unit comes with a plus.
+        /// </summary>
+        private static bool TryReadAnImaginaryTangent(Entity sum, Entity.Variable x, out Entity argument, out bool plus)
+        {
+            (argument, plus) = (Number.Integer.Zero, false);
+            if (sum is not Sumf and not Minusf || !sum.ContainsNode(x))
+                return false;
+            Entity free = Number.Integer.Zero;
+            Entity? coefficient = null;
+            Entity? tangentOf = null;
+            foreach (var term in Sumf.LinearChildren(sum))
+            {
+                if (!term.ContainsNode(x))
+                {
+                    free += term;
+                    continue;
+                }
+                if (coefficient is not null)
+                    return false;
+                Entity factors = Number.Integer.One;
+                foreach (var factor in Mulf.LinearChildren(term))
+                    if (factor is Tanf(var inner) && tangentOf is null)
+                        tangentOf = inner;
+                    else if (factor.ContainsNode(x))
+                        return false;
+                    else
+                        factors *= factor;
+                if (tangentOf is null)
+                    return false;
+                coefficient = factors;
+            }
+            if (coefficient is null || tangentOf is null || free == Number.Integer.Zero)
+                return false;
+            var ratio = Functions.PartialFractions.Bare((coefficient / free).InnerSimplified);
+            if (ratio.Evaled is not Number.Complex)
+                ratio = Functions.PartialFractions.Bare(ratio.Simplify());
+            plus = ratio.Evaled == MathS.i.Evaled;
+            if (!plus && ratio.Evaled != (-MathS.i).Evaled)
+                return false;
+            argument = tangentOf;
+            return true;
+        }
+
+        /// <summary>
         /// <c>A cos(y) + i A sin(y)</c> below the bar, written as the exponential it is:
         /// <c>A e^(i y)</c>, and <c>A cos(y) - i A sin(y)</c> as <c>A e^(-i y)</c>. Beside a power
         /// of the cosine above the bar that is an exponential times a power of a cosine, which
