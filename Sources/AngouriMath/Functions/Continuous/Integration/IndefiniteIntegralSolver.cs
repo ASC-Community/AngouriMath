@@ -3551,6 +3551,148 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>(a + b cos(y) + c sin(y))^n</c> for <c>a^2 = b^2 + c^2</c>, <c>y</c> linear in
+        /// <c>x</c> and <c>n</c> half-odd or a negative whole number, in closed form.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>b cos(y) + c sin(y)</c> is <c>R cos(y - phi)</c> for <c>R = sqrt(b^2 + c^2)</c>, so
+        /// the base is <c>a (1 ± cos(y - phi))</c>, a square of the half angle as
+        /// <c>a + a sin(y)</c> is, and <see cref="SolveAHalfPowerOfOnePlusASine"/>'s identity
+        /// holds for it. Rubi's <c>sqrt(5 + 4 cos(x) + 3 sin(x))</c> and the rest of its 4.7.7
+        /// with <c>a^2 = b^2 + c^2</c> were declined or past the budget. The answer needs no
+        /// <c>phi</c>: with <c>S</c> the base and <c>T = b sin(y) - c cos(y)</c>,
+        /// <c>T' = S - a</c>, <c>S' = -T</c> and <c>T^2 = S (2a - S)</c>, the last of which is
+        /// <c>a^2 = b^2 + c^2</c>, and from them
+        /// </para>
+        /// <code>
+        ///     d/dy (T S^(n-1)) = n S^n - a (2n - 1) S^(n-1)
+        /// </code>
+        /// <para>
+        /// which steps <c>n</c> down to <c>1/2</c>, where the integral is <c>2T/sqrt(S)</c>, or
+        /// up to <c>-1/2</c> or <c>-1</c>, where it is
+        /// <c>(2/sqrt(2a)) atanh(T/(sqrt(2a) sqrt(S)))</c> and <c>T/(a S)</c>. Each base is
+        /// checked by differentiating it with those three identities alone.
+        /// </para>
+        /// <para>
+        /// For a real <c>a</c> of either sign: the derivations use only
+        /// <c>S^(3/2) = S sqrt(S)</c> and <c>(sqrt(2a) sqrt(S))^2 = 2a S</c>, which hold for
+        /// the principal powers, and the argument of the hyperbolic arctangent stays between
+        /// <c>-1</c> and <c>1</c>, one less its square being <c>S/(2a)</c>, which is not negative
+        /// since <c>S</c> has the sign of <c>a</c>. An antiderivative on every interval between
+        /// the zeros of <c>S</c>, where <c>T</c> changes sign. <c>a^2 = b^2 + c^2</c> is decided,
+        /// not assumed, and the cosine and the sine are both there: one alone is
+        /// <see cref="SolveAHalfPowerOfOnePlusASine"/>'s.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAPowerOfACosineAndASinePlusTheirAmplitude(Entity expr, Entity.Variable x)
+        {
+            // A constant times one power of the base, the power above the bar or below it.
+            if (!TryReadAsQuotient(expr, out var above, out var below))
+                (above, below) = (expr, Number.Integer.One);
+            Entity constant = Number.Integer.One;
+            Entity? @base = null;
+            ERational? exponent = null;
+            foreach (var (side, sign) in new[] { (above, 1), (below, -1) })
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    if (!factor.ContainsNode(x))
+                    {
+                        constant = sign > 0 ? constant * factor : constant / factor;
+                        continue;
+                    }
+                    if (@base is not null)
+                        return null;
+                    (@base, exponent) = factor is Powf(var inner, var power) && power.Evaled is Number.Rational rational
+                        ? (inner, rational.ERational)
+                        : (factor, ERational.One);
+                    if (sign < 0)
+                        exponent = exponent.Negate();
+                }
+            if (@base is null || exponent is null)
+                return null;
+            var n = exponent;
+            // Half-odd, or a negative whole number, and of a modest size: a positive whole power
+            // is a polynomial in the sine and cosine.
+            var isHalfOdd = n.Denominator.Equals(EInteger.FromInt32(2));
+            if (!isHalfOdd && !(n.Denominator.Equals(EInteger.One) && n.Sign < 0)
+                || n.Abs().CompareTo(ERational.FromInt32(MaximumAmplitudePower)) > 0)
+                return null;
+            // a + b cos(y) + c sin(y), read off the sum.
+            Entity a = Number.Integer.Zero;
+            Entity? b = null, c = null, argument = null;
+            foreach (var term in Sumf.LinearChildren(@base))
+            {
+                if (!term.ContainsNode(x))
+                {
+                    a = a == Number.Integer.Zero ? term : a + term;
+                    continue;
+                }
+                Entity coefficient = Number.Integer.One;
+                Entity? function = null;
+                foreach (var factor in Mulf.LinearChildren(term))
+                    if (!factor.ContainsNode(x))
+                        coefficient = coefficient == Number.Integer.One ? factor : coefficient * factor;
+                    else if (function is null && factor is Sinf or Cosf)
+                        function = factor;
+                    else
+                        return null;
+                var inner = function?.DirectChildren.First();
+                if (inner is null || argument is not null && inner != argument)
+                    return null;
+                argument = inner;
+                if (function is Cosf)
+                {
+                    if (b is not null) return null;
+                    b = coefficient;
+                }
+                else
+                {
+                    if (c is not null) return null;
+                    c = coefficient;
+                }
+            }
+            if (b is null || c is null || argument is null || a == Number.Integer.Zero)
+                return null;
+            if (!TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
+                || rate.Evaled is Number.Complex { IsZero: true })
+                return null;
+            // a^2 = b^2 + c^2, decided rather than assumed.
+            var excess = (MathS.Sqr(a) - MathS.Sqr(b) - MathS.Sqr(c)).InnerSimplified;
+            if (excess.Evaled is not Number.Complex { IsZero: true }
+                && !(excess.Vars.Any() && Functions.PartialFractions.Bare(excess.Simplify()).Evaled is Number.Complex { IsZero: true }))
+                return null;
+            if (a.Evaled is Number.Complex { IsZero: true })
+                return null;
+
+            var s = @base;
+            var t = b * MathS.Sin(argument) - c * MathS.Cos(argument);
+            var half = ERational.Create(1, 2);
+            Entity Integral(ERational power)
+            {
+                if (power.CompareTo(half) == 0)
+                    return 2 * t / MathS.Sqrt(s);
+                if (power.CompareTo(half.Negate()) == 0)
+                    return 2 / MathS.Sqrt(2 * a) * MathS.Hyperbolic.Artanh(t / (MathS.Sqrt(2 * a) * MathS.Sqrt(s)));
+                if (power.CompareTo(ERational.FromInt32(-1)) == 0)
+                    return t / (a * s);
+                var current = Number.Rational.Create(power);
+                if (power.Sign > 0)
+                    return t * MathS.Pow(s, Number.Rational.Create(power.Subtract(ERational.One))) / current
+                        + a * (2 * current - 1) / current * Integral(power.Subtract(ERational.One));
+                return ((current + 1) * Integral(power.Add(ERational.One)) - t * MathS.Pow(s, current)) / (a * (2 * current + 1));
+            }
+            return (constant * Integral(n) / rate).InnerSimplified;
+        }
+
+        /// <summary>
+        /// The largest power, either way, that <see cref="SolveAPowerOfACosineAndASinePlusTheirAmplitude"/>
+        /// steps through: each step is a term of the answer.
+        /// </summary>
+        private const int MaximumAmplitudePower = 8;
+
+        /// <summary>
         /// Fractional powers of <c>a ± a sin(y)</c>, or of <c>a ± a cos(y)</c>, beside anything
         /// rational in the sine and cosine of <c>y</c>, by the half angle at which they are
         /// squares: <c>1 + sin(y)</c> is <c>2 sin(u)^2</c> and <c>1 - sin(y)</c> is

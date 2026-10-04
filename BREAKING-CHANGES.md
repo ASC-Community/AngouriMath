@@ -620,6 +620,22 @@ are right on both sides of zero ([#718](https://github.com/asc-community/Angouri
 | `"x^2/(1 + x^4)^(3/4)".ToEntity().Integrate("x")` | `integral(...)` | logarithms and an arctangent of `(1 + x^4)^(1/4)/x` |
 | `"x^6*(3 + 4*x^4)^(1/4)".ToEntity().Integrate("x")` | `integral(...)` | the same in `(3 + 4 x^4)^(1/4)/x` |
 
+### A power of a cosine and a sine plus their amplitude is integrated
+
+**Answers where there were none.** `sqrt(5 + 4 cos(x) + 3 sin(x))` was declined, with the rest of
+Rubi's 4.7.7 powers of `a + b cos(y) + c sin(y)` with `a^2 = b^2 + c^2`, several after searches past
+the budget. `b cos(y) + c sin(y)` is `R cos(y - phi)` for `R = sqrt(b^2 + c^2)`, so the base is
+`a (1 ± cos(y - phi))`, a square of the half angle; a half-odd power of it, or a negative whole one,
+is integrated in closed form now, through `T = b sin(y) - c cos(y)`, with no `phi` in the answer
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(5 + 4*cos(x) + 3*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | `2 (4 sin(x) - 3 cos(x))/sqrt(5 + 4 cos(x) + 3 sin(x))` |
+| `"1/sqrt(5 + 4*cos(x) + 3*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | `ln((1 + q)/(1 - q))/sqrt(10)` for `q = (4 sin(x) - 3 cos(x))/(sqrt(10) sqrt(5 + 4 cos(x) + 3 sin(x)))` |
+| `"(-5 + 4*cos(x) + 3*sin(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `T sqrt(S)/(3/2) - (40/3) T/sqrt(S)` for `T = 4 sin(x) - 3 cos(x)` and `S` the base, imaginary as the integrand is |
+| `"1/(b*cos(g + f*x) + c*sin(g + f*x) - sqrt(b^2 + c^2))^3".ToEntity().Integrate("x")` | `integral(...)` | `b sin(g + f x) - c cos(g + f x)` times powers of the base |
+
 ### A rational function of the sine and cosine with symbols in it is integrated by the half angle
 
 `sin(x)^2/(a + b cos(x))` was left unevaluated while `sin(x)^2/(2 + 3 cos(x))` was answered. Under
