@@ -523,6 +523,25 @@ antiderivative on each side of it, as Rubi's is
 | `"1/((2 + 3*x^2)^(1/4)*(4 + 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same in `(2 + 3 x^2)^(1/4)` |
 | `"1/((-2 + 3*x^2)*(-1 + 3*x^2)^(1/4))".ToEntity().Integrate("x")` | `integral(...)` | `-(arctan(u) + artanh(u))/(2 sqrt(6))`, `u = sqrt(3) x/(sqrt(2) (-1 + 3 x^2)^(1/4))` |
 
+### A product of powers of the trigonometric functions, some not whole, is integrated as sine and cosine powers
+
+**Answers where there were none.** `(a sin(x))^(5/2) sqrt(b sec(x))` was declined, and so were
+`(d csc(x))^(3/2) sqrt(c sec(x))`, `cos(x)^(7/2)/sin(x)^(7/2)` and the rest of the products of
+powers of the trigonometric functions of one argument, each of which is `sin^M cos^N` times a constant
+on every interval where both are continuous. With the exponents adding up to an even number that is
+`tan^M (1 + tan^2)^(-(M + N)/2)`, a function of the tangent, and with `M` or `N` an odd whole number
+the plain product, which the substitution by the other function answers: Chebyshev's three cases.
+It is integrated so now, and the answer is the integrand times the antiderivative of that form over
+the form, which holds on every such interval, the constants inside the roots whatever their signs.
+Rubi's 4.1.0 to 4.6.0 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a*sin(x))^(5/2)*sqrt(b*sec(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `sqrt(tan(x))` over `tan(x)^(5/2) (1 + tan(x)^2)^(-1)` |
+| `"cos(x)^(7/2)/sin(x)^(7/2)".ToEntity().Integrate("x")` | `integral(...)` | the same over `tan(x)^(-7/2)` |
+| `"(b*tan(x)^3)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same over `tan(x)^(9/2)` |
+| `"(d*sec(x))^(5/2)*sqrt(b*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `sqrt(sin(x))` over `sin(x)^(1/2) cos(x)^(-3)` |
+
 ### The third case of a binomial differential is right for a negative `x` too
 
 **Answers where there were none.** Chebyshev's third case, `x^m (a + b x^n)^(p/q)` with

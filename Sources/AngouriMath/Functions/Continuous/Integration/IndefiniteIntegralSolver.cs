@@ -8796,6 +8796,136 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A product of powers of the trigonometric functions of one argument, some of them not
+        /// whole, which is <c>sin(z)^M cos(z)^N</c> times a constant on every interval where both
+        /// are continuous: with <c>M + N</c> even integrated as
+        /// <c>tan(z)^M (1 + tan(z)^2)^(-(M + N)/2)</c>, and with <c>M</c> or <c>N</c> an odd whole
+        /// number as the plain product, Chebyshev's other two cases.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>sqrt(c sin(x))/sqrt(d cos(x))</c> is <c>sqrt(c/d) sqrt(tan(x))</c> wherever both
+        /// roots are real, and was declined, with the rest of such products the corpus has, a
+        /// constant inside a root among them: <c>(d csc(x))^(3/2) sqrt(c sec(x))</c>,
+        /// <c>(a sin(x))^(5/2) sqrt(b sec(x))</c>, <c>(d sec(x))^(5/2) sqrt(b tan(x))</c>. Each is
+        /// a power of the sine times a power of the cosine, and with the exponents adding up to an
+        /// even number it is a function of the tangent: <c>sin^M cos^N</c> is <c>tan^M cos^(M + N)</c>,
+        /// and <c>cos^(M + N)</c> is <c>(1 + tan^2)^(-(M + N)/2)</c> exactly. Rubi's 4.1.0 to
+        /// 4.6.0.
+        /// </para>
+        /// <para>
+        /// The constant is not written: the answer is the integrand times the antiderivative of the
+        /// tangent's form over that form, a quotient whose logarithmic derivative is zero -- both
+        /// halves have <c>(M cot(z) - N tan(z)) z'</c> -- so it is constant wherever it is
+        /// continuous, and the answer holds on every interval where the integrand is, the constants
+        /// inside the roots whatever their signs.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAProductOfPowersOfTrigonometricFunctionsThroughTheTangent(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Powf(var radicand, Number.Rational fraction) && fraction is not Number.Integer && radicand.ContainsNode(x)))
+                return null;
+            Entity? argument = null;
+            Number.Rational sine = Number.Integer.Zero;
+            Number.Rational cosine = Number.Integer.Zero;
+            var notWhole = false;
+            Entity constant = Number.Integer.One;
+            Entity varying = Number.Integer.One;
+            foreach (var (factor, underneath) in ThroughWholePowersOfProducts(FactorsOfTheIntegrand(expr)))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                varying = underneath ? varying / factor : varying * factor;
+                var (@base, power) = factor is Powf(var b, var p) && p.Evaled is Number.Rational r
+                    ? (b, r)
+                    : (factor, (Number.Rational)Number.Integer.One);
+                // A constant multiple of a function, and a whole power of one inside the power:
+                // `(b tan(z)^3)^(3/2)`.
+                if (@base is Mulf(var left, var right))
+                    @base = !left.ContainsNode(x) ? right : !right.ContainsNode(x) ? left : @base;
+                if (@base is Powf(var inner, Number.Integer innerPower))
+                    (@base, power) = (inner, (Number.Rational)(power * innerPower));
+                if (underneath)
+                    power = (Number.Rational)(-power);
+                if (power is not Number.Integer)
+                    notWhole = true;
+                // The powers of the sine and of the cosine each function is.
+                (Entity Of, int OnSine, int OnCosine)? read = @base switch
+                {
+                    Sinf(var of) => (of, 1, 0),
+                    Cosf(var of) => (of, 0, 1),
+                    Tanf(var of) => (of, 1, -1),
+                    Cotanf(var of) => (of, -1, 1),
+                    Secantf(var of) => (of, 0, -1),
+                    Cosecantf(var of) => (of, -1, 0),
+                    _ => null
+                };
+                if (read is null || argument is not null && argument != read.Value.Of)
+                    return null;
+                var (functionOf, onSine, onCosine) = read.Value;
+                argument = functionOf;
+                sine = (Number.Rational)(sine + power * onSine);
+                cosine = (Number.Rational)(cosine + power * onCosine);
+            }
+            if (argument is null || !notWhole
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
+                return null;
+            Entity form;
+            if ((sine + cosine) is Number.Integer { EInteger: var total } && total.IsEven && total.CanFitInInt32())
+            {
+                // The exponents add up to an even number: a function of the tangent.
+                var tangent = MathS.Tan(argument);
+                var half = -total.ToInt32Checked() / 2;
+                form = half == 0
+                    ? MathS.Pow(tangent, sine)
+                    : MathS.Pow(tangent, sine) * MathS.Pow(1 + MathS.Sqr(tangent), half);
+            }
+            else if (sine is Number.Integer { EInteger: var m } && !m.IsEven || cosine is Number.Integer { EInteger: var n } && !n.IsEven)
+                // An odd whole power of one of them: the plain product, which the substitution by
+                // the other answers, `(d sec(x))^(5/2) sqrt(b tan(x))` being `sin^(1/2) cos^(-3)`
+                // times a constant.
+                form = (sine is Number.Integer { IsZero: true } ? Number.Integer.One : MathS.Pow(MathS.Sin(argument), sine))
+                       * (cosine is Number.Integer { IsZero: true } ? Number.Integer.One : MathS.Pow(MathS.Cos(argument), cosine));
+            else
+                return null;
+            form = form.InnerSimplified;
+            // Already the form, and then the substitution's to answer as it stands.
+            if (varying == form || varying.InnerSimplified == form)
+                return null;
+            if (Integration.ComputeAsTheSameQuestion(form, x, integrateByParts) is not { } answer
+                || answer.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return constant * varying * answer / form;
+        }
+
+
+        /// <summary>
+        /// <paramref name="factors"/> with a whole power of a product read as the product of the
+        /// powers, a negative one on the other side of the bar: <c>1/(cos(x)^(7/2) sqrt(sin(x)))</c>
+        /// comes back from the polynomial term's <c>c/g</c> as <c>(cos(x)^(7/2) sqrt(sin(x)))^(-1)</c>,
+        /// one factor that is no function's power, and the half-angle substitution searched it for
+        /// twenty seconds before the tangent's form was reached.
+        /// </summary>
+        private static IEnumerable<(Entity Factor, bool Underneath)> ThroughWholePowersOfProducts(IEnumerable<(Entity Factor, bool Underneath)> factors)
+        {
+            foreach (var (factor, underneath) in factors)
+            {
+                if (factor is not Powf(Mulf product, Number.Integer { EInteger: var power }) || power.IsZero)
+                {
+                    yield return (factor, underneath);
+                    continue;
+                }
+                var magnitude = Number.Integer.Create(power.Abs());
+                foreach (var child in Mulf.LinearChildren(product))
+                    yield return (magnitude == Number.Integer.One ? child : MathS.Pow(child, magnitude), power.Sign < 0 ? !underneath : underneath);
+            }
+        }
+
+        /// <summary>
         /// A power of the cotangent that is not whole below the bar of an integrand with the
         /// tangent of the same argument in it, written as a power of the tangent above it:
         /// <c>1/cot(z)^p = K tan(z)^p</c> with <c>K = 1/(cot(z)^p tan(z)^p)</c>, which is 1
