@@ -633,6 +633,9 @@ namespace AngouriMath.Functions.Algebra
             // A power of an exponential with a positive base is the exponential of the product,
             // exactly, and only that spelling is one the exponential rules read.
             if ((answer = IndefiniteIntegralSolver.SolveByFlatteningAPowerOfAnExponential(expr, x, integrateByParts)) is { }) return answer;
+            // And any other power of an exponential beside a polynomial below the bar, as a constant
+            // multiple of an exponential wherever it is differentiable.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfAnExponentialAsAMultipleOfOne(expr, x, integrateByParts)) is { }) return answer;
             // An exponential of a quadratic in 1/L beside a power of L, onto the Gaussian under u = 1/L.
             if ((answer = IndefiniteIntegralSolver.SolveAGaussianInAReciprocal(expr, x)) is { }) return answer;
             // An exponential of a multiple of a logarithm is a power of the argument, which is
