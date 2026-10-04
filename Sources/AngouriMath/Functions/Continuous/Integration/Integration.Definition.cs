@@ -237,17 +237,23 @@ namespace AngouriMath.Functions.Algebra
         /// simplifying and a change count is therefore never still.
         /// </para>
         /// <para>
-        /// <b>A decline is held with the scope it was made in.</b> Five rules answer only the
-        /// question asked (<see cref="AnsweringTheQuestionAsked"/>) and decline the same
-        /// integrand one level down, so a <see langword="null"/> computed at depth two says
-        /// nothing about depth one — and once held without the scope it was served to the
-        /// top-level ask: <c>sec(x)^3</c>, tried and declined inside another rule's search, then
-        /// asked for directly and declined from the cache in two milliseconds. The key carries
-        /// the scope, and a lookup takes a decline only from its own scope and an answer from
-        /// either, since an antiderivative that was found is right wherever it is asked for.
+        /// <b>A decline is held with the scope it was made in.</b> Rules answer only the question
+        /// asked (<see cref="AnsweringTheQuestionAsked"/>), or it and one or two levels below it
+        /// (<see cref="AnsweringTheQuestionAskedOrOneBelow"/>,
+        /// <see cref="AnsweringTheQuestionAskedOrTwoBelow"/>), and decline the same integrand
+        /// deeper, so a <see langword="null"/> computed at one depth says nothing about a
+        /// shallower one. Held without the scope it was served there: <c>sec(x)^3</c>, tried and
+        /// declined inside another rule's search, then asked for directly and declined from the
+        /// cache in two milliseconds. And held with the top told only from the rest, a decline at
+        /// depth three was served at depth two: the search for <c>1/(x^(3/2) (a + c x^4))</c>
+        /// declines the root's substitution <c>2/(w^2 (a + c w^8))</c> at depth three and asks it
+        /// again at depth two, and the integral was declined. The key carries the depth as far as
+        /// a scope reaches, <see cref="ScopeDepth"/>, and a lookup takes a decline only from its
+        /// own depth and an answer from any, since an antiderivative that was found is right
+        /// wherever it is asked for.
         /// </para>
         /// </remarks>
-        [System.ThreadStatic] private static Dictionary<(Entity, Entity.Variable, bool, bool), Entity?>? answered;
+        [System.ThreadStatic] private static Dictionary<(Entity, Entity.Variable, bool, int), Entity?>? answered;
 
         /// <summary>The settings <see cref="answered"/> was filled under.</summary>
         [System.ThreadStatic] private static object?[]? answeredUnder;
@@ -345,6 +351,17 @@ namespace AngouriMath.Functions.Algebra
         /// parts on a power of an inverse function, and the remainder of the step on that.
         /// </summary>
         internal static bool AnsweringTheQuestionAskedOrTwoBelow => descentDepth <= 3;
+
+        /// <summary>
+        /// The depth as far as a scope tells one depth from another: 1 for the question asked, 2
+        /// and 3 for the levels <see cref="AnsweringTheQuestionAskedOrOneBelow"/> and
+        /// <see cref="AnsweringTheQuestionAskedOrTwoBelow"/> reach, and 4 for every level past
+        /// them, where every scoped rule declines alike.
+        /// </summary>
+        private static int ScopeDepth => System.Math.Min(descentDepth, DeepestScope);
+
+        /// <summary>The deepest <see cref="ScopeDepth"/>.</summary>
+        private const int DeepestScope = 4;
 
         /// <summary>
         /// <paramref name="expr"/> integrated as a question in its own right rather than as a
@@ -485,7 +502,7 @@ namespace AngouriMath.Functions.Algebra
             // would otherwise be answered with, without the rule ever being reached to say that a
             // second pass could answer it.
             if (answer is not null && memo is not null && stamp is not null && SettingsState.StillHolds(stamp))
-                memo[(Normalized(expr, x), x, integrateByParts, true)] = answer;
+                memo[(Normalized(expr, x), x, integrateByParts, 1)] = answer;
             return answer;
         }
 
@@ -549,12 +566,13 @@ namespace AngouriMath.Functions.Algebra
             var into = answered;
             var stamp = answeredUnder;
 
-            var key = (expr, x, integrateByParts, AnsweringTheQuestionAsked);
+            var depth = ScopeDepth;
+            var key = (expr, x, integrateByParts, depth);
             if (into.TryGetValue(key, out var already))
                 return already;
-            var otherScope = (expr, x, integrateByParts, !AnsweringTheQuestionAsked);
-            if (into.TryGetValue(otherScope, out var elsewhere) && elsewhere is not null)
-                return elsewhere;
+            for (var other = 1; other <= DeepestScope; other++)
+                if (other != depth && into.TryGetValue((expr, x, integrateByParts, other), out var elsewhere) && elsewhere is not null)
+                    return elsewhere;
 
             // Whether the descent ran out *inside this computation*, which is the only truncation
             // that says anything about this key. The flag is one per thread, so it is cleared
@@ -651,6 +669,12 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveAnExponentialOfAHyperbolicFunctionBesideItsDerivative(expr, x, integrateByParts)) is { }) return answer;
             // `A + i A tan(z)` is `A e^(i z)/cos(z)`, which beside a polynomial is a shape the
             // closed rules answer, where the imaginary unit in the coefficient is read by none.
+            // The same identity beside a power of the secant, where the powers are not whole and add
+            // up to a whole number: an exponential over a power of the cosine, in e^(i z). Before the
+            // rule below, which writes a power of the identity that is not whole as the power of a
+            // product and takes it apart, and so answers (c sec)^(5/2)/(a + i a tan)^(5/2) with the
+            // wrong constant wherever the cosine is negative.
+            if ((answer = IndefiniteIntegralSolver.SolveAPowerOfAnImaginaryTangentBesideAPowerOfTheSecant(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAnImaginaryTangentAsAnExponential(expr, x, integrateByParts)) is { }) return answer;
             // And `A cos(z) + i A sin(z)`, which is `A e^(i z)`, where no rotation is real.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAnImaginarySumOfACosineAndASineAsAnExponential(expr, x, integrateByParts)) is { }) return answer;
@@ -704,6 +728,9 @@ namespace AngouriMath.Functions.Algebra
             // A power of the variable times a sine or cosine of a logarithm, where two rounds of
             // parts close on the integrand: `int x^m sin(a + b ln(c x^n))` in closed form.
             if ((answer = IndefiniteIntegralSolver.SolveAPowerTimesATrigonometricOfALogarithm(expr, x, integrateByParts)) is { }) return answer;
+            // The same with an imaginary coefficient on the logarithm, where the closed form divides
+            // by zero: in exponentials, powers of the variable.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingATrigonometricFunctionOfAnImaginaryLogarithmInExponentials(expr, x, integrateByParts)) is { }) return answer;
             // A logarithm of a quotient that cancels with the functions in it as
             // indeterminates, which is how an inverse hyperbolic function of a hyperbolic
             // one arrives: atanh(tanh(u)) is 1/2 ln(e^(2u)) once its quotient is cancelled.
@@ -821,11 +848,17 @@ namespace AngouriMath.Functions.Algebra
             // cosine, by the half angle at which they are squares: `1 + sin(y)` is `2 sin(u)^2`. Before
             // the substitution search, which spent twenty seconds on the radicals of the sine.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusASineIsASquare(expr, x, integrateByParts)) is { }) return answer;
+            // And symbolic powers of `a ± a sin(y)` beside a power of `g cos(y)`, by u = sin(y), where
+            // `(1 + u)(1 - u)` is the cosine's square: the half angle wants numeric powers, and the
+            // substitution search spent the budget on these.
+            if ((answer = IndefiniteIntegralSolver.SolveSymbolicPowersOfOnePlusMinusASineThroughTheSine(expr, x, integrateByParts)) is { }) return answer;
             // And a half-odd power of a +- a sec(y), which is that square over cos(y): by the half-angle
             // tangent, in which the whole is rational beside one root.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant(expr, x, integrateByParts)) is { }) return answer;
             // And `a ± a cosh(y)` under a fractional power: `2a cosh(y/2)^2`, `-2a sinh(y/2)^2`.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare(expr, x, integrateByParts)) is { }) return answer;
+            // The hyperbolic sine's, off the real line: 1 + i sinh(y) is (cosh(y/2) + i sinh(y/2))^2.
+            if ((answer = IndefiniteIntegralSolver.SolveAHalfOddPowerOfOnePlusAnImaginaryHyperbolicSine(expr, x, integrateByParts)) is { }) return answer;
             // Several trigonometric arguments that are multiples of one linear with an offset or a
             // symbolic slope, written in that linear: before the substitution search, which reads
             // each function on its own.
@@ -874,6 +907,10 @@ namespace AngouriMath.Functions.Algebra
             // A power of the cotangent that is not whole beside the tangent, written as the
             // tangent's with the constant that takes in front, which the substitution below reads.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfTheCotangentInTheTangent(expr, x, integrateByParts)) is { }) return answer;
+            // A product of powers of the trigonometric functions of one argument, some not whole,
+            // whose powers of the sine and cosine add up to an even number: the tangent's form
+            // times a constant, which the substitution below reads.
+            if ((answer = IndefiniteIntegralSolver.SolveAProductOfPowersOfTrigonometricFunctionsThroughTheTangent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTangentSubstitution(expr, x, integrateByParts)) is { }) return answer;
             // A root of a quadratic in the tangent with a linear term, rotated until it has
             // none: `1/sqrt(a + b tan(x) + c tan(x)^2)` is `1/sqrt(A + C tan(y)^2)` under
@@ -967,6 +1004,9 @@ namespace AngouriMath.Functions.Algebra
             if (expr is Entity.Sumf or Entity.Minusf
                 && (answer = IndefiniteIntegralSolver.SolveByGatheringACommonPolynomialFactorOfASum(expr, x, integrateByParts)) is { })
                 return answer;
+            // A power of the secant that is not whole beside the cosine, written as the cosine's
+            // with the constant that takes in front, which the substitutions below read.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfTheSecantInTheCosine(expr, x, integrateByParts)) is { }) return answer;
             // The half-angle substitution goes *after* linearity, and that is not a preference.
             // It fires on anything built from sines and cosines, and it answers `cos(x) + 1` with
             // a correct expression in tan(x/2) some forty characters long where splitting the sum
@@ -1081,6 +1121,10 @@ namespace AngouriMath.Functions.Algebra
             // an ansatz finds it or nothing does. After the substitutions, which answer the
             // linear-exponent cases in their own terms.
             if ((answer = IndefiniteIntegralSolver.SolveByExponentialAnsatz(expr, x)) is { }) return answer;
+            // An exponential of a polynomial in the reciprocal of a linear that is not a Gaussian,
+            // under the Gaussian's substitution `u = 1/L`. After the ansatz, which answers some of
+            // these in the base: `f^(a + b/x)/x^4` is `f^(a + b/x)` times a polynomial in `1/x`.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialInTheReciprocalOfALinear(expr, x, integrateByParts)) is { }) return answer;
             // A polynomial times a fractional power of a base that holds a function of x,
             // answered as a polynomial times the next power of the base: a linear system in
             // the polynomial's coefficients, exact, and volunteered at any depth.
