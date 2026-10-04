@@ -232,6 +232,25 @@ Rubi's `x^m (a + b x^n)^p` and `(a + b x^n)^p (c + d x^n)^q`
 | `"1/(2+3/x^2)^3".Integrate("x")`, `1/(a + b/x^3)` | left unevaluated | an antiderivative |
 | `"(a+b*x^n)*(c+d*x^n)^3".Integrate("x")` | left unevaluated | written out, eight powers of `x` integrated: `a c^3 x + ... + b d^3 x^(4 n + 1)/(4 n + 1)` |
 
+### A whole power of a quotient with a symbol in it is integrated as the quotient of the powers
+
+**Answers where there were none, and a slowdown since 2.5.0 undone.** `(c/(a + c x^2))^2` was
+declined, after twenty-six seconds, while `c^2/(a + c x^2)^2`, the same function, was answered at
+once: the table reads the quotient of the powers and nothing read the power of the quotient. It is
+written so now wherever the quotient is of two polynomials in `x` with a symbol in them and what
+it leaves above the bar is a monomial, the table's `x^m/(a + b x^n)^p`; that is exact for a whole
+power. That is
+also how the substitution `u = x^2` writes `x/(a + c x^4)^2` since 2.5.0, having simplified
+`1/(a/c + u^2)^2`, and that integrand took twenty seconds where 2.5.0 took a tenth of one
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)`, after a minute | a quotient and an arctangent or a logarithm, by the sign of `a c` |
+| `"(1/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"(x/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"x/(a + c*x^4)^2".ToEntity().Integrate("x")` | the answer, in 0.1 s; 22 s on the unreleased master | the answer, in 0.06 s |
+
 ### A polynomial with symbols in it that is a binomial or an even quartic in a shifted variable is integrated in it
 
 **Answers where there were none.** `1/(c^2 x^3 + 3 b c x^2 + 3 b^2 x + 3 a b)` was left unevaluated,
