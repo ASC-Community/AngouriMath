@@ -4153,6 +4153,56 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>tan(y) tan(2y)</c> written <c>sec(2y) - 1</c>, and the integrand asked again in the
+        /// one argument <c>2y</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>tan(y)</c> is <c>(1 - cos(2y))/sin(2y)</c>, so <c>tan(y) tan(2y)</c> is
+        /// <c>(1 - cos(2y))/cos(2y)</c>, which is <c>sec(2y) - 1</c> wherever both sides are
+        /// defined; at the zeros of <c>cos(y)</c> the left is <c>-2</c> as a limit, which the right
+        /// is. Rubi's 4.7.7 has <c>sec(2(a + b x))^k sqrt(c tan(a + b x) tan(2(a + b x)))</c> and
+        /// its kin, a half-odd power of <c>c sec(2y) - c</c> beside powers of the secant or cosine
+        /// of <c>2y</c>, which <see cref="SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant"/>
+        /// answers in that one argument; with two arguments nothing read them.
+        /// </para>
+        /// <para>
+        /// The same question in another spelling, so asked as the same question. The answer is
+        /// what that rule gives, exact where the integrand is real.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByWritingATangentTimesThatOfItsDoubleThroughTheSecant(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            static bool IsTwice(Entity twice, Entity once)
+                => (twice - 2 * once).Expand().InnerSimplified.Evaled is Number.Complex { IsZero: true };
+            var found = false;
+            var rewritten = expr.Replace(node =>
+            {
+                if (node is not Mulf || !node.ContainsNode(x))
+                    return node;
+                var factors = Mulf.LinearChildren(node).ToList();
+                var single = factors.FindIndex(factor => factor is Tanf(var y) && y.ContainsNode(x)
+                    && factors.Any(other => other is Tanf(var z) && z != y && IsTwice(z, y)));
+                if (single < 0)
+                    return node;
+                var once = ((Tanf)factors[single]).Argument;
+                var twice = factors.FindIndex(other => other is Tanf(var z) && z != once && IsTwice(z, once));
+                var doubled = ((Tanf)factors[twice]).Argument;
+                Entity others = Number.Integer.One;
+                for (var i = 0; i < factors.Count; i++)
+                    if (i != single && i != twice)
+                        others = others == Number.Integer.One ? factors[i] : others * factors[i];
+                found = true;
+                // Spread over the difference, so that a root of it reads as `c sec(2y) - c`.
+                return others == Number.Integer.One ? MathS.Sec(doubled) - 1 : others * MathS.Sec(doubled) - others;
+            });
+            if (!found)
+                return null;
+            return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
+        }
+
+        /// <summary>
         /// <paramref name="expr"/> as what it is a product of beside <paramref name="bases"/>, and
         /// the sum of the exponents of each base in it, read through products, quotients and
         /// whole powers of them.
