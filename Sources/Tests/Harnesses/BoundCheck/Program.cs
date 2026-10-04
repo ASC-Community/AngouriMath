@@ -115,6 +115,10 @@ static class Program
         "abs(x)^2", "abs(x^2)", "abs(-x)", "abs(x)/x", "x/abs(x)",
         "sgn(x)*abs(x)", "abs(x)*sgn(x)",
         "sqrt(x)*sqrt(x)", "sqrt(-x)", "sqrt(1/x)", "1/sqrt(x)",
+        // A power of a reciprocal beside a power of its denominator, which splitting the power
+        // of the quotient got wrong for every negative x.
+        // https://github.com/asc-community/AngouriMath/issues/1734
+        "sqrt(x)*sqrt(1/x)", "sqrt(1/x)*x", "(1/x)^(3/2)*x^(3/2)", "sec(x)^(3/2)*cos(x)^(3/2)",
         "(-x)^(1/3)", "(-x)^(1/2)", "(2*x)^(1/2)",
         "tan(x)*cotan(x)", "sin(x)/cos(x)", "sin(x)^2+cos(x)^2",
         "arcsin(x)+arccos(x)", "arctan(x)+arccotan(x)",

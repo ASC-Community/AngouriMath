@@ -758,10 +758,17 @@ namespace AngouriMath.Functions.Algebra
             // degree-8 polynomial by expanding, both right and only one worth reading. Three
             // tests pinned exactly that and caught this when the split was put in front of the
             // substitution wholesale. The expanding call stays where it was, below.
+            // A whole power below -1 of a linear beside a power that is not whole of another, by the
+            // recurrence that raises the whole power to -1: closed, where the substitution for the
+            // root makes a rational function over a power of a symbolic quadratic.
+            if ((answer = IndefiniteIntegralSolver.SolveANegativePowerOfALinearBesideAPowerOfAnotherByTheRecurrence(expr, x, integrateByParts)) is { }) return answer;
             // A product of powers times a sum that is the derivative of the product with some
             // of the powers raised by one -- `e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))` -- read off
             // the sum, for symbolic exponents too. Before the split, which loses it.
             if ((answer = IndefiniteIntegralSolver.SolveAsTheDerivativeOfAProductOfPowers(expr, x)) is { }) return answer;
+            // Powers of two linears whose exponents sum to a whole number below -2, beside a polynomial of
+            // low degree, by t = L1/L2: a power of t beside a polynomial. The rule above reads the sum -2.
+            if ((answer = IndefiniteIntegralSolver.SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(expr, x)) is { }) return answer;
             // A rational function of x and of a tower of exponentials and logarithms over it,
             // by the Risch-Norman ansatz: a rational function of the same plus logarithms of
             // the denominator's factors, the coefficients unknown and solved for. Before the
@@ -777,6 +784,9 @@ namespace AngouriMath.Functions.Algebra
             // is `x^2/(L^2 sqrt(q))` cancelled, and was five terms over `L^5 (1 + L sqrt(q))`
             // each searched for seconds when the reduction reached it first.
             if ((answer = IndefiniteIntegralSolver.SolveByCancellingWithFunctionsAsIndeterminates(expr, x, integrateByParts)) is { }) return answer;
+            // A quotient by the square of a base with a function in it, by parts against the base's
+            // reciprocal where the base's derivative makes the rest exact.
+            if ((answer = IndefiniteIntegralSolver.SolveByPartsAgainstTheReciprocalOfASquaredBase(expr, x)) is { }) return answer;
             // A polynomial over a power of a linear and something that is not a polynomial,
             // the polynomial written in powers of the linear at its root: the part the power
             // divides goes over the rest alone. Before the split, so that the whole polynomial
@@ -848,14 +858,29 @@ namespace AngouriMath.Functions.Algebra
             // cosine, by the half angle at which they are squares: `1 + sin(y)` is `2 sin(u)^2`. Before
             // the substitution search, which spent twenty seconds on the radicals of the sine.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusASineIsASquare(expr, x, integrateByParts)) is { }) return answer;
+            // And a power of `a + b cos(y) + c sin(y)` with `a^2 = b^2 + c^2`, the same square
+            // turned by a phase, in closed form: the substitution search spent the budget on it.
+            if ((answer = IndefiniteIntegralSolver.SolveAPowerOfACosineAndASinePlusTheirAmplitude(expr, x)) is { }) return answer;
+            // And symbolic powers of `a ± a sin(y)` beside a power of `g cos(y)`, by u = sin(y), where
+            // `(1 + u)(1 - u)` is the cosine's square: the half angle wants numeric powers, and the
+            // substitution search spent the budget on these.
+            if ((answer = IndefiniteIntegralSolver.SolveSymbolicPowersOfOnePlusMinusASineThroughTheSine(expr, x, integrateByParts)) is { }) return answer;
             // And a half-odd power of a +- a sec(y), which is that square over cos(y): by the half-angle
             // tangent, in which the whole is rational beside one root.
+            // And `tan(y) tan(2y)` written `sec(2y) - 1` first, so that the rule reads one argument.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingATangentTimesThatOfItsDoubleThroughTheSecant(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant(expr, x, integrateByParts)) is { }) return answer;
             // And `a ± a cosh(y)` under a fractional power: `2a cosh(y/2)^2`, `-2a sinh(y/2)^2`.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare(expr, x, integrateByParts)) is { }) return answer;
+            // The hyperbolic sine's, off the real line: 1 + i sinh(y) is (cosh(y/2) + i sinh(y/2))^2.
+            if ((answer = IndefiniteIntegralSolver.SolveAHalfOddPowerOfOnePlusAnImaginaryHyperbolicSine(expr, x, integrateByParts)) is { }) return answer;
             // Several trigonometric arguments that are multiples of one linear with an offset or a
             // symbolic slope, written in that linear: before the substitution search, which reads
             // each function on its own.
+            // A cosine and a sine over a power of another such sum, through the denominator, its
+            // derivative and a constant, down to the reciprocal of the base: before the substitution
+            // search, which reads the quotient term by term.
+            if ((answer = IndefiniteIntegralSolver.SolveACosineAndASineOverAPowerOfAnother(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByWritingMultiplesOfOneLinearArgument(expr, x, integrateByParts)) is { }) return answer;
             // A constant out of a fractional power of a trigonometric factor: `sqrt(b sec(x))` is
             // `sqrt(b) sqrt(sec(x))` for a positive `b`, which meets the other powers of the
@@ -901,6 +926,9 @@ namespace AngouriMath.Functions.Algebra
             // A power of the cotangent that is not whole beside the tangent, written as the
             // tangent's with the constant that takes in front, which the substitution below reads.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfTheCotangentInTheTangent(expr, x, integrateByParts)) is { }) return answer;
+            // A difference of a function and its reciprocal's partner, `csc(z) - sin(z)`, as the
+            // quotient of powers it is, for the rule after it.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingADifferenceOfReciprocalFunctionsAsAQuotient(expr, x, integrateByParts)) is { }) return answer;
             // A product of powers of the trigonometric functions of one argument, some not whole,
             // whose powers of the sine and cosine add up to an even number: the tangent's form
             // times a constant, which the substitution below reads.
@@ -1151,6 +1179,9 @@ namespace AngouriMath.Functions.Algebra
             // A rational function with symbols in it beside a root of a linear, split into partial
             // fractions first, each term the question of one factor beside the root.
             if ((answer = IndefiniteIntegralSolver.SolveARationalFunctionBesideARootOfALinearSplitFirst(expr, x, integrateByParts)) is { }) return answer;
+            // A half-odd power of a constant over a polynomial of either sign, written apart with
+            // its sign in front. After the substitutions, which answer some of these without it.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAHalfOddPowerOfAReciprocalWithItsSign(expr, x, integrateByParts)) is { }) return answer;
             // The sign of a real-valued factor is constant between its zeros, and goes in
             // front of the antiderivative of the rest. After every rule that reads the sign
             // where it stands: `cos(x) sgn(sin(x))` is `|sin(x)|` by the substitution, and
