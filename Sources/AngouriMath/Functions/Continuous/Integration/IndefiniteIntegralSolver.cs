@@ -8856,11 +8856,11 @@ namespace AngouriMath.Functions.Algebra
                     : (factor, (Number.Rational)Number.Integer.One);
                 if (underneath)
                     power = (Number.Rational)(-power);
-                if (power is not Number.Integer)
-                    notWhole = true;
                 // Inside the power, a constant multiple of a product and quotient of whole powers of
                 // the functions: `(b tan(z)^3)^(3/2)`, and `(cos(z)^2/sin(z))^(5/2)`, which is how
-                // `(csc(z) - sin(z))^(5/2)` is written.
+                // `(csc(z) - sin(z))^(5/2)` is written. Not whole where some function's power is not:
+                // `(a csc(z)^2)^(-7/2)` is a whole power of the modulus of the cosecant, which the rule for
+                // an even power under a root answers with its sign.
                 if (!TryReadAMonomialInTheTrigonometricFunctions(@base, x, out var parts))
                     return null;
                 foreach (var (function, times) in parts)
@@ -8881,6 +8881,8 @@ namespace AngouriMath.Functions.Algebra
                     var (functionOf, onSine, onCosine) = read.Value;
                     argument = functionOf;
                     var weight = (Number.Rational)(power * Number.Integer.Create(times));
+                    if (weight is not Number.Integer)
+                        notWhole = true;
                     sine = (Number.Rational)(sine + weight * onSine);
                     cosine = (Number.Rational)(cosine + weight * onCosine);
                 }
