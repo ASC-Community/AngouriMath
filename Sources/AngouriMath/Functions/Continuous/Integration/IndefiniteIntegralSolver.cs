@@ -8886,6 +8886,161 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>(A + B cos(y) + C sin(y))/(a + b cos(y) + c sin(y))^n</c>, for a whole <c>n</c>, by
+        /// the denominator, its derivative and a constant: the numerator is
+        /// <c>alpha S + beta S' + gamma</c> for <c>S</c> the base, and each power of <c>S</c>
+        /// comes down to <c>1/S</c>, which the half-angle tangent answers.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>S' = c cos(y) - b sin(y)</c>, matching the cosine, the sine and the constant
+        /// gives <c>alpha = (B b + C c)/(b^2 + c^2)</c>, <c>beta = (B c - C b)/(b^2 + c^2)</c> and
+        /// <c>gamma = A - a alpha</c>; <c>beta S'/S^n</c> integrates to a logarithm or a power of
+        /// <c>S</c>. For the powers, with <c>T = b sin(y) - c cos(y) = -S'</c>,
+        /// <c>T^2 = b^2 + c^2 - (S - a)^2</c>, from which
+        /// </para>
+        /// <code>
+        ///     d/dy (T S^m) = (1 + m) S^(m+1) - a (1 + 2m) S^m + m (a^2 - b^2 - c^2) S^(m-1)
+        /// </code>
+        /// <para>
+        /// which for <c>m = 1 - k</c> writes <c>int S^(-k)</c> through <c>int S^(1-k)</c> and
+        /// <c>int S^(2-k)</c>, down to <c>int 1/S</c> and <c>y</c>. Rubi's
+        /// <c>(A + B cos(x) + C sin(x))/(a + b cos(x) + c sin(x))</c> and its kin were declined:
+        /// under the half-angle tangent each is a rational function over a quadratic with every
+        /// coefficient a symbol, beside <c>1 + t^2</c>, and the square of the denominator was
+        /// answered with coefficients past the fiftieth degree in them.
+        /// </para>
+        /// <para>
+        /// Exact, as the answer for <c>1/S</c> it is built on: a linear combination and an
+        /// identity of derivatives. <c>a^2 = b^2 + c^2</c>, where the base is a square of the
+        /// half angle and the recurrence divides by zero, is declined here, as is
+        /// <c>b^2 + c^2 = 0</c>, where the base is <c>a + b e^(±i y)</c>; both decided. A constant
+        /// numerator over the first power is <c>1/S</c> itself, left to the rules that answer it.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveACosineAndASineOverAPowerOfAnother(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!TryReadAsQuotient(expr, out var numerator, out var denominator))
+                return null;
+            var (@base, power) = denominator is Powf(var inner, var exponent) && exponent.Evaled is Number.Integer { EInteger: var whole }
+                ? (inner, whole)
+                : (denominator, EInteger.One);
+            if (power.Sign <= 0 || power.CompareTo(EInteger.FromInt32(MaximumPowerOfACosineAndASine)) > 0)
+                return null;
+            Entity? argument = null;
+            bool TryRead(Entity sum, out Entity constant, out Entity cosine, out Entity sine)
+            {
+                constant = cosine = sine = Number.Integer.Zero;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        constant = constant == Number.Integer.Zero ? term : constant + term;
+                        continue;
+                    }
+                    Entity coefficient = Number.Integer.One;
+                    Entity? function = null;
+                    foreach (var factor in Mulf.LinearChildren(term))
+                        if (!factor.ContainsNode(x))
+                            coefficient = coefficient == Number.Integer.One ? factor : coefficient * factor;
+                        else if (function is null && factor is Sinf or Cosf)
+                            function = factor;
+                        else
+                            return false;
+                    var inner = function!.DirectChildren.First();
+                    if (argument is not null && inner != argument)
+                        return false;
+                    argument = inner;
+                    if (function is Cosf)
+                    {
+                        if (cosine != Number.Integer.Zero) return false;
+                        cosine = coefficient;
+                    }
+                    else
+                    {
+                        if (sine != Number.Integer.Zero) return false;
+                        sine = coefficient;
+                    }
+                }
+                return true;
+            }
+            // The base with a constant, a cosine and a sine: with one of the two functions alone the
+            // half angle reads it, and without the constant it is one cosine turned by a phase,
+            // which the rotation answers.
+            if (!TryRead(@base, out var a, out var b, out var c) || a == Number.Integer.Zero || b == Number.Integer.Zero
+                || c == Number.Integer.Zero || !TryRead(numerator, out var bigA, out var bigB, out var bigC) || argument is null)
+                return null;
+            if (power.Equals(EInteger.One) && bigB == Number.Integer.Zero && bigC == Number.Integer.Zero)
+                return null;
+            if (!TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
+                || rate.Evaled is Number.Complex { IsZero: true })
+                return null;
+            static bool IsZero(Entity value)
+            {
+                var simplified = value.InnerSimplified;
+                return simplified.Evaled is Number.Complex { IsZero: true }
+                    || simplified.Vars.Any() && Functions.PartialFractions.Bare(simplified.Simplify()).Evaled is Number.Complex { IsZero: true };
+            }
+            var squares = MathS.Sqr(b) + MathS.Sqr(c);
+            var discriminant = MathS.Sqr(a) - squares;
+            if (IsZero(squares) || IsZero(discriminant))
+                return null;
+
+            var s = @base;
+            var t = b * MathS.Sin(argument) - c * MathS.Cos(argument);
+            var alpha = (bigB * b + bigC * c) / squares;
+            var beta = (bigB * c - bigC * b) / squares;
+            var gamma = bigA - a * alpha;
+            // int S^(-k) dx, from int 1/S as the integrator answers it and x.
+            Entity? reciprocal = null;
+            var computed = new Dictionary<int, Entity>();
+            Entity? Reciprocal(int k)
+            {
+                if (k == 0)
+                    return x;
+                if (computed.TryGetValue(k, out var known))
+                    return known;
+                Entity? result;
+                if (k == 1)
+                    result = reciprocal ??= Integration.ComputeIndefiniteIntegral(1 / s, x, integrateByParts);
+                else
+                {
+                    if (Reciprocal(k - 1) is not { } previous || Reciprocal(k - 2) is not { } beforeThat)
+                        return null;
+                    result = (t * MathS.Pow(s, 1 - k) / rate - (2 - k) * beforeThat + a * (3 - 2 * k) * previous)
+                        / ((1 - k) * discriminant);
+                }
+                if (result is not null)
+                    computed[k] = result;
+                return result;
+            }
+            var n = power.ToInt32Checked();
+            Entity answer = Number.Integer.Zero;
+            if (alpha != Number.Integer.Zero && !IsZero(alpha))
+            {
+                if (Reciprocal(n - 1) is not { } lower)
+                    return null;
+                answer += alpha * lower;
+            }
+            if (beta != Number.Integer.Zero && !IsZero(beta))
+                answer += beta / rate * (n == 1 ? MathS.Ln(s) : MathS.Pow(s, 1 - n) / (1 - n));
+            if (gamma != Number.Integer.Zero && !IsZero(gamma))
+            {
+                if (Reciprocal(n) is not { } same)
+                    return null;
+                answer += gamma * same;
+            }
+            return answer == Number.Integer.Zero ? null : answer;
+        }
+
+        /// <summary>
+        /// The largest power of the denominator <see cref="SolveACosineAndASineOverAPowerOfAnother"/>
+        /// steps through: each step is a term of the answer.
+        /// </summary>
+        private const int MaximumPowerOfACosineAndASine = 6;
+
+        /// <summary>
         /// A sum of a cosine and a sine of one argument turned into one cosine:
         /// <c>a cos(y) + b sin(y)</c> is <c>R cos(u)</c> for <c>R = sqrt(a^2 + b^2)</c> and
         /// <c>u = y - phi</c>, where <c>cos(y) = (a cos(u) - b sin(u))/R</c> and
