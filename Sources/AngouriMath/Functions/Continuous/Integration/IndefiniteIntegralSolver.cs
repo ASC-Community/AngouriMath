@@ -16018,6 +16018,84 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// Sines, cosines and the rest of a function of the reciprocal of a linear, beside a whole
+        /// power of the linear: <c>L^m f(a + b/L^k)</c> with <c>L = c + d x</c>. Under <c>u = 1/L</c>,
+        /// <c>dx = -du/(d u^2)</c>, and it is <c>-(1/d) u^(-m - 2) f(a + b u^k)</c>: a polynomial times
+        /// the function for <c>m &lt;= -2</c>, which by parts is elementary for a sine or cosine of a
+        /// linear. <c>sin(a + b/x)/x^3</c> is <c>-u sin(a + b u)</c>. Rubi's 4.1.12 and 4.2.12,
+        /// <c>(e x)^m (a + b sin(c + d x^n))^p</c> for a negative <c>n</c>; the exponential's case is
+        /// <see cref="SolveAGaussianInAReciprocal"/>.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </summary>
+        /// <remarks>
+        /// Every factor with the variable in it is read: a trigonometric function of something of
+        /// <c>L</c> with <c>1/L</c> in it, or a whole power of <c>L</c>; anything else and the rule
+        /// declines, rather than write a polynomial of <c>x</c> in <c>u</c>. Only for <c>m &lt;= -3</c>:
+        /// the other powers are answered as written, and asked here would come back respelled.
+        /// </remarks>
+        internal static Entity? SolveAFunctionOfTheReciprocalOfALinear(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            static bool IsATrigonometric(Entity node) => node is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf;
+            // The linear a trigonometric argument divides by.
+            Entity? linear = null;
+            foreach (var node in expr.Nodes)
+                if (IsATrigonometric(node) && node.DirectChildren.First() is var argument && argument.ContainsNode(x)
+                    && ALinearBelowABar(argument, x) is { } below)
+                {
+                    linear = below;
+                    break;
+                }
+            if (linear is null || !TreeAnalyzer.TryGetPolyLinear(linear, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
+                return null;
+            var u = Variable.CreateUnique(expr, "u_rec");
+            Entity constant = Number.Integer.One;
+            var power = EInteger.Zero;
+            Entity inU = Number.Integer.One;
+            var sawAFunction = false;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                var (candidate, k) = factor is Powf(var raised, Number.Integer n) ? (raised, n.EInteger) : (factor, EInteger.One);
+                if (candidate == linear)
+                {
+                    power = underneath ? power.Subtract(k) : power.Add(k);
+                    continue;
+                }
+                // A function of the reciprocal of the linear, read in u; a whole power of one as well.
+                // Bottom-up, so that each quotient by the linear is met whole; the linear anywhere
+                // else is left, and declines.
+                if (!factor.Nodes.Any(IsATrigonometric))
+                    return null;
+                var rewritten = factor.Replace(node => node switch
+                {
+                    Divf(var numerator, Powf(var below, Number.Integer k)) when below == linear => numerator * MathS.Pow(u, k),
+                    Divf(var numerator, var below) when below == linear => numerator * u,
+                    Powf(var below, Number.Integer { EInteger.Sign: < 0 } k) when below == linear => MathS.Pow(u, -k),
+                    _ => node
+                }).InnerSimplified;
+                if (rewritten.ContainsNode(x))
+                    return null;
+                sawAFunction = true;
+                inU = underneath ? inU / rewritten : inU * rewritten;
+            }
+            // L^m dx = -u^(-m - 2) du/d. Only where that is a positive power of u: at m = -2 the
+            // integrand is the derivative of its argument times a function of it, and above, a power
+            // of u below the bar is the sine and cosine integrals', both answered as written.
+            var inUPower = power.Negate().Subtract(EInteger.FromInt32(2));
+            if (!sawAFunction || inUPower.Sign <= 0 || inUPower.CompareTo(EInteger.FromInt32(24)) > 0)
+                return null;
+            var question = -constant / slope * MathS.Pow(u, Number.Integer.Create(inUPower)) * inU;
+            if (Integration.ComputeAsAQuestionOfItsOwn(question, u, integrateByParts) is not { } answer
+                || answer.Nodes.Any(node => node is Integralf || node == MathS.NaN))
+                return null;
+            return answer.Substitute(u, 1 / linear);
+        }
+
+        /// <summary>
         /// The linear a node of <paramref name="exponent"/> divides by, <c>b/L^k</c> or <c>L^(-k)</c>,
         /// or <see langword="null"/>.
         /// </summary>
