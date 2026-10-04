@@ -1801,6 +1801,9 @@ namespace AngouriMath.Functions
                 {
                     if (row == rank)
                         continue;
+                    // A row is a product and an exact division per column, of polynomials that grow with
+                    // the elimination: the step a budget has to be able to stop.
+                    Core.Multithreading.MultithreadingFunctional.ExitIfCancelled();
                     var factor = augmented[row][column];
                     for (var k = 0; k <= width; k++)
                     {

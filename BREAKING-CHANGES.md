@@ -195,6 +195,21 @@ answer on the far side of a root gets a real expression where it used to get a c
 | `1/(x*(-4+x^2)^4)` | 8,472 ms | 1,878 ms |
 | `1/((1+x)^3*(2+x)^3)` | 1,343 ms | 492 ms |
 
+### A whole power of a sum of two square roots below the bar is rationalised
+
+**Answers where there were none.** `x/(sqrt(a + b x) + sqrt(c + b x))^3` was declined, while the
+first power of such a sum below the bar is multiplied above and below by its conjugate, the product
+of the pair being the difference of the radicands. A whole power is multiplied by the same power of
+the conjugate now; an even power over a constant difference is left as it was, since its conjugate
+brings the root of the product of the radicands with it, and those were answered as written. Rubi's
+1.3.2 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x/(sqrt(a + b*x) + sqrt(c + b*x))^3".ToEntity().Integrate("x")` | `integral(...)` | powers of the two roots over `(a - c)^3` |
+| `"1/(sqrt(a + b*x) + sqrt(a + c*x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same, with logarithms and arctangents |
+| `"x^3/(sqrt(a + b*x) + sqrt(a + c*x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same; 10 s on the unreleased master, a tenth of one now |
+
 ### Two square roots of linears with one slope are rationalised together
 
 `sqrt(L1)` and `sqrt(L2)` with `L1 - L2` a constant are rational in their sum
@@ -313,6 +328,21 @@ too. A correct antiderivative in an unhelpful form, where there was none at all.
 `e^(x^2)` is still declined, and correctly: its exponent is not linear and it has no elementary
 antiderivative.
 
+### An exponential of the reciprocal of a linear beside a power of it is integrated
+
+**Answers where there were none.** `F^(a + b/(c + d x)) (c + d x)^2` was declined, and so were
+`F^(a + b/(c + d x))` alone, over `c + d x`, and with the cube of the reciprocal in the exponent:
+under `u = 1/(c + d x)` each is an exponential beside a power of `u`, and the substitution was made
+only where the exponent is a Gaussian in `u`, whose moments the table answers. It is made for any
+polynomial exponent in `u` now, and the question asked in `u`. Rubi's 2.3
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"F^(a + b/(c + d*x))*(c + d*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral and powers of `c + d x` times the exponential |
+| `"F^(a + b/(c + d*x))/(c + d*x)".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral |
+| `"F^(a + b/(c + d*x)^3)*(c + d*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral of the cube, and the exponential |
+
 ### A polynomial over a power of a binomial past the cube is integrated
 
 **Answers where there were none.** `P(x)/(a + b x^n)^k` with symbols in the binomial, `n >= 3`, was
@@ -375,6 +405,24 @@ improper fraction is declined before the first division rather than after the la
 | `"x^4/(d*x^2 + b*c - a*d)^5".ToEntity().Integrate("x")`, and `x^6` over the fourth power | `integral(...)` | the antiderivative |
 | `"(1 - b*x^2)^3/(c*(1 - b*x^2) + a*d*x^2)^3".ToEntity().Integrate("x")` | no answer within a minute | the antiderivative |
 | `"(a + b*x)^(5/2)/(c + d*x)^4".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
+
+### A decline is held at the depth it was made at
+
+**Answers where there were none.** The integrator remembers what it has worked out, declines
+included, and a rule may answer the question asked and the level or two below it and decline the
+same integrand deeper. A decline made at depth three was held under a key that told the question
+asked from the rest and nothing more, and was served at depth two: the search for
+`1/(x^(3/2) (a + c x^4))` declines the root's substitution `2/(w^2 (a + c w^8))` at depth three and
+asks it again at depth two, and the integral was declined. The memo is kept per thread, so a decline
+made deeper in one integral was served the same way to the next. A decline is held at the depth it
+was made at now, and an answer at every depth
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x^(3/2)*(a + c*x^4))".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
+| `"1/((a + b/x^3)*x^5)".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
+| `"1/(x^(7/2)*(a + b*x^2 + c*x^4))".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
 
 ### The Hermite reduction's system is solved in one order whatever the spelling
 
@@ -490,6 +538,25 @@ antiderivative on each side of it, as Rubi's is
 | `"1/((2 + 3*x^2)^(1/4)*(4 + 3*x^2))".ToEntity().Integrate("x")` | `integral(...)` | the same in `(2 + 3 x^2)^(1/4)` |
 | `"1/((-2 + 3*x^2)*(-1 + 3*x^2)^(1/4))".ToEntity().Integrate("x")` | `integral(...)` | `-(arctan(u) + artanh(u))/(2 sqrt(6))`, `u = sqrt(3) x/(sqrt(2) (-1 + 3 x^2)^(1/4))` |
 
+### A product of powers of the trigonometric functions, some not whole, is integrated as sine and cosine powers
+
+**Answers where there were none.** `(a sin(x))^(5/2) sqrt(b sec(x))` was declined, and so were
+`(d csc(x))^(3/2) sqrt(c sec(x))`, `cos(x)^(7/2)/sin(x)^(7/2)` and the rest of the products of
+powers of the trigonometric functions of one argument, each of which is `sin^M cos^N` times a constant
+on every interval where both are continuous. With the exponents adding up to an even number that is
+`tan^M (1 + tan^2)^(-(M + N)/2)`, a function of the tangent, and with `M` or `N` an odd whole number
+the plain product, which the substitution by the other function answers: Chebyshev's three cases.
+It is integrated so now, and the answer is the integrand times the antiderivative of that form over
+the form, which holds on every such interval, the constants inside the roots whatever their signs.
+Rubi's 4.1.0 to 4.6.0 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a*sin(x))^(5/2)*sqrt(b*sec(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `sqrt(tan(x))` over `tan(x)^(5/2) (1 + tan(x)^2)^(-1)` |
+| `"cos(x)^(7/2)/sin(x)^(7/2)".ToEntity().Integrate("x")` | `integral(...)` | the same over `tan(x)^(-7/2)` |
+| `"(b*tan(x)^3)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same over `tan(x)^(9/2)` |
+| `"(d*sec(x))^(5/2)*sqrt(b*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `sqrt(sin(x))` over `sin(x)^(1/2) cos(x)^(-3)` |
+
 ### The third case of a binomial differential is right for a negative `x` too
 
 **Answers where there were none.** Chebyshev's third case, `x^m (a + b x^n)^(p/q)` with
@@ -524,6 +591,24 @@ that `sec(x)^2/(a + b sin(x))` is rational in them rather than declined at once
 | `"sec(x)^2/(a + b*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 | `"tan(x)^4/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)` |
 | `"csc(x)^2/(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | `(tan(x/2)^3/12 + tan(x/2)/2 - 1/(4 tan(x/2)))/a` |
+
+### A power of `a + i a tan` beside a power of the secant is integrated as an exponential
+
+**Answers where there were none.** `sqrt(a + i a tan(x))/sqrt(c sec(x))` is `sqrt(a/c) e^(i x/2)`
+wherever the cosine is positive, and was declined, with every other pair of such powers, one of them
+not whole, whose exponents add up to a whole number: Rubi's 4.3.1.2 has 43 of them. `a + i a tan(z)` is
+`a sec(z) e^(i z)` on the real line, so the integrand is a constant on every interval where it is
+continuous times a power of the secant and an exponential, which in `w = e^(i z)` is rational in a root
+of `w`. Three of the 43, `(c sec(x))^p/(a + i a tan(x))^p` for `p` a half, three halves and five, were
+answered on the unreleased master through the power of a product taken apart, wrong by a constant
+wherever the cosine is negative; they are answered with the rest now
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + i*a*tan(x))/sqrt(c*sec(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `2/i`, through `e^(i x)` |
+| `"sqrt(c*sec(x))*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `e^(i x/2)` over its derivative |
+| `"(c*sec(x))^(5/2)/(a + i*a*tan(x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | the integrand times a power of `e^(i x)` |
 
 ### A rational function with complex coefficients is integrated through its real and imaginary parts
 
@@ -589,21 +674,25 @@ zero-discriminant arm, which gives the right answer.
 Each of these was checked by differentiating it back with the parameters pinned and comparing at
 four points. Nothing that already had an antiderivative changes.
 
-### A radical function of whole powers of `x` written through its logarithm says where its answer holds
+### A radical function of whole powers of `x` written through its logarithm is integrated on both sides of zero
 
-**Answers where there were none, each with the condition it holds under.** `1/csch(2 ln(x))^(1/2)`
-is `sqrt(sinh(2 ln(x)))`, which is `sqrt((x^2 - x^(-2))/2)` and real on both sides of zero; 2.5.0
-declined it. On the unreleased master it was integrated under `t = ln(x)`, where the rules take
-`e^t` to be positive, and the answer was right for a positive `x` and wrong for every negative one.
-Such an answer is given `provided x > 0` now, and `provided c x^n > 0` for a logarithm of `c x^n`
-([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+**Answers where there were none.** `1/csch(2 ln(x))^(1/2)` is `sqrt(sinh(2 ln(x)))`, which is
+`sqrt((x^2 - x^(-2))/2)` and real on both sides of zero; 2.5.0 declined it. Its exponentials are
+folded into powers of `x`, a negative one under a root written below the bar, and the answer is in those, on
+both sides of zero and on both sides of 1, where `sinh(2 ln(x))` changes sign. Under `t = ln(x)`,
+where the rules take `e^t` to be positive, an answer of this kind is given `provided x > 0`, and
+`provided c x^n > 0` for a logarithm of `c x^n`. A constant over a power that is not whole, `1/g^p`,
+is asked as `g^(-p)` at the depth it was asked at, so that the rules scoped to the question asked see
+it, which is how `1/csch(2 ln(x))^(1/2)` reaches the fold, and `1/sqrt(x + x^(3/2))` is answered on
+both sides of zero as well ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
-| `"1/csch(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
-| `"csch(2*ln(x))^(-3/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
-| `"1/csch(2*ln(c*x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided c x > 0` |
-| `"1/sech(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
+| `"1/csch(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"csch(2*ln(x))^(-3/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"1/csch(2*ln(c*x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"1/sech(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"1/sqrt(x + x^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | `4 sqrt(1 + sqrt(x))` times a factor constant where it is continuous, on both sides of zero |
 
 ### `e^(k acoth(a x))` beside a power of `c - a c x` is integrated
 
@@ -617,6 +706,23 @@ read them as nonzero. They are now decided over one bar, expanded, and at pinned
 |---|---|---|
 | `"e^(3*acoth(a*x))/(c-a*c*x)^3".Integrate("x")`, and over `(c - a c x)^4` | left unevaluated | an antiderivative in `sqrt((a x + 1)/(a x - 1))` |
 | `"e^(2*acoth(a*x))*sqrt(c-a*c*x)/x".Integrate("x")`, and over `x^2` | left unevaluated | an antiderivative in `sqrt(c - a c x)`, by cases on the sign of `c` |
+
+### A trigonometric function of an imaginary multiple of a logarithm is integrated in exponentials
+
+**Answers where there were none.** `tan(a + i ln(x))` and `sin(a + ln(c x^2) sqrt(-1/4))` were
+declined: the closed form for a power of the variable times a sine or cosine of a logarithm divides
+by `(m + 1)^2 + B^2`, which an imaginary `B` can make zero, and Rubi's 4.7.5 is built on exactly
+that. `e^(i (a + b ln(u)))` is `e^(i a)` times a real power of `u` when `b` is imaginary, so each
+such function is a sum or quotient of powers of `u`, and is written so now when `b` is an imaginary
+number; the zero is a power `1/x`, whose integral is a logarithm. A symbolic `b`,
+`sqrt(-1/n^2)`, is left alone, since whether the zero is there turns on the sign of `n`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"tan(a + i*ln(x))".ToEntity().Integrate("x")` | `integral(...)` | a rational function of `x` and `e^(i a)`, with a logarithm |
+| `"sin(a + ln(c*x^2)*sqrt(-1/4))".ToEntity().Integrate("x")` | `integral(...)` | powers of `x` and `c x^2` and a logarithm, through `e^(i a)` |
+| `"1/cos(a - 2*i*ln(c*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | an arctangent and a logarithm of a root, through `e^(i a)` |
 
 ### `e^(n i arctan(a x))` to a power that is not whole is integrated
 
@@ -820,6 +926,23 @@ left as it was, since the sum is real on both sides of 0 and `x^(j p)` is not. R
 | `"x*sqrt(x^2*(a + b*x^3))".ToEntity().Integrate("x")` | `(a + b x^3)^(3/2)/(9/2 b)`, wrong where `x < 0` | `sgn(x) (a + b x^3)^(3/2)/(9/2 b)` |
 | `"1/(x*sqrt(b*x^(2/3) + a*x))".ToEntity().Integrate("x")` | `integral(...)` | `K` times an antiderivative in `sqrt(b + a x^(1/3))` |
 | `"x/sqrt(1 + 1/(c*x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(x) (x sqrt(x^2 + 1/c^2)/2 - ln(2 x + 2 sqrt(x^2 + 1/c^2))/(2 c^2))`, for any `c` but 0 |
+
+### A quadratic sharing a root off the real line with a linear beside it is written over that root
+
+**Answers where there were none.** `1/((a + i a tan(x)) (c + d tan(x)))`, Rubi's 4.3.2.1, is under the
+tangent substitution a rational function over `(1 + i u)(c + d u)(1 + u^2)`, and `1 + u^2` is
+`(1 + i u)(1 - i u)`: the written factors share a linear. The splits read written factors as coprime,
+and the divisors that take shared factors apart are taken over the rationals, which the imaginary unit
+is not; it was declined, and with a square of `c + d tan(x)` it ran past a minute. With a symbol in the
+denominator, a quadratic that has a root off the real line in common with a linear beside it is now
+written as its leading coefficient times the linears of its two roots, and the shared linear taken as
+one power ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((a + i*a*tan(x))*(c + d*tan(x)))".ToEntity().Integrate("x")` | `integral(...)` | a quotient by `tan(x) - i` and logarithms |
+| `"1/((a + i*a*tan(x))^2*(c + d*tan(x)))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"1/((a + i*a*tan(x))*(c + d*tan(x))^2)".ToEntity().Integrate("x")` | `integral(...)` | the same |
 
 ### A rational function of a sine over a symbolic quadratic in it is integrated over the two roots
 
@@ -1185,6 +1308,24 @@ one form across the zeros.
 | `"(a + a*sin(x))^(1/2)/(c - c*sin(x))^(5/2)".Integrate("x")` | unevaluated | `sgn(sin(u)) sgn(cos(u)) sqrt(2a)/(4 c^(5/2)) (…)` |
 | `"sqrt(a + a*sin(x))".Integrate("x")` | unevaluated (`a^2 = a^2` is not decided by evaluation) | `-2 sqrt(2a) sgn(sin(u)) cos(u)` |
 | `"sqrt(1 + sin(x))".Integrate("x")` | `-2 cos(x)/sqrt(1 + sin(x))` | unchanged, the closed rule's |
+
+### A half-odd power of the secant beside the cosine is integrated as the cosine's
+
+**Answers where there were none.** `sec(x)^(3/2)/sqrt(1 + cos(x))` was declined while
+`1/(cos(x)^(3/2) sqrt(1 + cos(x)))`, which it is wherever the cosine is positive, was answered: the
+substitutions that read a function of the cosine read the secant as `1/cos` to a whole power only.
+A half-odd power of the secant beside the cosine is written as the cosine's on the other side of
+the bar now, `sec(x)^p = K/cos(x)^p`, with `K = sec(x)^p cos(x)^p` in front of the answer: `K` is 1
+where the cosine is positive and -1 where it is negative, so the answer holds on both sides. The
+same for the cosecant beside the sine. Rubi's 4.2.2.1, 4.2.3.1 and 4.2.4.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^(3/2)/sqrt(1 + cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, times `K` |
+| `"1/((a + a*cos(x))^(7/2)*sec(x)^(7/2))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, over `K` |
+| `"(A + c*cos(x)^2)*sec(x)^(11/2)*sqrt(a + a*cos(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, times `K` |
+| `"sqrt(csc(x))*sqrt(a + a*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `tan(x/2)`, times `csc(x)^(1/2) sin(x)^(1/2)` |
 
 ### Half-odd powers of `a ± a sec` and `a ± a csc` are integrated by the half-angle tangent
 
@@ -1614,7 +1755,7 @@ was ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 | Input | Was (2.5.0) | Now |
 |---|---|---|
 | `"x * sqrt(c - a*c*x) / e^(3 * atanh(a*x))".Integrate("x")` | `integral(…)` — left unevaluated, with `e` evaluated to a hundred digits inside it | an antiderivative in `sqrt(c - a c x)`, `provided c - a * c * x >= 0` |
-| `"1/sqrt(x + x^(3/2))".Integrate("x")` | `integral(1 / sqrt(x + x ^ (3/2)), x)` — left unevaluated | `2 * sqrt(1 + sqrt(x)) / (1/2) + C provided x >= 0` |
+| `"sqrt(x)/sqrt(x + x^2)".Integrate("x")` | `integral(...)` — left unevaluated | `2 sqrt(x + 1)` times a factor constant where it is continuous, `provided x + 1 >= 0` |
 
 ### An answer that read the sign of an even root says where the root is real
 
