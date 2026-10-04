@@ -11937,6 +11937,129 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// Powers of two linears whose exponents sum to a whole number <c>-k</c>, <c>k &gt;= 2</c>,
+        /// beside a polynomial of degree at most <c>k - 2</c>: <c>(a + b x)^m (c + d x)^(-3 - m)</c>,
+        /// <c>x^(n - 4)/(a + b x)^n</c>, <c>(e + f x)^2 (a + b x)^m (c + d x)^(-4 - m)</c>. Under
+        /// <c>t = L1/L2</c> each is <c>t^A</c> beside a polynomial in <c>t</c>, so the answer is
+        /// the two powers as written times a polynomial in <c>x</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>L1 = a1 + b1 x</c>, <c>L2 = a2 + b2 x</c> and <c>D = a1 b2 - a2 b1</c>, the
+        /// substitution makes <c>x = (a1 - a2 t)/(b2 t - b1)</c>, <c>L2 = D/(b2 t - b1)</c> and
+        /// <c>dx = -D dt/(b2 t - b1)^2</c>, so <c>L1^A L2^B P(x) dx</c> is, up to a factor constant
+        /// on each interval, <c>-D^(1 - k) t^A S(t) dt</c> for the polynomial
+        /// <c>S(t) = sum_j p_j (a1 - a2 t)^j (b2 t - b1)^(k - 2 - j)</c>. Its antiderivative is
+        /// <c>sum_i s_i t^(A + i + 1)/(A + i + 1)</c>, and since <c>t^(A + i + 1)</c> is
+        /// <c>t^A t^(i + 1)</c> for a whole <c>i + 1</c>, the constant factor and <c>t^A</c> come
+        /// back as the two powers as written: the answer is
+        /// <c>L1^A L2^B sum_i -D^(1 - k) s_i L1^(i + 1) L2^(k - 1 - i)/(A + i + 1)</c>, exact
+        /// wherever the integrand is defined. The generic case, as the integrator answers
+        /// everywhere: <c>A + i + 1</c> is taken to be nonzero.
+        /// </para>
+        /// <para>
+        /// Only the sum <c>-2</c> was answered, as the derivative of the product of the two powers
+        /// raised by one; Rubi's <c>(a + b x)^m (c + d x)^n</c> files hold the rest, and under
+        /// <c>u = sin(y)</c> so do the powers of <c>1 ± sin(y)</c> beside one another. A closed
+        /// rule, so at any depth. https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(Entity expr, Entity.Variable x)
+        {
+            Entity constant = Number.Integer.One;
+            var powers = new List<(Entity Base, Entity Exponent)>();
+            var polynomial = new List<(Entity Factor, bool Underneath)>();
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                var (@base, exponent) = factor is Powf(var powerBase, var power) ? (powerBase, power) : (factor, (Entity)Number.Integer.One);
+                if (exponent.ContainsNode(x))
+                    return null;
+                if (underneath)
+                    exponent = (-exponent).InnerSimplified;
+                var index = powers.FindIndex(pair => pair.Base == @base);
+                if (index >= 0)
+                    powers[index] = (@base, (powers[index].Exponent + exponent).InnerSimplified);
+                else if (exponent is Number.Integer)
+                    polynomial.Add((factor, underneath));
+                else
+                    powers.Add((@base, exponent));
+            }
+            if (powers.Count != 2)
+                return null;
+            // A whole power of a base that turned out to be one of the two goes into its exponent.
+            for (var i = polynomial.Count - 1; i >= 0; i--)
+            {
+                var (factor, underneath) = polynomial[i];
+                var (@base, exponent) = factor is Powf(var powerBase, Number.Integer power) ? (powerBase, (Entity)power) : (factor, (Entity)Number.Integer.One);
+                var index = powers.FindIndex(pair => pair.Base == @base);
+                if (index < 0)
+                {
+                    if (underneath)
+                        return null;
+                    continue;
+                }
+                powers[index] = (@base, (powers[index].Exponent + (underneath ? -exponent : exponent)).InnerSimplified);
+                polynomial.RemoveAt(i);
+            }
+            var ((first, a), (second, b)) = (powers[0], powers[1]);
+            if (a is Number.Integer || b is Number.Integer)
+                return null;
+            if ((a + b).Simplify() is not Number.Integer { EInteger: var sum } || sum.CompareTo(EInteger.FromInt32(-2)) > 0
+                || sum.CompareTo(EInteger.FromInt32(-MaximumLinearPowerSum)) < 0)
+                return null;
+            var k = -sum.ToInt32Checked();
+            if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var b1, out var a1) || !TreeAnalyzer.TryGetPolyLinear(second, x, out var b2, out var a2))
+                return null;
+            var d = (a1 * b2 - a2 * b1).InnerSimplified;
+            if (d.Evaled is Number.Complex { IsZero: true })
+                return null;
+            Entity product = Number.Integer.One;
+            foreach (var (factor, _) in polynomial)
+                product *= factor;
+            if (!TreeAnalyzer.TryGetPolynomial(product, x, out var coefficients)
+                || coefficients.Keys.Any(power => power.Sign < 0 || power.CompareTo(EInteger.FromInt32(k - 2)) > 0))
+                return null;
+            var t = Variable.CreateUnique(expr, "t_quotient");
+            // Whole powers written out, so that what is read as a polynomial in t is one.
+            static Entity Raised(Entity @base, int power) => power switch
+            {
+                0 => Number.Integer.One,
+                1 => @base,
+                _ => MathS.Pow(@base, power),
+            };
+            Entity inT = Number.Integer.Zero;
+            foreach (var pair in coefficients)
+            {
+                var j = pair.Key.ToInt32Checked();
+                inT += pair.Value * Raised(a1 - a2 * t, j) * Raised(b2 * t - b1, k - 2 - j);
+            }
+            if (!TreeAnalyzer.TryGetPolynomial(inT.InnerSimplified, t, out var ofT))
+                return null;
+            Entity polynomialInX = Number.Integer.Zero;
+            foreach (var pair in ofT)
+            {
+                var (i, s) = (pair.Key.ToInt32Checked(), pair.Value);
+                if (i < 0 || i > k - 2)
+                    return null;
+                polynomialInX += s / (a + (i + 1)) * Raised(first, i + 1) * Raised(second, k - 1 - i);
+            }
+            var answer = (-constant * MathS.Pow(d, 1 - k)).InnerSimplified * MathS.Pow(first, a) * MathS.Pow(second, b) * polynomialInX.InnerSimplified;
+            return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+        }
+
+        /// <summary>
+        /// The most negative sum of the two exponents
+        /// <see cref="SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber"/> takes: the polynomial
+        /// it writes has <c>k - 1</c> terms, each a product of powers summing to <c>k</c>.
+        /// </summary>
+        private const int MaximumLinearPowerSum = 12;
+
+        /// <summary>
         /// The constant <c>k</c> with <paramref name="left"/> equal to <c>k</c> times
         /// <paramref name="right"/>, read off one monomial with both written as polynomials
         /// in <paramref name="x"/> and in every atom holding it -- a logarithm, an exponential
