@@ -780,6 +780,22 @@ of `Q`, times `sqrt(Q)`, and the same two integrals that are not algebraic
 | `"(1 + 3*x + 4*x^2)/((1 + 2*x)^3*(2 + 3*x^2)^(5/2))".ToEntity().Integrate("x")` | `integral(...)` | linears over `(2 + 3 x^2)^2` and `2 + 3 x^2` and powers of `1/(1 + 2 x)`, times the root, and a logarithm |
 | `"(d + k*x + f*x^2)/((g + h*x)^2*(a + c*x^2)^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | the same in the symbols, and a logarithm or an arctangent by the sign of `a h^2 + c g^2` |
 
+### An even root of a quotient with an odd power below the bar keeps its sign below zero
+
+**Wrong answers on the unreleased master, right ones now.** `sqrt((1 + x)/x^3)` is real for `x < -1` as
+well as for `x > 0`, and was integrated as `sqrt(1 + x) x^(-3/2)`, which it is for `x > 0` only: below
+`-1` the two differ by a sign, and the answer was wrong at every point there. The check that decides
+whether an even root of a quotient may be written apart counted a factor below the bar as though it
+were above it; it counts against those above it now, and where the root does not come apart, a linear's
+odd power below it comes out with its sign in front of the answer, `|1 + x|` being `sgn(1 + x) (1 + x)`.
+2.5.0 declined these ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt((1 + x)/x^3)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(x)` times the antiderivative for `x > 0`, right on both sides |
+| `"sqrt(x/(1 + x)^3)".ToEntity().Integrate("x")` | `integral(...)` | the same with `sgn(1 + x)` |
+| `"((1 + x)/x^3)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same as the first |
+
 ### A function comes out of a fractional power of its even power with its sign
 
 **Improvement, not silent.** The entry two above made `(sin(x)^2)^(3/2)` the modulus `|sin(x)|^3`
