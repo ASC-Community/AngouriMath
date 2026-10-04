@@ -249,6 +249,22 @@ Rubi's `x^m (a + b x^n)^p` and `(a + b x^n)^p (c + d x^n)^q`
 | `"1/(2+3/x^2)^3".Integrate("x")`, `1/(a + b/x^3)` | left unevaluated | an antiderivative |
 | `"(a+b*x^n)*(c+d*x^n)^3".Integrate("x")` | left unevaluated | written out, eight powers of `x` integrated: `a c^3 x + ... + b d^3 x^(4 n + 1)/(4 n + 1)` |
 
+### A half-odd power of a constant over a polynomial of either sign is integrated with its sign
+
+**Answers where there were none.** `sqrt(1/(1 - x^2))`, the arcsine's derivative where it is real,
+was declined, with every half-odd power of a constant over a polynomial whose sign changes: the
+reading that writes a power of a quotient apart does so only where the denominator is positive. For
+a real `Q` other than zero, `(A/Q)^r` is `(A/Q)^r Q^r` times `Q^(-r)`, the first factor's derivative
+being zero wherever it has one, and for a positive number `A` that factor is `A^r sgn(Q)`. The power
+is written so, after the substitutions, and the factor goes in front of the answer
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(1/(1 - x^2))".ToEntity().Integrate("x")` | `integral(...)` | `sgn(1 - x^2) arcsin(x)` |
+| `"(1/(1 - x^2))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(1 - x^2) x/sqrt(1 - x^2)` |
+| `"(c/(a + b*x^2))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `(c/(a + b x^2))^(3/2) (a + b x^2)^(3/2) x/(a sqrt(a + b x^2))` |
+
 ### A whole power of a quotient with a symbol in it is integrated as the quotient of the powers
 
 **Answers where there were none, and a slowdown since 2.5.0 undone.** `(c/(a + c x^2))^2` was
