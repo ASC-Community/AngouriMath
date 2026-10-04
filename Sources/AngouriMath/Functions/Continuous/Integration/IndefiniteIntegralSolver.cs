@@ -23753,7 +23753,7 @@ namespace AngouriMath.Functions.Algebra
             if (!below.ContainsNode(x))
                 return null;
             var arguments = new List<Entity>();
-            var rewritten = below.Replace(node =>
+            Entity AsAnExponential(Entity node)
             {
                 if (node is not Sumf and not Minusf || !node.ContainsNode(x))
                     return node;
@@ -23807,14 +23807,32 @@ namespace AngouriMath.Functions.Algebra
                 return isTangent
                     ? constant * exponential / MathS.Cos(argument)
                     : (plus ? MathS.i : -MathS.i) * constant * exponential / MathS.Sin(argument);
-            });
+            }
+            var rewritten = below.Replace(AsAnExponential);
             if (rewritten == below)
                 return null;
-            // A tangent or a cotangent of the same argument above the bar in sines and cosines, so that
-            // the cosine or sine the identity puts below cancels it: `tan(z)/(A + i A tan(z))` is
-            // `sin(z) e^(-i z)/A`, an exponential times a sine, where `tan(z) cos(z) e^(-i z)/A` was
-            // a search past the budget with `z = c + d x`.
-            var inSinesAndCosines = above.Replace(node => node switch
+            // A root of the tangent or the cotangent of that argument, or of a constant times one, is
+            // read as written by the substitution `t = tan(z)`, where it is a root of `t`, and by
+            // nothing in the exponential's spelling: `sqrt(tan(c + d x))/(a + i a tan(c + d x))`
+            // rewritten was seven seconds of search to be declined, and is a third of one in `t`.
+            bool ARootOfTheTangent(Entity node)
+            {
+                if (node is not Powf(var radicand, Number.Rational power) || power is Number.Integer)
+                    return false;
+                var varying = Mulf.LinearChildren(radicand).Where(factor => factor.ContainsNode(x)).ToList();
+                return varying is [Tanf(var tangentOf)] && arguments.Contains(tangentOf)
+                    || varying is [Cotanf(var cotangentOf)] && arguments.Contains(cotangentOf);
+            }
+            if (expr.Nodes.Any(ARootOfTheTangent))
+                return null;
+            // The sums above the bar as exponentials too, now that one below has called for them:
+            // `(a + i a tan(z))^2/(c - i c tan(z))^4` is `a^2 e^(6 i z) cos(z)^2/c^4`, where the square
+            // above in sines and cosines was a sum of exponentials that nothing gathered, and a search
+            // past the budget. And a tangent or a cotangent of the same argument above the bar in sines
+            // and cosines, so that the cosine or sine the identity puts below cancels it:
+            // `tan(z)/(A + i A tan(z))` is `sin(z) e^(-i z)/A`, an exponential times a sine, where
+            // `tan(z) cos(z) e^(-i z)/A` was a search past the budget with `z = c + d x`.
+            var inSinesAndCosines = above.Replace(AsAnExponential).Replace(node => node switch
             {
                 Tanf(var inner) when arguments.Contains(inner) => MathS.Sin(inner) / MathS.Cos(inner),
                 Cotanf(var inner) when arguments.Contains(inner) => MathS.Cos(inner) / MathS.Sin(inner),
@@ -23840,7 +23858,7 @@ namespace AngouriMath.Functions.Algebra
                 return Integration.ComputeAsTheSameQuestion((above / rewritten).InnerSimplified, x, integrateByParts);
             // And what sines and cosines of it are left, as the exponentials they are, so that the whole is
             // a rational function of `e^(i z)`: `tan(z)^2/(A + i A tan(z))` leaves `sin(z)^2/(A cos(z) e^(i z))`.
-            var inExponentials = (top / bottom).Replace(node => node switch
+            Entity InExponentials(Entity written) => written.Replace(node => node switch
             {
                 Sinf(var inner) when arguments.Contains(inner)
                     => (MathS.Pow(MathS.e, MathS.i * inner) - MathS.Pow(MathS.e, -MathS.i * inner)) / (2 * MathS.i),
@@ -23848,7 +23866,41 @@ namespace AngouriMath.Functions.Algebra
                     => (MathS.Pow(MathS.e, MathS.i * inner) + MathS.Pow(MathS.e, -MathS.i * inner)) / 2,
                 _ => node,
             });
-            return Integration.ComputeAsTheSameQuestion(inExponentials.InnerSimplified, x, integrateByParts);
+            // Multiplied out where it is a polynomial in `e^(i z)` and its reciprocal with nothing else of x
+            // in it, the exponentials below the bar taken above as their reciprocals: a sum of exponentials,
+            // each term one the closed rule answers. `(a + i a tan(z))^2 (A + B tan(z))/(c - i c tan(z))^6`
+            // is `a^2 e^(8 i z) cos(z)^4 (A + B tan(z))/c^6`, fourteen seconds through the hyperbolic
+            // tangent's substitution as written and forty milliseconds multiplied out. Not beside a
+            // polynomial in x, which would be multiplied out too, and its answer with it.
+            Entity? Reciprocal(Entity below) => below switch
+            {
+                _ when !below.ContainsNode(x) => 1 / below,
+                Mulf(var left, var right) => Reciprocal(left) is { } ofLeft && Reciprocal(right) is { } ofRight ? ofLeft * ofRight : null,
+                Powf(var @base, var exponent) when @base == MathS.e => MathS.Pow(MathS.e, -exponent),
+                Powf(var inner, Number.Integer power) => Reciprocal(inner) is { } ofInner ? MathS.Pow(ofInner, power) : null,
+                _ => null,
+            };
+            if (Reciprocal(bottom) is not { } belowTakenAbove
+                || top.Replace(node => node is Sinf or Cosf || TheExponentOf(node) is not null ? Number.Integer.One : node).ContainsNode(x))
+                return Integration.ComputeAsTheSameQuestion(InExponentials(top / bottom).InnerSimplified, x, integrateByParts);
+            var overTheBar = top * belowTakenAbove;
+            // The exponentials of each term multiplied out gathered into one, whose exponent, a sum of
+            // theirs, `i x (-1) + i x`, is gathered to its slope and offset, so that a term whose
+            // exponents cancel is a constant.
+            var multipliedOut = Patterns.GatherPowersOfOneBase(InExponentials(overTheBar).Expand().InnerSimplified).Replace(node =>
+                TheExponentOf(node) is { } exponent && exponent.ContainsNode(x)
+                && TreeAnalyzer.TryGetPolyLinear(exponent, x, out var slope, out var offset)
+                    ? MathS.Pow(MathS.e, slope.InnerSimplified * x + offset.InnerSimplified)
+                    : node);
+            return Integration.ComputeAsTheSameQuestion(multipliedOut.InnerSimplified, x, integrateByParts);
+
+            // The exponent of an exponential, or of a whole power of one, as one exponential.
+            static Entity? TheExponentOf(Entity node) => node switch
+            {
+                Powf(var @base, var exponent) when @base == MathS.e => exponent,
+                Powf(Powf(var @base, var exponent), Number.Integer times) when @base == MathS.e => exponent * times,
+                _ => null,
+            };
         }
 
         /// <summary>
