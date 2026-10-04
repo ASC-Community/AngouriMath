@@ -4000,11 +4000,17 @@ namespace AngouriMath.Functions.Algebra
         {
             if (!asked && !Integration.AnsweringTheQuestionAsked)
                 return null;
-            if (!TryReadSineCosinePowers(expr, out var argument, out var sinePower, out var cosinePower, out var factor, out var throughAProduct))
+            if (!TryReadSineCosinePowers(expr, out var argument, out var sinePower, out var cosinePower, out var factor, out var throughAProduct,
+                    aConstantProduct: true))
                 return null;
             if (!TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.Evaled == 0)
                 return null;
-            if (IntegrateAPowerOfSineTimesAPowerOfCosine(argument, sinePower, cosinePower, factor, rate) is not { } integral)
+            // Powers that cancel, `cos(x)^2 sec(x)^2`, are the constant wherever the integrand is
+            // defined, and its integral is the constant times x.
+            var integral = sinePower.IsZero && cosinePower.IsZero
+                ? factor * x
+                : IntegrateAPowerOfSineTimesAPowerOfCosine(argument, sinePower, cosinePower, factor, rate);
+            if (integral is null)
                 return null;
             if (!throughAProduct)
                 return integral;
@@ -7152,8 +7158,14 @@ namespace AngouriMath.Functions.Algebra
         /// and whether a fractional power of a product was read as the product of the powers:
         /// true only up to a constant on each interval where the factors keep their signs.
         /// </summary>
+        /// <remarks>
+        /// A product whose powers cancel, <c>sin(u) csc(u)</c>, is read only where
+        /// <paramref name="aConstantProduct"/> asks for it: it is the constant where it is
+        /// defined, and the readers that go on to divide by a power have nothing to divide.
+        /// </remarks>
         private static bool TryReadSineCosinePowers(
-            Entity expr, out Entity argument, out ERational sinePower, out ERational cosinePower, out Entity factor, out bool throughAProduct)
+            Entity expr, out Entity argument, out ERational sinePower, out ERational cosinePower, out Entity factor, out bool throughAProduct,
+            bool aConstantProduct = false)
         {
             Entity? common = null;
             var sine = ERational.Zero;
@@ -7166,7 +7178,7 @@ namespace AngouriMath.Functions.Algebra
             cosinePower = cosine;
             factor = constant;
             throughAProduct = distributed;
-            return read && common is not null && !(sine.IsZero && cosine.IsZero);
+            return read && common is not null && (aConstantProduct || !(sine.IsZero && cosine.IsZero));
 
             bool Agrees(Entity candidate)
             {
