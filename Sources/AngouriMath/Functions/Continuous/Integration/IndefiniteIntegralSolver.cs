@@ -2162,9 +2162,13 @@ namespace AngouriMath.Functions.Algebra
                     // The exponent negated as a number rather than as a tree: `-power` on the
                     // node `2` is `2 * (-1)`, and `sin(x)^(2 * (-1))` is a shape the closed rule
                     // for a power of the sine does not read, so `c/sin(x)^2` went to the
-                    // half-angle substitution for what is `-c cot(x)`.
+                    // half-angle substitution for what is `-c cot(x)`. And asked as the same
+                    // question, since `c/g^p` and `c g^(-p)` are one: a level down the rules
+                    // scoped to the question asked did not see it, and `1/csch(2 ln(x))^(1/2)`
+                    // reached the fold of its exponentials there and was declined, where asked
+                    // at the top it is answered.
                     over is Entity.Powf(var @base, var power) ?
-                        Integration.ComputeIndefiniteIntegral(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts)?.Pipe(i => div * i) :
+                        Integration.ComputeAsTheSameQuestion(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts)?.Pipe(i => div * i) :
                     // A constant over a product is the reciprocal of the product, asked as the
                     // same question with the constant in front, and not the product to the
                     // power -1: `pe/(x (d + e x) sqrt(1 - c^2 x^2))` handed on as
@@ -16230,7 +16234,20 @@ namespace AngouriMath.Functions.Algebra
                 var folded = FoldTheExponent(exponent, x);
                 return folded ?? node;
             });
-            return folded == expr ? null : Integration.ComputeAsAQuestionOfItsOwn(folded, x, integrateByParts);
+            if (folded == expr)
+                return null;
+            // A radicand with its negative powers written below the bar, which is where the rules
+            // for a root read a denominator: `(1/((x^2 - x^(-2))/2))^(-3/2)` was declined where
+            // `(1/((x^2 - 1/x^2)/2))^(-3/2)` is answered. Only under a power that is not whole: a
+            // whole power of a sum is expanded, and the power rule reads its terms as `x^(-k)`,
+            // through which `sinh(a + b ln(c x^n))^4` is answered in a second and was searched for
+            // six with them below the bar.
+            folded = folded.Replace(node => node is Powf(var radicand, var exponent) && exponent.Evaled is not Number.Integer && radicand.ContainsNode(x)
+                ? MathS.Pow(radicand.Replace(inside => inside is Powf(var @base, Number.Integer { EInteger: var power }) && power.Sign < 0 && @base.ContainsNode(x)
+                    ? Number.Integer.One / (power.Equals(EInteger.FromInt32(-1)) ? @base : MathS.Pow(@base, Number.Integer.Create(-power)))
+                    : inside), exponent)
+                : node);
+            return Integration.ComputeAsAQuestionOfItsOwn(folded, x, integrateByParts);
         }
 
         /// <summary>
