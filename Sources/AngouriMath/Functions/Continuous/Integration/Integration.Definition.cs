@@ -643,6 +643,12 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveByTheExponentAsTheVariable(expr, x, integrateByParts)) is { }) return answer;
             // `A + i A tan(z)` is `A e^(i z)/cos(z)`, which beside a polynomial is a shape the
             // closed rules answer, where the imaginary unit in the coefficient is read by none.
+            // The same identity beside a power of the secant, where the powers are not whole and add
+            // up to a whole number: an exponential over a power of the cosine, in e^(i z). Before the
+            // rule below, which writes a power of the identity that is not whole as the power of a
+            // product and takes it apart, and so answers (c sec)^(5/2)/(a + i a tan)^(5/2) with the
+            // wrong constant wherever the cosine is negative.
+            if ((answer = IndefiniteIntegralSolver.SolveAPowerOfAnImaginaryTangentBesideAPowerOfTheSecant(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAnImaginaryTangentAsAnExponential(expr, x, integrateByParts)) is { }) return answer;
             // And `A cos(z) + i A sin(z)`, which is `A e^(i z)`, where no rotation is real.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAnImaginarySumOfACosineAndASineAsAnExponential(expr, x, integrateByParts)) is { }) return answer;
