@@ -352,16 +352,18 @@ namespace AngouriMath.Core.Transformations
         /// expressions must not quietly hand back a normalisation that merely resembles one.
         /// </para>
         /// <para>
-        /// The expression is gathered into a single quotient — which is the part nothing else
-        /// in the library does, and without which <c>1/x + 1/y</c> and <c>(x + y)/(x*y)</c>
-        /// could never meet — then reduced by the multivariate greatest common divisor and
-        /// scaled so the denominator is monic in the lexicographic monomial order.
+        /// The expression is written as a single fraction, as <see cref="AsSingleFraction"/>
+        /// writes it -- without which <c>1/x + 1/y</c> and <c>(x + y)/(x*y)</c> could never
+        /// meet -- then reduced by the multivariate greatest common divisor and scaled so the
+        /// denominator is monic in the lexicographic monomial order.
         /// </para>
         /// <para>
         /// <b>Cancelling carries its condition.</b> <c>x/x</c> is not <c>1</c>, so where a
         /// factor of positive degree comes out the answer says the factor is nonzero, as the
-        /// rest of the library already does. Gathering over a common denominator widens
+        /// rest of the library already does; and so does turning a quotient over, since
+        /// <c>1/(1/x)</c> is not <c>x</c> either. Gathering over a common denominator widens
         /// nothing by itself: a sum is defined exactly where its terms are.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1618">#1618</a>
         /// </para>
         /// <para>
         /// Nothing runs this by default. See

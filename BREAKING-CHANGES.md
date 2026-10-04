@@ -1175,6 +1175,29 @@ power of the secant or the cosecant under a root goes on now too. The cosecant's
 | `"sqrt(1 + csc(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | logarithms and an arctangent in `sqrt(2 tan(x)^2 + 1)`, times `sgn(tan(x))` |
 | `"1/sqrt(-1 + csc(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(tan(x)) ln(1 + tan(x)^2)/2` |
 
+### The rational canonical form keeps the points where the expression has no value
+
+**Wrong answers, silent.** `CanonicalizeAsRationalFunction` and `Transformation.RationalCanonicalization` kept the condition a
+cancelled factor owes, `x/x` being `1 provided not x = 0`, and dropped the one that dividing by a
+quotient owes: `1/(1/x)` was `x`, which is `0` at zero, where `1/(1/x)` has no value. The
+denominator a quotient turns over is now kept as a condition too, and so is the denominator under a
+numerator that vanishes: `0/x` is `0 provided not x = 0`. The condition is written canonically,
+because it is part of a form whose point is that equal trees mean equal functions: the square-free
+part of what was excluded, without what the reduced denominator still excludes. So `x^2/x^2` and
+`x/x` meet, and a cancelled factor that the denominator still has is not repeated. The form now
+gathers through the first step of `AsSingleFraction`, so the two agree on what a single quotient is
+and on where it has a value. [#1618](https://github.com/asc-community/AngouriMath/issues/1618).
+Both columns measured on a build, `v2.5.0` against this change.
+
+| `….ToEntity().CanonicalizeAsRationalFunction()` of | Was (2.5.0) | Is |
+|---|---|---|
+| `"1/(1/x)"` | `x` | `x provided not x = 0` |
+| `"1/(1 + 1/x)"` | `x / (x + 1)` | `x / (x + 1) provided not x = 0` |
+| `"(a/b)/(c/d)"` | `a * d / (b * c)` | `a * d / (b * c) provided not d = 0` |
+| `"0/x"` | `0` | `0 provided not x = 0` |
+| `"x^2/x^2"` | `1 provided not x ^ 2 = 0` | `1 provided not x = 0` |
+| `"(x^2 - 1)/(x^2 + 2x + 1) + 1/(x + 1)"` | `x / (x + 1) provided not x ^ 2 + 2 * x + 1 = 0` | `x / (x + 1)` |
+
 ### A partial-fraction coefficient with symbols in it is in lowest terms, its rational content included
 
 **Improvement, not silent.** The decomposition over written factors with symbols among their
