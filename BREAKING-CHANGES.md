@@ -674,21 +674,25 @@ zero-discriminant arm, which gives the right answer.
 Each of these was checked by differentiating it back with the parameters pinned and comparing at
 four points. Nothing that already had an antiderivative changes.
 
-### A radical function of whole powers of `x` written through its logarithm says where its answer holds
+### A radical function of whole powers of `x` written through its logarithm is integrated on both sides of zero
 
-**Answers where there were none, each with the condition it holds under.** `1/csch(2 ln(x))^(1/2)`
-is `sqrt(sinh(2 ln(x)))`, which is `sqrt((x^2 - x^(-2))/2)` and real on both sides of zero; 2.5.0
-declined it. On the unreleased master it was integrated under `t = ln(x)`, where the rules take
-`e^t` to be positive, and the answer was right for a positive `x` and wrong for every negative one.
-Such an answer is given `provided x > 0` now, and `provided c x^n > 0` for a logarithm of `c x^n`
-([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+**Answers where there were none.** `1/csch(2 ln(x))^(1/2)` is `sqrt(sinh(2 ln(x)))`, which is
+`sqrt((x^2 - x^(-2))/2)` and real on both sides of zero; 2.5.0 declined it. Its exponentials are
+folded into powers of `x`, a negative one under a root written below the bar, and the answer is in those, on
+both sides of zero and on both sides of 1, where `sinh(2 ln(x))` changes sign. Under `t = ln(x)`,
+where the rules take `e^t` to be positive, an answer of this kind is given `provided x > 0`, and
+`provided c x^n > 0` for a logarithm of `c x^n`. A constant over a power that is not whole, `1/g^p`,
+is asked as `g^(-p)` at the depth it was asked at, so that the rules scoped to the question asked see
+it, which is how `1/csch(2 ln(x))^(1/2)` reaches the fold, and `1/sqrt(x + x^(3/2))` is answered on
+both sides of zero as well ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
-| `"1/csch(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
-| `"csch(2*ln(x))^(-3/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
-| `"1/csch(2*ln(c*x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided c x > 0` |
-| `"1/sech(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative, `provided x > 0` |
+| `"1/csch(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"csch(2*ln(x))^(-3/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"1/csch(2*ln(c*x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"1/sech(2*ln(x))^(1/2)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative on both sides of zero |
+| `"1/sqrt(x + x^(3/2))".ToEntity().Integrate("x")` | `integral(...)` | `4 sqrt(1 + sqrt(x))` times a factor constant where it is continuous, on both sides of zero |
 
 ### `e^(k acoth(a x))` beside a power of `c - a c x` is integrated
 
@@ -1731,7 +1735,7 @@ was ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 | Input | Was (2.5.0) | Now |
 |---|---|---|
 | `"x * sqrt(c - a*c*x) / e^(3 * atanh(a*x))".Integrate("x")` | `integral(…)` — left unevaluated, with `e` evaluated to a hundred digits inside it | an antiderivative in `sqrt(c - a c x)`, `provided c - a * c * x >= 0` |
-| `"1/sqrt(x + x^(3/2))".Integrate("x")` | `integral(1 / sqrt(x + x ^ (3/2)), x)` — left unevaluated | `2 * sqrt(1 + sqrt(x)) / (1/2) + C provided x >= 0` |
+| `"sqrt(x)/sqrt(x + x^2)".Integrate("x")` | `integral(...)` — left unevaluated | `2 sqrt(x + 1)` times a factor constant where it is continuous, `provided x + 1 >= 0` |
 
 ### An answer that read the sign of an even root says where the root is real
 

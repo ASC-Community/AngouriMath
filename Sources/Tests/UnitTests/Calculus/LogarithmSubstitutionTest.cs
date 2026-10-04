@@ -6,7 +6,6 @@
 //
 
 using System;
-using System.Linq;
 using AngouriMath.Extensions;
 using Xunit;
 
@@ -121,38 +120,30 @@ namespace AngouriMath.Tests.Calculus
         /// <summary>
         /// A radical function of whole powers of <c>x</c> written through its logarithm, which is
         /// real on both sides of zero: <c>sinh(2 ln(x))</c> is <c>(x^2 - x^(-2))/2</c> for a
-        /// negative <c>x</c> as well. Each answer is compared at three negative points and three
-        /// positive ones, wherever it does not say it holds only elsewhere. Integrated under
-        /// <c>t = ln(x)</c>, the first four say they hold where the logarithm's argument is
-        /// positive; the last two are answered in powers of <c>x</c> and hold on both sides.
-        /// Rubi's 6.5.3, 226, and 6.6.3, 188.
+        /// negative <c>x</c> as well. Each answer is compared on both sides of zero and on both
+        /// sides of 1, where <c>sinh(2 ln(x))</c> changes sign, and holds at every point: the
+        /// exponentials of the logarithm are folded into powers of <c>x</c>, and the answer is in
+        /// those. Rubi's 6.5.3, 226, and 6.6.3, 188.
         /// </summary>
         [Theory]
-        [InlineData("1/csch(2*ln(x))^(1/2)", false)]
-        [InlineData("csch(2*ln(x))^(-3/2)", false)]
-        [InlineData("1/csch(2*ln(13/10*x))^(1/2)", false)]
-        [InlineData("1/sech(2*ln(x))^(1/2)", false)]
-        [InlineData("sqrt(sinh(2*ln(x)))", true)]
-        [InlineData("sqrt(cosh(2*ln(13/10*x)))", true)]
-        public void ARadicalFunctionOfAWholePowerOfX(string integrand, bool onBothSides)
+        [InlineData("1/csch(2*ln(x))^(1/2)")]
+        [InlineData("csch(2*ln(x))^(-3/2)")]
+        [InlineData("1/csch(2*ln(13/10*x))^(1/2)")]
+        [InlineData("1/sech(2*ln(x))^(1/2)")]
+        [InlineData("sqrt(sinh(2*ln(x)))")]
+        [InlineData("sqrt(cosh(2*ln(13/10*x)))")]
+        public void ARadicalFunctionOfAWholePowerOfX(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
             var derivative = integral.Substitute("C", 0).Differentiate("x");
             var original = integrand.ToEntity();
-            var conditions = integral.Nodes.OfType<Entity.Providedf>().Select(provided => provided.Predicate).ToList();
-            foreach (var at in new[] { -2.7, -1.9, -1.3, 1.3, 1.9, 2.7 })
+            foreach (var at in new[] { -2.7, -1.9, -1.3, -0.7, -0.4, 0.4, 0.7, 1.3, 1.9, 2.7 })
             {
-                if (conditions.Any(condition => condition.Substitute("x", at).Evaled == Entity.Boolean.False))
-                {
-                    Assert.False(onBothSides, $"the antiderivative of {integrand} says it does not hold at x = {at}");
-                    Assert.True(at < 0, $"the antiderivative of {integrand} says it does not hold at x = {at}");
-                    continue;
-                }
                 var got = derivative.Substitute("x", at).EvalNumerical();
                 var want = original.Substitute("x", at).EvalNumerical();
                 var difference = Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart);
-                Assert.True(difference / Math.Max(1.0, Math.Abs((double)want.RealPart)) < 1e-9,
+                Assert.True(difference / Math.Max(1.0, Math.Abs((double)want.RealPart) + Math.Abs((double)want.ImaginaryPart)) < 1e-9,
                     $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
             }
         }
