@@ -23990,19 +23990,40 @@ namespace AngouriMath.Functions.Algebra
         /// <c>cos(x)^2/(a cos(x) + i a sin(x))^3</c> was declined after twelve seconds.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// The sibling of <see cref="SolveByWritingAnImaginaryTangentAsAnExponential"/>, which reads
         /// <c>A + i A tan(y)</c>; below the bar only, for the same reason.
+        /// </para>
+        /// <para>
+        /// With a constant beside the pair, <c>a + b cos(y) + i b sin(y)</c> is <c>a + b e^(i y)</c>,
+        /// and there the cosine and sine of <c>y</c> elsewhere are written as exponentials too, so
+        /// that the whole is rational in <c>e^(i y)</c>: Rubi's
+        /// <c>(A + B cos(x))/(a + b cos(x) + i b sin(x))</c> and its kin were declined, a cosine
+        /// beside the exponential being nothing the rules for either read. Without the constant the
+        /// cosine above the bar stays, beside the exponential the closed rules answer.
         /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
         /// </remarks>
         internal static Entity? SolveByWritingAnImaginarySumOfACosineAndASineAsAnExponential(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             var (above, below) = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr));
             if (!below.ContainsNode(x))
                 return null;
+            Entity? argumentBesideAConstant = null;
             var rewritten = below.Replace(node =>
             {
-                if (node is not (Sumf or Minusf) || !node.ContainsNode(x)
-                    || !TryReadACosineAndASine(node, x, out var cosineCoefficient, out var sineCoefficient, out var argument))
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(x))
+                    return node;
+                // A constant beside the pair: the pair alone is read, and the constant added back.
+                Entity? constant = null;
+                var pair = node;
+                var terms = Sumf.LinearChildren(node);
+                if (terms.Count == 3 && terms.Count(term => !term.ContainsNode(x)) == 1)
+                {
+                    constant = terms.First(term => !term.ContainsNode(x));
+                    pair = terms.Where(term => term.ContainsNode(x)).Aggregate((left, right) => left + right);
+                }
+                if (!TryReadACosineAndASine(pair, x, out var cosineCoefficient, out var sineCoefficient, out var argument))
                     return node;
                 // The ratio is the imaginary unit one way or the other, and nothing else. Bare:
                 // `i a/a` simplifies to `i provided not a = 0`, and a condition is not a number
@@ -24013,10 +24034,30 @@ namespace AngouriMath.Functions.Algebra
                 var plus = ratio.Evaled == MathS.i.Evaled;
                 if (!plus && ratio.Evaled != (-MathS.i).Evaled)
                     return node;
-                return cosineCoefficient * MathS.Pow(MathS.e, ((plus ? MathS.i : -MathS.i) * argument).InnerSimplified);
+                var exponential = cosineCoefficient * MathS.Pow(MathS.e, ((plus ? MathS.i : -MathS.i) * argument).InnerSimplified);
+                if (constant is null)
+                    return exponential;
+                if (argumentBesideAConstant is not null && argumentBesideAConstant != argument)
+                    return node;
+                argumentBesideAConstant = argument;
+                return constant + exponential;
             });
             if (rewritten == below)
                 return null;
+            // Beside a constant, the cosine and sine of that argument everywhere as exponentials.
+            if (argumentBesideAConstant is { } inExponentials)
+            {
+                var rising = MathS.Pow(MathS.e, (MathS.i * inExponentials).InnerSimplified);
+                var falling = MathS.Pow(MathS.e, (-MathS.i * inExponentials).InnerSimplified);
+                Entity InExponentials(Entity side) => side.Replace(node => node switch
+                {
+                    Cosf(var y) when y == inExponentials => (rising + falling) / 2,
+                    Sinf(var y) when y == inExponentials => (rising - falling) / (2 * MathS.i),
+                    _ => node,
+                });
+                above = InExponentials(above);
+                rewritten = InExponentials(rewritten);
+            }
             // And a whole power of what was written split, `(A e^(i y))^n` as `A^n e^(i n y)`, so
             // that the exponential stands on its own for the rules that read one: the rule that
             // distributes such powers takes a constant with a symbol in it and leaves a number,
