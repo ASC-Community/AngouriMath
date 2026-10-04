@@ -20857,16 +20857,23 @@ namespace AngouriMath.Functions.Algebra
                                 continue;
                             }
                             // g^(2m r) is |g|^(2 m r): g itself where that power is even or g is
-                            // positive, and for x the answer for x > 0 extended by parity;
-                            // otherwise the factor stays where it is.
+                            // positive, for x the answer for x > 0 extended by parity, and for a
+                            // linear an odd whole power of it with its sign in front of the answer,
+                            // `|g|` being `sgn(g) g` -- `sqrt(x/(1 + x)^3)` is
+                            // `sgn(1 + x) sqrt(x/(1 + x))/(1 + x)`; only where the root is a factor
+                            // of the integrand, as the sign goes in front of the answer. Otherwise
+                            // the factor stays where it is.
                             if (factor is Powf(var g, Number.Integer n) && n.EInteger.CompareTo(EInteger.FromInt32(2)) >= 0 && g.ContainsNode(x)
                                 && n.EInteger.Divide(EInteger.FromInt32(2)).Multiply(EInteger.FromInt32(2)) is var even
                                 && (Number.Integer.Create(underneath ? even.Negate() : even) * exponent).InnerSimplified is var power
-                                && (g == x || power is Number.Integer { EInteger.IsEven: true } || IsPositiveForReal(g, x)))
+                                && (g == x || power is Number.Integer { EInteger.IsEven: true } || IsPositiveForReal(g, x)
+                                    || power is Number.Integer && factors.Contains(node) && TreeAnalyzer.TryGetPolyLinear(g, x, out var slopeOfG, out _) && !TreeAnalyzer.IsZero(slopeOfG)))
                             {
                                 var evenPower = MathS.Pow(g, Number.Integer.Create(even));
                                 if (g == x && !factors.Contains(node))
                                     everyPowerOfXFromAFactor = false;
+                                if (g != x && power is Number.Integer { EInteger.IsEven: false } && !IsPositiveForReal(g, x))
+                                    signs[g] = signs.TryGetValue(g, out var timesTaken) ? timesTaken + 1 : 1;
                                 taken = taken * (g == x ? PowerOfAPositive(evenPower, underneath ? -exponent : exponent)
                                     : power is Number.Integer ? MathS.Pow(g, power) : MathS.Pow(evenPower, underneath ? -exponent : exponent));
                                 if (!n.EInteger.IsEven)
@@ -20998,12 +21005,20 @@ namespace AngouriMath.Functions.Algebra
             // out below zero -- which Timofeev's `sqrt(tan(x) tan(2x))` found. The constant must
             // be positive, since a negative one would take the phase the other way.
             // `((x - 1)^3 (x + 2)^5)^(1/4)` splits: above 1 both are positive, below -2 both
-            // negative with 3 + 5 a multiple of 8, and between the product is negative.
+            // negative with 3 + 5 a multiple of 8, and between the product is negative. A factor
+            // below the bar counts against those above it, its power being the negative of the
+            // exponent: `sqrt((1 + x)/x^3)` below -1 has the phases of `sqrt(1 + x)` and of
+            // `x^(-3/2)`, pi/2 and -3 pi/2, which add up to -pi, 1 - 3 = -2, and is
+            // `-sqrt(1 + x) x^(-3/2)` there; counted as one sum, 1 + 3 = 4 split it, right for
+            // x > 0 and wrong for every x < -1. The sum is still asked as well, so that only a
+            // split taken before is taken: the difference alone splits `sqrt((1 + x)/x)` below
+            // -1, rightly, and the rules after it answer `sqrt(1 + x)/sqrt(x)` for x > 0 only,
+            // where the root whole is answered on both sides.
             bool AnEvenRootOfAProductSplits(Entity above, Entity below, EInteger q, out bool onlyWhereTheRootIsReal)
             {
                 onlyWhereTheRootIsReal = false;
                 var factors = new List<(Entity Polynomial, EInteger Times)>();
-                foreach (var side in new[] { above, below })
+                foreach (var (side, underneath) in new[] { (above, false), (below, true) })
                     foreach (var factor in Mulf.LinearChildren(side))
                     {
                         if (!factor.ContainsNode(x))
@@ -21015,7 +21030,7 @@ namespace AngouriMath.Functions.Algebra
                         var (polynomial, times) = factor is Powf(var g, Number.Integer n) && n.EInteger.Sign > 0 ? (g, n.EInteger) : (factor, EInteger.One);
                         if (!TreeAnalyzer.TryGetPolynomial(polynomial, x, out _))
                             return false;
-                        factors.Add((polynomial, times));
+                        factors.Add((polynomial, underneath ? times.Negate() : times));
                     }
                 if (factors.Count < 2)
                     return false;
@@ -21023,11 +21038,15 @@ namespace AngouriMath.Functions.Algebra
                 var splits = OnEveryRealIntervalAt(factors.Select(f => f.Polynomial).ToList(), x, (at, signs) =>
                 {
                     var negativeTimes = EInteger.Zero;
+                    var negativeTimesUnsigned = EInteger.Zero;
                     for (var i = 0; i < signs.Count; i++)
                         if (signs[i] < 0)
+                        {
                             negativeTimes = negativeTimes.Add(factors[i].Times);
+                            negativeTimesUnsigned = negativeTimesUnsigned.Add(factors[i].Times.Abs());
+                        }
                     if (negativeTimes.IsEven)
-                        return negativeTimes.Remainder(q.ShiftLeft(1)).IsZero;
+                        return negativeTimes.Remainder(q.ShiftLeft(1)).IsZero && negativeTimesUnsigned.Remainder(q.ShiftLeft(1)).IsZero;
                     if (!NotRealAt(expr, x, at))
                         realBeyondTheRoot = true;
                     return true;
