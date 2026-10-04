@@ -393,7 +393,12 @@ namespace AngouriMath.Functions.Algebra
             foreach (var factor in Mulf.LinearChildren(denominator))
                 if (squared is null && factor is Powf(var @base, Number.Integer { EInteger: var power }) && power.Equals(EInteger.FromInt32(2))
                     && @base is Sumf or Minusf && @base.ContainsNode(x)
-                    && @base.Nodes.Any(node => node.ContainsNode(x) && node is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf or Logf or Powf(Number, _)))
+                    && @base.Nodes.Any(node => node.ContainsNode(x) && IsAFunctionOfTheVariable(node))
+                    // The variable outside the functions as well, as in `a x cos(a x) - sin(a x)`: a
+                    // base that is a function of `sin(x)` alone, `(a + b sin(x))^2`, is the
+                    // substitutions' and the reductions', and was answered in a second where this
+                    // ran past the budget.
+                    && @base.Replace(node => IsAFunctionOfTheVariable(node) ? Number.Integer.One : node).ContainsNode(x))
                     squared = @base;
                 else
                     rest = rest * factor;
@@ -427,6 +432,10 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             return -gTop / (gBottom * squared) + integral;
         }
+
+        /// <summary>Whether <paramref name="node"/> is a trigonometric function, a logarithm or an exponential.</summary>
+        private static bool IsAFunctionOfTheVariable(Entity node)
+            => node is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf or Logf or Powf(Number, _);
 
         /// <summary>Whether <paramref name="expr"/> holds a fractional power of something in <paramref name="x"/>.</summary>
         private static bool HasARadicalOf(Entity expr, Entity.Variable x)
