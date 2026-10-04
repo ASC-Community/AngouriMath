@@ -851,6 +851,10 @@ namespace AngouriMath.Functions.Algebra
             // cosine, by the half angle at which they are squares: `1 + sin(y)` is `2 sin(u)^2`. Before
             // the substitution search, which spent twenty seconds on the radicals of the sine.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusASineIsASquare(expr, x, integrateByParts)) is { }) return answer;
+            // And symbolic powers of `a ± a sin(y)` beside a power of `g cos(y)`, by u = sin(y), where
+            // `(1 + u)(1 - u)` is the cosine's square: the half angle wants numeric powers, and the
+            // substitution search spent the budget on these.
+            if ((answer = IndefiniteIntegralSolver.SolveSymbolicPowersOfOnePlusMinusASineThroughTheSine(expr, x, integrateByParts)) is { }) return answer;
             // And a half-odd power of a +- a sec(y), which is that square over cos(y): by the half-angle
             // tangent, in which the whole is rational beside one root.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant(expr, x, integrateByParts)) is { }) return answer;

@@ -3609,6 +3609,159 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// Powers of <c>a ± a sin(y)</c> with a symbolic exponent, beside a power of
+        /// <c>g cos(y)</c> and anything else in the sine alone, under <c>u = sin(y)</c>:
+        /// <c>(1 + sin(y))(1 - sin(y))</c> is <c>cos(y)^2</c>, so each factor is a power of
+        /// <c>1 + u</c> or of <c>1 - u</c> up to a factor constant on each interval where it is
+        /// defined, and <c>dy = du/cos(y)</c> is one more pair of half powers. The cosine's the
+        /// same way, by <c>u = cos(y)</c> beside a power of <c>g sin(y)</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>(a + b sin)^m (c + d sin)^n</c> files with <c>a^2 = b^2</c> and
+        /// <c>c^2 = d^2</c> hold about a hundred and twenty problems with a symbolic exponent,
+        /// <c>(a + a sin(e + f x))^m sqrt(c - c sin(e + f x))</c> the plainest, and none was
+        /// answered: the half angle at which <c>1 ± sin(y)</c> is a square, the rule before this
+        /// one, wants numeric powers, and the substitution search spent the budget on them. What
+        /// is asked in <c>u</c> is <c>(1 + u)^A (1 - u)^B R(u)</c>, which is elementary where one
+        /// of <c>A</c>, <c>B</c> and <c>A + B</c> is a whole number and the rest is a
+        /// polynomial, and is declined where it is not.
+        /// </para>
+        /// <para>
+        /// The answer is <c>K G(sin(y))/F</c>, for <c>G</c> the antiderivative in <c>u</c>,
+        /// <c>F</c> the slope of <c>y</c> and <c>K</c> the powers as written over the form they
+        /// were rewritten to and over <c>cos(y)</c>: a quotient whose logarithmic derivative is
+        /// zero, so the answer holds whatever <c>a</c>, <c>g</c> and the exponents are --
+        /// <c>(a (1 + u))^m</c> is not <c>a^m (1 + u)^m</c> for every <c>a</c>, and the quotient
+        /// of the two is constant on each interval either way. At the question asked only, and
+        /// only where an exponent is symbolic: numeric half powers are the half angle's.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveSymbolicPowersOfOnePlusMinusASineThroughTheSine(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAsked)
+                return null;
+            Entity? argument = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (TrigonometricArgument(node) is not { } thisArgument || !thisArgument.ContainsNode(x))
+                    continue;
+                if (argument is null)
+                    argument = thisArgument;
+                else if (argument != thisArgument)
+                    return null;
+            }
+            if (argument is null || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _)
+                || rate.ContainsNode(x) || TreeAnalyzer.IsZero(rate))
+                return null;
+            var sine = MathS.Sin(argument);
+            var cosine = MathS.Cos(argument);
+            // Each factor as a base and an exponent, a power of a power read as one power: the
+            // quotient of the two spellings is constant on each interval, and K carries it.
+            var factors = new List<(Entity Factor, Entity Base, Entity Exponent)>();
+            foreach (var factor in Mulf.LinearChildren(expr))
+            {
+                Entity @base = factor, exponent = Number.Integer.One;
+                while (@base is Powf(var inner, var power))
+                {
+                    @base = inner;
+                    exponent = power * exponent;
+                }
+                if (exponent.ContainsNode(x))
+                    return null;
+                factors.Add((factor, @base, exponent.InnerSimplified));
+            }
+            // Which function the sums are of: all of one kind.
+            bool? ofTheSine = null;
+            foreach (var (_, @base, _) in factors)
+                if (@base.ContainsNode(x) && ReadAsOnePlusMinusAFunction(@base, sine, cosine) is var (_, _, isSine))
+                {
+                    if (ofTheSine is { } kind && kind != isSine)
+                        return null;
+                    ofTheSine = isSine;
+                }
+            if (ofTheSine is not { } sineKind)
+                return null;
+            var function = sineKind ? sine : cosine;
+            var complement = sineKind ? cosine : sine;
+            var u = Variable.CreateUnique(expr, "u_one_plus_minus");
+            // The exponents of 1 + f, of 1 - f and of the complement, the factors that carry
+            // them as they stand, and the rest in u.
+            Entity plus = Number.Integer.Zero, minus = Number.Integer.Zero, ofTheComplement = Number.Integer.Zero;
+            Entity asItIs = Number.Integer.One, rest = Number.Integer.One;
+            var symbolic = false;
+            foreach (var (factor, @base, exponent) in factors)
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    rest *= factor;
+                    continue;
+                }
+                if (ReadAsOnePlusMinusAFunction(@base, sine, cosine) is var (_, isPlus, _))
+                {
+                    if (isPlus)
+                        plus += exponent;
+                    else
+                        minus += exponent;
+                    asItIs *= factor;
+                    symbolic |= exponent is not Number;
+                    continue;
+                }
+                if (AsAPowerOfTheComplement(@base) is { } sign)
+                {
+                    ofTheComplement += sign * exponent;
+                    asItIs *= factor;
+                    symbolic |= exponent is not Number;
+                    continue;
+                }
+                var inU = factor.Substitute(function, u);
+                if (inU.ContainsNode(x))
+                    return null;
+                rest *= inU;
+            }
+            if (!symbolic)
+                return null;
+            // dy = du/complement takes one more half power of each.
+            var half = Number.Rational.Create(1, 2);
+            var a = (plus + ofTheComplement * half - half).Simplify();
+            var b = (minus + ofTheComplement * half - half).Simplify();
+            // A zero exponent leaves its factor out: `(1 - u)^0` is one provided `u` is not one, and
+            // the condition would stand between the question and the rules that answer it.
+            Entity PowerOf(Entity @base, Entity exponent) => exponent == Number.Integer.Zero ? Number.Integer.One : MathS.Pow(@base, exponent);
+            var integrand = (PowerOf(1 + u, a) * PowerOf(1 - u, b) * rest).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(integrand, u, integrateByParts) is not { } result)
+                return null;
+            // d sin(y) = cos(y) dy and d cos(y) = -sin(y) dy.
+            Entity constant = asItIs * PowerOf(1 + function, (-a).InnerSimplified) * PowerOf(1 - function, (-b).InnerSimplified) / (rate * complement);
+            if (!sineKind)
+                constant = -constant;
+            var answer = constant * result.Substitute(u, function);
+            return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+
+            // 1 for a constant times the complement, -1 for a constant times its reciprocal
+            // function, null for anything else.
+            int? AsAPowerOfTheComplement(Entity @base)
+            {
+                int? found = null;
+                foreach (var part in Mulf.LinearChildren(@base))
+                {
+                    if (!part.ContainsNode(x))
+                        continue;
+                    if (found is not null)
+                        return null;
+                    if (part == complement)
+                        found = 1;
+                    else if (sineKind ? part is Secantf(var s) && s == argument : part is Cosecantf(var c) && c == argument)
+                        found = -1;
+                    else
+                        return null;
+                }
+                return found;
+            }
+        }
+
+        /// <summary>
         /// Half-odd powers of <c>a ± a sec(y)</c>, beside powers of <c>d sec(y)</c> or
         /// <c>d cos(y)</c> and anything rational in the sine and cosine of <c>y</c>, by the
         /// half-angle tangent <c>t = tan(y/2)</c>: <c>1 + sec(y)</c> is <c>2/(1 - t^2)</c>,
