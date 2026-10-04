@@ -17039,6 +17039,86 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A half-odd power of a perfect square in one trigonometric function of <paramref name="x"/>
+        /// is that power of the modulus: <c>sqrt(b^2 + 2 a b sin(y) + a^2 sin(y)^2)</c> is
+        /// <c>sqrt(a^2) |sin(y) + b/a|</c>, which is <c>sqrt(a^2) sgn(sin(y) + b/a) (sin(y) + b/a)</c>,
+        /// the sign constant between the zeros of the linear in the sine.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="SolveByTakingARootOfAPerfectSquare"/>'s reading, with the function for the
+        /// variable: Rubi's 4.7.7 has <c>(a + b sin(d + e x)) sqrt(b^2 + 2 a b sin(d + e x) + a^2 sin(d + e x)^2)</c>
+        /// and the same with a tangent or a secant, at the half-odd powers either way, and they
+        /// were declined or past the budget where with the modulus written the rest is rational in
+        /// the function. At the top only, and only where each such root is a factor of the
+        /// integrand, so that its sign goes in front; a leading coefficient a number or one of
+        /// known sign for a real parameter, whose condition travels with the answer, as that
+        /// rule's does.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByTakingARootOfAPerfectSquareInATrigonometricFunction(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAsked)
+                return null;
+            var factors = FactorsOfTheIntegrand(expr).Select(pair => pair.Factor).ToList();
+            var changed = false;
+            var declined = false;
+            Entity assumed = Entity.Boolean.True;
+            Entity signs = Number.Integer.One;
+            var written = expr.Replace(node =>
+            {
+                if (declined || node is not Powf(var radicand, Number.Rational r) || r is Number.Integer
+                    || !r.ERational.Denominator.Equals(EInteger.FromInt32(2)) || !radicand.ContainsNode(x)
+                    || radicand.Complexity > 40 || TreeAnalyzer.TryGetPolynomial(radicand, x, out _))
+                    return node;
+                var functions = radicand.Nodes.Where(inner => inner.ContainsNode(x)
+                    && inner is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf).Distinct().ToList();
+                if (functions.Count != 1)
+                    return node;
+                var function = functions[0];
+                var w = Variable.CreateUnique(expr, "w_sq");
+                var inW = radicand.Replace(inner => inner == function ? w : inner);
+                if (inW.ContainsNode(x) || !TreeAnalyzer.TryGetPolynomial(inW, w, out var monomials)
+                    || monomials.Keys.Max() is not { } degree || !degree.Equals(EInteger.FromInt32(2))
+                    || monomials.Keys.Any(k => k.Sign < 0))
+                    return node;
+                var a = monomials[degree];
+                var b = monomials.TryGetValue(EInteger.One, out var b1) ? b1 : Number.Integer.Zero;
+                var c = monomials.TryGetValue(EInteger.Zero, out var c0) ? c0 : Number.Integer.Zero;
+                if (b.Evaled is Number.Complex and not Number.Real || c.Evaled is Number.Complex and not Number.Real
+                    || !IsAPerfectSquareDiscriminant(a, b, c))
+                    return node;
+                if (a.Evaled is not Number.Real { IsPositive: true })
+                {
+                    if (!IsPositiveForARealParameter(a, x, out var leadingAssumed, assumed))
+                        return node;
+                    assumed = leadingAssumed;
+                }
+                // The sign in front of the integral, which needs the root to be a factor of it.
+                if (factors.Count(factor => factor == node) < expr.Nodes.Count(inner => inner == node))
+                {
+                    declined = true;
+                    return node;
+                }
+                var h = (b / (Number.Integer.Create(2) * a)).InnerSimplified;
+                if (h.Vars.Any())
+                    h = Functions.PartialFractions.Bare(h.Simplify());
+                var linear = h == Number.Integer.Zero ? function : (function + h).InnerSimplified;
+                var twoR = Number.Integer.Create(r.ERational.Numerator);
+                signs = signs * MathS.Signum(linear);
+                changed = true;
+                return MathS.Pow(a, r) * (twoR == Number.Integer.One ? linear : MathS.Pow(linear, twoR));
+            });
+            if (declined || !changed)
+                return null;
+            if (Integration.ComputeAsTheSameQuestion(written, x, integrateByParts) is not { } answer)
+                return null;
+            answer = signs * answer;
+            return assumed == Entity.Boolean.True ? answer : answer.Provided(assumed);
+        }
+
+        /// <summary>
         /// A fractional power of a sum whose every term has x to a power in it,
         /// <c>(a x^j + b x^n)^p</c> with <c>0 &lt; j &lt; n</c>, as <c>K x^(j p) (a + b x^(n - j))^p</c>:
         /// the integral is <c>K</c> times the integral with <c>x^(j p) (a + b x^(n - j))^p</c> in its
