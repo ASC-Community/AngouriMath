@@ -12,7 +12,7 @@ name: 'Generated Files Up To Date'
 #
 # The ANTLR parser has its own job, GrammarUpToDate.yml, because it needs a Java runtime where this
 # needs a dotnet tool. Keeping them apart means neither goes red for the other's reason.
-# https://github.com/AngouriMath/AngouriMath/issues/1034
+# https://github.com/asc-community/AngouriMath/issues/1034
 
 on:
   push:

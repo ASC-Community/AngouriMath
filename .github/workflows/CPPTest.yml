@@ -1,7 +1,7 @@
 name: 'C++ Test'
 
-# Coverage for this leg is https://github.com/AngouriMath/AngouriMath/issues/746 item 35 and
-# https://github.com/AngouriMath/AngouriMath/issues/397, and it is not the same measurement the
+# Coverage for this leg is https://github.com/asc-community/AngouriMath/issues/746 item 35 and
+# https://github.com/asc-community/AngouriMath/issues/397, and it is not the same measurement the
 # other three legs make. C#, F# and Interactive each run `dotnet test` and collect coverage of
 # managed assemblies with the VSTest XPlat collector. Nothing in this job can: the library reaches
 # the tests as a Native AOT shared object, the published artefact contains no managed assembly at

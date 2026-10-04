@@ -9,7 +9,7 @@
 #
 # Path filters are globs matched against paths relative to the repository root, so the
 # leading "./" was wrong as well, though it made no difference while the target did not
-# exist. https://github.com/AngouriMath/AngouriMath/issues/775
+# exist. https://github.com/asc-community/AngouriMath/issues/775
 on:
   workflow_dispatch:
   push:
@@ -65,7 +65,7 @@ jobs:
     #
     # Last, so that a failure here does not cost the RAM figures, and before the upload so
     # that the file to copy over the baseline is in the artifact of the run that failed.
-    # https://github.com/AngouriMath/AngouriMath/issues/529
+    # https://github.com/asc-community/AngouriMath/issues/529
     - name: 'Kernel performance gate'
       run: |
         cd Sources/Tests/DotnetBenchmark
@@ -73,7 +73,7 @@ jobs:
 
     # The numbers used to exist only in this job's log, which expires -- so there was no way to
     # see whether a figure had moved without re-running an old commit by hand. Retaining them is
-    # step 1 of https://github.com/AngouriMath/AngouriMath/issues/500, and the only step that
+    # step 1 of https://github.com/asc-community/AngouriMath/issues/500, and the only step that
     # can be taken from inside this repository: the two destinations that issue names,
     # AngouriMathLab/performance-reports and AngouriMathLab/performance-reports-tools, do not
     # exist.
