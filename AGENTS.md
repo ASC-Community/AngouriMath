@@ -3,7 +3,7 @@
 For AI agents working on AngouriMath. Humans: [CONTRIBUTING.md](CONTRIBUTING.md) is yours, and
 everything below applies to you too.
 
-AngouriMath is a Math OS in the making — [#746](https://github.com/AngouriMath/AngouriMath/issues/746)
+AngouriMath is a Math OS in the making — [#746](https://github.com/asc-community/AngouriMath/issues/746)
 says what that means — of which the computer algebra system is the part that exists. The thing being
 built is *mathematics*, and the code is how it is expressed. Read this as instructions for doing
 mathematics well, using C# and F#.
@@ -31,7 +31,7 @@ Mathematica, Maxima — and match the mathematics rather than the language you a
 all three of those give; C's `%` truncates, but C's `%` is an operation on machine integers.
 Check it, do not reason about it from memory: this exact case was got wrong first time round.
 
-**Consistency is the point.** [#497](https://github.com/AngouriMath/AngouriMath/issues/497), the
+**Consistency is the point.** [#497](https://github.com/asc-community/AngouriMath/issues/497), the
 2.0 paper, names inconsistency as the central defect: *"one may find it inconsistent in a lot of
 places in API, behaviour, and internal structure of code."* A rule that fires for `sin` but not
 `tan`, a limit that works from both sides but not from one, an evaluation that holds precision for
@@ -41,7 +41,7 @@ When you fix something, ask what else is the same shape, and fix that too, or wr
 **Ask what a thing *means* before asking how it is computed.** A number evaluated to a hundred
 digits is an approximation of a number; a boolean is not an approximation of anything, and
 its value cannot depend on how many digits were enumerated on the way to it. `2 + 2^(-100) = 2`
-was `True` ([#1376](https://github.com/AngouriMath/AngouriMath/issues/1376)) because the
+was `True` ([#1376](https://github.com/asc-community/AngouriMath/issues/1376)) because the
 comparison subtracted the sides and asked whether the difference was under `1e-16` -- and the
 first analysis of it asked *which tolerance* the comparison should use, which is the same mistake
 in a smaller font. Both sides were exact rationals; the answer is `False` with no digits
@@ -53,7 +53,7 @@ a `Setting<EContext>` on every evaluation -- the mechanism is not the mathematic
 answered inside its frame inherits its error. Evaluation to a requested accuracy, exactness kept
 wherever the input was exact, and interval arithmetic for what is genuinely approximate are the
 shape of the answer, and they are queued for v3 in
-[#1019](https://github.com/AngouriMath/AngouriMath/issues/1019).
+[#1019](https://github.com/asc-community/AngouriMath/issues/1019).
 
 ## Not answering is a legitimate answer. Answering wrongly is not.
 
@@ -90,7 +90,7 @@ anything you can run. These are not: it touches more files, it might break tests
 have to understand, a smaller change exists that suppresses the wrong answer without producing the
 right one.
 
-The worked example is [#757](https://github.com/AngouriMath/AngouriMath/issues/757).
+The worked example is [#757](https://github.com/asc-community/AngouriMath/issues/757).
 `(x - a)(x + a) <= 0` was answered with an interval whose endpoints are ordered for one sign of `a`
 only, and the two candidate fixes were a case split on that sign, or declining to answer a symbolic
 coefficient at all. Refusing is not a fix that works — it is a stopgap — and choosing it would have
@@ -104,7 +104,7 @@ concrete. Enumerating cases is usually a sign that an identity has been missed.
 
 ### "Not a CAS operation" is not a reason either
 
-This is a Math OS ([#746](https://github.com/AngouriMath/AngouriMath/issues/746)), not a computer
+This is a Math OS ([#746](https://github.com/asc-community/AngouriMath/issues/746)), not a computer
 algebra system that happens to do calculus. A question is not out of scope because its notation is
 statistical, combinatorial, number-theoretic or about a sequence: an expectation over a distribution,
 a probability of an event, a recurrence and the limit of the sequence it defines, a divisibility, a
@@ -115,7 +115,7 @@ library does not do that kind of thing. `sum` and `integral` are binders that re
 `E[f(X)]` for `X ~ U(0, 1)` reduces to an integral the same way, and a node that reduces is a node
 worth having. Where the reduction is a theorem rather than a computation, say which theorem and
 what the node would need to state it, and leave the answer unevaluated rather than absent.
-[#1212](https://github.com/AngouriMath/AngouriMath/issues/1212) is where this was said.
+[#1212](https://github.com/asc-community/AngouriMath/issues/1212) is where this was said.
 
 ## Output has a contract too
 
@@ -136,7 +136,7 @@ so.
 That is weaker than `Stringize`'s contract, not stronger. `StringizeRoundTripTest` fails in this
 repository the moment the printed form stops parsing; the LaTeX contract fails as a bug report from
 someone else, months later. When you change `Latexize` output, check it against CSharpMath and open
-a PR there as well ([#822](https://github.com/AngouriMath/AngouriMath/issues/822)).
+a PR there as well ([#822](https://github.com/asc-community/AngouriMath/issues/822)).
 
 **The standard command wins, and CSharpMath follows it.** `Latexize` emits the LaTeX a
 mathematician would write — `\binom{n}{k}`, `\pmod{n}`, `\mathbb{Z}^{+}` — and never a
@@ -191,16 +191,16 @@ shape you are chasing — **add the operation and keep it**. A scratch project a
 once and is deleted; the next person to ask it writes the same thing again.
 
 Learned the wrong way round: closing
-[#629](https://github.com/AngouriMath/AngouriMath/issues/629) needed a system solve, the probe had
+[#629](https://github.com/asc-community/AngouriMath/issues/629) needed a system solve, the probe had
 no operation for one, and a throwaway project got written to answer it. The durable version was ten
 lines in the probe. Same measurement, and only one of the two can be re-run.
 
 Listed inputs and generated inputs fail differently, and both are worth having. A corpus of recorded
 problems tells you about the corpus. A harness that builds its own inputs — sampling negative points,
 checking a simplification against the expression it came from — finds what nobody thought to write
-down: [#744](https://github.com/AngouriMath/AngouriMath/issues/744),
-[#751](https://github.com/AngouriMath/AngouriMath/issues/751) and
-[#752](https://github.com/AngouriMath/AngouriMath/issues/752) were all found that way while every
+down: [#744](https://github.com/asc-community/AngouriMath/issues/744),
+[#751](https://github.com/asc-community/AngouriMath/issues/751) and
+[#752](https://github.com/asc-community/AngouriMath/issues/752) were all found that way while every
 listed corpus stayed green. When you add one, sample negative points, make the tolerance relative,
 and treat a `NaN` as a failure only where the original had a value somewhere.
 
@@ -324,7 +324,7 @@ being states, and they belong to a quantum computing library rather than to a CA
 what it claims about its output, and how well justified the claim is. The algorithms underneath are
 untouched; what changed is that a step can be named, composed and enumerated rather than only
 called. See [`Contributing/Transformations.md`](Sources/AngouriMath/Docs/Contributing/Transformations.md),
-and [#746](https://github.com/AngouriMath/AngouriMath/issues/746) for where it is going.
+and [#746](https://github.com/asc-community/AngouriMath/issues/746) for where it is going.
 
 Three habits it asks for, and each is the honesty rule above in a different place:
 
@@ -391,15 +391,15 @@ with a node the tree already has, write down its defining properties — its equ
 operations, what it is an element of — and check them against a second source** (mathlib4's
 definition, a textbook, Wikipedia's *definition* section) rather than against how it is printed.
 Two objects with the same notation and different operations are different nodes, or one of them
-is designed later (the pair, with points, in v3: [#1237](https://github.com/AngouriMath/AngouriMath/issues/1237),
-[#1409](https://github.com/AngouriMath/AngouriMath/issues/1409)).
+is designed later (the pair, with points, in v3: [#1237](https://github.com/asc-community/AngouriMath/issues/1237),
+[#1409](https://github.com/asc-community/AngouriMath/issues/1409)).
 
 **A name, like a behaviour, is chosen and not copied.** That another system has a name or a
 behaviour is not a reason to adopt it. The operation that writes an expression as one quotient was
 proposed as `Together` because Mathematica and SymPy call it that, and the maintainer asked whether
 mathematicians use the word or it is engineers' jargon: it is jargon, a mathematician says *write it
 as a single fraction*, and the operation is `AsSingleFraction`
-([#1239](https://github.com/AngouriMath/AngouriMath/issues/1239)). **Before proposing a public
+([#1239](https://github.com/asc-community/AngouriMath/issues/1239)). **Before proposing a public
 name, say what a textbook calls the operation and name what the result is; cite another system
 only as corroboration.** The same holds for logic: a rule, a convention or a default taken over from
 SymPy or Mathematica is checked against the mathematics, its definition and its hypotheses, before
@@ -419,7 +419,7 @@ out everything it has:
 - **The operations** — what is computed, decided or characterised, and by which procedure.
 - **The methods** — how the text *proves* and *argues*: induction in its variants, contrapositive,
   contradiction, cases, counter-examples. A proof method is as much a capability as an object
-  ([#746](https://github.com/AngouriMath/AngouriMath/issues/746)'s proof engine is built from
+  ([#746](https://github.com/asc-community/AngouriMath/issues/746)'s proof engine is built from
   exactly these), and a reference that teaches them is specifying it.
 - **Every example and exercise as a test case.** *"Does there exist a natural number `k` such that
   `5k` is one more than a multiple of `7`? If so, the smallest? Can you characterise all of them?"*
@@ -437,7 +437,7 @@ The output of the reading is a document with those lists — objects, notation, 
 methods, what is wrong, test cases — kept beside the goal it came from, and the docket of work is
 derived from it. A summary written before the reading is finished is the thing this section
 exists to stop, and it has happened: the first pass over
-[#1409](https://github.com/AngouriMath/AngouriMath/issues/1409)'s book was a table of contents
+[#1409](https://github.com/asc-community/AngouriMath/issues/1409)'s book was a table of contents
 turned into a feature list.
 
 **And name it where you cite it.** A comment, a test summary or a changelog entry that says
@@ -491,7 +491,7 @@ Then:
    each with `?sort=updated&direction=desc`), and **Discussions** are a third -- questions and
    ideas live there, not in issues, and an unanswered one is as much yours as an issue comment:
    ```
-   gh api graphql -f query='{ repository(owner:"AngouriMath", name:"AngouriMath") {
+   gh api graphql -f query='{ repository(owner:"asc-community", name:"AngouriMath") {
      discussions(first:10, orderBy:{field:UPDATED_AT, direction:DESC}) {
        nodes { number title updatedAt isAnswered category { name } } } } }'
    ```
@@ -512,8 +512,8 @@ Then:
    are read at all. The comment endpoints are not filtered by state, so sweep by time and let
    them say where the comment is:
    ```
-   gh api "repos/AngouriMath/AngouriMath/issues/comments?sort=updated&direction=desc&since=<when>"
-   gh api "repos/AngouriMath/AngouriMath/pulls/comments?sort=updated&direction=desc&since=<when>"
+   gh api "repos/asc-community/AngouriMath/issues/comments?sort=updated&direction=desc&since=<when>"
+   gh api "repos/asc-community/AngouriMath/pulls/comments?sort=updated&direction=desc&since=<when>"
    ```
    Sweep every round with `<when>` set to the last sweep rather than to the session's start, and
    read what comes back before picking the next piece of work up: a reply that waits for the end
@@ -670,7 +670,7 @@ what was wrong. Say what is wrong and why; leave the fix to whoever owns the fil
 ### Working from a roadmap
 
 A large issue is a dependency graph written down as a list, and the list order is not the execution
-order. Read [#746](https://github.com/AngouriMath/AngouriMath/issues/746) that way:
+order. Read [#746](https://github.com/asc-community/AngouriMath/issues/746) that way:
 
 1. Audit what is actually implemented, against the code rather than the checklist.
 2. Build the dependency graph.
@@ -697,7 +697,7 @@ leave project-management scaffolding behind once the work it tracked has landed.
 
 A milestone is triaged on its own, as a type is: an issue with none has an untriaged milestone,
 and there is no untriaged issue as such
-([#1511](https://github.com/AngouriMath/AngouriMath/pull/1511#issuecomment-5858287510)). Once
+([#1511](https://github.com/asc-community/AngouriMath/pull/1511#issuecomment-5858287510)). Once
 triaged, every issue is on one, and the milestone says what kind of change it is, not only when:
 
 - **The next minor** (`2.6.0`, then `2.7.0`, …) carries defects and additive work that moves no
@@ -705,7 +705,7 @@ triaged, every issue is on one, and the milestone says what kind of change it is
   what will not be in the next one goes to the one after, and a release is cut when what is left
   can be moved with a reason rather than when the list is empty.
 - **The next major** (`3.0`) carries what re-values existing input — the docket in
-  [#1019](https://github.com/AngouriMath/AngouriMath/issues/1019). An item that breaks something
+  [#1019](https://github.com/asc-community/AngouriMath/issues/1019). An item that breaks something
   is never on a minor, however agreed it is; if an issue is half additive and half breaking, split
   it. **The v3 redesign is seen as a whole**: across every issue on the milestone, and across the
   file structure, the API structure with its implementations, the projects and the packages, at
@@ -713,39 +713,39 @@ triaged, every issue is on one, and the milestone says what kind of change it is
   consideration limits the v3 design, and the C++ wrapper's own v3 shape comes after, in `3.1`.
 - **`2.8`** is the minor that holds the design work the maintainer wants tried *before* v3 so that
   v3 can review it with the whole in view — the Unicode output and parsing of
-  [#1242](https://github.com/AngouriMath/AngouriMath/issues/1242), and differentiation with
-  respect to a function ([#230](https://github.com/AngouriMath/AngouriMath/issues/230)), moved
+  [#1242](https://github.com/asc-community/AngouriMath/issues/1242), and differentiation with
+  respect to a function ([#230](https://github.com/asc-community/AngouriMath/issues/230)), moved
   there from `3.1` on 2026-09-21 for that reason. **`3.1`** holds what follows the redesign rather
   than shaping it: the C++ surface.
 - **Future** is an explicit deprioritisation, and the only one: it replaces the `Not now` label, and
   nothing sits there because it is hard. A "not now" that is ready to do is on a version — which is
   why the milestone holds one issue, not thirty. Once every other milestone is done, the next
   milestones are planned by pulling issues from it
-  ([#1468](https://github.com/AngouriMath/AngouriMath/issues/1468)); its description says so.
+  ([#1468](https://github.com/asc-community/AngouriMath/issues/1468)); its description says so.
 - **Guiding principles** is perpetual: the Goals with no expected completion, which the work
   keeps following rather than finishing -- #746, the roadmap itself, and its kind. It is neither
   a version nor the backlog, and nothing leaves it by being done.
 - **Epics** — the agentic goals, #718, #1409 and their kind — are Goals used as parents, which is
   what an epic is here (the type, not a milestone; the `Epics` milestone was retired when the
-  types came in, [#1384](https://github.com/AngouriMath/AngouriMath/pull/1384)). A Goal is on
+  types came in, [#1384](https://github.com/asc-community/AngouriMath/pull/1384)). A Goal is on
   the milestone its last planned piece is aimed at, and each sub-issue or PR is on its own; the
   Goal stays open across releases, lists what each one delivered, and moves when its last piece
-  does ([#1498](https://github.com/AngouriMath/AngouriMath/issues/1498#issuecomment-5857987112)).
+  does ([#1498](https://github.com/asc-community/AngouriMath/issues/1498#issuecomment-5857987112)).
   A Goal with no last piece to aim at is on Guiding principles
-  ([#1511](https://github.com/AngouriMath/AngouriMath/pull/1511#issuecomment-5858231058)).
+  ([#1511](https://github.com/asc-community/AngouriMath/pull/1511#issuecomment-5858231058)).
 - A proposal without `Accepted` is on Future until it is decided: a version would decide it.
 - **A parent is never due before its children.** Milestones run through the versions in order,
   then Future, then Guiding principles, and a parent issue's is never earlier than any child's:
   when a child moves later than its parent, the parent moves with it
-  ([#718](https://github.com/AngouriMath/AngouriMath/issues/718#issuecomment-5910345918)). The
+  ([#718](https://github.com/asc-community/AngouriMath/issues/718#issuecomment-5910345918)). The
   rule runs one way. Bringing work *earlier* is a scheduling decision, not a consequence of it:
   the integration work under #233 goes to `2.6.0` because calculus comes first, being the
   door to university mathematics and beyond
-  ([#1626](https://github.com/AngouriMath/AngouriMath/pull/1626#issuecomment-5911144638)), and
+  ([#1626](https://github.com/asc-community/AngouriMath/pull/1626#issuecomment-5911144638)), and
   #718, a parent with no last piece to aim at, is on Guiding principles. And "under" is
   GitHub's sub-issue relationship, not prose: an issue that belongs under another is linked in the
   turn it is filed, and a comment says "under" only once the link is there
-  ([#718](https://github.com/AngouriMath/AngouriMath/issues/718#issuecomment-5910315961)) --
+  ([#718](https://github.com/asc-community/AngouriMath/issues/718#issuecomment-5910315961)) --
   the tree is what the backlog is read by, and a word in a comment is invisible to it.
 
 An issue you open has its type and its milestone from the moment it is filed, which the reply
@@ -753,14 +753,14 @@ that triages someone else's issue does for theirs. `gh issue create --milestone`
 the type needs a second call, since `gh issue create` has no flag for it:
 
 ```
-gh api -X PATCH repos/AngouriMath/AngouriMath/issues/<n> -f type=Bug   # Bug, Feature, Maintenance or Goal
+gh api -X PATCH repos/asc-community/AngouriMath/issues/<n> -f type=Bug   # Bug, Feature, Maintenance or Goal
 ```
 
 and a sub-issue link takes the child's id rather than its number:
 
 ```
-gh api -X POST repos/AngouriMath/AngouriMath/issues/<parent>/sub_issues \
-  -F sub_issue_id=$(gh api repos/AngouriMath/AngouriMath/issues/<child> --jq .id)
+gh api -X POST repos/asc-community/AngouriMath/issues/<parent>/sub_issues \
+  -F sub_issue_id=$(gh api repos/asc-community/AngouriMath/issues/<child> --jq .id)
 ```
 
 When a PR merges, check its issue's milestone still describes where the change lands — a fix
@@ -792,7 +792,7 @@ where they are searchable and where someone hitting the same wall will find them
 the code is the conclusion and the reason it holds. A measurement that justifies a constant is a
 reason; a story about how you arrived at it is not.
 
-Cite issues by full URL in code comments (`https://github.com/AngouriMath/AngouriMath/issues/557`),
+Cite issues by full URL in code comments (`https://github.com/asc-community/AngouriMath/issues/557`),
 since a bare `#557` means nothing outside GitHub. `#557` is fine in PR titles and bodies.
 
 ## Where things are written down
@@ -805,7 +805,7 @@ are short, and a stale one is worse than none — if you change what a file desc
 | [BREAKING-CHANGES.md](BREAKING-CHANGES.md) | every input whose answer has changed, with both values and why |
 | [CHANGELOG.md](CHANGELOG.md) | points at the published release notes on the site |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | for humans; how to get set up and what a PR should look like |
-| [`Docs/Usage/Syntax.md`](Sources/AngouriMath/Docs/Usage/Syntax.md) | what the parser accepts. The grammar was the only statement of it until [#706](https://github.com/AngouriMath/AngouriMath/pull/706) |
+| [`Docs/Usage/Syntax.md`](Sources/AngouriMath/Docs/Usage/Syntax.md) | what the parser accepts. The grammar was the only statement of it until [#706](https://github.com/asc-community/AngouriMath/pull/706) |
 | [`Docs/Usage/Exceptions.md`](Sources/AngouriMath/Docs/Usage/Exceptions.md) | the exception hierarchy under `AngouriMathBaseException` |
 | [`Docs/Usage/Comparison.md`](Sources/AngouriMath/Docs/Usage/Comparison.md) | how we measure against Math.NET Symbolics, Symbolism and SymPy, with the versions and what each comparison does not establish |
 | [`Docs/References.md`](Sources/AngouriMath/Docs/References.md) | the books, papers, corpora and reference works the code and its tests draw on, with the link and what each is used for. Add a work there when it is first cited |
@@ -831,7 +831,7 @@ be caught by.
 
 ## Read the roadmap before you release anything
 
-[#746](https://github.com/AngouriMath/AngouriMath/issues/746) is the ten-year technical vision, and
+[#746](https://github.com/asc-community/AngouriMath/issues/746) is the ten-year technical vision, and
 it is **not optional reading before a release, a version number, or anything that lands in the kernel
 package**. It was written to be argued with, not obeyed — but it has to be read first, because two
 things in it are easy to break by accident and impossible to undo afterwards.
@@ -862,17 +862,17 @@ whatever else it delivered:
 So the release checklist is: the suite and the harnesses in `Sources/Tests/Harnesses` green, a `BREAKING-CHANGES.md`
 entry for every changed answer measured on real builds, **a performance column measured against the
 previous one on the same machine**, a version number that does not contradict #746, **the
-integration work of [#718](https://github.com/AngouriMath/AngouriMath/issues/718) properly done
+integration work of [#718](https://github.com/asc-community/AngouriMath/issues/718) properly done
 for the release that claims it** — `2.6.0` is not cut while a Rubi family it promised is half
 landed — and **the MCP server and two other repositories brought to the release**:
 
 - the MCP server, `amcli mcp`, in [`Sources/MCP`](Sources/MCP), which exposes the library to an
-  agent. It was AngouriMath/AngouriMathMCP, now archived. It builds against the library here and
+  agent. It was asc-community/AngouriMathMCP, now archived. It builds against the library here and
   its tests run in CI, so its code keeps up, but it has to expose what the release added. Its
   documentation, `Sources/MCP/README.md`, is where an agent learns *how a problem is put to the
   library* — which nodes to build for a question, which operation to invoke, and how to read the
   answer back out of the nodes. That documentation is as much a deliverable as the operation (the
-  maintainer's words on [#1409](https://github.com/AngouriMath/AngouriMath/issues/1409)); write it
+  maintainer's words on [#1409](https://github.com/asc-community/AngouriMath/issues/1409)); write it
   there, or in this repository's `Docs/Usage` and the website, and check at every release that the
   MCP still says what the library does.
 - [CSharpMath](https://github.com/verybadcat/CSharpMath), for the round trip of `Latexize` — see
@@ -881,15 +881,15 @@ landed — and **the MCP server and two other repositories brought to the releas
 - the website, below.
 
 The website, [am.angouri.org](https://am.angouri.org), is generated from
-[AngouriMath/AngouriMathSite](https://github.com/AngouriMath/AngouriMathSite): its *What's new*
+[asc-community/AngouriMathSite](https://github.com/asc-community/AngouriMathSite): its *What's new*
 page gets a block cut from the release's notes with the `BREAKING-CHANGES.md` link pinned to the tag,
 and its quickstart names the release as current. Four releases went out without that between
 2026-08-12 and 2026-09-09, and the page said 2.1.0 while the package said 2.5.0 — the maintainer's
-words on [#1019](https://github.com/AngouriMath/AngouriMath/issues/1019) are *"each release also
+words on [#1019](https://github.com/asc-community/AngouriMath/issues/1019) are *"each release also
 needs to update the website"*, and this line is where that is kept.
 
 **Every major version gets an architectural review**, and the docket for the next one is
-[#1019](https://github.com/AngouriMath/AngouriMath/issues/1019): the API refactored to the best
+[#1019](https://github.com/asc-community/AngouriMath/issues/1019): the API refactored to the best
 abstraction the work since the last major has moved it to, and duplicated functionality — the same
 computation written twice, or two types standing for one concept — found and synthesised, since the
 major is where the surviving one may take the other's name. What the docket says about who does the
@@ -900,40 +900,40 @@ v3 pass and how is a maintainer decision recorded there, not here.
 Good entry points, roughly by depth. **Checked against the tracker on 2026-08-08** — the list this
 replaces had gone stale, with eight of its ten issues closed, so it was pointing at finished work.
 
-- **Missing functions** — [#809](https://github.com/AngouriMath/AngouriMath/issues/809). `floor`, `ceil`, `round`, `min`, `max`, `gcd`. Each wants
+- **Missing functions** — [#809](https://github.com/asc-community/AngouriMath/issues/809). `floor`, `ceil`, `round`, `min`, `max`, `gcd`. Each wants
   a design decision rather than a grammar line, and `min`/`max` are the cheapest thing here.
-- **More solvers** — [#231](https://github.com/AngouriMath/AngouriMath/issues/231) for limits, [#233](https://github.com/AngouriMath/AngouriMath/issues/233) for integrals. Both accepted, both
+- **More solvers** — [#231](https://github.com/asc-community/AngouriMath/issues/231) for limits, [#233](https://github.com/asc-community/AngouriMath/issues/233) for integrals. Both accepted, both
   open-ended, and both measurable one problem at a time.
-- **Solving** — [#475](https://github.com/AngouriMath/AngouriMath/issues/475), [#381](https://github.com/AngouriMath/AngouriMath/issues/381). Diophantine equations and characteristic
+- **Solving** — [#475](https://github.com/asc-community/AngouriMath/issues/475), [#381](https://github.com/asc-community/AngouriMath/issues/381). Diophantine equations and characteristic
   polynomials both want the polynomial layer.
-- **A wrong answer** — [#812](https://github.com/AngouriMath/AngouriMath/issues/812). `abs(x) = -1` returns a non-empty set whose members do not
+- **A wrong answer** — [#812](https://github.com/asc-community/AngouriMath/issues/812). `abs(x) = -1` returns a non-empty set whose members do not
   satisfy it. Highest priority here by the rule at the top of this file: not answering is
   legitimate, answering wrongly is not.
-- **Decisions only a major version may take** — [#326](https://github.com/AngouriMath/AngouriMath/issues/326) the syntax for piecewise,
+- **Decisions only a major version may take** — [#326](https://github.com/asc-community/AngouriMath/issues/326) the syntax for piecewise,
   and only the part of it that *removes* the incumbent form: new syntax can be added in a minor
   while the old spelling keeps parsing. Two entries that stood here have gone, both by
-  measurement rather than by decision. [#721](https://github.com/AngouriMath/AngouriMath/issues/721) was done additively in
-  [#1090](https://github.com/AngouriMath/AngouriMath/pull/1090) — `DomainConditionIn(Domain)` is a
-  new method and `Codomain` was left alone — and the issue is closed. [#204](https://github.com/AngouriMath/AngouriMath/issues/204) roots versus
+  measurement rather than by decision. [#721](https://github.com/asc-community/AngouriMath/issues/721) was done additively in
+  [#1090](https://github.com/asc-community/AngouriMath/pull/1090) — `DomainConditionIn(Domain)` is a
+  new method and `Codomain` was left alone — and the issue is closed. [#204](https://github.com/asc-community/AngouriMath/issues/204) roots versus
   fractional powers is no longer a value question at all: `sqrt(x)` and `x ^ (1/2)` are *the same
   entity*, `==` answers `True` and `Complexity` is 3 for both, since `1/2` started parsing as a
   `Rational` in 2.3.0. Only the printed form differs, which is a `BREAKING-CHANGES.md` entry rather
   than a major. **Re-measure an entry here before treating it as a constraint** — this list was
   wrong on two of its three for months. Note that
-  [#318](https://github.com/AngouriMath/AngouriMath/issues/318) is *not* one of these despite looking like it: `Invert` and `InvertNode` are
+  [#318](https://github.com/asc-community/AngouriMath/issues/318) is *not* one of these despite looking like it: `Invert` and `InvertNode` are
   `internal` and `private protected`, so changing what they return breaks nobody, and the
   parametric sets it asks for already work — what is left of it is the guard in #812.
-- **Structural** — [#286](https://github.com/AngouriMath/AngouriMath/issues/286) and [#495](https://github.com/AngouriMath/AngouriMath/issues/495), functions and lambdas as entities;
-  [#248](https://github.com/AngouriMath/AngouriMath/issues/248), n-ary operators. All three add node types, and whether *that* is a breaking
+- **Structural** — [#286](https://github.com/asc-community/AngouriMath/issues/286) and [#495](https://github.com/asc-community/AngouriMath/issues/495), functions and lambdas as entities;
+  [#248](https://github.com/asc-community/AngouriMath/issues/248), n-ary operators. All three add node types, and whether *that* is a breaking
   change is itself undecided — see #248.
 - **The polynomial layer itself** — multivariate GCD, resultants, factorisation. Large, and most of
   the above sits behind it. Its representation is already a monoid algebra in all but name; see
   *One structure under several features* for the shape it wants, and note that
   `GatherMonomialInformation` is on the hot path for solving, long division *and* simplification, so
   nothing there moves without a measured proof it did not regress.
-- **The goals** — [#717](https://github.com/AngouriMath/AngouriMath/issues/717) parity with sympy, [#718](https://github.com/AngouriMath/AngouriMath/issues/718) competition and textbook
-  problems, [#746](https://github.com/AngouriMath/AngouriMath/issues/746) the ten-year one. Long-horizon, and each names its own measurement.
+- **The goals** — [#717](https://github.com/asc-community/AngouriMath/issues/717) parity with sympy, [#718](https://github.com/asc-community/AngouriMath/issues/718) competition and textbook
+  problems, [#746](https://github.com/asc-community/AngouriMath/issues/746) the ten-year one. Long-horizon, and each names its own measurement.
 
-[#497](https://github.com/AngouriMath/AngouriMath/issues/497), the AngouriMath 2.0 design paper, is **closed**: the decision recorded there on
+[#497](https://github.com/asc-community/AngouriMath/issues/497), the AngouriMath 2.0 design paper, is **closed**: the decision recorded there on
 2026-08-04 was to evolve the existing design rather than rewrite it in F#. So 2.0 is now a version
 of this codebase, not a successor to it, and structural proposals belong in their own issue.
