@@ -367,6 +367,67 @@ namespace AngouriMath.Functions.Algebra
             return Integration.ComputeAsTheSameQuestion(written, x, integrateByParts);
         }
 
+        /// <summary>
+        /// A quotient by the square of a base, by parts against the base's reciprocal, where the
+        /// base's derivative makes the rest exact: <c>N/(M v^2)</c> is <c>g v'/v^2</c> with
+        /// <c>g = N/(M v')</c>, and <c>v'/v^2</c> is the derivative of <c>-1/v</c>, so the integral
+        /// is <c>-g/v</c> plus the integral of <c>g'/v</c>; taken only where <c>v</c> cancels from
+        /// that, with the functions of <paramref name="x"/> in it taken for indeterminates.
+        /// </summary>
+        /// <remarks>
+        /// <c>x^2/(a x cos(a x) - sin(a x))^2</c> was declined, with the rest of Rubi's 4.7.7 by the
+        /// square of <c>a x cos(a x) - sin(a x)</c> or <c>cos(a x) + a x sin(a x)</c>: the base's
+        /// derivative is <c>-a^2 x sin(a x)</c>, so <c>g</c> is <c>-x csc(a x)/a^2</c>, and
+        /// <c>g'</c> is <c>a^2 v/(a^2 sin(a x))^2</c>, whose integral is <c>-cot(a x)/a^3</c>. Only
+        /// for a base with a function of <paramref name="x"/> in it that is not a polynomial, since
+        /// a quotient of polynomials is the partial fractions', and only where <c>v</c> cancels,
+        /// since otherwise the remainder is the harder question.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByPartsAgainstTheReciprocalOfASquaredBase(Entity expr, Entity.Variable x)
+        {
+            if (!TryReadAsQuotient(expr, out var numerator, out var denominator) || !denominator.ContainsNode(x))
+                return null;
+            Entity? squared = null;
+            Entity rest = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+                if (squared is null && factor is Powf(var @base, Number.Integer { EInteger: var power }) && power.Equals(EInteger.FromInt32(2))
+                    && @base is Sumf or Minusf && @base.ContainsNode(x)
+                    && @base.Nodes.Any(node => node.ContainsNode(x) && node is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf or Logf or Powf(Number, _)))
+                    squared = @base;
+                else
+                    rest = rest * factor;
+            if (squared is null)
+                return null;
+            // A power of x every term of the base has goes to the rest: `x^2 v^2` arrives as
+            // `(a x^2 cos(a x) - x sin(a x))^2`, the square of `x v`.
+            var lowest = Sumf.LinearChildren(squared).Select(term => Mulf.LinearChildren(term)
+                .Select(factor => factor == x ? 1 : factor is Powf(var b, Number.Integer { EInteger: var n }) && b == x && n.CanFitInInt32() ? n.ToInt32Unchecked() : 0)
+                .Sum()).Min();
+            if (lowest > 0)
+            {
+                squared = (squared / MathS.Pow(x, lowest)).Expand().InnerSimplified;
+                rest = rest * MathS.Pow(x, 2 * lowest);
+            }
+            // Expanded, since the derivative of `a x cos(a x)` and of `sin(a x)` each have an
+            // `a cos(a x)`, which cancel only once multiplied out.
+            var derivative = squared.Differentiate(x).Expand().InnerSimplified;
+            // A derivative of one term, so that what it leaves below the bar of the remainder is
+            // no new square of a sum to take apart the same way.
+            if (TreeAnalyzer.IsZero(derivative) || derivative is Sumf or Minusf)
+                return null;
+            var (gTop, gBottom) = CancelledWithFunctionsAsIndeterminates(numerator, rest * derivative, x, expr);
+            // g' over v, cancelled: (A' B - A B')/(B^2 v) for g = A/B.
+            var above = (gTop.Differentiate(x) * gBottom - gTop * gBottom.Differentiate(x)).InnerSimplified;
+            var (rTop, rBottom) = CancelledWithFunctionsAsIndeterminates(above, MathS.Pow(gBottom, 2) * squared, x, expr);
+            if (rBottom.Nodes.Any(node => node == squared) || !rTop.ContainsNode(x) && !rBottom.ContainsNode(x) && TreeAnalyzer.IsZero(rTop))
+                return null;
+            var remainder = Functions.PartialFractions.Bare(rTop / rBottom);
+            if (Integration.ComputeIndefiniteIntegral(remainder, x) is not { } integral || integral.Nodes.Any(node => node is Integralf))
+                return null;
+            return -gTop / (gBottom * squared) + integral;
+        }
+
         /// <summary>Whether <paramref name="expr"/> holds a fractional power of something in <paramref name="x"/>.</summary>
         private static bool HasARadicalOf(Entity expr, Entity.Variable x)
             => expr.Nodes.Any(node => node is Powf(var @base, Number.Rational power) && power is not Number.Integer && @base.ContainsNode(x));
