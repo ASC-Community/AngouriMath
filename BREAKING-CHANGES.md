@@ -345,6 +345,19 @@ square and the cube keep the Hermite reduction's answers. Rubi's 1.1.3.8 `P(x) (
 | `"(c + d*x)/(a + b*x^3)^4".ToEntity().Integrate("x")` | `integral(...)` | the same at the roots of `a + b x^3` |
 | `"x^2/(a + b*x^5)^5".ToEntity().Integrate("x")` | `integral(...)` | four algebraic terms, and the integral of `x^2/(a + b x^5)` |
 
+### A difference is offered to the substitution search as a sum is
+
+**Answers where there were none.** `sin(1 + 2/(1 + x))` was answered under `u = 1 + x`, and
+`sin(1 + 2/(1 - x))` was declined: the substitution search offered every sum in the integrand as a
+candidate and no difference, so `u = 1 - x` was never tried. A difference is offered now wherever a
+sum is ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin(1 + 2/(1 - x))".ToEntity().Integrate("x")` | `integral(...)` | in the sine and cosine integrals of `2/(1 - x)` |
+| `"cos(1 + 2/(x - 1))".ToEntity().Integrate("x")` | `integral(...)` | in the sine and cosine integrals of `2/(x - 1)` |
+| `"sin(p + k/(c - d*x))".ToEntity().Integrate("x")` | `integral(...)` | in the sine and cosine integrals of `k/(c - d x)` |
+
 ### A polynomial over a power of a trinomial past the square is integrated
 
 `P(x)/(a + b x^n + c x^(2n))^k`, a polynomial over a power of a trinomial in `x^n` with symbols in
