@@ -748,6 +748,39 @@ namespace AngouriMath
             => Transformation.FactorizationAtLevel(level).ApplyOrKeep(this);
 
         /// <summary>
+        /// This expression written as a single fraction: one numerator over one denominator, with
+        /// nothing divided inside either, as <c>a + b/c</c> is written <c>(a c + b)/c</c>. Any
+        /// expression, functions included, and nothing cancelled or multiplied out, so the factors
+        /// of the denominator stay as they were: <c>1/(t^2 + 1) + 1/(t + 1)</c> is
+        /// <c>(2 + t + t^2) / ((t^2 + 1)(t + 1))</c>, and <c>x/x</c> stays <c>x/x</c>. The common
+        /// denominator is the least common multiple of the denominators as they are written, so
+        /// <c>1/x + 1/x^2</c> is <c>(x + 1)/x^2</c>; nothing is factorised to find it. A rational number
+        /// counts as the fraction it is written as, so <c>2/3 + x/2</c> is <c>(4 + 3x)/6</c>. An
+        /// expression with no division in it comes back as it was. Dividing by a fraction moves
+        /// its denominator into the numerator, and the expression has no value where that
+        /// denominator is zero, so the answer says so: <c>1/(1/x)</c> is <c>x provided not x = 0</c>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Simplify(int)"/> never does this, since one fraction is not always the
+        /// simpler form: <c>1/x + 1/y</c> reads more easily than <c>(x + y)/(x y)</c>. For a
+        /// rational function in lowest terms, the denominator multiplied out and monic, use
+        /// <see cref="Transformation.RationalCanonicalization"/>, which is a canonical form and
+        /// declines anything with a function in it.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1239">#1239</a>
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// Console.WriteLine("sin(x) + 1/cos(x)".ToEntity().AsSingleFraction());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// (1 + cos(x) * sin(x)) / cos(x)
+        /// </code>
+        /// </example>
+        public Entity AsSingleFraction()
+            => Transformation.AsSingleFraction.ApplyOrKeep(this);
+
+        /// <summary>
         /// Simplifies an equation ( e.g. (x - y) * (x + y) -> x^2 - y^2, but 3 * x + y * x = (3 + y) * x )
         /// </summary>
         /// <param name="level">

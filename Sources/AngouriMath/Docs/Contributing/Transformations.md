@@ -55,6 +55,7 @@ on hashing or on which type loaded first.
 Entity.Simplify(level)     ->  Transformation.SimplificationAtLevel(level)  ->  Simplificator.Simplify
 Entity.Expand(level)       ->  Transformation.ExpansionAtLevel(level)       ->  Entity.ExpandOverSum
 Entity.Factorize(level)    ->  Transformation.FactorizationAtLevel(level)   ->  RewriteRules, composed
+Entity.AsSingleFraction()  ->  Transformation.AsSingleFraction              ->  SingleQuotient.OverLeastCommonDenominator, each half tidied
 Entity.Differentiate(x)    ->  Transformation.Differentiation(x)            ->  Entity.DifferentiateOnce
 Entity.Integrate(x)        ->  Transformation.Integration(x)                ->  Integration.ComputeIndefiniteIntegral
 Entity.Limit(x, to, side)  ->  Transformation.LimitAt(x, to, side)          ->  LimitFunctional.ComputeLimit

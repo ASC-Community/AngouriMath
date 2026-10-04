@@ -50,7 +50,9 @@ namespace AngouriMath.Tests.Core.Transformations
         [InlineData("2 * x / (4 * y)", "x / (2 * y)")]
         [InlineData("(x + 1) / (x + 2)", "(2 * x + 2) / (2 * x + 4)")]
         [InlineData("x / y + 1", "(x + y) / y")]
-        [InlineData("1 / (1 / x)", "x")]
+        [InlineData("1 / (1 / x)", "x ^ 2 / x")]
+        [InlineData("x ^ 2 / x ^ 2", "x / x")]
+        [InlineData("(a / b) / (c / d)", "(a * d ^ 2) / (b * c * d)")]
         [InlineData("x ^ (-2)", "1 / x ^ 2")]
         [InlineData("(a + b) / (a * b)", "1/b + 1/a")]
         public void OneFunctionHasOneForm(string left, string right)
@@ -65,8 +67,51 @@ namespace AngouriMath.Tests.Core.Transformations
         [InlineData("x / y", "y / x")]
         [InlineData("(x + 1) / (x + 2)", "(x + 2) / (x + 1)")]
         [InlineData("x / (2 * y)", "x / (3 * y)")]
+        // Undefined at zero and zero there: not one function, however the value agrees elsewhere.
+        // https://github.com/asc-community/AngouriMath/issues/1618
+        [InlineData("1 / (1 / x)", "x")]
+        [InlineData("1 / (1 + 1 / x)", "x / (x + 1)")]
+        [InlineData("0 / x", "0")]
         public void DifferentFunctionsDoNotCollide(string left, string right)
             => Assert.NotEqual(Required(left), Required(right));
+
+        /// <summary>
+        /// Dividing by a quotient moves its denominator into the numerator, where it no longer
+        /// stops the form having a value; the expression has none there, so the form says the
+        /// denominator is nonzero. The same for a quotient raised to a negative power, and for a
+        /// numerator that vanishes, which is zero only where its denominator does not.
+        /// https://github.com/asc-community/AngouriMath/issues/1618
+        /// </summary>
+        [Theory]
+        [InlineData("1 / (1 / x)", "x", "0")]
+        [InlineData("1 / (1 + 1 / x)", "x", "0")]
+        [InlineData("(a / b) / (c / d)", "d", "0")]
+        [InlineData("(1 / x) ^ (-1)", "x", "0")]
+        [InlineData("(x / y) ^ (-2)", "y", "0")]
+        [InlineData("x / (y / x)", "x", "0")]
+        [InlineData("0 / x", "x", "0")]
+        public void WhereTheExpressionHasNoValueNeitherHasTheForm(string expression, string variable, string at)
+        {
+            Entity original = expression;
+            var form = Required(expression);
+            foreach (var name in original.Vars)
+            {
+                Entity value = name.Name == variable ? at : "1";
+                original = original.Substitute(name, value);
+                form = form.Substitute(name, value);
+            }
+            Assert.Equal(MathS.NaN, original.Evaled);
+            Assert.Equal(MathS.NaN, form.Evaled);
+        }
+
+        /// <summary>
+        /// The condition is part of the form, so it is canonical too, and it says only what the
+        /// denominator does not: <c>(x^2 - 1)/(x^2 + 2x + 1) + 1/(x + 1)</c> cancels
+        /// <c>(x + 1)^2</c>, and <c>x/(x + 1)</c> is already undefined at <c>-1</c>.
+        /// </summary>
+        [Fact]
+        public void TheDenominatorsExclusionIsNotRepeated()
+            => Assert.Equal(Required("x / (x + 1)"), Required("(x ^ 2 - 1) / (x ^ 2 + 2 * x + 1) + 1 / (x + 1)"));
 
         /// <summary>
         /// The case where "the same function" is a trap. `(x^2 - 1)/(x + 1)` is undefined at
