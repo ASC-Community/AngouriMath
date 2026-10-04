@@ -19174,19 +19174,33 @@ namespace AngouriMath.Functions.Algebra
             Entity rest = Number.Integer.One;
             foreach (var factor in Mulf.LinearChildren(denominator))
             {
-                if (conjugate is null && factor is Sumf or Minusf && Sumf.LinearChildren(factor).ToList() is { Count: 2 } terms
+                // Or a whole power of the pair, whose conjugate is the power of the pair's:
+                // `x/(sqrt(a + b x) + sqrt(c + b x))^3` was declined where its square was answered.
+                var (pair, power) = factor is Powf(var raised, Number.Integer { EInteger: var whole }) && whole.Sign > 0 && whole.CompareTo(EInteger.FromInt32(8)) <= 0
+                    ? (raised, whole.ToInt32Checked())
+                    : (factor, 1);
+                if (conjugate is null && pair is Sumf or Minusf && Sumf.LinearChildren(pair).ToList() is { Count: 2 } terms
                     && terms.All(term => IsARootOfAPolynomial(term)))
                 {
                     // The conjugate flips the sign of the second term; the product is the
                     // difference of the squares, each square a polynomial.
                     var first = terms[0];
                     var second = terms[1];
-                    conjugate = first - second;
+                    conjugate = power == 1 ? first - second : MathS.Pow(first - second, power).Expand();
                     product = (SquareOf(first) - SquareOf(second)).InnerSimplified;
                     // Not the same radicand twice: the difference is zero, the factor is zero
                     // or a multiple of one root, and neither is this rule's.
                     if (product.Evaled is Number.Complex { IsZero: true } || product.Simplify().Evaled is Number.Complex { IsZero: true })
                         return null;
+                    // An even power of the conjugate has the root of the product of the radicands
+                    // in it, `2 sqrt(A B)` in the square, which over a constant difference leaves a
+                    // root of a quadratic where the power as written was answered: the squares over
+                    // `sqrt(a + b x) + sqrt(c + b x)` ran past the budget so, and were answered in a
+                    // second as they stood.
+                    if (power % 2 == 0 && !product.Simplify().ContainsNode(x))
+                        return null;
+                    if (power != 1)
+                        product = MathS.Pow(product, power);
                     continue;
                 }
                 rest = rest * factor;
