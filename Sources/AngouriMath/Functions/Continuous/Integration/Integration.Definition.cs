@@ -635,6 +635,8 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveByFlatteningAPowerOfAnExponential(expr, x, integrateByParts)) is { }) return answer;
             // An exponential of a quadratic in 1/L beside a power of L, onto the Gaussian under u = 1/L.
             if ((answer = IndefiniteIntegralSolver.SolveAGaussianInAReciprocal(expr, x)) is { }) return answer;
+            // The same substitution where the exponent in the reciprocal is not a Gaussian.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialInTheReciprocalOfALinear(expr, x, integrateByParts)) is { }) return answer;
             // An exponential of a multiple of a logarithm is a power of the argument, which is
             // how every inverse hyperbolic function under an exponential arrives.
             if ((answer = IndefiniteIntegralSolver.SolveByFoldingAnExponentialOfALogarithm(expr, x, integrateByParts)) is { }) return answer;

@@ -15523,6 +15523,63 @@ namespace AngouriMath.Functions.Algebra
         /// </remarks>
         internal static Entity? SolveAGaussianInAReciprocal(Entity expr, Entity.Variable x)
         {
+            if (ReadAnExponentialInTheReciprocalOfALinear(expr, x) is not var (constant, @base, exponentInU, u, linear, slope, power)
+                || !TreeAnalyzer.TryGetPolyQuadratic(exponentInU, u, out var square, out _, out _) || TreeAnalyzer.IsZero(square))
+                return null;
+            var powerInU = -power - EInteger.FromInt32(2);
+            if (!powerInU.CanFitInInt32() || powerInU.Abs().CompareTo(EInteger.FromInt32(32)) > 0)
+                return null;
+            var gaussian = MathS.Pow(@base, exponentInU);
+            var inU = powerInU.IsZero ? gaussian : MathS.Pow(u, Number.Integer.Create(powerInU)) * gaussian;
+            if (IntegralPatterns.TryStandardIntegrals(inU, u) is not { } answerInU)
+                return null;
+            return (-constant / slope * answerInU.Substitute(u, 1 / linear)).InnerSimplified;
+        }
+
+        /// <summary>
+        /// The same substitution where the exponent is not a Gaussian in <c>u = 1/L</c>:
+        /// <c>L^m F^(a + b/L)</c> or <c>L^m F^(a + b/L^3)</c> is
+        /// <c>-(1/d) u^(-m - 2) F^(a + b u)</c> or <c>F^(a + b u^3)</c>, an exponential beside a
+        /// power, asked as a question in <c>u</c> and written back with <c>u = 1/L</c>.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's 2.3, <c>F^(a + b/(c + d x)) (c + d x)^2</c>, <c>F^(a + b/(c + d x))/(c + d x)</c>
+        /// and <c>F^(a + b/(c + d x)^3)/(c + d x)</c>, were declined: the substitution was made only
+        /// for a Gaussian, whose moments the table answers, and an exponential of a linear or a
+        /// cube in <c>u</c> beside a power of it is the exponential integral's, or a power of the
+        /// cube's argument under <c>w = u^3</c>, which the integrator answers when asked in
+        /// <c>u</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveAnExponentialInTheReciprocalOfALinear(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (ReadAnExponentialInTheReciprocalOfALinear(expr, x) is not var (constant, @base, exponentInU, u, linear, slope, power)
+                || !TreeAnalyzer.TryGetPolynomial(exponentInU, u, out var monomials)
+                || monomials.Keys.Any(k => k.Sign < 0 || k.CompareTo(EInteger.FromInt32(8)) > 0)
+                || !monomials.Keys.Any(k => k.Sign > 0))
+                return null;
+            var powerInU = -power - EInteger.FromInt32(2);
+            if (!powerInU.CanFitInInt32() || powerInU.Abs().CompareTo(EInteger.FromInt32(32)) > 0)
+                return null;
+            var exponential = MathS.Pow(@base, exponentInU);
+            var inU = powerInU.IsZero ? exponential : MathS.Pow(u, Number.Integer.Create(powerInU)) * exponential;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inU, u, integrateByParts) is not { } answerInU
+                || answerInU.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return (-constant / slope * answerInU.Substitute(u, 1 / linear)).InnerSimplified;
+        }
+
+        /// <summary>
+        /// <paramref name="expr"/> read as a constant times <c>F^E</c> times a whole power of a
+        /// linear <c>L</c>, with every <c>x</c> in <c>E</c> inside a reciprocal power of <c>L</c>:
+        /// the constant, <c>F</c>, <c>E</c> written in <c>u = 1/L</c>, <c>u</c>, <c>L</c>, its slope
+        /// and the power of <c>L</c>. The exponent is rewritten into <c>u</c> a node at a time --
+        /// <c>b/L^k</c> is <c>b u^k</c> -- rather than by substituting <c>x = (1/u - c)/d</c> and
+        /// asking the simplifier to see that <c>1/(1/u)^2</c> is <c>u^2</c>.
+        /// </summary>
+        private static (Entity Constant, Entity Base, Entity ExponentInU, Variable U, Entity Linear, Entity Slope, EInteger Power)?
+            ReadAnExponentialInTheReciprocalOfALinear(Entity expr, Entity.Variable x)
+        {
             Powf? exponential = null;
             Entity? linear = null;
             var power = EInteger.Zero;
@@ -15560,16 +15617,9 @@ namespace AngouriMath.Functions.Algebra
                 Powf(var below, Number.Integer { EInteger.Sign: < 0 } k) when below == linear => MathS.Pow(u, -k),
                 _ => node
             });
-            if (exponentInU.ContainsNode(x) || !TreeAnalyzer.TryGetPolyQuadratic(exponentInU, u, out var square, out _, out _) || TreeAnalyzer.IsZero(square))
+            if (exponentInU.ContainsNode(x))
                 return null;
-            var powerInU = -power - EInteger.FromInt32(2);
-            if (!powerInU.CanFitInInt32() || powerInU.Abs().CompareTo(EInteger.FromInt32(32)) > 0)
-                return null;
-            var gaussian = MathS.Pow(exponential.Base, exponentInU);
-            var inU = powerInU.IsZero ? gaussian : MathS.Pow(u, Number.Integer.Create(powerInU)) * gaussian;
-            if (IntegralPatterns.TryStandardIntegrals(inU, u) is not { } answerInU)
-                return null;
-            return (-constant / slope * answerInU.Substitute(u, 1 / linear)).InnerSimplified;
+            return (constant, exponential.Base, exponentInU, u, linear, slope, power);
         }
 
         /// <summary>
