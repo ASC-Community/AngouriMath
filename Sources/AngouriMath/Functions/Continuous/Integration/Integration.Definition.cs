@@ -1111,6 +1111,10 @@ namespace AngouriMath.Functions.Algebra
             // an ansatz finds it or nothing does. After the substitutions, which answer the
             // linear-exponent cases in their own terms.
             if ((answer = IndefiniteIntegralSolver.SolveByExponentialAnsatz(expr, x)) is { }) return answer;
+            // An exponential of a polynomial in the reciprocal of a linear that is not a Gaussian,
+            // under the Gaussian's substitution `u = 1/L`. After the ansatz, which answers some of
+            // these in the base: `f^(a + b/x)/x^4` is `f^(a + b/x)` times a polynomial in `1/x`.
+            if ((answer = IndefiniteIntegralSolver.SolveAnExponentialInTheReciprocalOfALinear(expr, x, integrateByParts)) is { }) return answer;
             // A polynomial times a fractional power of a base that holds a function of x,
             // answered as a polynomial times the next power of the base: a linear system in
             // the polynomial's coefficients, exact, and volunteered at any depth.

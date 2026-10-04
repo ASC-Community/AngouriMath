@@ -313,6 +313,21 @@ too. A correct antiderivative in an unhelpful form, where there was none at all.
 `e^(x^2)` is still declined, and correctly: its exponent is not linear and it has no elementary
 antiderivative.
 
+### An exponential of the reciprocal of a linear beside a power of it is integrated
+
+**Answers where there were none.** `F^(a + b/(c + d x)) (c + d x)^2` was declined, and so were
+`F^(a + b/(c + d x))` alone, over `c + d x`, and with the cube of the reciprocal in the exponent:
+under `u = 1/(c + d x)` each is an exponential beside a power of `u`, and the substitution was made
+only where the exponent is a Gaussian in `u`, whose moments the table answers. It is made for any
+polynomial exponent in `u` now, and the question asked in `u`. Rubi's 2.3
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"F^(a + b/(c + d*x))*(c + d*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral and powers of `c + d x` times the exponential |
+| `"F^(a + b/(c + d*x))/(c + d*x)".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral |
+| `"F^(a + b/(c + d*x)^3)*(c + d*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral of the cube, and the exponential |
+
 ### A polynomial over a power of a binomial past the cube is integrated
 
 **Answers where there were none.** `P(x)/(a + b x^n)^k` with symbols in the binomial, `n >= 3`, was
