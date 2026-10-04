@@ -14197,8 +14197,34 @@ namespace AngouriMath.Functions.Algebra
                 if (coefficient.Evaled is Number.Complex and not Number.Real)
                     return null;
 
-            var q = new Dictionary<EInteger, Entity> { [EInteger.Zero] = c, [EInteger.One] = b, [EInteger.FromInt32(2)] = a };
-            var qPrime = new Dictionary<EInteger, Entity> { [EInteger.Zero] = b, [EInteger.One] = (2 * a).InnerSimplified };
+            // Each coefficient that is neither a number nor a symbol is named for the solve and
+            // written back into what it gives. Carried through the elimination as written,
+            // `g^2/f^2` as the leading coefficient of `sqrt(a + b x + g^2 x^2/f^2)` came back in an
+            // answer of 188,000 characters after four seconds, where a symbol in its place gives a
+            // short one at once.
+            var names = new List<(Variable Name, Entity Value)>();
+            Entity Named(Entity value)
+            {
+                if (value is Number or Variable)
+                    return value;
+                foreach (var (name, named) in names)
+                    if (named == value)
+                        return name;
+                var fresh = Variable.CreateUnique(expr, "k_named" + names.Count);
+                names.Add((fresh, value));
+                return fresh;
+            }
+            Entity Back(Entity value)
+            {
+                foreach (var (name, named) in names)
+                    value = value.Substitute(name, named);
+                return value;
+            }
+            var (namedA, namedB, namedC) = (Named(a), Named(b), Named(c));
+            pRead = pRead.ToDictionary(pair => pair.Key, pair => Named(pair.Value));
+
+            var q = new Dictionary<EInteger, Entity> { [EInteger.Zero] = namedC, [EInteger.One] = namedB, [EInteger.FromInt32(2)] = namedA };
+            var qPrime = new Dictionary<EInteger, Entity> { [EInteger.Zero] = namedB, [EInteger.One] = (2 * namedA).InnerSimplified };
             Dictionary<EInteger, Entity> PowerOfQ(int j)
             {
                 var result = new Dictionary<EInteger, Entity> { [EInteger.Zero] = Number.Integer.One };
@@ -14239,12 +14265,12 @@ namespace AngouriMath.Functions.Algebra
             Entity r = Number.Integer.Zero;
             for (var k = 0; k <= degreeOfR; k++)
             {
-                var value = values[k].InnerSimplified;
+                var value = Back(values[k]).InnerSimplified;
                 if (value.Evaled is Number.Complex { IsZero: true })
                     continue;
                 r = r + value * (k == 0 ? Number.Integer.One : k == 1 ? x : MathS.Pow(x, k));
             }
-            var kValue = values[degreeOfR + 1].InnerSimplified;
+            var kValue = Back(values[degreeOfR + 1]).InnerSimplified;
             var root = MathS.Pow(radicand, Number.Rational.Create(1, 2));
             var powerOfQInFront = positive ? root : MathS.Pow(radicand, Number.Rational.Create(-(2 * j + 1), 2));
             Entity reduced = r == Number.Integer.Zero ? Number.Integer.Zero : r * powerOfQInFront;

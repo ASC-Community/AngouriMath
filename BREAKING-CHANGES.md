@@ -843,6 +843,23 @@ simplified as before
 | `"sec(x)^2/(a + b*cos(x))^4".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"sec(c + d*x)^2/(a + b*cos(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | the same in `tan((c + d x)/2)` |
 
+### A polynomial times an odd half power of a quadratic with compound coefficients is answered shortly
+
+**Answers where there were none, and short ones where the unreleased master's were not.**
+`sqrt(a + b x + g^2 x^2/f^2)` was declined by 2.5.0. The unreleased master answers it by reducing
+a polynomial times an odd half power of the quadratic with one linear solve in the coefficients,
+and carried as written, a quotient or a product of symbols among them came back in answers of 40,000
+to 480,000 characters, after up to eight seconds, which took up to a minute more to differentiate
+back. Each such coefficient is named for the solve now and written back in what it gives, and the
+answers are a thousand characters, in a tenth of a second
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + b*x + g^2*x^2/f^2)".ToEntity().Integrate("x")` | `integral(...)` | the root times a linear, and an arcsine or a logarithm by the sign of `g^2/f^2` |
+| `"(a + b*x + c*x^2/f)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same with the power |
+| `"x^2*sqrt(a*f + b*x + c*x^2/f)".ToEntity().Integrate("x")` | `integral(...)` | the same with a cubic in front of the root |
+
 ### A linear over a quadratic beside the root of another quadratic is integrated
 
 `(g + h x)/(A sqrt(B))`, `A` and `B` two different quadratics, was left unevaluated wherever a
