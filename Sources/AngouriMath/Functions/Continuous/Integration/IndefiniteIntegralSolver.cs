@@ -18496,8 +18496,10 @@ namespace AngouriMath.Functions.Algebra
         /// factor below the bar. Only the fractional part of <c>p</c> is in it, since a whole
         /// power of <c>x^j T</c> distributes. For an even whole <c>j</c> and a whole <c>j p</c> it
         /// is <c>sgn(x)^(j p)</c>: <c>x^j</c> is not negative for a real x, so <c>(x^j T)^p</c> is
-        /// <c>|x|^(j p) T^p</c>. Where x is in the integrand to a power that is not a rational
-        /// number, the integrand is real for a positive x only, and there <c>K</c> is 1.
+        /// <c>|x|^(j p) T^p</c>. A symbol in an exponent does not confine the integrand to a
+        /// positive x: <c>x^(3 (n - 1)/2)/(a x^(n - 1) + b x^n + c x^(n + 1))^(3/2)</c> is real for
+        /// a negative x and any <c>n</c>, the phases of the two principal powers cancelling to a
+        /// sign, and <c>K</c> is that sign; so it is written there too, and is 1 for a positive x.
         /// </para>
         /// <para>
         /// <c>(c x^e)^m</c> for a whole <c>e</c> is <c>x^(e m)</c> times <c>c^q (c x^e)^r/x^(e r)</c>,
@@ -18564,7 +18566,6 @@ namespace AngouriMath.Functions.Algebra
                 : above.Nodes.Concat(below.Nodes).Count(node => node == found.Value.Sum) != 1)
                 return null;
             var outside = found is var (_, _, powerOfTheSum, lowestPower, _) ? Simplified(lowestPower * powerOfTheSum) : Number.Integer.Zero;
-            var positive = HoldsAPowerOfXOffTheRationals(expr, x);
             Entity constant = Number.Integer.One;
             var (top, powerAbove) = Rewritten(above, Number.Integer.One);
             var (bottom, powerBelow) = Rewritten(below, Number.Integer.MinusOne);
@@ -18615,7 +18616,7 @@ namespace AngouriMath.Functions.Algebra
                     {
                         exponent = Shifted(exponent, outside, subtract: false);
                         written = exponentOfTheSum == Number.Integer.One ? theRest : MathS.Pow(theRest, exponentOfTheSum);
-                        if (positive || exponentOfTheSum is Number.Integer)
+                        if (exponentOfTheSum is Number.Integer)
                             turn = Number.Integer.One;
                         // The sign of x to the power j p where that is all it is, which is its own
                         // reciprocal.
@@ -18631,15 +18632,9 @@ namespace AngouriMath.Functions.Algebra
                     {
                         exponent = Shifted(exponent, Simplified(e * m), subtract: false);
                         written = Number.Integer.One;
-                        var signed = (sign * m).InnerSimplified;
-                        if (positive)
-                            turn = MathS.Pow(c, signed);
-                        else
-                        {
-                            var (whole, fraction) = FractionalPart(signed);
-                            var turned = MathS.Pow(@base, fraction) / MathS.Pow(x, Simplified(e * fraction));
-                            turn = whole == Number.Integer.Zero ? turned : MathS.Pow(c, whole) * turned;
-                        }
+                        var (whole, fraction) = FractionalPart((sign * m).InnerSimplified);
+                        var turned = MathS.Pow(@base, fraction) / MathS.Pow(x, Simplified(e * fraction));
+                        turn = whole == Number.Integer.Zero ? turned : MathS.Pow(c, whole) * turned;
                     }
                     if (turn != Number.Integer.One)
                         constant = constant == Number.Integer.One ? turn : constant * turn;

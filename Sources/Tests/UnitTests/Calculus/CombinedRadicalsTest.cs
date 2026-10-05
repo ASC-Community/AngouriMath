@@ -121,8 +121,7 @@ namespace AngouriMath.Tests.Calculus
         }
 
         /// <summary>
-        /// The same with a symbol for an exponent, where the integrand is real for a positive x
-        /// only and the factor in front is 1, the power of the sum whole or not:
+        /// The same with a symbol for an exponent, the power of the sum whole or not:
         /// <c>1/(a x + b x^n)</c> is <c>1/(x (a + b x^(n - 1)))</c>. Beside it a power of
         /// <c>c x</c> is a power of x times a constant.
         /// </summary>
@@ -136,7 +135,19 @@ namespace AngouriMath.Tests.Calculus
         // A power of a monomial past the first degree alone.
         [InlineData("(c*x^3)^n")]
         public void APowerOfXComesOutWhereAnExponentIsASymbol(string integrand)
-            => DifferentiatesBackPinned(integrand, new[] { 0.3, 0.9, 1.7, 2.6 }, c: 0.4);
+            => DifferentiatesBackPinned(integrand, new[] { -2.6, -1.7, -0.9, -0.3, 0.3, 0.9, 1.7, 2.6 }, c: 0.4);
+
+        /// <summary>
+        /// A symbol in an exponent does not confine the integrand to a positive x. Two rows of
+        /// Rubi's 1.2.4.2 are real for a negative x and any <c>n</c>, the phases of the principal
+        /// powers cancelling to a sign; for <c>n = 2.3</c> that sign is -1, and the factor in
+        /// front of the integral is what carries it.
+        /// </summary>
+        [Theory]
+        [InlineData("x^(3/2*(n - 1))/(a*x^(n - 1) + b*x^n + c*x^(n + 1))^(3/2)")]
+        [InlineData("x^((n - 1)/2)/sqrt(a*x^(n - 1) + b*x^n + c*x^(n + 1))")]
+        public void ASymbolInAnExponentLeavesTheNegativeSideReal(string integrand)
+            => DifferentiatesBackPinned(integrand, new[] { -2.6, -1.7, -0.9, -0.3, 0.3, 0.9, 1.7, 2.6 }, c: 0.4, n: 2.3);
 
         /// <summary>
         /// An odd power of x out of a root of a sum of whole powers past x times a linear, which
@@ -155,12 +166,12 @@ namespace AngouriMath.Tests.Calculus
             => DifferentiatesBackPinned(integrand, new[] { -2.3, -1.9, -1.6, 0.4, 1.2, 2.3 }, c);
 
         /// <summary>
-        /// <see cref="DifferentiatesBack"/> with <c>a = 1.3</c>, <c>b = 0.7</c>, <c>n = 1.7</c> and
-        /// <paramref name="c"/> put in after integrating, compared off the real line as well.
+        /// <see cref="DifferentiatesBack"/> with <c>a = 1.3</c>, <c>b = 0.7</c>, <paramref name="c"/>
+        /// and <paramref name="n"/> put in after integrating, compared off the real line as well.
         /// </summary>
-        private static void DifferentiatesBackPinned(string integrand, double[] points, double c)
+        private static void DifferentiatesBackPinned(string integrand, double[] points, double c, double n = 1.7)
         {
-            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.7).Substitute("c", c).Substitute("n", 1.7);
+            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.7).Substitute("c", c).Substitute("n", n);
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
             Assert.DoesNotContain("NaN", integral.Stringize());
