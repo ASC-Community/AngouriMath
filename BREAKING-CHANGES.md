@@ -528,6 +528,22 @@ the linear at its root now, and each piece is the table's
 | `"t^9/(a + b*t)^8".ToEntity().Integrate("t")` | `integral(...)` | powers of `a/b + t` and a logarithm, in 0.03 s |
 | `"x^4/(a + b*sqrt(x))^8".ToEntity().Integrate("x")` | `integral(...)` | the same in `sqrt(x)`, in 0.5 s; a minute on the unreleased master |
 
+### Two roots of linears over a linear off the real line are integrated
+
+**Answers where there were none.** `1/(sqrt(x) sqrt(a + b x) (1 - i x))` was declined. The closed forms
+for two roots of linears over a third, an arctangent and a logarithm, were chosen by the sign of a
+quantity that, over a linear whose coefficients are not real, has none -- `-i a - b < 0` is NaN, the
+complex numbers not being ordered -- and on the unreleased master the answer was a piecewise on that
+sign which held at no point. Both forms use nothing about their root but `sqrt(q)^2 = q`, so either
+is an antiderivative wherever the quantity is not zero, whatever its phase, and with the imaginary
+unit in the quantity the one for a positive quantity is taken alone
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(sqrt(x)*sqrt(a + b*x)*(1 - i*x))".ToEntity().Integrate("x")` | `integral(...)` | `2 arctan(sqrt(-i a - b) sqrt(x)/sqrt(a + b x))/sqrt(-i a - b)` |
+| `"sqrt(x)*sqrt(a + b*x)/(1 + i*x)".ToEntity().Integrate("x")` | `integral(...)` | a root, a logarithm and an arctangent, piecewise in the sign of `b` |
+
 ### A polynomial over a power of a quadratic with a sum of symbols in it is reduced
 
 **Answers where there were none.** The reduction of `N(x)/Q(x)^n` divides `N` by the quadratic a
@@ -792,6 +808,23 @@ wherever the cosine is negative; they are answered with the rest now
 | `"sqrt(a + i*a*tan(x))/sqrt(c*sec(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times `2/i`, through `e^(i x)` |
 | `"sqrt(c*sec(x))*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `e^(i x/2)` over its derivative |
 | `"(c*sec(x))^(5/2)/(a + i*a*tan(x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | the integrand times a power of `e^(i x)` |
+
+### A rational function of the tangent beside a power of `a + i a tan` is integrated in that sum
+
+**Answers where there were none.** `(A + B tan(c + d x))/sqrt(a + i a tan(c + d x))` and the rest of
+Rubi's 4.3.3.1 with a whole power of the tangent or cotangent beside `A + B tan` over a power of
+`a + i a tan` ran past the budget, whole powers and half-odd ones alike. With `S = a ± i a tan(z)`,
+`tan(z)` is `(S - a)/(± i a)` and `dz = c dS/(S (S - 2a))`, so each is a rational function of `S`
+beside a power of it, whose factors `S`, `S - 2a` and `S - a` have no imaginary root. Beside a
+second such sum, `q - i q tan(z)`, which is linear in `S`, the sum under a power that is not whole is
+the variable: `(a + i a tan(z))/(q - i q tan(z))^(3/2)`, from 4.3.2.1, ran past the budget as well
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"tan(c + d*x)^2*(k + q*tan(c + d*x))/sqrt(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `sqrt(a + i a tan(c + d x))` and, piecewise in the sign of `a`, an arctangent or a logarithm of it |
+| `"cot(c + d*x)^2*(k + q*tan(c + d*x))/(a + i*a*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | powers and logarithms of `a + i a tan(c + d x)`, of `a - i a tan(c + d x)` and of `tan(c + d x)` |
+| `"(a + i*a*tan(c + d*x))/(q - i*q*tan(c + d*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `-2 i a (q - i q tan(c + d x))^(-3/2)/(3d)`, written longer |
 
 ### A rational function with complex coefficients is integrated through its real and imaginary parts
 

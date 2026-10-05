@@ -10698,7 +10698,7 @@ namespace AngouriMath.Functions.Algebra
                 var r = LowestOverTheSymbols(d / b);
                 answer = answer + BySign(r,
                     ofTheLogarithm * MathS.Ln((1 + MathS.Sqrt(r) * root) / (1 - MathS.Sqrt(r) * root)) / MathS.Sqrt(r),
-                    2 * ofTheLogarithm * MathS.Arctan(MathS.Sqrt(-r) * root) / MathS.Sqrt(-r));
+                    2 * ofTheLogarithm * MathS.Arctan(MathS.Sqrt(-r) * root) / MathS.Sqrt(-r), alsoOffTheRealLine: true);
             }
             if (ofTheThirdKind != Number.Integer.Zero)
             {
@@ -10708,7 +10708,7 @@ namespace AngouriMath.Functions.Algebra
                 var rho = LowestOverTheSymbols(-atThePole[1] / atThePole[0]);
                 answer = answer + BySign(rho,
                     -2 * ofTheThirdKind * MathS.Arctan(MathS.Sqrt(rho) * root) / MathS.Sqrt(rho),
-                    -ofTheThirdKind * MathS.Ln((1 + MathS.Sqrt(-rho) * root) / (1 - MathS.Sqrt(-rho) * root)) / MathS.Sqrt(-rho));
+                    -ofTheThirdKind * MathS.Ln((1 + MathS.Sqrt(-rho) * root) / (1 - MathS.Sqrt(-rho) * root)) / MathS.Sqrt(-rho), alsoOffTheRealLine: true);
             }
             return (constantBelow == Number.Integer.One ? answer : answer / constantBelow).InnerSimplified;
         }
@@ -11316,10 +11316,21 @@ namespace AngouriMath.Functions.Algebra
         // where it holds, for a quantity with symbols in it, as `1/(a - x^2)` is answered. A
         // number times even powers of symbols has the number's sign wherever the symbols are
         // real and not zero, which is the generic case: `-b^2` in `a^2 - b^2 x^2` is negative.
-        private static Entity BySign(Entity quantity, Entity wherePositive, Entity whereNegative)
-            => SignOfANumberTimesEvenPowers(quantity) is { } sign
-                ? (sign < 0 ? whereNegative : wherePositive)
-                : MathS.Piecewise((wherePositive, new Greaterf(quantity, Number.Integer.Zero)), (whereNegative, new Lessf(quantity, Number.Integer.Zero)));
+        // Off the real line neither sign holds, the complex numbers not being ordered, and the
+        // piecewise had no arm there: `1/(sqrt(x) sqrt(a + b x) (1 - i x))` was answered with
+        // nothing at any point. Where the caller's form for a positive quantity uses nothing about
+        // its root but `sqrt(z)^2 = z`, as an arctangent or a logarithm does and an arcsine does
+        // not, it is an antiderivative wherever the quantity is not zero, whatever its phase -- the
+        // sign only chooses the form that is real on the real line -- and the caller says so with
+        // alsoOffTheRealLine: a quantity with the imaginary unit in it then takes that form alone.
+        private static Entity BySign(Entity quantity, Entity wherePositive, Entity whereNegative, bool alsoOffTheRealLine = false)
+        {
+            if (SignOfANumberTimesEvenPowers(quantity) is { } sign)
+                return sign < 0 ? whereNegative : wherePositive;
+            if (alsoOffTheRealLine && HoldsTheImaginaryUnit(quantity.InnerSimplified))
+                return wherePositive;
+            return MathS.Piecewise((wherePositive, new Greaterf(quantity, Number.Integer.Zero)), (whereNegative, new Lessf(quantity, Number.Integer.Zero)));
+        }
 
         // The same where the form for a positive first quantity is chosen by the sign of a second,
         // as one piecewise rather than one inside another.
@@ -25459,6 +25470,145 @@ namespace AngouriMath.Functions.Algebra
             if (expanded == expr)
                 return null;
             return Integration.ComputeAsAQuestionOfItsOwn(expanded.Expand().InnerSimplified, x, integrateByParts);
+        }
+
+        /// <summary>
+        /// A rational function of <c>tan(z)</c> beside a power of <c>S = a + c tan(z)</c> with
+        /// <c>c = ±i a</c>, below the bar or not whole, integrated in <c>S</c>: <c>tan(z)</c> is
+        /// <c>(S - a)/c</c>, and since <c>c^2 = -a^2</c>, <c>dS/dz = c sec(z)^2 = S (S - 2a)/c</c>, so
+        /// <c>dz = c dS/(S (S - 2a))</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>cot(c + d x)^3 (A + B tan(c + d x))/(a + i a tan(c + d x))^2</c> and the rest of
+        /// its 4.3.3.1 with a power of the tangent beside <c>(A + B tan)</c> over a power of
+        /// <c>a + i a tan</c> ran past the budget, whole powers and half-odd ones alike: under
+        /// <c>u = tan(z)</c> each is a rational function over <c>1 + i u</c> and <c>1 - i u</c> with
+        /// symbols in every coefficient. In <c>S</c> the factors are <c>S</c>, <c>S - 2a</c> and,
+        /// from a cotangent, <c>S - a</c>, with no imaginary root among them, and the same
+        /// integrands are a second or two; a half-odd power of <c>S</c> is a root of a linear.
+        /// </para>
+        /// <para>
+        /// Exact wherever the integrand is defined: the substitution is the identity
+        /// <c>sec(z)^2 = 1 + tan(z)^2</c> read in <c>S</c>, and the power of <c>S</c> is the
+        /// integrand's own. Only whole powers of the tangent and cotangent of <c>z</c> beside it,
+        /// and nothing else in x; a base standing only to positive whole powers is a polynomial in
+        /// the tangent, which the rules for those answer.
+        /// </para>
+        /// <para>
+        /// Beside a second such sum of the same argument, <c>q - i q tan(z)</c>, which is linear in
+        /// the first, the one under a power that is not whole is the variable and the other a whole
+        /// power of a linear in it: <c>(a + i a tan(z))/(q - i q tan(z))^(3/2)</c>, Rubi's 4.3.2.1,
+        /// ran past the budget too.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveInTheImaginarySumOfAConstantAndATangent(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var sums = new List<(Entity Base, Entity Constant, Entity Coefficient, Entity Argument)>();
+            foreach (var node in expr.Nodes)
+            {
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(x) || sums.Any(found => found.Base == node))
+                    continue;
+                Entity sum = Number.Integer.Zero;
+                Entity? factor = null, inner = null;
+                var read = true;
+                foreach (var term in Sumf.LinearChildren(node))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        sum = sum == Number.Integer.Zero ? term : sum + term;
+                        continue;
+                    }
+                    if (factor is not null)
+                    {
+                        read = false;
+                        break;
+                    }
+                    Entity product = Number.Integer.One;
+                    foreach (var piece in Mulf.LinearChildren(term))
+                    {
+                        if (piece is Tanf(var y) && inner is null)
+                            inner = y;
+                        else if (!piece.ContainsNode(x))
+                            product = product == Number.Integer.One ? piece : product * piece;
+                        else
+                        {
+                            read = false;
+                            break;
+                        }
+                    }
+                    if (!read || inner is null)
+                    {
+                        read = false;
+                        break;
+                    }
+                    factor = product;
+                }
+                if (!read || factor is null || inner is null || sum == Number.Integer.Zero)
+                    continue;
+                var ratio = Functions.PartialFractions.Bare((factor / sum).InnerSimplified);
+                if (ratio.Evaled is not Number.Complex)
+                    ratio = Functions.PartialFractions.Bare(ratio.Simplify());
+                if (ratio.Evaled != MathS.i.Evaled && ratio.Evaled != (-MathS.i).Evaled)
+                    continue;
+                sums.Add((node, sum, factor, inner));
+            }
+            // Two such sums, `a + i a tan(z)` and `c - i c tan(z)`, are each linear in the other: in
+            // the one under a power that is not whole the other is a whole power of a linear, where
+            // in the other it would be the root of one. Where both or neither are, declined.
+            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == sum && p is not Number.Integer);
+            var chosen = sums.Count switch
+            {
+                1 => sums[0],
+                2 when NotWhole(sums[0].Base) != NotWhole(sums[1].Base) => NotWhole(sums[0].Base) ? sums[0] : sums[1],
+                _ => default,
+            };
+            var (@base, constant, coefficient, argument) = chosen;
+            if (@base is null || constant is null || coefficient is null || argument is null
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
+                || rate.Evaled is Number.Complex { IsZero: true })
+                return null;
+            // Below the bar, or to a power that is not whole: a positive whole power alone is a
+            // polynomial in the tangent.
+            var below = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr)).Denominator;
+            if (!below.Nodes.Contains(@base)
+                && !expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == @base && p is not Number.Integer))
+                return null;
+            var s = Variable.CreateUnique(expr, "s_imaginary_tangent");
+            var tangent = (s - constant) / coefficient;
+            // The other sum, `q + c' tan(z)`, written as the linear in `S` it is, `(c'/c) (S - r)`
+            // for `r = a - q c/c'`, its root spelled `2 a` where it is that: there it cancels the
+            // `S - 2a` of `dz` as written, where `q + c' (S - a)/c` cancelled nothing, and the pole
+            // it left made `(a + i a tan(z))^2/sqrt(q - i q tan(z))` fourteen thousand characters.
+            Entity? other = null, otherInS = null;
+            if (sums.Count == 2)
+            {
+                var (otherBase, otherConstant, otherCoefficient, _) = sums[0].Base == @base ? sums[1] : sums[0];
+                var ratio = Functions.PartialFractions.InLowestTermsOverTheSymbols(otherCoefficient / coefficient);
+                var root = Functions.PartialFractions.InLowestTermsOverTheSymbols(constant - otherConstant * coefficient / otherCoefficient);
+                if (Functions.PartialFractions.IsZeroAsAValue(root - 2 * constant))
+                    root = 2 * constant;
+                (other, otherInS) = (otherBase, ratio * (s - root));
+            }
+            var rewritten = expr.Replace(node => node == @base ? s : other is not null && node == other ? otherInS! : node).Replace(node => node switch
+            {
+                Tanf(var y) when y == argument => tangent,
+                Cotanf(var y) when y == argument => 1 / tangent,
+                _ => node,
+            });
+            if (rewritten.ContainsNode(x))
+                return null;
+            // No power that is not whole but of S itself: a root of the tangent is a root of
+            // `(S - a)/c` with `c` imaginary, and taken apart over the constant it changed its
+            // branch -- `cot(z)^(3/2) (A + B tan(z))/(a + i a tan(z))^2` and `tan(z)^(8/3)/(a + i a tan(z))`
+            // came back wrong at every point.
+            if (rewritten.Nodes.Any(node => node is Powf(var radicand, var power) && power is not Number.Integer && radicand != s))
+                return null;
+            var inS = (rewritten * coefficient / (s * (s - 2 * constant)) / rate).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inS, s, integrateByParts) is not { } inTermsOfS)
+                return null;
+            return inTermsOfS.Substitute(s, @base);
         }
 
         /// <summary>
