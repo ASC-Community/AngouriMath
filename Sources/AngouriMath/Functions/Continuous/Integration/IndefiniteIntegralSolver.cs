@@ -11419,6 +11419,97 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A function whose argument is a quotient of two linears, <c>(a + b x)/(c + d x)</c>, with
+        /// that argument written over the denominator: <c>b/d + (a d - b c)/(d (c + d x))</c>, a
+        /// constant plus a multiple of the reciprocal of a linear.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>sin((a + b x)/(c + d x))</c> and its powers were declined, and the hyperbolic
+        /// sine and cosine of the same, written in exponentials, likewise, where
+        /// <c>sin(a + k/(c + d x))</c> is answered in sines and cosine integrals and
+        /// <c>e^(a + k/(c + d x))</c> in exponential integrals: those rules read a reciprocal of a
+        /// linear, and a quotient of two linears is one plus a constant. Exact: polynomial division,
+        /// for <c>d</c> and <c>a d - b c</c> not zero, as everywhere in the integrator.
+        /// </para>
+        /// <para>
+        /// The arguments of the sine, cosine, tangent, cotangent, secant and cosecant and the
+        /// exponents of the exponential, each written so; the same question in another spelling.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByWritingAQuotientOfLinearsOverItsDenominator(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var names = new Dictionary<Variable, Entity>();
+            Entity? Divided(Entity argument)
+            {
+                // Written as a quotient, or a constant times one: the sum this writes is neither,
+                // so the same question asked again does not divide it a second time.
+                Entity factor = Number.Integer.One;
+                var quotient = argument;
+                // The product's two children as written: read through, `-(a + b x)/(c + d x)` as a
+                // constant times a quotient is a quotient taken apart into its factors.
+                if (argument is Mulf(var left, var right))
+                    (factor, quotient) = left.ContainsNode(x) ? (right, left) : (left, right);
+                if (factor.ContainsNode(x))
+                    return null;
+                if (quotient is not Divf(var above, var below))
+                    return null;
+                if (!below.ContainsNode(x) || !above.ContainsNode(x)
+                    || !TreeAnalyzer.TryGetPolyLinear(above, x, out var b, out var a) || b.ContainsNode(x) || a.ContainsNode(x)
+                    || !TreeAnalyzer.TryGetPolyLinear(below, x, out var d, out var c) || d.ContainsNode(x) || c.ContainsNode(x))
+                    return null;
+                var remainder = (a * d - b * c).InnerSimplified;
+                if (remainder.Evaled is Number.Complex { IsZero: true } || d.Evaled is Number.Complex { IsZero: true })
+                    return null;
+                // The constant and the multiple named, each a symbol of its own while the question
+                // is asked: `sin(b/d + ((a d - b c)/d)/(c + d x))` was declined where
+                // `sin(p + k/(c + d x))` is answered, the rules reading a symbol where they meet a
+                // quotient of symbols.
+                Entity Named(Entity value)
+                {
+                    value = value.InnerSimplified;
+                    if (value is Variable || value is Number)
+                        return value;
+                    foreach (var pair in names)
+                        if (pair.Value == value)
+                            return pair.Key;
+                    var name = Variable.CreateUnique(expr + names.Keys.Aggregate((Entity)Number.Integer.Zero, (sum, v) => sum + v), "k_quotient");
+                    names[name] = value;
+                    return name;
+                }
+                // A constant in front stays in front, so that `e^Q` and `e^(-Q)` keep one argument
+                // and their product is 1.
+                var divided = Named(b / d) + Named(remainder / d) / below;
+                return factor == Number.Integer.One ? divided : factor * divided;
+            }
+            var changed = false;
+            var rewritten = expr.Replace(node =>
+            {
+                Entity? divided;
+                switch (node)
+                {
+                    case Sinf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Sin(divided);
+                    case Cosf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Cos(divided);
+                    case Tanf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Tan(divided);
+                    case Cotanf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Cotan(divided);
+                    case Secantf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Sec(divided);
+                    case Cosecantf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Cosec(divided);
+                    case Powf(var @base, var exponent) when @base == MathS.e && (divided = Divided(exponent)) is not null:
+                        changed = true;
+                        return MathS.Pow(MathS.e, divided);
+                    default:
+                        return node;
+                }
+            });
+            if (!changed || Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts) is not { } answer)
+                return null;
+            foreach (var pair in names)
+                answer = answer.Substitute(pair.Key, pair.Value);
+            return answer;
+        }
+
+        /// <summary>
         /// Trigonometric functions of several arguments that are whole or rational multiples of one
         /// linear, <c>p + q x</c>, written in <c>u = p + q x</c>: <c>csc(a + b x) csc(2a + 2b x)^2</c>
         /// is <c>csc(u) csc(2u)^2</c> over <c>b</c>, whose arguments are multiples of <c>u</c> alone,

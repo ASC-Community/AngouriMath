@@ -876,13 +876,16 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare(expr, x, integrateByParts)) is { }) return answer;
             // The hyperbolic sine's, off the real line: 1 + i sinh(y) is (cosh(y/2) + i sinh(y/2))^2.
             if ((answer = IndefiniteIntegralSolver.SolveAHalfOddPowerOfOnePlusAnImaginaryHyperbolicSine(expr, x, integrateByParts)) is { }) return answer;
-            // Several trigonometric arguments that are multiples of one linear with an offset or a
-            // symbolic slope, written in that linear: before the substitution search, which reads
-            // each function on its own.
+            // A quotient of linears as a function's argument, written over its denominator: a
+            // constant plus a multiple of the reciprocal of a linear, which the rules read.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingAQuotientOfLinearsOverItsDenominator(expr, x, integrateByParts)) is { }) return answer;
             // A cosine and a sine over a power of another such sum, through the denominator, its
             // derivative and a constant, down to the reciprocal of the base: before the substitution
             // search, which reads the quotient term by term.
             if ((answer = IndefiniteIntegralSolver.SolveACosineAndASineOverAPowerOfAnother(expr, x, integrateByParts)) is { }) return answer;
+            // Several trigonometric arguments that are multiples of one linear with an offset or a
+            // symbolic slope, written in that linear: before the substitution search, which reads
+            // each function on its own.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingMultiplesOfOneLinearArgument(expr, x, integrateByParts)) is { }) return answer;
             // Two tangents, cotangents, secants or cosecants of arguments a constant apart, written
             // as functions of each alone by the addition formulas.
