@@ -15728,9 +15728,6 @@ namespace AngouriMath.Functions.Algebra
             var degreeOfP = pRead.Count == 0 ? 0 : pRead.Keys.Max()!.ToInt32Unchecked();
             if (degreeOfP > 8 || m > 9 || m < -9)
                 return null;
-            foreach (var coefficient in new[] { a, b, c, constant }.Concat(pRead.Values))
-                if (coefficient.Evaled is Number.Complex and not Number.Real)
-                    return null;
 
             // Each coefficient that is neither a number nor a symbol is named for the solve and
             // written back into what it gives. Carried through the elimination as written,
