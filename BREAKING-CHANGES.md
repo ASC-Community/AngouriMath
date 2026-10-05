@@ -843,6 +843,19 @@ number; the zero is a power `1/x`, whose integral is a logarithm. A symbolic `b`
 | `"sin(a + ln(c*x^2)*sqrt(-1/4))".ToEntity().Integrate("x")` | `integral(...)` | powers of `x` and `c x^2` and a logarithm, through `e^(i a)` |
 | `"1/cos(a - 2*i*ln(c*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | an arctangent and a logarithm of a root, through `e^(i a)` |
 
+### A constant plus an imaginary cosine and sine is an exponential
+
+**Answers where there were none.** `(A + B cos(x))/(a + b cos(x) + i b sin(x))` was declined, with the
+rest of Rubi's 4.7.7 over `a + b cos(x) ± i b sin(x)`. That denominator is `a + b e^(±i x)`, and with
+the cosine and sine above it written as exponentials too the integrand is rational in `e^(i x)`;
+`1/(a + b cos(x) + i b sin(x))`, answered on the unreleased master by the half-angle tangent, is
+answered in the exponential now ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(k + q*cos(x))/(a + b*cos(x) + i*b*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | logarithms in `e^(i x)` and a term `e^(-i x)/a`, piecewise in the symbols |
+| `"1/(a + b*cos(x) + i*b*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | a logarithm in `e^(i x)`, piecewise in `b = 0` |
+
 ### `e^(n i arctan(a x))` to a power that is not whole is integrated
 
 **Answers where there were none.** `e^(n i arctan(L))` is written algebraically, as
