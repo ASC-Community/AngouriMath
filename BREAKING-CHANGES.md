@@ -120,6 +120,21 @@ the working digits, or `MathS.Settings.PrecisionErrorZeroRange` where a caller h
 still that integer, so `e^(-123.456)` is 0 as it was.
 [#1338](https://github.com/asc-community/AngouriMath/issues/1338).
 
+### A piecewise case whose condition is undefined is passed over
+
+**A different answer.** A case whose predicate evaluates to NaN -- an order comparison of a number
+off the real line, `i < 0`, the complex numbers not being ordered -- made the whole piecewise NaN,
+even where another case held. It holds no more than a false predicate does now: the case is never
+taken, and the cases after it are read as before. The derivative of an antiderivative written with
+an arm for each sign of a quantity that is not real, `x^2 provided not x = 0` beside
+`x^3 provided -13/10 i - 3/5 < 0`, came out NaN that way, where it is `2x`.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"piecewise(1 provided i < 0, 2 provided 1 > 0)".ToEntity().InnerSimplified` | `NaN` | `2` |
+| `"piecewise(2 * x provided not x = 0, 3 * x ^ 2 provided i - 1 < 0)".ToEntity().InnerSimplified` | `NaN` | `2 * x` where `x` is not 0 |
+| `"piecewise(1 provided i < 0, 2 provided i > 0)".ToEntity().InnerSimplified` | `NaN` | `NaN`, as before: no case holds |
+
 ### The factorial far from zero, and a quotient by a number whose modulus is nearly whole
 
 The numerical factorial is Spouge's approximation, and it holds right of zero. Used left of zero it
