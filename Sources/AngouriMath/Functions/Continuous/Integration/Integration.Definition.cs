@@ -800,6 +800,9 @@ namespace AngouriMath.Functions.Algebra
             // `(1 + x + sqrt(3))/((1 + x - sqrt(3)) sqrt(1 + x^3))`. Before the reduction over the
             // linear, which writes it as `1` and `2 sqrt(3)` over the linear, neither elementary.
             if ((answer = IndefiniteIntegralSolver.SolveAPseudoEllipticQuotientOverTheRootOfACubicBinomial(expr, x)) is { }) return answer;
+            // x over a cubic binomial beside the root of another, at the two ratios where that is
+            // elementary: Welz's `x/((4 - x^3) sqrt(1 - x^3))`.
+            if ((answer = IndefiniteIntegralSolver.SolveXOverACubicBinomialBesideTheRootOfAnother(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByReducingThePolynomialOverALinearFactor(expr, x, integrateByParts)) is { }) return answer;
             if (expr is Entity.Sumf or Entity.Minusf
                 && (answer = IndefiniteIntegralSolver.SolveBySplittingSum(expr, x, integrateByParts)) is { })

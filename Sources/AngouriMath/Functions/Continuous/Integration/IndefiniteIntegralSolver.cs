@@ -4921,6 +4921,105 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>x/((a + b x^3) sqrt(c + d x^3))</c> at the two ratios where its integral is elementary,
+        /// Rubi's 1.1.3.4: <c>4 b c = a d</c> and <c>8 b c + a d = 0</c>, in closed form.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>q = (d/c)^(1/3)</c>, the real root, and <c>y = sqrt(c + d x^3)</c>, at
+        /// <c>4 b c = a d</c>, for <c>r = sqrt(c)</c> where <c>c</c> is positive and
+        /// <c>r = sqrt(-c)</c> where it is negative:
+        /// <code>
+        /// c &gt; 0:   q/(3 2^(2/3) b r) (artanh(y/r)/3 + atan(y/(sqrt(3) r))/sqrt(3)
+        ///                      - atan(sqrt(3) r (1 + 2^(1/3) q x)/y)/sqrt(3) - artanh(r (1 - 2^(1/3) q x)/y))
+        /// c &lt; 0:  -q/(3 2^(2/3) b r) (atan(y/r)/3 + artanh(y/(sqrt(3) r))/sqrt(3)
+        ///                      + artanh(sqrt(3) r (1 + 2^(1/3) q x)/y)/sqrt(3) + atan(r (1 - 2^(1/3) q x)/y))
+        /// </code>
+        /// and at <c>8 b c + a d = 0</c>, where the integrand is <c>-(d/b) x/((8 c - d x^3) y)</c>, that
+        /// times
+        /// <code>
+        /// c &gt; 0:   (artanh(r (1 + q x)^2/(3 y))/18 - artanh(y/(3 r))/18 - atan(sqrt(3) r (1 + q x)/y)/(6 sqrt(3)))/(r^3 q^2)
+        /// c &lt; 0:  -(atan(r (1 + q x)^2/(3 y))/18 + atan(y/(3 r))/18 - artanh(sqrt(3) r (1 + q x)/y)/(6 sqrt(3)))/(r^3 q^2)
+        /// </code>
+        /// Rubi splits the second into three integrals, a substitution's in <c>x^3</c>, a linear
+        /// over a linear and a quadratic over a quadratic, each elementary, and their sum is the
+        /// form above; asked as three, two come back piecewise in the symbols and their sum holds
+        /// every combination of the arms. Every condition is decided as a value, and the answer is
+        /// differentiated back at sampled points before it is returned.
+        /// Welz's <c>x/((4 - x^3) sqrt(1 - x^3))</c> and <c>x/((8 - d x^3) sqrt(1 + d x^3))</c> were
+        /// declined, with the rest of 1.1.3.4 at those ratios.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveXOverACubicBinomialBesideTheRootOfAnother(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var (numerator, denominator) = Functions.SingleQuotient.Of(expr);
+            if (!TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) || above.Count != 1
+                || !above.TryGetValue(EInteger.One, out var multiple) || multiple.ContainsNode(x))
+                return null;
+            Entity? radicand = null;
+            Entity below = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+                if (factor is Powf(var @base, Number.Rational half) && half.ERational.Equals(ERational.Create(1, 2)) && @base.ContainsNode(x))
+                {
+                    if (radicand is not null)
+                        return null;
+                    radicand = @base;
+                }
+                else
+                    below = below == Number.Integer.One ? factor : below * factor;
+            if (radicand is null || ACubicBinomial(radicand) is not var (c, d) || ACubicBinomial(below) is not var (a, b))
+                return null;
+            static bool Zero(Entity condition) => Functions.PartialFractions.IsZeroAsAValue(condition);
+            if (Zero(a) || Zero(b) || Zero(c) || Zero(d) || Zero(b * c - a * d))
+                return null;
+            var y = MathS.Sqrt(radicand);
+            var q = MathS.Pow(LowestOverTheSymbols(d / c), Number.Rational.Create(1, 3));
+            var cubeRootOfTwo = MathS.Pow(2, Number.Rational.Create(1, 3));
+            var sqrtOfThree = MathS.Sqrt(3);
+            Entity? answer = null;
+            if (Zero(4 * b * c - a * d))
+            {
+                var r = MathS.Sqrt(c);
+                var wherePositive = q / (3 * MathS.Sqr(cubeRootOfTwo) * b * r)
+                    * (MathS.Hyperbolic.Artanh(y / r) / 3 + MathS.Arctan(y / (sqrtOfThree * r)) / sqrtOfThree
+                       - MathS.Arctan(sqrtOfThree * r * (1 + cubeRootOfTwo * q * x) / y) / sqrtOfThree
+                       - MathS.Hyperbolic.Artanh(r * (1 - cubeRootOfTwo * q * x) / y));
+                var s = MathS.Sqrt(LowestOverTheSymbols(-c));
+                var whereNegative = -q / (3 * MathS.Sqr(cubeRootOfTwo) * b * s)
+                    * (MathS.Arctan(y / s) / 3 + MathS.Hyperbolic.Artanh(y / (sqrtOfThree * s)) / sqrtOfThree
+                       + MathS.Hyperbolic.Artanh(sqrtOfThree * s * (1 + cubeRootOfTwo * q * x) / y) / sqrtOfThree
+                       + MathS.Arctan(s * (1 - cubeRootOfTwo * q * x) / y));
+                answer = BySign(c, wherePositive, whereNegative);
+            }
+            else if (Zero(8 * b * c + a * d))
+            {
+                // The integrand is -(d/b) x/((8 c - d x^3) y).
+                var r = MathS.Sqrt(c);
+                var wherePositive = (MathS.Hyperbolic.Artanh(r * MathS.Sqr(1 + q * x) / (3 * y)) / 18 - MathS.Hyperbolic.Artanh(y / (3 * r)) / 18
+                    - MathS.Arctan(sqrtOfThree * r * (1 + q * x) / y) / (6 * sqrtOfThree)) / (MathS.Pow(r, 3) * MathS.Sqr(q));
+                var s = MathS.Sqrt(LowestOverTheSymbols(-c));
+                var whereNegative = -(MathS.Arctan(s * MathS.Sqr(1 + q * x) / (3 * y)) / 18 + MathS.Arctan(y / (3 * s)) / 18
+                    - MathS.Hyperbolic.Artanh(sqrtOfThree * s * (1 + q * x) / y) / (6 * sqrtOfThree)) / (MathS.Pow(s, 3) * MathS.Sqr(q));
+                answer = LowestOverTheSymbols(-d / b) * BySign(c, wherePositive, whereNegative);
+            }
+            if (answer is null)
+                return null;
+            answer = (multiple * answer).InnerSimplified;
+            bool holds;
+            using (MathS.Settings.DowncastingEnabled.Set(false))
+                holds = Functions.PartialFractions.HoldsAtSampledPoints(answer.Differentiate(x), expr, x);
+            return holds ? answer : null;
+
+            // `p + r x^3`, as `(p, r)`, each free of x.
+            (Entity, Entity)? ACubicBinomial(Entity binomial)
+                => TreeAnalyzer.TryGetPolynomial(binomial, x, out var read) && read.Count == 2
+                   && read.TryGetValue(EInteger.Zero, out var constant) && read.TryGetValue(EInteger.FromInt32(3), out var cubic)
+                   && !constant.ContainsNode(x) && !cubic.ContainsNode(x)
+                    ? (constant, cubic) : null;
+        }
+
+        /// <summary>
         /// A root of a quadratic binomial beside another, <c>1/((A + B x^2)^(1/3) (C + D x^2))</c>
         /// with <c>B C + 3 A D = 0</c> or <c>B C - 9 A D = 0</c>, and
         /// <c>1/((A + B x^2)^(1/4) (C + D x^2))</c> with <c>B C - 2 A D = 0</c>: the ratios at which
