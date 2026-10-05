@@ -161,6 +161,21 @@ the division's; with it on, the rounding is the setting's own and stays
 | `"(-60.5)!"` at 30 digits, downcasting off | `5.86118478907722232671451280188E-81` | `2.93059239453861116335725639905E-81` |
 | `"abs(75 + 316.22776601683796i)"`, downcasting off | `325` | `325.000000000000026076735749…` |
 
+### One linear twice is not two linear powers
+
+**Answers that had no value.** `(a c + b c x)^(-3 - 2 p) (f + g x) (a^2 + 2 a b x + b^2 x^2)^p` was answered
+on the unreleased master with `(1/b a b c - a c)^(-2)` in it, which is zero to a negative power: the
+answer had no value anywhere. The square is written as a power of its root, `(x + a/b)^(2 p)`, beside
+`a c + b c x`, which is `b c (x + a/b)`, and the rule for two linear powers whose exponents sum to a whole
+number divides by the two linears' cross term, declining where it is zero -- tested as a number, which
+with symbols in it it is not. It is tested as a value now, and the integral is answered by the rules
+after it
+([#1793](https://github.com/asc-community/AngouriMath/issues/1793)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
+
 ### A power of a constant below `1e-50` is no longer simplified to zero
 
 **Answers that were wrong.** Evaluation rounds a value within `1e-50` of an integer onto it, and
@@ -402,6 +417,23 @@ up to a third of such an answer, and of every answer built on one, as `1/(x (a +
 |---|---|---|
 | `"1/(1 + q*x^2)".ToEntity().Integrate("x")` | four arms, the third `-2/(2 q x)` on `4 q = 0` | three, without it |
 | `"1/(x*(a + b*x))".ToEntity().Integrate("x")` | four arms, the second an arctangent on `-a^2 > 0` | three, without it |
+
+### A constant with `i` in it is put in lowest terms when a rational function is split
+
+**Shorter answers.** `(c + d tan(x))^(5/2)/(a + i a tan(x))^2` is `2 d^3 t^2/((t^2 - c - i d)^3 (t^2 - c + i d))`
+over `a^2` in `t = sqrt(c + d tan(x))`, and splitting that into partial fractions carries `c + i d` through
+every step of the inverse modulo the cube of its quadratic. The polynomial gcd reads coefficients in the
+rationals, and `i` is not one, so no step cancelled anything: the coefficients came out with `d^572` in them,
+and the answer at 813,000 characters, which the default precision could not evaluate. A constant with `i`
+among its coefficients is written as its real and imaginary parts over a real denominator now, the three
+without a common factor
+([#1788](https://github.com/asc-community/AngouriMath/issues/1788)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c + d*tan(x))^(5/2)/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 813,280 characters on the unreleased master | 83,614 characters |
+| `"(c + d*tan(x))^(3/2)/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 470,119 characters on the unreleased master | 77,377 characters |
+| `"(c + d*tan(x))^(1/2)/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 258,943 characters on the unreleased master | 71,266 characters |
 
 ### A polynomial with symbols in it that is a binomial or an even quartic in a shifted variable is integrated in it
 

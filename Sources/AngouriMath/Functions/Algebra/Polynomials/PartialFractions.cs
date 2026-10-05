@@ -639,6 +639,11 @@ namespace AngouriMath.Functions
             if (expandedAbove == Integer.Zero || expandedAbove.Evaled is Complex { IsZero: true } || IsZeroAtPinnedSymbols(expandedAbove))
                 return Integer.Zero;
             var expandedBelow = Bare(below.Expand().InnerSimplified);
+            // A number is folded already, and stays a number.
+            if ((expandedAbove.Vars.Any() || expandedBelow.Vars.Any())
+                && (HoldsTheImaginaryUnit(expandedAbove) || HoldsTheImaginaryUnit(expandedBelow))
+                && InLowestTermsOverTheGaussianRationals(expandedAbove, expandedBelow) is { } gaussian)
+                return gaussian;
             // With room for the coefficient a fourth-order block leaves: the series of
             // `x^4 (A + B x)/(1 + x^2)` at `-a/b` had `(a^2 + b^2)^3` in common at the third
             // order and eleven hundred nodes, and left uncancelled it carried into every
@@ -652,6 +657,117 @@ namespace AngouriMath.Functions
             if (CancelledByTheWrittenFactors(expandedAbove, below) is { } byFactors)
                 return WithThePrimitiveDenominator(byFactors);
             return WithThePrimitiveDenominator(expandedBelow == Integer.One ? expandedAbove : expandedAbove / expandedBelow);
+        }
+
+        /// <summary>Whether a number off the real line is among the nodes of <paramref name="expr"/>.</summary>
+        private static bool HoldsTheImaginaryUnit(Entity expr)
+            => expr.Nodes.Any(node => node is Complex number && number is not Real && !number.ImaginaryPart.IsZero);
+
+        /// <summary>
+        /// <paramref name="above"/> over <paramref name="below"/>, with the imaginary unit among
+        /// their coefficients, as <c>(P + i Q)/R</c> for polynomials <c>P</c>, <c>Q</c> and
+        /// <c>R</c> over the rationals in the symbols, with no factor common to the three and
+        /// <c>R</c> primitive; null where a side does not read as a polynomial so.
+        /// </summary>
+        /// <remarks>
+        /// The polynomial gcd reads its coefficients in the rationals, and <c>i</c> is not one, so
+        /// a constant with it in was left as the expansion gave it and nothing in it cancelled.
+        /// Newton's iteration for the inverse modulo a power of a quadratic squares its iterate
+        /// every round, and the split of <c>2 d^3 t^2/((t^2 - c - i d)^3 (t^2 - c + i d))</c>,
+        /// which the root substitution makes of Rubi's 4.3.2.1
+        /// <c>(c + d tan(x))^(5/2)/(a + i a tan(x))^2</c>, came out with <c>d^572</c> in its
+        /// coefficients and an answer of 240,000 characters, which the default precision could
+        /// not evaluate.
+        /// https://github.com/asc-community/AngouriMath/issues/1788
+        /// The unit is read as a symbol <c>j</c> with <c>j^2 = -1</c>, so each side is
+        /// <c>A + j B</c> with <c>A</c> and <c>B</c> free of it; the denominator times its
+        /// conjugate is real, <c>B0^2 + B1^2</c>, and what the three polynomials over the
+        /// rationals then share is their gcd. With the denominator real and that gcd one the
+        /// form is unique, so a constant that is zero comes out zero.
+        /// </remarks>
+        private static Entity? InLowestTermsOverTheGaussianRationals(Entity above, Entity below)
+        {
+            if ((long)above.Complexity + below.Complexity > 4096)
+                return null;
+            var unit = Variable.CreateUnique(above + below, "j");
+            Entity WithTheUnitNamed(Entity side)
+                => side.Replace(node => node is Complex number && number is not Real ? number.RealPart + number.ImaginaryPart * unit : node);
+            var namedAbove = WithTheUnitNamed(above);
+            var namedBelow = WithTheUnitNamed(below);
+            var variables = namedAbove.Vars.Concat(namedBelow.Vars).Distinct().OrderBy(v => v.Name, System.StringComparer.Ordinal).ToArray();
+            if (variables.Length > MultivariatePolynomial.MaxVariables)
+                return null;
+            var indices = new Dictionary<Variable, int>(variables.Length);
+            for (var i = 0; i < variables.Length; i++)
+                indices[variables[i]] = i;
+            if (MultivariatePolynomial.TryParse(namedAbove, indices) is not { } top
+                || MultivariatePolynomial.TryParse(namedBelow, indices) is not { } bottom || bottom.IsZero)
+                return null;
+            var (a0, a1) = RealAndImaginaryParts(top, indices[unit]);
+            var (b0, b1) = RealAndImaginaryParts(bottom, indices[unit]);
+            MultivariatePolynomial p, q, r;
+            if (b1.IsZero)
+                (p, q, r) = (a0, a1, b0);
+            else if (a0.Multiply(b0) is { } a0b0 && a1.Multiply(b1) is { } a1b1
+                && a1.Multiply(b0) is { } a1b0 && a0.Multiply(b1) is { } a0b1
+                && b0.Multiply(b0) is { } b0b0 && b1.Multiply(b1) is { } b1b1)
+                (p, q, r) = (a0b0.Add(a1b1), a1b0.Subtract(a0b1), b0b0.Add(b1b1));
+            else
+                return null;
+            if (r.IsZero)
+                return null;
+            var order = new int[variables.Length];
+            for (var i = 0; i < order.Length; i++)
+                order[i] = i;
+            if (PolynomialGcd.Gcd(p, q, order, 0) is not { } shared || PolynomialGcd.Gcd(shared, r, order, 0) is not { } common)
+                return null;
+            if (!common.IsConstant)
+            {
+                // Multiplied back, as the gcd's own cancellation is: nothing is divided out that
+                // has not been seen to divide.
+                if (p.DivideExact(common) is not { } reducedP || q.DivideExact(common) is not { } reducedQ
+                    || r.DivideExact(common) is not { } reducedR
+                    || reducedP.Multiply(common) is not { } backP || !backP.SameAs(p)
+                    || reducedQ.Multiply(common) is not { } backQ || !backQ.SameAs(q)
+                    || reducedR.Multiply(common) is not { } backR || !backR.SameAs(r))
+                    return null;
+                (p, q, r) = (reducedP, reducedQ, reducedR);
+            }
+            var primitive = r.Normalized(out var scale);
+            p = p.ScaleBy(scale);
+            q = q.ScaleBy(scale);
+            // `c - i d` rather than `c + i (-d)`: the imaginary part goes in with its sign taken
+            // out where its first term, as written, is negative.
+            var negative = !q.IsZero && q.Terms.OrderByDescending(term => term.Key).First().Value.Sign < 0;
+            Entity numerator;
+            if (q.IsZero)
+                numerator = p.ToEntity(variables);
+            else
+            {
+                var imaginary = MathS.i * (negative ? q.ScaleBy(ERational.FromInt32(-1)) : q).ToEntity(variables);
+                numerator = p.IsZero ? (negative ? -imaginary : imaginary) : negative ? p.ToEntity(variables) - imaginary : p.ToEntity(variables) + imaginary;
+            }
+            return primitive.IsConstant ? numerator : numerator / primitive.ToEntity(variables);
+        }
+
+        /// <summary>
+        /// <paramref name="polynomial"/>, in which <paramref name="unit"/> stands for the
+        /// imaginary unit, as <c>A + j B</c> with <c>j^2 = -1</c> and both free of it.
+        /// </summary>
+        private static (MultivariatePolynomial Real, MultivariatePolynomial Imaginary) RealAndImaginaryParts(MultivariatePolynomial polynomial, int unit)
+        {
+            var real = MultivariatePolynomial.Zero(polynomial.VariableCount);
+            var imaginary = MultivariatePolynomial.Zero(polynomial.VariableCount);
+            foreach (var pair in polynomial.CoefficientsIn(unit))
+            {
+                // j^k is 1, j, -1, -j as k is 0, 1, 2, 3 modulo 4.
+                var term = pair.Key % 4 >= 2 ? pair.Value.ScaleBy(ERational.FromInt32(-1)) : pair.Value;
+                if (pair.Key % 2 == 0)
+                    real = real.Add(term);
+                else
+                    imaginary = imaginary.Add(term);
+            }
+            return (real, imaginary);
         }
 
         /// <summary>
