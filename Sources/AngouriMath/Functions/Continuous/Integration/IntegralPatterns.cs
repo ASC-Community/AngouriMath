@@ -1039,13 +1039,18 @@ namespace AngouriMath.Functions.Algebra
         {
             var quadratic = a * x * x + b * x + c;
             var derivative = 2 * a * x + b;
-            var discriminant = 4 * a * c - b * b;
             // A discriminant that is zero once its spellings meet -- `4a^2 b^(-2)` against
             // `4 (1/b)^2 a^2` for `(x + (1 + i a)/(i b))^2` -- is the perfect square and not a
             // piecewise of three arms, two of them dividing by that zero: the piecewise
             // simplified to NaN, and an integral of `x e^(-2 i arctan(a + b x))` with it.
-            var expanded = discriminant.Expand().InnerSimplified;
-            if (!TreeAnalyzer.IsZero(a) && (TreeAnalyzer.IsZero(expanded) || IsZeroOnceSimplified(expanded)))
+            // And expanded as the first power's rule writes it, in the arms as well: the two
+            // meet in one answer wherever a split hands a quadratic's powers to the integrator
+            // side by side, and the piecewise that adds them reads `4 (-c - d) = 0` and
+            // `(-4) c + (-4) d = 0` as two conditions, so their arms multiplied --
+            // `2 d^3 t^2/((t^2 - c - d)^3 (t^2 - c + d))` was answered in 18,000 characters,
+            // and in 5,000 with a symbol for each constant term.
+            var discriminant = (4 * a * c - b * b).Expand().InnerSimplified;
+            if (!TreeAnalyzer.IsZero(a) && (TreeAnalyzer.IsZero(discriminant) || IsZeroOnceSimplified(discriminant)))
                 return (numerator * MathS.Pow(4 * a, power) * MathS.Pow(derivative, 1 - 2 * power)
                     / (2 * a * (1 - 2 * power))).InnerSimplified;
 
