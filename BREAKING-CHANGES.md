@@ -328,6 +328,19 @@ polynomial exponent in `u` now, and the question asked in `u`. Rubi's 2.3
 | `"F^(a + b/(c + d*x))/(c + d*x)".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral |
 | `"F^(a + b/(c + d*x)^3)*(c + d*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral of the cube, and the exponential |
 
+### A power of a monomial in a symbolic power of `x` is integrated as the power of `x` it is
+
+**Answers where there were none.** `(c x^n)^b` is written `c^b x^(n b)`, and the exponent `n b` was
+left as the inner simplification leaves it: `(c x^n)^(2/n)` came out as `c^(2/n) x^(n (2/n))`, which
+no rule reads as `x^2`, and `1/(a + b (c x^n)^(2/n))` was declined where `1/(a + b c^(2/n) x^2)` is
+answered. The exponent is simplified now. Rubi's 1.1.3.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a + b*(c*x^n)^(2/n))".ToEntity().Integrate("x")` | `integral(...)` | an arctangent or a logarithm in `b c^(2/n) x`, by the sign of `a b c^(2/n)` |
+| `"1/(1 + 4*(x^(2*n))^(1/n))".ToEntity().Integrate("x")` | `integral(...)` | `arctan(2 x)/2` |
+
 ### A polynomial over a power of a binomial past the cube is integrated
 
 **Answers where there were none.** `P(x)/(a + b x^n)^k` with symbols in the binomial, `n >= 3`, was

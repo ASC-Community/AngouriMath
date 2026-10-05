@@ -23482,7 +23482,11 @@ namespace AngouriMath.Functions.Algebra
                     assumed = assumed == Entity.Boolean.True ? positive : assumed & positive;
                 }
                 changed = true;
-                var distributed = split ? MathS.Pow(x, (degree! * exponent).InnerSimplified) : MathS.Pow(rest, exponent);
+                // The exponent of x as it simplifies: `(c x^n)^(2/n)` is `c^(2/n) x^(n (2/n))`, and that
+                // power of x is `x^2` only once `n (2/n)` is folded, which the inner simplification
+                // leaves standing -- `1/(a + b (c x^n)^(2/n))` was declined where `1/(a + b c^(2/n) x^2)`
+                // is answered. Exponents are small.
+                var distributed = split ? MathS.Pow(x, SimplifiedExponent((degree! * exponent).InnerSimplified)) : MathS.Pow(rest, exponent);
                 return constant == Number.Integer.One ? distributed : MathS.Pow(constant, exponent) * distributed;
             });
             if (!changed)
@@ -23498,6 +23502,9 @@ namespace AngouriMath.Functions.Algebra
             if (Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts) is not { } answer)
                 return null;
             return assumed == Entity.Boolean.True ? answer : answer.Provided(assumed);
+
+            static Entity SimplifiedExponent(Entity exponent)
+                => exponent is Number || exponent.Complexity > 40 ? exponent : Functions.PartialFractions.Bare(exponent.Simplify());
         }
 
         /// <summary>
