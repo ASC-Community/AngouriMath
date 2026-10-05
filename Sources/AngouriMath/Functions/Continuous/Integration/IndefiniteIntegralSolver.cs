@@ -27067,7 +27067,11 @@ namespace AngouriMath.Functions.Algebra
                         break;
                     // A difference as a sum: `1 - x` below the bar of `sin(1 + 2/(1 - x))` is the
                     // substitution that `1 + x` is for `sin(1 + 2/(1 + x))`, and was never offered.
-                    case Sumf or Minusf when !rational && !large && node.Complexity <= LargestSumOffered:
+                    // In the question asked only: below it every substitution writes differences,
+                    // `x = (u^2 - c)/d`, and offering them was two fifths more search on Rubi's
+                    // `(c + d x)^(5/2)/(x (a + b x)^2)`, past the harness's patience.
+                    case Sumf or Minusf when !rational && !large && node.Complexity <= LargestSumOffered
+                        && (node is Sumf || Integration.AnsweringTheQuestionAsked):
                         if (node.DirectChildren.Any(child => child.ContainsNode(x))) candidates.Add(node); // Linear expressions ax + b
                         break;
                 }
