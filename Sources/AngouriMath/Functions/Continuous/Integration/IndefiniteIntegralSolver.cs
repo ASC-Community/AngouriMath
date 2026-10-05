@@ -16524,9 +16524,17 @@ namespace AngouriMath.Functions.Algebra
         /// splits cannot factor is declined by them at a cost that grows with it. Asked, not
         /// volunteered, like every rule that lands on a search of any size.
         /// </para>
+        /// <para>
+        /// <b>The sum the integrand writes.</b> Where the integrand holds <c>d + e x + f sqrt(Q)</c>
+        /// with <c>e^2</c> the leading coefficient of <c>Q</c> times <c>f^2</c>, that sum is the
+        /// variable, and its powers are powers of it: Rubi's
+        /// <c>(d + e x + f sqrt(a + b x + e^2 x^2/f^2))^n</c>. Asked with only that, the rule
+        /// answers through such a sum or not at all, which is how it is asked before the split
+        /// that would expand the powers of <c>Q</c> beside one.
+        /// </para>
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </remarks>
-        internal static Entity? SolveByEulerSubstitution(Entity expr, Entity.Variable x)
+        internal static Entity? SolveByEulerSubstitution(Entity expr, Entity.Variable x, bool onlyBySumItWrites = false)
         {
 
             // One square root of a quadratic in x, and otherwise a rational function of x --
@@ -16659,15 +16667,15 @@ namespace AngouriMath.Functions.Algebra
             // monomials in `t` to the power `a`, the second a rational function of `sqrt(t)`,
             // and each is handed to the chain in `t` rather than to the rational integrator,
             // since neither is a quotient of polynomials.
-            var powered = false;
-            if (powersOfTheSubstitution.Count > 0)
+            var root = MathS.Pow(radicand, Number.Rational.Create(1, 2));
+            // `x - sqrt(Q)` is the same substitution with the root's sign flipped:
+            // `t = x - sqrt(Q)` gives the same `x(t)`, `sqrt(Q) = x - t` in place of `t - x`,
+            // and `t = x - sqrt(Q)` on the way back. Both signs in one integrand is neither.
+            // Whether the powers are flipped so, or null where they are not powers of either.
+            bool? FlippedForThePowers()
             {
                 if (which != 1 || !(a.Evaled is Number.Integer { IsZero: false } aOne && aOne.EInteger.Equals(EInteger.One)))
                     return null;
-                // `x - sqrt(Q)` is the same substitution with the root's sign flipped:
-                // `t = x - sqrt(Q)` gives the same `x(t)`, `sqrt(Q) = x - t` in place of `t - x`,
-                // and `t = x - sqrt(Q)` on the way back. Both signs in one integrand is neither.
-                var root = MathS.Pow(radicand, Number.Rational.Create(1, 2));
                 var flipped = (bool?)null;
                 foreach (var power in powersOfTheSubstitution)
                 {
@@ -16679,17 +16687,86 @@ namespace AngouriMath.Functions.Algebra
                         flipped = minus;
                     else if (flipped != minus)
                         return null;
-                    expr = expr.Substitute(power, MathS.Pow(t, power.Exponent));
                 }
-                if (flipped == true)
+                return flipped;
+            }
+            var flippedForThePowers = powersOfTheSubstitution.Count > 0 ? FlippedForThePowers() : null;
+
+            // **The sum the integrand writes, as the variable.** `(d + e x + f sqrt(Q))^n` with
+            // `e^2 = a f^2` -- Rubi's, with `Q = c + b x + (e^2/f^2) x^2` -- is the first
+            // substitution shifted and scaled: `t = d + e x + f sqrt(Q)` squares, as
+            // `(t - d - e x)^2 = f^2 Q`, to an equation linear in x, the `e^2 x^2` on the left
+            // being the `a f^2 x^2` on the right. So `x = ((t - d)^2 - c f^2)/(2 e (t - d) + b f^2)`
+            // and `sqrt(Q) = (t - d - e x)/f`, exactly, with no root of `a` taken; and a power of
+            // the sum is a power of t, whatever its exponent. Taken where the substitution as
+            // written does not reach it: a symbol for `a`, whose root the generic case writes as
+            // `sqrt(e^2/f^2)`, which cancels against nothing, and a power of the sum besides
+            // `x ± sqrt(Q)`.
+            Entity? writtenSum = null;
+            Entity? writtenDerivative = null;
+            var named = new List<(Variable Name, Entity Value)>();
+            if ((aValue is null || powersOfTheSubstitution.Count > 0 && flippedForThePowers is null)
+                && TheSumOfALinearAndTheRoot(expr, root, a, x) is var (sum, d, e, f))
+            {
+                if (powersOfTheSubstitution.Any(power => power.Base != sum))
+                    return null;
+                writtenSum = sum;
+                // With `rho = d - b f^2/(2e)` and `kappa = c f^2 - (b f^2/(2e))^2`,
+                // `2 e (t - d) + b f^2` is `2 e (t - rho)`, `sqrt(Q)` is
+                // `((t - rho)^2 + kappa)/(2 f (t - rho))` and `dx/dt` is
+                // `((t - rho)^2 + kappa)/(2 e (t - rho)^2)`. Each is named while the question is
+                // asked, since the rules read a symbol where they would meet the compound:
+                // `sqrt(d + e x + f sqrt(a + b x + e^2 x^2/f^2))` took most of a minute unnamed.
+                // Simplified once, while they are small: `b = 2 d e/f^2` makes `kappa` `c f^2 - d^2`.
+                var shiftValue = Functions.PartialFractions.Bare((d - b * MathS.Sqr(f) / (2 * e)).Simplify());
+                var kappaValue = Functions.PartialFractions.Bare((c * MathS.Sqr(f) - MathS.Sqr(b * MathS.Sqr(f) / (2 * e))).Simplify());
+                Entity shift = Number.Integer.Zero;
+                if (!VanishesIdentically(shiftValue))
                 {
-                    rootInT = xInT - t;
-                    backSubstitution = x - root;
+                    var shiftName = Variable.CreateUnique(expr, "k_euler");
+                    named.Add((shiftName, shiftValue));
+                    shift = shiftName;
+                }
+                var kappa = Variable.CreateUnique(expr * shift, "k_euler");
+                named.Add((kappa, kappaValue));
+                xInT = (MathS.Sqr(t - d) - c * MathS.Sqr(f)) / (2 * e * (t - shift));
+                rootInT = (MathS.Sqr(t - shift) + kappa) / (2 * f * (t - shift));
+                writtenDerivative = (MathS.Sqr(t - shift) + kappa) / (2 * e * MathS.Sqr(t - shift));
+                backSubstitution = sum;
+                expr = expr.Replace(node => node == sum ? t : node);
+            }
+            if (onlyBySumItWrites && writtenSum is null)
+                return null;
+
+            var powered = false;
+            if (powersOfTheSubstitution.Count > 0)
+            {
+                if (writtenSum is null)
+                {
+                    if (flippedForThePowers is not { } flipped)
+                        return null;
+                    foreach (var power in powersOfTheSubstitution)
+                        expr = expr.Substitute(power, MathS.Pow(t, power.Exponent));
+                    if (flipped)
+                    {
+                        rootInT = xInT - t;
+                        backSubstitution = x - root;
+                    }
                 }
                 powered = true;
             }
 
-            var dxdt = xInT.Differentiate(t);
+            var dxdt = writtenDerivative ?? xInT.Differentiate(t);
+            // Back in x: the variable, then the names the written sum's constants were given.
+            Entity InX(Entity inT)
+            {
+                // Inner-simplified while the names stand for the constants, which is half the
+                // length of the answer for a half-odd power: written out, they repeat in every term.
+                var back = (named.Count > 0 ? inT.InnerSimplified : inT).Substitute(t, backSubstitution);
+                foreach (var (name, value) in named)
+                    back = back.Substitute(name, value);
+                return back.InnerSimplified;
+            }
             // `Q^(k/2)` is the root to the `k`th power, and a whole power `Q^n` the root to the
             // `2n`th: read as the `n`th, it was `Q^(n/2)`, and `Q^2/(x + sqrt(Q))` was answered as
             // `Q/(x + sqrt(Q))`. https://github.com/asc-community/AngouriMath/issues/1770
@@ -16720,13 +16797,22 @@ namespace AngouriMath.Functions.Algebra
                 Entity cancelledPowered = polynomialAbove / poweredBelow;
                 if (Functions.PolynomialGcd.TryCancel(polynomialAbove.InnerSimplified, poweredBelow.InnerSimplified, out var poweredByGcd) && poweredByGcd is not null)
                     cancelledPowered = Functions.PartialFractions.Bare(poweredByGcd);
+                // A polynomial in t over a monomial in it, beside the powers, is integrated term
+                // by term by the power rule. That is what the written sum makes of
+                // `Q^k (d + e x + f sqrt(Q))^n` where `b f^2 = 2 d e`, `2 e (t - d) + b f^2` being
+                // `2 e t` there; the chain took seconds a term over it.
+                if (ByThePowerRuleTermByTerm(setAside * cancelledPowered, t) is { } termByTerm)
+                {
+                    var byTerms = InX(termByTerm);
+                    return byTerms.Nodes.Any(n => n is Number.Complex { IsNaN: true }) ? null : byTerms;
+                }
                 var poweredInT = Functions.SingleQuotient.Combine(setAside * cancelledPowered).Simplify();
                 if (poweredInT is Providedf(var bareInT, _))
                     poweredInT = bareInT;
                 var inTByTheChain = Integration.ComputeIndefiniteIntegral(poweredInT, t, integrateByParts: true);
                 if (inTByTheChain is null)
                     return null;
-                var poweredAnswer = inTByTheChain.Substitute(t, backSubstitution).InnerSimplified;
+                var poweredAnswer = InX(inTByTheChain);
                 return poweredAnswer.Nodes.Any(n => n is Number.Complex { IsNaN: true }) ? null : poweredAnswer;
             }
             var (numerator, denominator) = Functions.SingleQuotient.Of(rewritten.InnerSimplified);
@@ -16802,9 +16888,113 @@ namespace AngouriMath.Functions.Algebra
                    ?? (cleanDenominator.Evaled is Number ? Integration.ComputeIndefiniteIntegral(rational, t, integrateByParts: false) : null);
             if (inT is null)
                 return null;
-            var answer = inT.Substitute(t, backSubstitution).InnerSimplified;
+            var answer = InX(inT);
             // Not answering is legitimate; answering NaN is not.
             return answer.Nodes.Any(n => n is Number.Complex { IsNaN: true }) ? null : answer;
+        }
+
+        /// <summary>
+        /// The antiderivative of <paramref name="integrand"/> where it is a product of powers of
+        /// <paramref name="t"/> times a polynomial in it over a constant multiple of one whole
+        /// power of it: the sum of the power rule's antiderivatives of its terms, the generic
+        /// case where an exponent is a symbol. <see langword="null"/> where it is not of that shape.
+        /// </summary>
+        private static Entity? ByThePowerRuleTermByTerm(Entity integrand, Entity.Variable t)
+        {
+            var (above, below) = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(Functions.PartialFractions.Bare(integrand)));
+            Entity exponent = Number.Integer.Zero;
+            Entity polynomialAbove = Number.Integer.One;
+            Entity polynomialBelow = Number.Integer.One;
+            foreach (var (side, sign) in new[] { (above, 1), (below, -1) })
+                foreach (var factor in Mulf.LinearChildren(side))
+                    if (factor is Powf(var @base, var power) && @base == t && power is not Number.Integer && !power.ContainsNode(t))
+                        exponent = sign > 0 ? exponent + power : exponent - power;
+                    else if (sign > 0)
+                        polynomialAbove *= factor;
+                    else
+                        polynomialBelow *= factor;
+            if (exponent == Number.Integer.Zero)
+                return null;
+            // Read as polynomials in every symbol, which collects like terms as it multiplies:
+            // the expansion of the substitution's cubes and squares, term by term, passes the
+            // expansion's bound before anything cancels.
+            var variables = polynomialAbove.Vars.Concat(polynomialBelow.Vars).Append(t).Distinct()
+                .OrderBy(variable => variable.Name, System.StringComparer.Ordinal).ToArray();
+            if (variables.Length > Functions.MultivariatePolynomial.MaxVariables)
+                return null;
+            var indices = new Dictionary<Variable, int>();
+            for (var i = 0; i < variables.Length; i++)
+                indices[variables[i]] = i;
+            if (Functions.MultivariatePolynomial.TryParse(polynomialAbove, indices) is not { } top
+                || Functions.MultivariatePolynomial.TryParse(polynomialBelow, indices) is not { } bottom
+                || bottom.CoefficientsIn(indices[t]) is not { Count: 1 } belowRead || top.IsZero)
+                return null;
+            var lowest = belowRead.Single();
+            if (lowest.Value.IsZero)
+                return null;
+            // Each coefficient over the one below the bar in lowest terms: the substitution's
+            // powers of f and e cancel, and left in they were most of a two-page answer.
+            var order = Enumerable.Range(0, variables.Length).ToArray();
+            var belowPrimitive = lowest.Value.Normalized(out var belowScale);
+            Entity Coefficient(Functions.MultivariatePolynomial coefficient)
+            {
+                var abovePrimitive = coefficient.Normalized(out var aboveScale);
+                var belowPart = belowPrimitive;
+                if (Functions.PolynomialGcd.Gcd(abovePrimitive, belowPart, order, 0) is { IsConstant: false } common
+                    && abovePrimitive.DivideExact(common) is { } reducedAbove && belowPart.DivideExact(common) is { } reducedBelow)
+                    (abovePrimitive, belowPart) = (reducedAbove, reducedBelow);
+                // Each polynomial is its primitive part over its scale.
+                Entity number = Number.Rational.Create(belowScale.Divide(aboveScale));
+                return (number * abovePrimitive.ToEntity(variables) / belowPart.ToEntity(variables)).InnerSimplified;
+            }
+            Entity? answer = null;
+            foreach (var term in top.CoefficientsIn(indices[t]))
+            {
+                var raised = (exponent + Number.Integer.Create(term.Key - lowest.Key + 1)).InnerSimplified;
+                var antiderivative = raised.Evaled is Number.Complex { IsZero: true }
+                    ? MathS.Ln(t)
+                    : MathS.Pow(t, raised) / raised;
+                var summand = Coefficient(term.Value) * antiderivative;
+                answer = answer is null ? summand : answer + summand;
+            }
+            return answer;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> holds a power, not a whole one, of a sum with a square
+        /// root in it: the shape <see cref="SolveByEulerSubstitution"/> takes as its variable
+        /// where the sum is <c>d + e x + f sqrt(Q)</c> with <c>e^2 = a f^2</c>.
+        /// </summary>
+        internal static bool HoldsAPowerOfASumWithARoot(Entity expr, Entity.Variable x)
+            => expr.Nodes.Any(node => node is Powf(Sumf or Minusf, var exponent) power
+                && exponent is not Number.Integer && !exponent.ContainsNode(x)
+                && power.Base.Nodes.Any(inner => inner is Powf(var radicand, Number.Rational half)
+                    && half.ERational.Denominator.Equals(EInteger.FromInt32(2)) && radicand.ContainsNode(x)));
+
+        /// <summary>
+        /// The one sum <c>d + e x + f sqrt(Q)</c> in <paramref name="expr"/> with <c>e^2 = a f^2</c>,
+        /// <c>a</c> the <paramref name="leading"/> coefficient of <c>Q</c>, and its <c>d</c>,
+        /// <c>e</c> and <c>f</c>; <see langword="null"/> where there is none, or more than one.
+        /// </summary>
+        private static (Entity Sum, Entity Constant, Entity Slope, Entity OfTheRoot)? TheSumOfALinearAndTheRoot(
+            Entity expr, Entity root, Entity leading, Entity.Variable x)
+        {
+            var r = Entity.Variable.CreateUnique(expr, "r_euler");
+            (Entity Sum, Entity Constant, Entity Slope, Entity OfTheRoot)? found = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(root))
+                    continue;
+                if (!TreeAnalyzer.TryGetPolyLinear(node.Substitute(root, r), r, out var ofTheRoot, out var rest)
+                    || ofTheRoot.ContainsNode(x) || !TreeAnalyzer.TryGetPolyLinear(rest, x, out var slope, out var constant)
+                    || VanishesIdentically(ofTheRoot) || VanishesIdentically(slope)
+                    || !VanishesIdentically(slope * slope - leading * ofTheRoot * ofTheRoot))
+                    continue;
+                if (found is { } other && other.Sum != node)
+                    return null;
+                found = (node, constant, slope, ofTheRoot);
+            }
+            return found;
         }
 
         /// <summary>

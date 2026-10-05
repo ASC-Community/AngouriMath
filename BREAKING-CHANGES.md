@@ -254,6 +254,21 @@ brings the root of the product of the radicands with it, and those were answered
 | `"1/(sqrt(a + b*x) + sqrt(a + c*x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same, with logarithms and arctangents |
 | `"x^3/(sqrt(a + b*x) + sqrt(a + c*x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same; 10 s on the unreleased master, a tenth of one now |
 
+### A power of a linear plus a root whose square matches it is integrated in their sum
+
+**Answers where there were none.** `(d + e x + f sqrt(Q))^n` with `e^2` the leading coefficient of
+`Q` times `f^2` -- Rubi's 1.3.2 writes `Q` as `a + b x + e^2 x^2/f^2` -- was declined for a symbolic
+`e` or `f` whatever `n` was, and for any power but a whole one. The sum is Euler's variable: `t =
+d + e x + f sqrt(Q)` squares to an equation linear in `x`, so `x`, the root and `dx` are rational in
+`t` and a power of the sum is a power of `t`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(d + k*x + f*sqrt(a + 2*d*k*x/f^2 + k^2*x^2/f^2))^n".ToEntity().Integrate("x")` | `integral(...)` | `T^(n + 1)/(2k (n + 1)) + (a f^2 - d^2) T^(n - 1)/(2k (n - 1))`, `T` the sum |
+| `"1/(d + k*x + f*sqrt(a + k^2*x^2/f^2))".ToEntity().Integrate("x")` | `integral(...)` | logarithms of `T` and of `T - d`, and a reciprocal of `T - d` |
+| `"sqrt(d + k*x + f*sqrt(a + b*x + k^2*x^2/f^2))".ToEntity().Integrate("x")` | `integral(...)` | powers of `sqrt(T)` and an arctangent or a logarithm of it, by the sign of `d - b f^2/(2k)` |
+
 ### Two square roots of linears with one slope are rationalised together
 
 `sqrt(L1)` and `sqrt(L2)` with `L1 - L2` a constant are rational in their sum
