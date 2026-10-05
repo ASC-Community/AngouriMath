@@ -706,6 +706,9 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveByTakingARootOfAPerfectSquare(expr, x, integrateByParts)) is { }) return answer;
             // And a square in one trigonometric function, at the top: the modulus of the linear in it.
             if ((answer = IndefiniteIntegralSolver.SolveByTakingARootOfAPerfectSquareInATrigonometricFunction(expr, x, integrateByParts)) is { }) return answer;
+            // Four nested roots with a closed form: `sqrt(1 + sqrt(1 - x^2))`,
+            // `sqrt(x^2 + sqrt(1 + x^4))/sqrt(1 + x^4)` and the two beside them in Rubi's 1.3.3.
+            if ((answer = IndefiniteIntegralSolver.SolveANestedRootByItsClosedForm(expr, x, integrateByParts)) is { }) return answer;
             // And any power of a square in any power of x, as the power of its root times a factor
             // constant where the root is not zero: `x^2 (a^2 + 2 a b x^3 + b^2 x^6)^p`.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfASquareAsAPowerOfItsRoot(expr, x, integrateByParts)) is { }) return answer;
@@ -723,6 +726,10 @@ namespace AngouriMath.Functions.Algebra
             // And of quotients, which a substitution leaves where it has simplified a sum over
             // the bar: `(c/(a + c u^2))^2` is read by nothing that reads `c^2/(a + c u^2)^2`.
             if ((answer = IndefiniteIntegralSolver.SolveByDistributingWholePowersOfQuotients(expr, x, integrateByParts)) is { }) return answer;
+            // The derivative of a power of x over a binomial, over a multiple of the binomial's
+            // square plus a power of x: an arctangent of the quotient, which nothing else reads
+            // past a quartic -- `(e - 4 f x^3)/(e^2 + 4 d f x^2 + 4 e f x^3 + 4 f^2 x^6)`.
+            if ((answer = IndefiniteIntegralSolver.SolveAsTheArctangentOfAPowerOfXOverABinomial(expr, x, integrateByParts)) is { }) return answer;
             // And a fractional or symbolic power of a monomial: `(c x^n)^b` is `c^b x^(n b)`
             // for a positive `c`, on the `x > 0` where a symbolic `n` leaves the integrand real.
             if ((answer = IndefiniteIntegralSolver.SolveByDistributingAPowerOfAMonomial(expr, x, integrateByParts)) is { }) return answer;
@@ -770,6 +777,10 @@ namespace AngouriMath.Functions.Algebra
             // of the powers raised by one -- `e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))` -- read off
             // the sum, for symbolic exponents too. Before the split, which loses it.
             if ((answer = IndefiniteIntegralSolver.SolveAsTheDerivativeOfAProductOfPowers(expr, x)) is { }) return answer;
+            // And a power of a binomial in x^n beside a power of x, with a symbol in the exponents,
+            // where Chebyshev's third case is a whole number at most 0: by Rubi's reduction, which
+            // the rule above does not read for a power on its own or past the first step.
+            if ((answer = IndefiniteIntegralSolver.SolveABinomialInTheThirdCaseWithASymbolicExponent(expr, x)) is { }) return answer;
             // Powers of two linears whose exponents sum to a whole number below -2, beside a polynomial of
             // low degree, by t = L1/L2: a power of t beside a polynomial. The rule above reads the sum -2.
             if ((answer = IndefiniteIntegralSolver.SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(expr, x)) is { }) return answer;
@@ -800,6 +811,9 @@ namespace AngouriMath.Functions.Algebra
             // `(1 + x + sqrt(3))/((1 + x - sqrt(3)) sqrt(1 + x^3))`. Before the reduction over the
             // linear, which writes it as `1` and `2 sqrt(3)` over the linear, neither elementary.
             if ((answer = IndefiniteIntegralSolver.SolveAPseudoEllipticQuotientOverTheRootOfACubicBinomial(expr, x)) is { }) return answer;
+            // x over a cubic binomial beside the root of another, at the two ratios where that is
+            // elementary: Welz's `x/((4 - x^3) sqrt(1 - x^3))`.
+            if ((answer = IndefiniteIntegralSolver.SolveXOverACubicBinomialBesideTheRootOfAnother(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByReducingThePolynomialOverALinearFactor(expr, x, integrateByParts)) is { }) return answer;
             if (expr is Entity.Sumf or Entity.Minusf
                 && (answer = IndefiniteIntegralSolver.SolveBySplittingSum(expr, x, integrateByParts)) is { })
@@ -908,7 +922,17 @@ namespace AngouriMath.Functions.Algebra
             // Two roots of linears with one slope, rationalised together by their sum: before the
             // substitution search, which reads each root on its own.
             if ((answer = IndefiniteIntegralSolver.SolveBySubstitutingTheSumOfTwoRootsOfLinears(expr, x, integrateByParts)) is { }) return answer;
+            // A function of `x^n` for a symbolic `n` beside a power of `x`, under `u = x^(n/d)`:
+            // before the substitution search, which reads `x^(2n)` as a power of `x^n` only for a
+            // number `n`.
+            if ((answer = IndefiniteIntegralSolver.SolveByAPowerOfXWithASymbolicExponent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveBySubstitution(expr, x, integrateByParts)) is { }) return answer;
+            // A constant times a whole power of something of x under a power that is not whole, the
+            // whole power taken out with the factor constant where it is not zero:
+            // `x^2 (c (a + b x^2)^2)^(3/2)` is that factor times a polynomial. After the substitution
+            // search, which answers a power of a linear and an odd power of x beside a function of
+            // x^2 more shortly: `1/(c (a + b x)^2)^(5/2)` in 64 characters, where this writes 98.
+            if ((answer = IndefiniteIntegralSolver.SolveByTakingAWholePowerOutOfAPowerOfAProduct(expr, x, integrateByParts)) is { }) return answer;
             // A logarithmic derivative the substitution above could not read for a symbol in
             // an exponent: `(x^(n-1) - 1)/(x^n - n x)`.
             if ((answer = IndefiniteIntegralSolver.SolveALogarithmicDerivativeWithASymbolicExponent(expr, x)) is { }) return answer;

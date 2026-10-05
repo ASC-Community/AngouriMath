@@ -4921,6 +4921,105 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>x/((a + b x^3) sqrt(c + d x^3))</c> at the two ratios where its integral is elementary,
+        /// Rubi's 1.1.3.4: <c>4 b c = a d</c> and <c>8 b c + a d = 0</c>, in closed form.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>q = (d/c)^(1/3)</c>, the real root, and <c>y = sqrt(c + d x^3)</c>, at
+        /// <c>4 b c = a d</c>, for <c>r = sqrt(c)</c> where <c>c</c> is positive and
+        /// <c>r = sqrt(-c)</c> where it is negative:
+        /// <code>
+        /// c &gt; 0:   q/(3 2^(2/3) b r) (artanh(y/r)/3 + atan(y/(sqrt(3) r))/sqrt(3)
+        ///                      - atan(sqrt(3) r (1 + 2^(1/3) q x)/y)/sqrt(3) - artanh(r (1 - 2^(1/3) q x)/y))
+        /// c &lt; 0:  -q/(3 2^(2/3) b r) (atan(y/r)/3 + artanh(y/(sqrt(3) r))/sqrt(3)
+        ///                      + artanh(sqrt(3) r (1 + 2^(1/3) q x)/y)/sqrt(3) + atan(r (1 - 2^(1/3) q x)/y))
+        /// </code>
+        /// and at <c>8 b c + a d = 0</c>, where the integrand is <c>-(d/b) x/((8 c - d x^3) y)</c>, that
+        /// times
+        /// <code>
+        /// c &gt; 0:   (artanh(r (1 + q x)^2/(3 y))/18 - artanh(y/(3 r))/18 - atan(sqrt(3) r (1 + q x)/y)/(6 sqrt(3)))/(r^3 q^2)
+        /// c &lt; 0:  -(atan(r (1 + q x)^2/(3 y))/18 + atan(y/(3 r))/18 - artanh(sqrt(3) r (1 + q x)/y)/(6 sqrt(3)))/(r^3 q^2)
+        /// </code>
+        /// Rubi splits the second into three integrals, a substitution's in <c>x^3</c>, a linear
+        /// over a linear and a quadratic over a quadratic, each elementary, and their sum is the
+        /// form above; asked as three, two come back piecewise in the symbols and their sum holds
+        /// every combination of the arms. Every condition is decided as a value, and the answer is
+        /// differentiated back at sampled points before it is returned.
+        /// Welz's <c>x/((4 - x^3) sqrt(1 - x^3))</c> and <c>x/((8 - d x^3) sqrt(1 + d x^3))</c> were
+        /// declined, with the rest of 1.1.3.4 at those ratios.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveXOverACubicBinomialBesideTheRootOfAnother(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var (numerator, denominator) = Functions.SingleQuotient.Of(expr);
+            if (!TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) || above.Count != 1
+                || !above.TryGetValue(EInteger.One, out var multiple) || multiple.ContainsNode(x))
+                return null;
+            Entity? radicand = null;
+            Entity below = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+                if (factor is Powf(var @base, Number.Rational half) && half.ERational.Equals(ERational.Create(1, 2)) && @base.ContainsNode(x))
+                {
+                    if (radicand is not null)
+                        return null;
+                    radicand = @base;
+                }
+                else
+                    below = below == Number.Integer.One ? factor : below * factor;
+            if (radicand is null || ACubicBinomial(radicand) is not var (c, d) || ACubicBinomial(below) is not var (a, b))
+                return null;
+            static bool Zero(Entity condition) => Functions.PartialFractions.IsZeroAsAValue(condition);
+            if (Zero(a) || Zero(b) || Zero(c) || Zero(d) || Zero(b * c - a * d))
+                return null;
+            var y = MathS.Sqrt(radicand);
+            var q = MathS.Pow(LowestOverTheSymbols(d / c), Number.Rational.Create(1, 3));
+            var cubeRootOfTwo = MathS.Pow(2, Number.Rational.Create(1, 3));
+            var sqrtOfThree = MathS.Sqrt(3);
+            Entity? answer = null;
+            if (Zero(4 * b * c - a * d))
+            {
+                var r = MathS.Sqrt(c);
+                var wherePositive = q / (3 * MathS.Sqr(cubeRootOfTwo) * b * r)
+                    * (MathS.Hyperbolic.Artanh(y / r) / 3 + MathS.Arctan(y / (sqrtOfThree * r)) / sqrtOfThree
+                       - MathS.Arctan(sqrtOfThree * r * (1 + cubeRootOfTwo * q * x) / y) / sqrtOfThree
+                       - MathS.Hyperbolic.Artanh(r * (1 - cubeRootOfTwo * q * x) / y));
+                var s = MathS.Sqrt(LowestOverTheSymbols(-c));
+                var whereNegative = -q / (3 * MathS.Sqr(cubeRootOfTwo) * b * s)
+                    * (MathS.Arctan(y / s) / 3 + MathS.Hyperbolic.Artanh(y / (sqrtOfThree * s)) / sqrtOfThree
+                       + MathS.Hyperbolic.Artanh(sqrtOfThree * s * (1 + cubeRootOfTwo * q * x) / y) / sqrtOfThree
+                       + MathS.Arctan(s * (1 - cubeRootOfTwo * q * x) / y));
+                answer = BySign(c, wherePositive, whereNegative);
+            }
+            else if (Zero(8 * b * c + a * d))
+            {
+                // The integrand is -(d/b) x/((8 c - d x^3) y).
+                var r = MathS.Sqrt(c);
+                var wherePositive = (MathS.Hyperbolic.Artanh(r * MathS.Sqr(1 + q * x) / (3 * y)) / 18 - MathS.Hyperbolic.Artanh(y / (3 * r)) / 18
+                    - MathS.Arctan(sqrtOfThree * r * (1 + q * x) / y) / (6 * sqrtOfThree)) / (MathS.Pow(r, 3) * MathS.Sqr(q));
+                var s = MathS.Sqrt(LowestOverTheSymbols(-c));
+                var whereNegative = -(MathS.Arctan(s * MathS.Sqr(1 + q * x) / (3 * y)) / 18 + MathS.Arctan(y / (3 * s)) / 18
+                    - MathS.Hyperbolic.Artanh(sqrtOfThree * s * (1 + q * x) / y) / (6 * sqrtOfThree)) / (MathS.Pow(s, 3) * MathS.Sqr(q));
+                answer = LowestOverTheSymbols(-d / b) * BySign(c, wherePositive, whereNegative);
+            }
+            if (answer is null)
+                return null;
+            answer = (multiple * answer).InnerSimplified;
+            bool holds;
+            using (MathS.Settings.DowncastingEnabled.Set(false))
+                holds = Functions.PartialFractions.HoldsAtSampledPoints(answer.Differentiate(x), expr, x);
+            return holds ? answer : null;
+
+            // `p + r x^3`, as `(p, r)`, each free of x.
+            (Entity, Entity)? ACubicBinomial(Entity binomial)
+                => TreeAnalyzer.TryGetPolynomial(binomial, x, out var read) && read.Count == 2
+                   && read.TryGetValue(EInteger.Zero, out var constant) && read.TryGetValue(EInteger.FromInt32(3), out var cubic)
+                   && !constant.ContainsNode(x) && !cubic.ContainsNode(x)
+                    ? (constant, cubic) : null;
+        }
+
+        /// <summary>
         /// A root of a quadratic binomial beside another, <c>1/((A + B x^2)^(1/3) (C + D x^2))</c>
         /// with <c>B C + 3 A D = 0</c> or <c>B C - 9 A D = 0</c>, and
         /// <c>1/((A + B x^2)^(1/4) (C + D x^2))</c> with <c>B C - 2 A D = 0</c>: the ratios at which
@@ -12881,6 +12980,118 @@ namespace AngouriMath.Functions.Algebra
             return null;
         }
 
+
+        /// <summary>
+        /// A binomial differential <c>x^m (a + b x^n)^p</c> with a symbol in its exponents, in
+        /// Chebyshev's third case at a whole <c>(m + 1)/n + p + 1 = -k</c> of at most 0: Rubi's
+        /// <c>1/(a + b x^n)^((1 + 2 n)/n)</c>.
+        /// </summary>
+        /// <remarks>
+        /// At <c>k = 0</c> the integral is <c>x^(m + 1) (a + b x^n)^(p + 1)/(a (m + 1))</c>, whose
+        /// derivative is the integrand there. Below it Rubi's reduction raises <c>p</c> by one,
+        /// <code>
+        /// J(p) = -x^(m + 1) (a + b x^n)^(p + 1)/(a n (p + 1)) + (m + 1 + n (p + 1))/(a n (p + 1)) J(p + 1)
+        /// </code>
+        /// and <c>k</c> steps of it reach the first. <see cref="SolveABinomialDifferential(Entity, Entity.Variable)"/> reads
+        /// the three cases with numbers for the exponents; with a symbol, a power of x beside the
+        /// binomial at <c>k = 0</c> is <see cref="SolveAsTheDerivativeOfAProductOfPowers"/>'s, which
+        /// leaves a power on its own and every <c>k</c> past 0, and those were declined: Rubi's
+        /// 1.1.3.2:3301-3304. The answer is differentiated back at sampled points before it is
+        /// returned.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveABinomialInTheThirdCaseWithASymbolicExponent(Entity expr, Entity.Variable x)
+        {
+            Entity constant = Number.Integer.One;
+            Entity m = Number.Integer.Zero;
+            Entity? sum = null, p = null;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                var (@base, exponent) = factor is Powf(var factorBase, var factorExponent) && !factorExponent.ContainsNode(x) ? (factorBase, factorExponent) : (factor, (Entity)Number.Integer.One);
+                if (underneath)
+                    exponent = -exponent;
+                if (@base == x)
+                {
+                    m = m + exponent;
+                    continue;
+                }
+                if (sum is not null || @base is not (Sumf or Minusf))
+                    return null;
+                (sum, p) = (@base, exponent);
+            }
+            if (sum is null || p is null || ABinomial(sum) is not var (a, b, n))
+                return null;
+            m = m.InnerSimplified;
+            p = p.InnerSimplified;
+            // A symbol among the exponents: with numbers only it is the binomial differential's.
+            if (!m.Vars.Any() && !n.Vars.Any() && !p.Vars.Any())
+                return null;
+            var s = Simplified((m + 1) / n + p + 1);
+            if (s is not Number.Integer { EInteger: var whole } || whole.Sign > 0 || whole.CompareTo(-6) < 0)
+                return null;
+            var k = -whole.ToInt32Checked();
+            static bool Zero(Entity value) => Functions.PartialFractions.IsZeroAsAValue(value);
+            if (Zero(m + 1) || Zero(a))
+                return null;
+            // Each coefficient in lowest terms over the symbols: the first step's
+            // `(-3) n/(a n (-3 - 1/n))` is `3 n/(a (3 n + 1))`.
+            var raisedX = MathS.Pow(x, Simplified(m + 1));
+            Entity? answer = null;
+            Entity coefficient = Number.Integer.One;
+            for (var j = 0; j < k; j++)
+            {
+                var raised = Simplified(p + j + 1);
+                if (Zero(raised))
+                    return null;
+                var term = LowestOverTheSymbols(-coefficient / (a * n * raised)) * raisedX * MathS.Pow(sum, raised);
+                answer = answer is null ? term : answer + term;
+                coefficient = LowestOverTheSymbols(coefficient * (m + 1 + n * raised) / (a * n * raised));
+            }
+            var last = LowestOverTheSymbols(coefficient / (a * (m + 1))) * raisedX * MathS.Pow(sum, Simplified(p + k + 1));
+            answer = constant * (answer is null ? last : answer + last);
+            return Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x) ? answer : null;
+
+            // `a + b x^n`, `b x^n + a`: the constant, the coefficient and the power, each free of x.
+            (Entity, Entity, Entity)? ABinomial(Entity binomial)
+            {
+                Entity? free = null, coefficient = null, power = null;
+                foreach (var term in Sumf.LinearChildren(binomial))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        if (free is not null)
+                            return null;
+                        free = term;
+                        continue;
+                    }
+                    if (coefficient is not null)
+                        return null;
+                    Entity c = Number.Integer.One;
+                    foreach (var part in Mulf.LinearChildren(term))
+                        if (!part.ContainsNode(x))
+                            c = c == Number.Integer.One ? part : c * part;
+                        else if (part == x && power is null)
+                            power = Number.Integer.One;
+                        else if (part is Powf(var powerBase, var powerExponent) && powerBase == x && !powerExponent.ContainsNode(x) && power is null)
+                            power = powerExponent;
+                        else
+                            return null;
+                    coefficient = c;
+                }
+                return free is null || coefficient is null || power is null ? null : (free, coefficient, power);
+            }
+
+            // A short exponent simplified: `p + 1 + 1` is `p + 2`, which the inner simplification
+            // leaves as written, and `1/n - (1 + n)/n + 1` is 0, which the simplification gives with
+            // `n` not 0 beside it.
+            static Entity Simplified(Entity exponent)
+                => exponent.InnerSimplified is var inner && (inner is Number || inner.Complexity > 40) ? inner : Functions.PartialFractions.Bare(inner.Simplify());
+        }
         /// <summary>
         /// Powers of two linears whose exponents sum to a whole number <c>-k</c>, <c>k &gt;= 2</c>,
         /// beside a polynomial of degree at most <c>k - 2</c>: <c>(a + b x)^m (c + d x)^(-3 - m)</c>,
@@ -12960,8 +13171,11 @@ namespace AngouriMath.Functions.Algebra
             var k = -sum.ToInt32Checked();
             if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var b1, out var a1) || !TreeAnalyzer.TryGetPolyLinear(second, x, out var b2, out var a2))
                 return null;
+            // Zero as a value, not only as a number: `x + a/b` beside `a c + b c x` is one linear
+            // twice, their cross term `a/b (b c) - a c` has symbols in it and is zero, and the
+            // formula below divided by it -- an answer with no value anywhere.
             var d = (a1 * b2 - a2 * b1).InnerSimplified;
-            if (d.Evaled is Number.Complex { IsZero: true })
+            if (Functions.PartialFractions.IsZeroAsAValue(d))
                 return null;
             Entity product = Number.Integer.One;
             foreach (var (factor, _) in polynomial)
@@ -18322,6 +18536,254 @@ namespace AngouriMath.Functions.Algebra
             => VanishesIdentically(b * b - Number.Integer.Create(4) * a * c);
 
         /// <summary>
+        /// Four nested roots with a closed form, Rubi's 1.3.3: <c>sqrt(a + b sqrt(c + d x^2))</c>
+        /// with <c>a^2 = b^2 c</c>; <c>sqrt(c x^2 + d sqrt(a + b x^4))/sqrt(a + b x^4)</c> with
+        /// <c>c^2 = b d^2</c>; <c>1/((a + b x^n) sqrt(c x^2 + d (a + b x^n)^(2/n)))</c>; and
+        /// <c>sqrt(a x^2 + b x sqrt(c + d x^2))/(x sqrt(c + d x^2))</c> with <c>a^2 = b^2 d</c> and
+        /// <c>b^2 c + a = 0</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The first is <c>2 b^2 d x^3/(3 S^(3/2)) + 2 a x/sqrt(S)</c> for the root <c>S</c>. The
+        /// second and third are the derivative of <c>w = x/sqrt(S)</c> over <c>1 - 2c w^2</c> and
+        /// <c>1 - c w^2</c>: <c>sqrt(S)/R</c> for the inner root <c>R</c> is <c>d w'/(1 - 2c w^2)</c>, since
+        /// <c>S' = 2 c x S/(d R)</c> where <c>c^2 = b d^2</c>, and <c>1 - 2c w^2 = d R/S</c>. The fourth is
+        /// <c>sqrt(2) b/a</c> times <c>1/sqrt(1 + t^2/a)</c> in <c>t = a x + b sqrt(c + d x^2)</c>. The
+        /// integral in <c>w</c> or <c>t</c> is asked of the integrator with its coefficient named, and
+        /// the answer is differentiated back before it is returned. Rubi's 1.3.2 and the Welz and
+        /// Timofeev suites declined all of them.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveANestedRootByItsClosedForm(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            // The factors with x in them as powers, those below the bar negated, and the constant
+            // in front: `sqrt(S)/sqrt(P)` arrives as `sqrt(S) (sqrt(P))^(-1)`.
+            Entity constant = Number.Integer.One;
+            var factors = new List<Entity>();
+            var (above, below) = Functions.SingleQuotient.Of(expr);
+            foreach (var (side, sign) in new[] { (above, 1), (below, -1) })
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    if (!factor.ContainsNode(x))
+                    {
+                        if (factor == Number.Integer.One)
+                            continue;
+                        var k = sign > 0 ? factor : 1 / factor;
+                        constant = constant == Number.Integer.One ? k : constant * k;
+                        continue;
+                    }
+                    factors.Add(factor is Powf(var b, var p) && !p.ContainsNode(x)
+                        ? MathS.Pow(b, sign > 0 ? p : (-p).InnerSimplified)
+                        : sign > 0 ? factor : MathS.Pow(factor, Number.Integer.MinusOne));
+                }
+            if (factors.Count is < 1 or > 3)
+                return null;
+            var half = Number.Rational.Create(1, 2);
+            var answer = factors.Count switch
+            {
+                1 => ARootOfAConstantPlusARootOfAQuadratic(factors[0]),
+                2 => ARootOverTheRootInsideIt(factors) ?? AReciprocalOfTheRootInsideIt(factors),
+                _ => AProductRootOverTheRootInsideIt(factors),
+            };
+            if (answer is null)
+                return null;
+            answer = constant == Number.Integer.One ? answer : constant * answer;
+            return Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x) ? answer : null;
+
+            // sqrt(a + b sqrt(c + d x^2)), a^2 = b^2 c: 2 b^2 d x^3/(3 S^(3/2)) + 2 a x/sqrt(S).
+            Entity? ARootOfAConstantPlusARootOfAQuadratic(Entity factor)
+            {
+                if (factor is not Powf(var sum, var power) || power != half || ConstantPlusMultipleOfARoot(sum) is not var (a, b, inner)
+                    || Coefficients(inner, 0, 2) is not [var c, var d])
+                    return null;
+                if (!Functions.PartialFractions.IsZeroAsAValue(a * a - b * b * c))
+                    return null;
+                return 2 * b * b * d * MathS.Pow(x, 3) / (3 * MathS.Pow(sum, Number.Rational.Create(3, 2))) + 2 * a * x / MathS.Pow(sum, half);
+            }
+
+            // sqrt(c x^2 + d sqrt(P))/sqrt(P), P = a + b x^4, c^2 = b d^2: d G(x/sqrt(S)), G' = 1/(1 - 2c w^2).
+            Entity? ARootOverTheRootInsideIt(List<Entity> pair)
+            {
+                if (pair.Find(f => f is Powf(_, var p) && p == half) is not Powf(var sum, _)
+                    || pair.Find(f => f is Powf(_, var p) && p == -half) is not Powf(var radicand, _)
+                    || Coefficients(radicand, 0, 4) is not [_, var b]
+                    || SquareOfXPlusMultipleOfRoot(sum, radicand, half) is not var (c, d)
+                    || !Functions.PartialFractions.IsZeroAsAValue(c * c - b * d * d))
+                    return null;
+                return InW(d, 2 * c, x / MathS.Pow(sum, half));
+            }
+
+            // 1/((a + b x^n) sqrt(c x^2 + d (a + b x^n)^(2/n))): (1/a) H(x/sqrt(S)), H' = 1/(1 - c w^2).
+            Entity? AReciprocalOfTheRootInsideIt(List<Entity> pair)
+            {
+                if (pair.Find(f => f is Powf(_, var p) && p == -half) is not Powf(var sum, _)
+                    || pair.Find(f => f is Powf(_, var p) && p == Number.Integer.MinusOne) is not Powf(var outer, _)
+                    || Sumf.LinearChildren(outer) is not { Count: 2 } terms)
+                    return null;
+                var a = terms.FirstOrDefault(t => !t.ContainsNode(x));
+                var power = terms.FirstOrDefault(t => t.ContainsNode(x)) is { } t2 && ConstantTimesAWholePowerOfX(t2) is var (_, n) ? n : null;
+                if (a is null || power is null)
+                    return null;
+                if (SquareOfXPlusMultipleOfRoot(sum, outer, Number.Rational.Create(2, power.EInteger)) is not var (c, _))
+                    return null;
+                return InW(1 / a, c, x / MathS.Pow(sum, half));
+            }
+
+            // sqrt(a x^2 + b x sqrt(Q))/(x sqrt(Q)), Q = c + d x^2, a^2 = b^2 d, b^2 c + a = 0:
+            // sqrt(2) b/a K(a x + b sqrt(Q)), K' = 1/sqrt(1 + t^2/a).
+            Entity? AProductRootOverTheRootInsideIt(List<Entity> three)
+            {
+                if (three.Find(f => f is Powf(_, var p) && p == half) is not Powf(var sum, _)
+                    || three.Find(f => f is Powf(_, var p) && p == -half) is not Powf(var radicand, _)
+                    || !three.Any(f => f is Powf(var bx, var p) && bx == x && p == Number.Integer.MinusOne)
+                    || Coefficients(radicand, 0, 2) is not [var c, var d])
+                    return null;
+                // a x^2 + b x sqrt(Q), as two terms.
+                Entity? a = null, b = null;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (ConstantTimesAWholePowerOfX(term) is var (k, two) && two.EInteger.Equals(EInteger.FromInt32(2)))
+                        a = k;
+                    else if (MultipleOf(term, MathS.Pow(x, 1) * MathS.Pow(radicand, half)) is { } m)
+                        b = m;
+                    else
+                        return null;
+                }
+                if (a is null || b is null || !Functions.PartialFractions.IsZeroAsAValue(a * a - b * b * d)
+                    || !Functions.PartialFractions.IsZeroAsAValue(b * b * c + a))
+                    return null;
+                var t = Variable.CreateUnique(expr, "t_nested");
+                var reciprocal = Lowest(1 / a);
+                Entity q = reciprocal.Vars.Any() ? Variable.CreateUnique(expr, "q_nested") : reciprocal;
+                if (Integration.ComputeIndefiniteIntegral(1 / MathS.Sqrt(1 + MathS.Pow(t, 2) * q), t, integrateByParts) is not { } inT)
+                    return null;
+                var inX = inT.Substitute(t, a * x + b * MathS.Pow(radicand, half));
+                return MathS.Sqrt(2) * b / a * (q is Variable named ? inX.Substitute(named, reciprocal) : inX);
+            }
+
+            // multiple times the integral of 1/(1 - q w^2) at w = at, with q named while it is asked.
+            Entity? InW(Entity multiple, Entity coefficient, Entity at)
+            {
+                // Named only where it has symbols in it: a number put in afterwards is not folded,
+                // and `sqrt(4 q)` at `q = 2` was written `2/1 * 2^(1/2)`.
+                var w = Variable.CreateUnique(expr, "w_nested");
+                var lowest = Lowest(coefficient);
+                Entity q = lowest.Vars.Any() ? Variable.CreateUnique(expr, "q_nested") : lowest;
+                if (Integration.ComputeIndefiniteIntegral(1 / (1 - q * MathS.Pow(w, 2)), w, integrateByParts) is not { } inW)
+                    return null;
+                var written = inW.Substitute(w, at);
+                return Lowest(multiple) * (q is Variable named ? written.Substitute(named, lowest) : written);
+            }
+
+            // A constant in lowest terms over its symbols, and a number as the number it is: the
+            // lowest terms of `2` are `2/1`.
+            static Entity Lowest(Entity constant)
+                => constant.Vars.Any() ? Functions.PartialFractions.InLowestTermsOverTheSymbols(constant) : constant.InnerSimplified;
+
+            // c x^2 + d R^power, with R as given: (c, d).
+            (Entity C, Entity D)? SquareOfXPlusMultipleOfRoot(Entity sum, Entity root, Entity power)
+            {
+                Entity? c = null, d = null;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (ConstantTimesAWholePowerOfX(term) is var (k, two) && two.EInteger.Equals(EInteger.FromInt32(2)))
+                        c = c is null ? k : null;
+                    else if (MultipleOf(term, MathS.Pow(root, power)) is { } m)
+                        d = d is null ? m : null;
+                    else
+                        return null;
+                }
+                return c is null || d is null ? null : (c, d);
+            }
+
+            // a + b sqrt(Q), with Q holding x: (a, b, Q).
+            (Entity A, Entity B, Entity Inner)? ConstantPlusMultipleOfARoot(Entity sum)
+            {
+                Entity? a = null, b = null, inner = null;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        a = a is null ? term : a + term;
+                        continue;
+                    }
+                    if (inner is not null)
+                        return null;
+                    Entity k = Number.Integer.One;
+                    foreach (var part in Mulf.LinearChildren(term))
+                        if (!part.ContainsNode(x))
+                            k = k == Number.Integer.One ? part : k * part;
+                        else if (inner is null && part is Powf(var r, var p) && p == half)
+                            inner = r;
+                        else
+                            return null;
+                    b = k;
+                }
+                return a is null || b is null || inner is null ? null : (a, b, inner);
+            }
+
+            // term = m times the given product of factors with x, m free of x.
+            Entity? MultipleOf(Entity term, Entity product)
+            {
+                var wanted = Mulf.LinearChildren(product).Where(f => f != Number.Integer.One).ToList();
+                Entity m = Number.Integer.One;
+                foreach (var part in Mulf.LinearChildren(term))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        m = m == Number.Integer.One ? part : m * part;
+                        continue;
+                    }
+                    var at = wanted.FindIndex(w => w == part || (part == x && w is Powf(var wb, var wp) && wb == x && wp == Number.Integer.One));
+                    if (at < 0)
+                        return null;
+                    wanted.RemoveAt(at);
+                }
+                return wanted.Count == 0 ? m : null;
+            }
+
+            // c x^n with n whole: (c, n); a constant is n = 0.
+            (Entity Coefficient, Number.Integer Power)? ConstantTimesAWholePowerOfX(Entity term)
+            {
+                Entity k = Number.Integer.One;
+                Number.Integer? n = null;
+                foreach (var part in Mulf.LinearChildren(term))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        k = k == Number.Integer.One ? part : k * part;
+                        continue;
+                    }
+                    if (n is not null)
+                        return null;
+                    n = part == x ? Number.Integer.One : part is Powf(var bx, Number.Integer e) && bx == x ? e : null;
+                    if (n is null)
+                        return null;
+                }
+                return (k, n ?? Number.Integer.Zero);
+            }
+
+            // The coefficients of a polynomial in x with terms of the two degrees given and no other.
+            Entity[]? Coefficients(Entity polynomial, int low, int high)
+            {
+                Entity? lowCoefficient = null, highCoefficient = null;
+                foreach (var term in Sumf.LinearChildren(polynomial))
+                {
+                    if (ConstantTimesAWholePowerOfX(term) is not var (k, n))
+                        return null;
+                    if (n.EInteger.Equals(EInteger.FromInt32(low)))
+                        lowCoefficient = lowCoefficient is null ? k : lowCoefficient + k;
+                    else if (n.EInteger.Equals(EInteger.FromInt32(high)))
+                        highCoefficient = highCoefficient is null ? k : highCoefficient + k;
+                    else
+                        return null;
+                }
+                return lowCoefficient is null || highCoefficient is null ? null : new[] { lowCoefficient, highCoefficient };
+            }
+        }
+
+        /// <summary>
         /// A square root of a perfect square in <paramref name="x"/> is the modulus:
         /// <c>sqrt(x^2)</c> is <c>|x|</c>, which for a real <c>x</c> is <c>sgn(x) x</c>, and
         /// <c>sqrt(a (x + h)^2)</c> is <c>sqrt(a) sgn(x + h) (x + h)</c> for a positive number
@@ -18595,23 +19057,42 @@ namespace AngouriMath.Functions.Algebra
         /// A fractional power of a sum whose every term has x to a power in it,
         /// <c>(a x^j + b x^n)^p</c> with <c>0 &lt; j &lt; n</c>, as <c>K x^(j p) (a + b x^(n - j))^p</c>:
         /// the integral is <c>K</c> times the integral with <c>x^(j p) (a + b x^(n - j))^p</c> in its
-        /// place, where <c>K = (a x^j + b x^n)^p / (x^(j p) (a + b x^(n - j))^p)</c>.
+        /// place, where <c>K = (a x^j + b x^n)^p / (x^(j p) (a + b x^(n - j))^p)</c>. And so a power
+        /// of a product of powers of x and a sum, <c>(x^m (a + b x^n))^p</c>, a whole power where
+        /// an exponent of x is not a rational number, <c>1/(a x + b x^n)</c>, and beside either a
+        /// power of a monomial, <c>(c x)^m</c>, which is <c>x^m</c> times a constant.
         /// </summary>
         /// <remarks>
         /// <para>
         /// <c>K</c> is constant on every interval where x and the sum are not zero: with
         /// <c>S = x^j T</c>, its logarithmic derivative is <c>p (S'/S - j/x - T'/T)</c>, and
         /// <c>S'/S = j/x + T'/T</c>. So it goes in front of the integral, as the factor of a square
-        /// does in <see cref="SolveByWritingAPowerOfASquareAsAPowerOfItsRoot"/>. For an even whole
-        /// <c>j</c> and a whole <c>j p</c> it is <c>sgn(x)^(j p)</c>: <c>x^j</c> is not negative for a
-        /// real x, so <c>(x^j T)^p</c> is <c>|x|^(j p) T^p</c>.
+        /// does in <see cref="SolveByWritingAPowerOfASquareAsAPowerOfItsRoot"/>, and over it for a
+        /// factor below the bar. Only the fractional part of <c>p</c> is in it, since a whole
+        /// power of <c>x^j T</c> distributes. For an even whole <c>j</c> and a whole <c>j p</c> it
+        /// is <c>sgn(x)^(j p)</c>: <c>x^j</c> is not negative for a real x, so <c>(x^j T)^p</c> is
+        /// <c>|x|^(j p) T^p</c>. A symbol in an exponent does not confine the integrand to a
+        /// positive x: <c>x^(3 (n - 1)/2)/(a x^(n - 1) + b x^n + c x^(n + 1))^(3/2)</c> is real for
+        /// a negative x and any <c>n</c>, the phases of the two principal powers cancelling to a
+        /// sign, and <c>K</c> is that sign; so it is written there too, and is 1 for a positive x.
+        /// </para>
+        /// <para>
+        /// <c>(c x^e)^m</c> for a whole <c>e</c> is <c>x^(e m)</c> times <c>c^q (c x^e)^r/x^(e r)</c>,
+        /// for the whole part <c>q</c> and the rest <c>r</c> of <c>m</c>, constant on either side
+        /// of 0 by the same argument; for a positive x it is <c>c^m</c>, whatever <c>c</c> is. It
+        /// is taken apart beside the sum, and alone where <c>e</c> is past 1, <c>(d x^3)^n</c>:
+        /// <c>(c x)^m</c> alone is a power of a linear, a substitution's, and for an <c>e</c> that
+        /// is not whole it is <see cref="SolveByDistributingAPowerOfAMonomial"/>'s.
         /// </para>
         /// <para>
         /// Rubi's 1.1.4.2 and 1.1.4.3 write these by the hundred: <c>1/sqrt(a x^2 + b x^5)</c> and
         /// <c>1/(x sqrt(b x^(2/3) + a x))</c> were declined, the first since the factorization
         /// over the rationals does not read a symbol, and the second since nothing took the power
-        /// of x out of the root. With it out, the binomial is what the rules for
-        /// <c>x^m (a + b x^n)^p</c> read. At the top only, where the answer is the caller's.
+        /// of x out of the root; and so were <c>1/(a x + b x^n)</c>, <c>sqrt(c x)/(a x + b x^n)^(3/2)</c>
+        /// and <c>1/sqrt(x^(2 - n) (a + b x^n))</c>. With it out, the binomial is what the rules for
+        /// <c>x^m (a + b x^n)^p</c> read. At the top only, where the answer is the caller's: below
+        /// it, integration by parts integrates the answer again, and <c>x^2 sqrt(a x + b x^4)</c>,
+        /// whose integral is not elementary, was half a minute of that before it was declined.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </para>
         /// </remarks>
@@ -18621,58 +19102,197 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             // The sum as a factor of the integrand, above the bar or below it.
             var (above, below) = Functions.SingleQuotient.Of(expr);
-            (Entity Sum, Entity Exponent, Number.Rational Lowest, Entity Quotient, bool Below)? found = null;
-            foreach (var (side, isBelow) in new[] { (above, false), (below, true) })
+            (Entity Factor, Entity Sum, Entity Exponent, Entity Lowest, Entity Quotient)? found = null;
+            foreach (var side in new[] { above, below })
                 foreach (var factor in Mulf.LinearChildren(side))
                 {
-                    if (factor is not Powf(var sum, var power) || power is Number.Integer || power.ContainsNode(x)
-                        || !sum.ContainsNode(x) || sum.Complexity > 60)
+                    var (sum, power) = factor is Powf(var @base, var p) && !p.ContainsNode(x) ? (@base, p) : (factor, (Entity)Number.Integer.One);
+                    if (!sum.ContainsNode(x) || sum.Complexity > 60)
+                        continue;
+                    // A whole power is the rules' for the sum as written, unless x is in the sum to a
+                    // power that is not a rational number, which nothing else reads.
+                    if (power is Number.Integer && !HoldsAPowerOfXOffTheRationals(sum, x))
                         continue;
                     if ((OutOfASum(sum) ?? OutOfAProduct(sum)) is not var (lowest, rest))
                         continue;
-                    // An odd whole power of x out of a sum of whole powers: the sum is real on both
-                    // sides of 0 and x^(j p) is not, and the rules for the sum as written answer it
-                    // on both. An even one comes out as its sign, and a fractional one is real for a
-                    // positive x only, as the sum already was.
-                    if (lowest is Number.Integer { EInteger.IsEven: false } && !sum.Nodes.Any(node => node is Powf(var @base, Number.Rational r) && @base == x && r is not Number.Integer))
+                    // x to an odd power out of a sum of whole powers that is x times a linear, or a
+                    // linear over x: the sum is real on both sides of 0 and x^(j p) is not, and the
+                    // rules for the root of a quadratic answer it on both -- `x/sqrt(x^2 - 2 x)` is
+                    // the secant substitution's. And out of a product of x and more than one sum,
+                    // which the factor does not make any easier: `((1 - x) x (1 - k x))^(1/3)` was a
+                    // minute of search to be declined, where as written it is five seconds. Past those
+                    // nothing reads the sum as written, and the factor below answers both sides:
+                    // `x/sqrt(a x + b x^4)`. An even power comes out as its sign, and a fractional one
+                    // is real for a positive x only, as the sum already was.
+                    if (lowest is Number.Integer { EInteger.IsEven: false } odd && odd.EInteger.Abs().Equals(EInteger.One)
+                        && !sum.Nodes.Any(node => node is Powf(var @base, var r) && @base == x && r is not Number.Integer)
+                        && (Mulf.LinearChildren(rest).Where(part => part.ContainsNode(x)).ToList() is not [Sumf or Minusf]
+                            || Sumf.LinearChildren(rest).All(term => PowerOfX(term, x) is (_, Number.Integer { EInteger: var degree }) && degree.CompareTo(1) <= 0 && degree.Sign >= 0)))
                         continue;
                     // Two such would want two factors.
                     if (found is { })
                         return null;
-                    found = (sum, power, lowest, rest, isBelow);
+                    found = (factor, sum, power, lowest, rest);
                 }
-            if (found is not var (theSum, exponentOfTheSum, j, theRest, sumIsBelow)
-                || above.Nodes.Concat(below.Nodes).Count(node => node == theSum) != 1)
+            // With no such sum, a power of a monomial past the first degree with nothing of x
+            // beside it but powers of x, `(d x^3)^n`, which nothing else reads: `(c x)^m` is a
+            // power of a linear, and a substitution's.
+            if (found is null ? !OnlyMonomialsBeside(above, below, x)
+                : above.Nodes.Concat(below.Nodes).Count(node => node == found.Value.Sum) != 1)
                 return null;
-            var outside = (j * exponentOfTheSum).InnerSimplified;
-            Entity Without(Entity side)
+            var outside = found is var (_, _, powerOfTheSum, lowestPower, _) ? Simplified(lowestPower * powerOfTheSum) : Number.Integer.Zero;
+            Entity constant = Number.Integer.One;
+            var (top, powerAbove) = Rewritten(above, Number.Integer.One);
+            var (bottom, powerBelow) = Rewritten(below, Number.Integer.MinusOne);
+            // Every power of x as one: a negative whole one below the bar and the question
+            // simplified, since `x^(-1) sqrt(a + b x^m)` is answered with `1/(1/x)` in it where
+            // `sqrt(a + b x^m)/x` is not; any other number above the bar and simplified, since
+            // `1/(x^(11/2) sqrt(a + b x^3))` is answered for a positive x only where
+            // `x^(-11/2)/sqrt(a + b x^3)` is answered on both sides; and a symbol above the bar
+            // and not simplified back below it, where the rules for `x^m (a + b x^n)^p` read it --
+            // `1/(x^(1 - n/2) sqrt(a + b x^n))` is declined where `x^(-1 + n/2)/sqrt(a + b x^n)`
+            // is answered.
+            var powerOfX = Shifted(powerAbove, powerBelow, subtract: true);
+            Entity question;
+            if (powerOfX is Number.Integer { EInteger.Sign: < 0 } negative)
+                question = (top / Times(bottom, MathS.Pow(x, Number.Integer.Create(negative.EInteger.Negate())))).InnerSimplified;
+            else if (powerOfX is Number)
             {
-                Entity product = Number.Integer.One;
-                foreach (var factor in Mulf.LinearChildren(side))
-                    if (!(factor is Powf(var sum, var power) && sum == theSum && power == exponentOfTheSum))
-                        product = product == Number.Integer.One ? factor : product * factor;
-                return product;
+                var abovePart = Functions.PartialFractions.IsZeroAsAValue(powerOfX) ? top : Times(top, MathS.Pow(x, powerOfX));
+                question = (bottom == Number.Integer.One ? abovePart : abovePart / bottom).InnerSimplified;
             }
-            var replacement = MathS.Pow(x, outside) * MathS.Pow(theRest, exponentOfTheSum);
-            var written = sumIsBelow ? Without(above) / (replacement * Without(below)) : replacement * Without(above) / below;
-            if (Integration.ComputeIndefiniteIntegral(written.InnerSimplified, x, integrateByParts) is not { } integral)
+            else
+            {
+                var abovePart = Functions.PartialFractions.IsZeroAsAValue(powerOfX) ? top : Times(top, MathS.Pow(x, powerOfX));
+                question = bottom == Number.Integer.One ? abovePart : abovePart / bottom;
+            }
+            if (Integration.ComputeIndefiniteIntegral(question, x, integrateByParts) is not { } integral)
                 return null;
-            // K: the sign of x to the power j p where that is all it is, which is its own reciprocal,
-            // and the quotient otherwise.
-            var aSign = j is Number.Integer { EInteger.IsEven: true } && outside is Number.Integer;
-            Entity constant = aSign
-                ? (((Number.Integer)outside).EInteger.IsEven ? Number.Integer.One : MathS.Signum(x))
-                : MathS.Pow(theSum, exponentOfTheSum) / replacement;
-            var answer = constant == Number.Integer.One ? integral : sumIsBelow && !aSign ? integral / constant : constant * integral;
+            var answer = constant == Number.Integer.One ? integral : constant * integral;
             return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
 
-            // A sum, each term a coefficient times a rational power of x: the lowest power, not 0,
-            // and what is left with it taken out of every term.
-            (Number.Rational, Entity)? OutOfASum(Entity sum)
+            // A side of the bar with the sum and every monomial beside it written so, and its
+            // powers of x apart, as one exponent; and the constant each rewriting costs gathered:
+            // the factor written over what is written for it, or the reverse below the bar.
+            (Entity Others, Entity PowerOfX) Rewritten(Entity side, Number.Integer sign)
+            {
+                Entity product = Number.Integer.One;
+                Entity exponent = Number.Integer.Zero;
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    var written = factor;
+                    Entity turn = Number.Integer.One;
+                    if (factor == x || factor is Powf(var bx, var ex) && bx == x && !ex.ContainsNode(x))
+                    {
+                        exponent = Shifted(exponent, factor is Powf(_, var e) ? e : Number.Integer.One, subtract: false);
+                        continue;
+                    }
+                    if (found is var (theFactor, theSum, exponentOfTheSum, j, theRest) && factor == theFactor)
+                    {
+                        exponent = Shifted(exponent, outside, subtract: false);
+                        written = exponentOfTheSum == Number.Integer.One ? theRest : MathS.Pow(theRest, exponentOfTheSum);
+                        if (exponentOfTheSum is Number.Integer)
+                            turn = Number.Integer.One;
+                        // The sign of x to the power j p where that is all it is, which is its own
+                        // reciprocal.
+                        else if (j is Number.Integer { EInteger.IsEven: true } && outside is Number.Integer whole)
+                            turn = whole.EInteger.IsEven ? Number.Integer.One : MathS.Signum(x);
+                        else
+                        {
+                            var fraction = FractionalPart((sign * exponentOfTheSum).InnerSimplified).Fraction;
+                            turn = MathS.Pow(theSum, fraction) / (MathS.Pow(x, Simplified(j * fraction)) * MathS.Pow(theRest, fraction));
+                        }
+                    }
+                    else if (AMonomial(factor, x) is var (@base, c, e, m))
+                    {
+                        exponent = Shifted(exponent, Simplified(e * m), subtract: false);
+                        written = Number.Integer.One;
+                        var (whole, fraction) = FractionalPart((sign * m).InnerSimplified);
+                        var turned = MathS.Pow(@base, fraction) / MathS.Pow(x, Simplified(e * fraction));
+                        turn = whole == Number.Integer.Zero ? turned : MathS.Pow(c, whole) * turned;
+                    }
+                    if (turn != Number.Integer.One)
+                        constant = constant == Number.Integer.One ? turn : constant * turn;
+                    if (written != Number.Integer.One)
+                        product = product == Number.Integer.One ? written : product * written;
+                }
+                return (product, exponent);
+            }
+
+            static Entity Times(Entity product, Entity factor)
+                => product == Number.Integer.One ? factor : factor * product;
+
+            // An exponent written as it simplifies: `1 + n - 1` is `n`, which the inner
+            // simplification leaves standing, and an answer carried it. Exponents are small.
+            static Entity Simplified(Entity exponent)
+                => exponent.InnerSimplified is var inner && (inner is Number || inner.Complexity > 40) ? inner : inner.Simplify();
+
+            // Every factor free of x, a power of x, or a power of a monomial past the first
+            // degree that is not whole, and one of those at least.
+            static bool OnlyMonomialsBeside(Entity above, Entity below, Entity.Variable x)
+            {
+                var any = false;
+                foreach (var factor in Mulf.LinearChildren(above).Concat(Mulf.LinearChildren(below)))
+                {
+                    if (!factor.ContainsNode(x) || factor == x || factor is Powf(var b, var e) && b == x && !e.ContainsNode(x))
+                        continue;
+                    if (AMonomial(factor, x) is not (_, _, var degree, _) || degree.EInteger.Abs().CompareTo(1) <= 0)
+                        return false;
+                    any = true;
+                }
+                return any;
+            }
+
+            // A number as its whole part, toward 0, and the rest; anything else as all rest.
+            static (Entity Whole, Entity Fraction) FractionalPart(Entity number)
+            {
+                if (number is not Number.Rational rational)
+                    return (Number.Integer.Zero, number);
+                var whole = rational.ERational.Numerator.Divide(rational.ERational.Denominator);
+                return (Number.Integer.Create(whole), Number.Rational.Create(rational.ERational.Subtract(ERational.FromEInteger(whole))));
+            }
+
+            static bool HoldsAPowerOfXOffTheRationals(Entity expr, Entity.Variable x)
+                => expr.Nodes.Any(node => node is Powf(var @base, var exponent) && @base == x && exponent is not Number.Rational);
+
+            // `(c x^e)^m` for a constant `c` that is not 1, a whole `e` that is not 0 and an `m`
+            // that is not whole: the base, `c`, `e` and `m`.
+            static (Entity Base, Entity Constant, Number.Integer Degree, Entity Power)? AMonomial(Entity factor, Entity.Variable x)
+            {
+                if (factor is not Powf(var @base, var power) || @base is not (Mulf or Divf) || power is Number.Integer || power.ContainsNode(x))
+                    return null;
+                Entity constant = Number.Integer.One;
+                var degree = EInteger.Zero;
+                foreach (var part in Mulf.LinearChildren(@base))
+                    switch (part)
+                    {
+                        case Entity.Variable v when v == x:
+                            degree = degree.Add(EInteger.One);
+                            break;
+                        case Powf(var b, Number.Integer k) when b == x:
+                            degree = degree.Add(k.EInteger);
+                            break;
+                        // A divisor's power of x is read so, `(x^k)^(-1)`.
+                        case Powf(Powf(var b, Number.Integer k), Number.Integer l) when b == x:
+                            degree = degree.Add(k.EInteger.Multiply(l.EInteger));
+                            break;
+                        case var other when !other.ContainsNode(x):
+                            constant = constant == Number.Integer.One ? other : constant * other;
+                            break;
+                        default:
+                            return null;
+                    }
+                return degree.IsZero || constant == Number.Integer.One ? null : (@base, constant, Number.Integer.Create(degree), power);
+            }
+
+            // A sum, each term a coefficient times a power of x: the lowest power where every
+            // exponent is a rational number and the first otherwise, not 0, and what is left with
+            // it taken out of every term.
+            (Entity, Entity)? OutOfASum(Entity sum)
             {
                 if (sum is not (Sumf or Minusf))
                     return null;
-                var terms = new List<(Entity Coefficient, Number.Rational Exponent)>();
+                var terms = new List<(Entity Coefficient, Entity Exponent)>();
                 foreach (var term in Sumf.LinearChildren(sum))
                 {
                     if (PowerOfX(term, x) is not { } read)
@@ -18681,43 +19301,57 @@ namespace AngouriMath.Functions.Algebra
                 }
                 if (terms.Count < 2)
                     return null;
-                var lowest = terms.Select(term => term.Exponent).Aggregate((least, next) => next.ERational.CompareTo(least.ERational) < 0 ? next : least);
-                if (lowest.ERational.IsZero)
+                var lowest = terms.All(term => term.Exponent is Number.Rational)
+                    ? terms.Select(term => (Number.Rational)term.Exponent).Aggregate((least, next) => next.ERational.CompareTo(least.ERational) < 0 ? next : least)
+                    : terms[0].Exponent;
+                if (Functions.PartialFractions.IsZeroAsAValue(lowest))
                     return null;
                 Entity rest = Number.Integer.Zero;
                 foreach (var (coefficient, exponent) in terms)
                 {
-                    var shifted = Number.Rational.Create(exponent.ERational.Subtract(lowest.ERational));
-                    rest += shifted is Number.Integer { EInteger.IsZero: true } ? coefficient
+                    var shifted = Shifted(exponent, lowest, subtract: true);
+                    rest += Functions.PartialFractions.IsZeroAsAValue(shifted) ? coefficient
                         : coefficient * (shifted == Number.Integer.One ? x : MathS.Pow(x, shifted));
                 }
                 return (lowest, rest);
             }
             // A product or a quotient with powers of x among its factors and something else of x:
-            // `x^2 (a + b x^3)`, `(a + b x^3)/x`.
-            (Number.Rational, Entity)? OutOfAProduct(Entity product)
+            // `x^2 (a + b x^3)`, `(a + b x^3)/x`, and the power out of a sum among them as well,
+            // `x (b x + a x^n)`.
+            (Entity, Entity)? OutOfAProduct(Entity product)
             {
                 if (product is not (Mulf or Divf))
                     return null;
                 var (numerator, denominator) = Functions.SingleQuotient.Of(product);
-                var exponent = ERational.Zero;
+                Entity exponent = Number.Integer.Zero;
                 Entity rest = Number.Integer.One;
-                foreach (var (side, sign) in new[] { (numerator, 1), (denominator, -1) })
+                foreach (var (side, subtract) in new[] { (numerator, false), (denominator, true) })
                     foreach (var factor in Mulf.LinearChildren(side))
                     {
                         if (factor == x)
-                            exponent = sign > 0 ? exponent.Add(ERational.One) : exponent.Subtract(ERational.One);
-                        else if (factor is Powf(var @base, Number.Rational power) && @base == x)
-                            exponent = sign > 0 ? exponent.Add(power.ERational) : exponent.Subtract(power.ERational);
+                            exponent = Shifted(exponent, Number.Integer.One, subtract);
+                        else if (factor is Powf(var @base, var power) && @base == x && !power.ContainsNode(x))
+                            exponent = Shifted(exponent, power, subtract);
+                        else if (OutOfASum(factor) is var (lowest, inner))
+                        {
+                            exponent = Shifted(exponent, lowest, subtract);
+                            rest = subtract ? rest / inner : rest * inner;
+                        }
                         else
-                            rest = sign > 0 ? rest * factor : rest / factor;
+                            rest = subtract ? rest / factor : rest * factor;
                     }
-                return exponent.IsZero || !rest.ContainsNode(x) ? null : (Number.Rational.Create(exponent), rest);
+                return Functions.PartialFractions.IsZeroAsAValue(exponent) || !rest.ContainsNode(x) ? null : (exponent, rest);
             }
 
-            // A term as a coefficient free of x and a rational exponent of x, through products and
-            // quotients.
-            static (Entity Coefficient, Number.Rational Exponent)? PowerOfX(Entity term, Entity.Variable x)
+            // The sum or difference of two exponents, as a number where both are rational.
+            static Entity Shifted(Entity exponent, Entity by, bool subtract)
+                => exponent is Number.Rational left && by is Number.Rational right
+                    ? Number.Rational.Create(subtract ? left.ERational.Subtract(right.ERational) : left.ERational.Add(right.ERational))
+                    : Simplified(subtract ? exponent - by : exponent + by);
+
+            // A term as a coefficient free of x and an exponent of x free of it, through products
+            // and quotients.
+            static (Entity Coefficient, Entity Exponent)? PowerOfX(Entity term, Entity.Variable x)
             {
                 if (!term.ContainsNode(x))
                     return (term, Number.Integer.Zero);
@@ -18725,19 +19359,127 @@ namespace AngouriMath.Functions.Algebra
                 {
                     case Entity.Variable v when v == x:
                         return (Number.Integer.One, Number.Integer.One);
-                    case Powf(var @base, Number.Rational power) when @base == x:
+                    case Powf(var @base, var power) when @base == x && !power.ContainsNode(x):
                         return (Number.Integer.One, power);
                     case Mulf(var left, var right):
                         if (PowerOfX(left, x) is not var (lc, le) || PowerOfX(right, x) is not var (rc, re))
                             return null;
-                        return (lc * rc, Number.Rational.Create(le.ERational.Add(re.ERational)));
+                        return (lc * rc, Shifted(le, re, subtract: false));
                     case Divf(var left, var right):
                         if (PowerOfX(left, x) is not var (nc, ne) || PowerOfX(right, x) is not var (dc, de))
                             return null;
-                        return (nc / dc, Number.Rational.Create(ne.ERational.Subtract(de.ERational)));
+                        return (nc / dc, Shifted(ne, de, subtract: true));
                     default:
                         return null;
                 }
+            }
+        }
+
+        /// <summary>
+        /// The derivative of <c>w = x^k/L</c>, for a binomial <c>L = x^p + l</c>, over a multiple of
+        /// <c>L^2</c> plus a power of x, <c>c L^2 + d x^(2k)</c>: the integrand is
+        /// <c>(m/c) w'/(1 + (d/c) w^2)</c>, an arctangent of <c>w</c> or a hyperbolic one. Rubi's
+        /// 1.3.2 <c>(e - 4 f x^3)/(e^2 + 4 d f x^2 + 4 e f x^3 + 4 f^2 x^6)</c> is
+        /// <c>arctan(2 sqrt(d f) x/(e + 2 f x^3))/(2 sqrt(d f))</c>, and its rows in symbolic
+        /// powers of x are the same in <c>w = x^(m + 1)/(e + 2 f x^n)</c>.
+        /// </summary>
+        /// <remarks>
+        /// The denominator is read as four terms, each a constant times a power of x: one is
+        /// <c>d x^(2k)</c>, and the other three are <c>a + b x^p + c x^(2p)</c> with
+        /// <c>b^2 = 4 a c</c>, which is <c>c L^2</c> for <c>L = x^p + b/(2c)</c>. The numerator is
+        /// a constant multiple of <c>k x^(k - 1) L - p x^(k + p - 1)</c>, which is <c>w' L^2</c>;
+        /// the constant is read at <c>x = 1</c>, and the answer is differentiated back. Past a
+        /// quartic these were declined: partial fractions over a sextic in x, or over a sum of
+        /// symbolic powers of it, are out of reach, and nothing read the quotient.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveAsTheArctangentOfAPowerOfXOverABinomial(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var (above, below) = Functions.SingleQuotient.Of(expr);
+            if (!below.ContainsNode(x))
+                return null;
+            var terms = Sumf.LinearChildren(below);
+            if (terms.Count != 4)
+                return null;
+            var read = new (Entity Coefficient, Entity Exponent)[4];
+            for (var i = 0; i < 4; i++)
+                if (ConstantTimesAPowerOfX(terms[i], x) is { } term)
+                    read[i] = term;
+                else
+                    return null;
+            for (var i = 0; i < 4; i++)
+            {
+                // The i-th as d x^(2k), and the other three as a + b x^p + c x^(2p).
+                Entity? a = null;
+                var powers = new List<(Entity Coefficient, Entity Exponent)>();
+                for (var j = 0; j < 4; j++)
+                    if (j != i)
+                    {
+                        if (Functions.PartialFractions.IsZeroAsAValue(read[j].Exponent))
+                            a = a is null ? read[j].Coefficient : null;
+                        else
+                            powers.Add(read[j]);
+                    }
+                if (a is null || powers.Count != 2)
+                    continue;
+                if (!Functions.PartialFractions.IsZeroAsAValue(powers[1].Exponent - 2 * powers[0].Exponent))
+                    powers.Reverse();
+                var ((b, p), (c, twiceP)) = (powers[0], powers[1]);
+                if (!Functions.PartialFractions.IsZeroAsAValue(twiceP - 2 * p)
+                    || !Functions.PartialFractions.IsZeroAsAValue(b * b - 4 * a * c))
+                    continue;
+                var (d, twiceK) = read[i];
+                var k = Exponent(twiceK / 2);
+                var binomial = MathS.Pow(x, p) + Exponent(b / (2 * c));
+                // w' L^2, and the constant the numerator is of it.
+                var derivative = k * MathS.Pow(x, Exponent(k - 1)) * binomial - p * MathS.Pow(x, Exponent(k + p - 1));
+                var atOne = derivative.Substitute(x, 1).InnerSimplified;
+                if (Functions.PartialFractions.IsZeroAsAValue(atOne))
+                    continue;
+                // The constants in lowest terms: `(e - 4 f)/(1 + e/(2 f) - 3)` is `2 f`.
+                var multiple = Functions.PartialFractions.InLowestTermsOverTheSymbols(above.Substitute(x, 1) / (atOne * c));
+                var ratio = Functions.PartialFractions.InLowestTermsOverTheSymbols(d / c);
+                // The ratio named while it is integrated: as a quotient of symbols it is read as
+                // the coefficient of a general quadratic, with an arm for a double root that 1 + q u^2
+                // never has.
+                var u = Variable.CreateUnique(expr, "u_quotient");
+                var q = Variable.CreateUnique(expr, "q_ratio");
+                if (Integration.ComputeIndefiniteIntegral(1 / (1 + q * MathS.Pow(u, 2)), u, integrateByParts) is not { } inU)
+                    return null;
+                var answer = multiple * inU.Substitute(u, MathS.Pow(x, k) / binomial).Substitute(q, ratio);
+                return Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x) ? answer : null;
+            }
+            return null;
+
+            // An exponent as it simplifies: `(2 + 2 m)/2` is `1 + m`. Exponents are small.
+            static Entity Exponent(Entity exponent)
+                => exponent.InnerSimplified is var inner && (inner is Number || inner.Complexity > 40) ? inner : inner.Simplify();
+
+            // A constant times a power of x, `c x^e` with `e` free of x and not 0 unless the term
+            // is free of x; null otherwise.
+            static (Entity Coefficient, Entity Exponent)? ConstantTimesAPowerOfX(Entity term, Entity.Variable x)
+            {
+                Entity coefficient = Number.Integer.One;
+                Entity? exponent = null;
+                foreach (var part in Mulf.LinearChildren(term))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        coefficient = coefficient == Number.Integer.One ? part : coefficient * part;
+                        continue;
+                    }
+                    if (exponent is not null)
+                        return null;
+                    exponent = part switch
+                    {
+                        Variable v when v == x => Number.Integer.One,
+                        Powf(var @base, var e) when @base == x && !e.ContainsNode(x) => e,
+                        _ => null
+                    };
+                    if (exponent is null)
+                        return null;
+                }
+                return (coefficient, exponent ?? Number.Integer.Zero);
             }
         }
 
@@ -25006,6 +25748,94 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power that is not whole of a constant times a whole power of something of x,
+        /// <c>(c S^k)^p</c> for a whole <c>k</c> past 1, as <c>K S^(k p)</c>, with
+        /// <c>K = c^q (c S^k)^r/S^(k r)</c> for the whole part <c>q</c> of <c>p</c> and the rest
+        /// <c>r</c>: Rubi's 1.3.2 <c>x^m (c (a + b x^2)^2)^(3/2)</c> is <c>K x^m (a + b x^2)^3</c>,
+        /// a polynomial, and was declined.
+        /// </summary>
+        /// <remarks>
+        /// <c>K</c> is constant on every interval where <c>S</c> is not zero: its logarithmic
+        /// derivative is <c>r (k S'/S - k S'/S)</c>. So it goes in front of the integral, and over it
+        /// for a factor below the bar, as the factor of
+        /// <see cref="SolveByTakingAPowerOfXOutOfAFractionalPower"/> does. A whole power of the
+        /// constant times the power distributes exactly, which is why only the rest of <c>p</c> is
+        /// in <c>K</c>. Only factors of the integrand, where <c>K</c> is a factor of the whole; only
+        /// something of x by arithmetic, since a power of a function is the rules' for that function,
+        /// which write its sign; and at the top only, where the answer is the caller's.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByTakingAWholePowerOutOfAPowerOfAProduct(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAsked)
+                return null;
+            var (above, below) = Functions.SingleQuotient.Of(expr);
+            Entity constant = Number.Integer.One;
+            var changed = false;
+            var top = Rewritten(above, Number.Integer.One);
+            var bottom = Rewritten(below, Number.Integer.MinusOne);
+            if (!changed)
+                return null;
+            var question = (bottom == Number.Integer.One ? top : top / bottom).InnerSimplified;
+            if (Integration.ComputeIndefiniteIntegral(question, x, integrateByParts) is not { } integral)
+                return null;
+            var answer = constant * integral;
+            return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+
+            Entity Rewritten(Entity side, Number.Integer sign)
+            {
+                Entity product = Number.Integer.One;
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    var written = factor;
+                    if (factor is Powf(var @base, var power) && power is not Number.Integer && !power.ContainsNode(x)
+                        && @base is Mulf or Divf && ConstantTimesAWholePower(@base, x) is var (c, inner, k))
+                    {
+                        written = MathS.Pow(inner, (k * power).InnerSimplified);
+                        var signed = (sign * power).InnerSimplified;
+                        Entity whole = Number.Integer.Zero;
+                        var fraction = signed;
+                        if (signed is Number.Rational rational)
+                        {
+                            whole = Number.Integer.Create(rational.ERational.Numerator.Divide(rational.ERational.Denominator));
+                            fraction = (signed - whole).InnerSimplified;
+                        }
+                        var turned = MathS.Pow(@base, fraction) / MathS.Pow(inner, (k * fraction).InnerSimplified);
+                        var turn = whole == Number.Integer.Zero || c == Number.Integer.One ? turned : MathS.Pow(c, whole) * turned;
+                        constant = constant == Number.Integer.One ? turn : constant * turn;
+                        changed = true;
+                    }
+                    product = product == Number.Integer.One ? written : product * written;
+                }
+                return product;
+            }
+
+            // A product of constants and one whole power past 1 of something of x: the constant,
+            // the something and the power.
+            static (Entity Constant, Entity Inner, Number.Integer Power)? ConstantTimesAWholePower(Entity @base, Entity.Variable x)
+            {
+                Entity c = Number.Integer.One;
+                (Entity Inner, Number.Integer Power)? found = null;
+                foreach (var part in Mulf.LinearChildren(@base))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        c = c == Number.Integer.One ? part : c * part;
+                        continue;
+                    }
+                    if (found is not null || part is not Powf(var inner, Number.Integer { EInteger: var k } whole) || k.CompareTo(2) < 0)
+                        return null;
+                    // Of x by arithmetic alone: a power of a function of x is the rules' for that
+                    // function, which write its sign.
+                    if (inner.Nodes.Any(node => node.ContainsNode(x) && node is not (Sumf or Minusf or Mulf or Divf or Powf or Variable)))
+                        return null;
+                    found = (inner, whole);
+                }
+                return found is var (i, w) ? (c, i, w) : null;
+            }
+        }
+
+        /// <summary>
         /// A fractional or symbolic power of a monomial, distributed: <c>(c x^n)^b</c> is
         /// <c>c^b x^(n b)</c> for a positive <c>c</c> and a <c>n</c> that is not whole.
         /// </summary>
@@ -25156,7 +25986,11 @@ namespace AngouriMath.Functions.Algebra
                     assumed = assumed == Entity.Boolean.True ? positive : assumed & positive;
                 }
                 changed = true;
-                var distributed = split ? MathS.Pow(x, (degree! * exponent).InnerSimplified) : MathS.Pow(rest, exponent);
+                // The exponent of x as it simplifies: `(c x^n)^(2/n)` is `c^(2/n) x^(n (2/n))`, and that
+                // power of x is `x^2` only once `n (2/n)` is folded, which the inner simplification
+                // leaves standing -- `1/(a + b (c x^n)^(2/n))` was declined where `1/(a + b c^(2/n) x^2)`
+                // is answered. Exponents are small.
+                var distributed = split ? MathS.Pow(x, SimplifiedExponent((degree! * exponent).InnerSimplified)) : MathS.Pow(rest, exponent);
                 return constant == Number.Integer.One ? distributed : MathS.Pow(constant, exponent) * distributed;
             });
             if (!changed)
@@ -25172,6 +26006,9 @@ namespace AngouriMath.Functions.Algebra
             if (Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts) is not { } answer)
                 return null;
             return assumed == Entity.Boolean.True ? answer : answer.Provided(assumed);
+
+            static Entity SimplifiedExponent(Entity exponent)
+                => exponent is Number || exponent.Complexity > 40 ? exponent : Functions.PartialFractions.Bare(exponent.Simplify());
         }
 
         /// <summary>
@@ -25429,7 +26266,10 @@ namespace AngouriMath.Functions.Algebra
         /// Beside a second such sum of the same argument, <c>q - i q tan(z)</c>, which is linear in
         /// the first, the one under a power that is not whole is the variable and the other a whole
         /// power of a linear in it: <c>(a + i a tan(z))/(q - i q tan(z))^(3/2)</c>, Rubi's 4.3.2.1,
-        /// ran past the budget too.
+        /// ran past the budget too. A symbol for the power is not whole either:
+        /// <c>(a + i a tan(z))^m (q - i q tan(z))^4</c> is <c>S^(m - 1)</c> times a polynomial in
+        /// <c>S</c>, and was declined or past the budget with the rest of 4.3.2.1 and 4.3.3.1 that
+        /// write a symbolic power of one sum beside a whole one of the other.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </para>
         /// </remarks>
@@ -25485,9 +26325,10 @@ namespace AngouriMath.Functions.Algebra
                 sums.Add((node, sum, factor, inner));
             }
             // Two such sums, `a + i a tan(z)` and `c - i c tan(z)`, are each linear in the other: in
-            // the one under a power that is not whole the other is a whole power of a linear, where
-            // in the other it would be the root of one. Where both or neither are, declined.
-            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == sum && p is not Number.Integer);
+            // the one under a power that is not whole -- a fraction or a symbol -- the other is a
+            // whole power of a linear, where in the other it would be the root of one. Where both or
+            // neither are, declined.
+            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, var p) && b == sum && p is not Number.Integer && (p is Number.Rational || !p.ContainsNode(x)));
             var chosen = sums.Count switch
             {
                 1 => sums[0],
@@ -25502,8 +26343,7 @@ namespace AngouriMath.Functions.Algebra
             // Below the bar, or to a power that is not whole: a positive whole power alone is a
             // polynomial in the tangent.
             var below = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr)).Denominator;
-            if (!below.Nodes.Contains(@base)
-                && !expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == @base && p is not Number.Integer))
+            if (!below.Nodes.Contains(@base) && !NotWhole(@base))
                 return null;
             var s = Variable.CreateUnique(expr, "s_imaginary_tangent");
             var tangent = (s - constant) / coefficient;
@@ -25538,6 +26378,10 @@ namespace AngouriMath.Functions.Algebra
             var inS = (rewritten * coefficient / (s * (s - 2 * constant)) / rate).InnerSimplified;
             if (Integration.ComputeAsAQuestionOfItsOwn(inS, s, integrateByParts) is not { } inTermsOfS)
                 return null;
+            // A short sum of symbols simplified, which the power rule leaves as it wrote it:
+            // `S^(m + -1 + 1)/(m + -1 + 1)` is `S^m/m`.
+            inTermsOfS = inTermsOfS.Replace(node => node is Sumf or Minusf && !node.ContainsNode(s) && node.Vars.Any() && node.Complexity <= 20
+                ? node.Simplify() : node);
             return inTermsOfS.Substitute(s, @base);
         }
 
@@ -26505,6 +27349,117 @@ namespace AngouriMath.Functions.Algebra
                 return false;
             var stripped = expr.Replace(node => node is Powf(var @base, var exponent) && !@base.ContainsNode(x) && exponent.ContainsNode(x) ? Number.Integer.One : node);
             return !stripped.ContainsNode(x);
+        }
+
+        /// <summary>
+        /// A function of <c>x^n</c> for a symbolic <c>n</c> beside a power of <c>x</c>,
+        /// <c>x^m R(x^n)</c> with <c>(m + 1)/n</c> rational, under <c>u = x^(n/d)</c>: Rubi's
+        /// <c>x^(-1 + 4n)/(a + b x^n + c x^(2n))</c> and <c>x^(-1 + n/4)/(b x^n + c x^(2n))</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>g = x f(x)</c>, <c>int f dx = (d/n) int g/u du</c>, since <c>dx/x = (d/n) du/u</c>;
+        /// and every power <c>x^t</c> in <c>g</c> is <c>u^(t d/n)</c>, a whole power of <c>u</c>
+        /// where <c>t d/n</c> is a whole number, which makes it the same value for every
+        /// <c>x</c>. The search reads <c>x^(2n)</c> as a power of <c>x^n</c> only for a number
+        /// <c>n</c>, and found no candidate for <c>x^(n/4)</c>, which is not written; so these
+        /// were declined. The powers of <c>x</c> are gathered first, <c>x x^(-1 + 4n)</c> into
+        /// <c>x^(4n)</c>, and the unit is each exponent left, divided by up to six.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByAPowerOfXWithASymbolicExponent(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Powf(var @base, var exponent) && @base == x && exponent is not Number && !exponent.ContainsNode(x)))
+                return null;
+            // An algebraic function of the powers only. Under a function the power is the
+            // function's, and the search finds the substitution for it: `coth(a + b ln(c x^n))^3/x`
+            // is `t = ln(c x^n)`, and in `u = x^n` it was `coth(a + b ln(c u))^3/u`, the same
+            // question in another letter at the cost of a second search.
+            if (expr.Nodes.Any(node => node.ContainsNode(x)
+                    && node is not (Sumf or Minusf or Mulf or Divf or Variable) && !(node is Powf(_, var exponent) && !exponent.ContainsNode(x))))
+                return null;
+            // Over one bar first, so that an x inside `(x (a + b x^n))^(-1)` is a factor to gather.
+            var g = Patterns.GatherPowersOfOneBase(Functions.SingleQuotient.Combine(x * expr));
+            var exponents = g.Nodes.OfType<Powf>().Where(power => power.Base == x && power.Exponent is not Number && !power.Exponent.ContainsNode(x))
+                .Select(power => power.Exponent).Distinct().OrderBy(exponent => exponent.Complexity).ToList();
+            if (exponents.Count == 0)
+                return null;
+            var u = Variable.CreateUnique(expr, "u_power");
+            foreach (var unit in exponents)
+                foreach (var d in new[] { 1, 2, 3, 4, 6 })
+                {
+                    var step = (unit / d).InnerSimplified;
+                    // Every power of x a whole power of u, and no x left bare or elsewhere.
+                    var whole = true;
+                    var inU = g.Replace(node =>
+                    {
+                        if (!whole || node is not Powf(var @base, var exponent) || @base != x)
+                            return node;
+                        if (Functions.PartialFractions.Bare((exponent / step).Simplify()) is Number.Integer power)
+                            return power == Number.Integer.One ? u : MathS.Pow(u, power);
+                        whole = false;
+                        return node;
+                    });
+                    if (!whole || inU.ContainsNode(x))
+                        continue;
+                    // Divided by u through the gathering, where `u/u` left in is a quotient the
+                    // chain declines; the constant `d/n` outside it.
+                    var overU = Functions.PartialFractions.Bare(Patterns.GatherPowersOfOneBase(Functions.SingleQuotient.Combine(inU) * MathS.Pow(u, -1)).InnerSimplified);
+                    // Each constant with a symbol in it that is not built from symbols by arithmetic
+                    // and whole powers -- `e^a`, `c^b`, a function of the symbols -- named while the
+                    // integral in u is asked, and written back into what it gives:
+                    // `coth(a + b ln(c x^n))^3/x` arrives here as
+                    // `((e^a)^2 (c^b)^2 x^(2 n b) + 1)^3/(...)^3/x`, whose integral in u was past half a
+                    // minute with `(e^a)^2 (c^b)^2` carried through the partial fractions, and is under
+                    // one in `k^2 m^2`. Those only: a coefficient named whole hides what relates it to
+                    // the others, and `a^2 + 2 a b u + b^2 u^2` named so is a quadratic with no double
+                    // root, answered wrongly.
+                    var named = new List<(Variable Name, Entity Value)>();
+                    var namedOverU = NameTheAtoms(overU);
+                    if (Integration.ComputeIndefiniteIntegral(namedOverU, u, integrateByParts) is not { } inTermsOfU)
+                        return null;
+                    foreach (var (name, value) in named)
+                        inTermsOfU = inTermsOfU.Substitute(name, value);
+                    var answer = (d / unit * inTermsOfU).Substitute(u, MathS.Pow(x, step)).InnerSimplified;
+                    return answer.Nodes.Any(node => node is Number.Complex { IsNaN: true }) ? null : answer;
+
+                    // Arithmetic and whole powers taken apart; a root of something with u in it keeps
+                    // its exponent; any other constant with a symbol in it is an atom, and named.
+                    Entity NameTheAtoms(Entity e)
+                    {
+                        switch (e)
+                        {
+                            case Number or Variable:
+                                return e;
+                            case Sumf(var left, var right):
+                                return NameTheAtoms(left) + NameTheAtoms(right);
+                            case Minusf(var left, var right):
+                                return NameTheAtoms(left) - NameTheAtoms(right);
+                            case Mulf(var left, var right):
+                                return NameTheAtoms(left) * NameTheAtoms(right);
+                            case Divf(var above, var below):
+                                return NameTheAtoms(above) / NameTheAtoms(below);
+                            case Powf(var @base, Number.Integer whole):
+                                return MathS.Pow(NameTheAtoms(@base), whole);
+                            case Powf(var @base, var exponent) when @base.ContainsNode(u) && !exponent.ContainsNode(u):
+                                return MathS.Pow(NameTheAtoms(@base), exponent);
+                            default:
+                                return !e.ContainsNode(u) && e.Vars.Any() ? Named(e) : e;
+                        }
+                    }
+
+                    Entity Named(Entity value)
+                    {
+                        foreach (var (name, earlier) in named)
+                            if (earlier == value)
+                                return name;
+                        var fresh = Variable.CreateUnique(overU + named.Aggregate((Entity)Number.Integer.Zero, (sum, pair) => sum + pair.Name), "k_named");
+                        named.Add((fresh, value));
+                        return fresh;
+                    }
+                }
+            return null;
         }
 
         /// <summary>
