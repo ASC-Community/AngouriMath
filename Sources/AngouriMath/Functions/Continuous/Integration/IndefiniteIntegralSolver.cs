@@ -24586,6 +24586,62 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A function of <c>x^n</c> for a symbolic <c>n</c> beside a power of <c>x</c>,
+        /// <c>x^m R(x^n)</c> with <c>(m + 1)/n</c> rational, under <c>u = x^(n/d)</c>: Rubi's
+        /// <c>x^(-1 + 4n)/(a + b x^n + c x^(2n))</c> and <c>x^(-1 + n/4)/(b x^n + c x^(2n))</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>g = x f(x)</c>, <c>int f dx = (d/n) int g/u du</c>, since <c>dx/x = (d/n) du/u</c>;
+        /// and every power <c>x^t</c> in <c>g</c> is <c>u^(t d/n)</c>, a whole power of <c>u</c>
+        /// where <c>t d/n</c> is a whole number, which makes it the same value for every
+        /// <c>x</c>. The search reads <c>x^(2n)</c> as a power of <c>x^n</c> only for a number
+        /// <c>n</c>, and found no candidate for <c>x^(n/4)</c>, which is not written; so these
+        /// were declined. The powers of <c>x</c> are gathered first, <c>x x^(-1 + 4n)</c> into
+        /// <c>x^(4n)</c>, and the unit is each exponent left, divided by up to six.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByAPowerOfXWithASymbolicExponent(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Powf(var @base, var exponent) && @base == x && exponent is not Number && !exponent.ContainsNode(x)))
+                return null;
+            // Over one bar first, so that an x inside `(x (a + b x^n))^(-1)` is a factor to gather.
+            var g = Patterns.GatherPowersOfOneBase(Functions.SingleQuotient.Combine(x * expr));
+            var exponents = g.Nodes.OfType<Powf>().Where(power => power.Base == x && power.Exponent is not Number && !power.Exponent.ContainsNode(x))
+                .Select(power => power.Exponent).Distinct().OrderBy(exponent => exponent.Complexity).ToList();
+            if (exponents.Count == 0)
+                return null;
+            var u = Variable.CreateUnique(expr, "u_power");
+            foreach (var unit in exponents)
+                foreach (var d in new[] { 1, 2, 3, 4, 6 })
+                {
+                    var step = (unit / d).InnerSimplified;
+                    // Every power of x a whole power of u, and no x left bare or elsewhere.
+                    var whole = true;
+                    var inU = g.Replace(node =>
+                    {
+                        if (!whole || node is not Powf(var @base, var exponent) || @base != x)
+                            return node;
+                        if (Functions.PartialFractions.Bare((exponent / step).Simplify()) is Number.Integer power)
+                            return power == Number.Integer.One ? u : MathS.Pow(u, power);
+                        whole = false;
+                        return node;
+                    });
+                    if (!whole || inU.ContainsNode(x))
+                        continue;
+                    // Divided by u through the gathering, where `u/u` left in is a quotient the
+                    // chain declines; the constant `d/n` outside it.
+                    var overU = Functions.PartialFractions.Bare(Patterns.GatherPowersOfOneBase(Functions.SingleQuotient.Combine(inU) * MathS.Pow(u, -1)).InnerSimplified);
+                    if (Integration.ComputeIndefiniteIntegral(overU, u, integrateByParts) is not { } inTermsOfU)
+                        return null;
+                    var answer = (d / unit * inTermsOfU).Substitute(u, MathS.Pow(x, step)).InnerSimplified;
+                    return answer.Nodes.Any(node => node is Number.Complex { IsNaN: true }) ? null : answer;
+                }
+            return null;
+        }
+
+        /// <summary>
         /// A quotient whose numerator is a constant multiple of its denominator's derivative,
         /// with a symbolic exponent about: <c>c ln(D)</c>, the constant read off the terms.
         /// </summary>

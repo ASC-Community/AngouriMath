@@ -868,6 +868,10 @@ namespace AngouriMath.Functions.Algebra
             // Two roots of linears with one slope, rationalised together by their sum: before the
             // substitution search, which reads each root on its own.
             if ((answer = IndefiniteIntegralSolver.SolveBySubstitutingTheSumOfTwoRootsOfLinears(expr, x, integrateByParts)) is { }) return answer;
+            // A function of `x^n` for a symbolic `n` beside a power of `x`, under `u = x^(n/d)`:
+            // before the substitution search, which reads `x^(2n)` as a power of `x^n` only for a
+            // number `n`.
+            if ((answer = IndefiniteIntegralSolver.SolveByAPowerOfXWithASymbolicExponent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveBySubstitution(expr, x, integrateByParts)) is { }) return answer;
             // A logarithmic derivative the substitution above could not read for a symbol in
             // an exponent: `(x^(n-1) - 1)/(x^n - n x)`.
