@@ -17101,13 +17101,16 @@ namespace AngouriMath.Functions.Algebra
                     // x to an odd power out of a sum of whole powers that is x times a linear, or a
                     // linear over x: the sum is real on both sides of 0 and x^(j p) is not, and the
                     // rules for the root of a quadratic answer it on both -- `x/sqrt(x^2 - 2 x)` is
-                    // the secant substitution's. Past those nothing reads the sum as written, and
-                    // the factor below answers both sides: `x/sqrt(a x + b x^4)`. An even power comes
-                    // out as its sign, and a fractional one is real for a positive x only, as the sum
-                    // already was.
+                    // the secant substitution's. And out of a product of x and more than one sum,
+                    // which the factor does not make any easier: `((1 - x) x (1 - k x))^(1/3)` was a
+                    // minute of search to be declined, where as written it is five seconds. Past those
+                    // nothing reads the sum as written, and the factor below answers both sides:
+                    // `x/sqrt(a x + b x^4)`. An even power comes out as its sign, and a fractional one
+                    // is real for a positive x only, as the sum already was.
                     if (lowest is Number.Integer { EInteger.IsEven: false } odd && odd.EInteger.Abs().Equals(EInteger.One)
                         && !sum.Nodes.Any(node => node is Powf(var @base, var r) && @base == x && r is not Number.Integer)
-                        && Sumf.LinearChildren(rest).All(term => PowerOfX(term, x) is (_, Number.Integer { EInteger: var degree }) && degree.CompareTo(1) <= 0 && degree.Sign >= 0))
+                        && (Mulf.LinearChildren(rest).Where(part => part.ContainsNode(x)).ToList() is not [Sumf or Minusf]
+                            || Sumf.LinearChildren(rest).All(term => PowerOfX(term, x) is (_, Number.Integer { EInteger: var degree }) && degree.CompareTo(1) <= 0 && degree.Sign >= 0)))
                         continue;
                     // Two such would want two factors.
                     if (found is { })
