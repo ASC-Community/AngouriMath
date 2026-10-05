@@ -249,6 +249,22 @@ Rubi's `x^m (a + b x^n)^p` and `(a + b x^n)^p (c + d x^n)^q`
 | `"1/(2+3/x^2)^3".Integrate("x")`, `1/(a + b/x^3)` | left unevaluated | an antiderivative |
 | `"(a+b*x^n)*(c+d*x^n)^3".Integrate("x")` | left unevaluated | written out, eight powers of `x` integrated: `a c^3 x + ... + b d^3 x^(4 n + 1)/(4 n + 1)` |
 
+### The derivative of a power of `x` over a binomial is integrated as an arctangent over one plus a multiple of its square
+
+**Answers where there were none.** `(k - 4 f x^3)/(k^2 + 4 d f x^2 + 4 k f x^3 + 4 f^2 x^6)` is
+`w'/(2 f (1 + (d/f) w^2))` for `w = x/(x^3 + k/(2 f))`, and was declined: the partial fractions
+over a sextic in `x`, or over a sum of symbolic powers of it, are out of reach, and nothing read the
+quotient. A denominator `a + b x^p + c x^(2p) + d x^(2j)` with `b^2 = 4 a c` is read as
+`c L^2 + d x^(2j)` for `L = x^p + b/(2c)`, and a numerator that is a constant multiple of
+`(x^j/L)' L^2` is integrated as an arctangent of `x^j/L`, or a logarithm, by the sign of `d/c`.
+Rubi's 1.3.2 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(k - 4*f*x^3)/(k^2 + 4*d*f*x^2 + 4*k*f*x^3 + 4*f^2*x^6)".ToEntity().Integrate("x")` | `integral(...)` | `arctan(sqrt(d/f) x/(x^3 + k/(2 f)))/(2 sqrt(d f))` for `d/f > 0`, a logarithm for `d/f < 0` |
+| `"(k - 2*f*(n - 1)*x^n)/(k^2 + 4*d*f*x^2 + 4*k*f*x^n + 4*f^2*x^(2*n))".ToEntity().Integrate("x")` | `integral(...)` | the same in `x/(x^n + k/(2 f))` |
+| `"x^m*(k*(1 + m) + 2*f*(1 + m - n)*x^n)/(k^2 + 4*d*f*x^(2 + 2*m) + 4*k*f*x^n + 4*f^2*x^(2*n))".ToEntity().Integrate("x")` | `integral(...)` | the same in `x^(m + 1)/(x^n + k/(2 f))` |
+
 ### A whole power of a quotient with a symbol in it is integrated as the quotient of the powers
 
 **Answers where there were none, and a slowdown since 2.5.0 undone.** `(c/(a + c x^2))^2` was
