@@ -702,6 +702,8 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveAReciprocalOfAnInverseTrigonometricFunction(expr, x, integrateByParts)) is { }) return answer;
             // A fractional power of a perfect square is the power of the modulus, sgn(P) P^(2r).
             if ((answer = IndefiniteIntegralSolver.SolveByTakingARootOfAPerfectSquare(expr, x, integrateByParts)) is { }) return answer;
+            // And a square in one trigonometric function, at the top: the modulus of the linear in it.
+            if ((answer = IndefiniteIntegralSolver.SolveByTakingARootOfAPerfectSquareInATrigonometricFunction(expr, x, integrateByParts)) is { }) return answer;
             // And any power of a square in any power of x, as the power of its root times a factor
             // constant where the root is not zero: `x^2 (a^2 + 2 a b x^3 + b^2 x^6)^p`.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfASquareAsAPowerOfItsRoot(expr, x, integrateByParts)) is { }) return answer;

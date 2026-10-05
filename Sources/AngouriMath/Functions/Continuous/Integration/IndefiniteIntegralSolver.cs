@@ -18100,6 +18100,86 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A half-odd power of a perfect square in one trigonometric function of <paramref name="x"/>
+        /// is that power of the modulus: <c>sqrt(b^2 + 2 a b sin(y) + a^2 sin(y)^2)</c> is
+        /// <c>sqrt(a^2) |sin(y) + b/a|</c>, which is <c>sqrt(a^2) sgn(sin(y) + b/a) (sin(y) + b/a)</c>,
+        /// the sign constant between the zeros of the linear in the sine.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="SolveByTakingARootOfAPerfectSquare"/>'s reading, with the function for the
+        /// variable: Rubi's 4.7.7 has <c>(a + b sin(d + e x)) sqrt(b^2 + 2 a b sin(d + e x) + a^2 sin(d + e x)^2)</c>
+        /// and the same with a tangent or a secant, at the half-odd powers either way, and they
+        /// were declined or past the budget where with the modulus written the rest is rational in
+        /// the function. At the top only, and only where each such root is a factor of the
+        /// integrand, so that its sign goes in front; a leading coefficient a number or one of
+        /// known sign for a real parameter, whose condition travels with the answer, as that
+        /// rule's does.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByTakingARootOfAPerfectSquareInATrigonometricFunction(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAsked)
+                return null;
+            var factors = FactorsOfTheIntegrand(expr).Select(pair => pair.Factor).ToList();
+            var changed = false;
+            var declined = false;
+            Entity assumed = Entity.Boolean.True;
+            Entity signs = Number.Integer.One;
+            var written = expr.Replace(node =>
+            {
+                if (declined || node is not Powf(var radicand, Number.Rational r) || r is Number.Integer
+                    || !r.ERational.Denominator.Equals(EInteger.FromInt32(2)) || !radicand.ContainsNode(x)
+                    || radicand.Complexity > 40 || TreeAnalyzer.TryGetPolynomial(radicand, x, out _))
+                    return node;
+                var functions = radicand.Nodes.Where(inner => inner.ContainsNode(x)
+                    && inner is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf).Distinct().ToList();
+                if (functions.Count != 1)
+                    return node;
+                var function = functions[0];
+                var w = Variable.CreateUnique(expr, "w_sq");
+                var inW = radicand.Replace(inner => inner == function ? w : inner);
+                if (inW.ContainsNode(x) || !TreeAnalyzer.TryGetPolynomial(inW, w, out var monomials)
+                    || monomials.Keys.Max() is not { } degree || !degree.Equals(EInteger.FromInt32(2))
+                    || monomials.Keys.Any(k => k.Sign < 0))
+                    return node;
+                var a = monomials[degree];
+                var b = monomials.TryGetValue(EInteger.One, out var b1) ? b1 : Number.Integer.Zero;
+                var c = monomials.TryGetValue(EInteger.Zero, out var c0) ? c0 : Number.Integer.Zero;
+                if (b.Evaled is Number.Complex and not Number.Real || c.Evaled is Number.Complex and not Number.Real
+                    || !IsAPerfectSquareDiscriminant(a, b, c))
+                    return node;
+                if (a.Evaled is not Number.Real { IsPositive: true })
+                {
+                    if (!IsPositiveForARealParameter(a, x, out var leadingAssumed, assumed))
+                        return node;
+                    assumed = leadingAssumed;
+                }
+                // The sign in front of the integral, which needs the root to be a factor of it.
+                if (factors.Count(factor => factor == node) < expr.Nodes.Count(inner => inner == node))
+                {
+                    declined = true;
+                    return node;
+                }
+                var h = (b / (Number.Integer.Create(2) * a)).InnerSimplified;
+                if (h.Vars.Any())
+                    h = Functions.PartialFractions.Bare(h.Simplify());
+                var linear = h == Number.Integer.Zero ? function : (function + h).InnerSimplified;
+                var twoR = Number.Integer.Create(r.ERational.Numerator);
+                signs = signs * MathS.Signum(linear);
+                changed = true;
+                return MathS.Pow(a, r) * (twoR == Number.Integer.One ? linear : MathS.Pow(linear, twoR));
+            });
+            if (declined || !changed)
+                return null;
+            if (Integration.ComputeAsTheSameQuestion(written, x, integrateByParts) is not { } answer)
+                return null;
+            answer = signs * answer;
+            return assumed == Entity.Boolean.True ? answer : answer.Provided(assumed);
+        }
+
+        /// <summary>
         /// A fractional power of a sum whose every term has x to a power in it,
         /// <c>(a x^j + b x^n)^p</c> with <c>0 &lt; j &lt; n</c>, as <c>K x^(j p) (a + b x^(n - j))^p</c>:
         /// the integral is <c>K</c> times the integral with <c>x^(j p) (a + b x^(n - j))^p</c> in its
@@ -25172,19 +25252,40 @@ namespace AngouriMath.Functions.Algebra
         /// <c>cos(x)^2/(a cos(x) + i a sin(x))^3</c> was declined after twelve seconds.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// The sibling of <see cref="SolveByWritingAnImaginaryTangentAsAnExponential"/>, which reads
         /// <c>A + i A tan(y)</c>; below the bar only, for the same reason.
+        /// </para>
+        /// <para>
+        /// With a constant beside the pair, <c>a + b cos(y) + i b sin(y)</c> is <c>a + b e^(i y)</c>,
+        /// and there the cosine and sine of <c>y</c> elsewhere are written as exponentials too, so
+        /// that the whole is rational in <c>e^(i y)</c>: Rubi's
+        /// <c>(A + B cos(x))/(a + b cos(x) + i b sin(x))</c> and its kin were declined, a cosine
+        /// beside the exponential being nothing the rules for either read. Without the constant the
+        /// cosine above the bar stays, beside the exponential the closed rules answer.
         /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
         /// </remarks>
         internal static Entity? SolveByWritingAnImaginarySumOfACosineAndASineAsAnExponential(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             var (above, below) = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr));
             if (!below.ContainsNode(x))
                 return null;
+            Entity? argumentBesideAConstant = null;
             var rewritten = below.Replace(node =>
             {
-                if (node is not (Sumf or Minusf) || !node.ContainsNode(x)
-                    || !TryReadACosineAndASine(node, x, out var cosineCoefficient, out var sineCoefficient, out var argument))
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(x))
+                    return node;
+                // A constant beside the pair: the pair alone is read, and the constant added back.
+                Entity? constant = null;
+                var pair = node;
+                var terms = Sumf.LinearChildren(node);
+                if (terms.Count == 3 && terms.Count(term => !term.ContainsNode(x)) == 1)
+                {
+                    constant = terms.First(term => !term.ContainsNode(x));
+                    pair = terms.Where(term => term.ContainsNode(x)).Aggregate((left, right) => left + right);
+                }
+                if (!TryReadACosineAndASine(pair, x, out var cosineCoefficient, out var sineCoefficient, out var argument))
                     return node;
                 // The ratio is the imaginary unit one way or the other, and nothing else. Bare:
                 // `i a/a` simplifies to `i provided not a = 0`, and a condition is not a number
@@ -25195,10 +25296,30 @@ namespace AngouriMath.Functions.Algebra
                 var plus = ratio.Evaled == MathS.i.Evaled;
                 if (!plus && ratio.Evaled != (-MathS.i).Evaled)
                     return node;
-                return cosineCoefficient * MathS.Pow(MathS.e, ((plus ? MathS.i : -MathS.i) * argument).InnerSimplified);
+                var exponential = cosineCoefficient * MathS.Pow(MathS.e, ((plus ? MathS.i : -MathS.i) * argument).InnerSimplified);
+                if (constant is null)
+                    return exponential;
+                if (argumentBesideAConstant is not null && argumentBesideAConstant != argument)
+                    return node;
+                argumentBesideAConstant = argument;
+                return constant + exponential;
             });
             if (rewritten == below)
                 return null;
+            // Beside a constant, the cosine and sine of that argument everywhere as exponentials.
+            if (argumentBesideAConstant is { } inExponentials)
+            {
+                var rising = MathS.Pow(MathS.e, (MathS.i * inExponentials).InnerSimplified);
+                var falling = MathS.Pow(MathS.e, (-MathS.i * inExponentials).InnerSimplified);
+                Entity InExponentials(Entity side) => side.Replace(node => node switch
+                {
+                    Cosf(var y) when y == inExponentials => (rising + falling) / 2,
+                    Sinf(var y) when y == inExponentials => (rising - falling) / (2 * MathS.i),
+                    _ => node,
+                });
+                above = InExponentials(above);
+                rewritten = InExponentials(rewritten);
+            }
             // And a whole power of what was written split, `(A e^(i y))^n` as `A^n e^(i n y)`, so
             // that the exponential stands on its own for the rules that read one: the rule that
             // distributes such powers takes a constant with a symbol in it and leaves a number,

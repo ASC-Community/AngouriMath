@@ -120,6 +120,21 @@ the working digits, or `MathS.Settings.PrecisionErrorZeroRange` where a caller h
 still that integer, so `e^(-123.456)` is 0 as it was.
 [#1338](https://github.com/asc-community/AngouriMath/issues/1338).
 
+### A piecewise case whose condition is undefined is passed over
+
+**A different answer.** A case whose predicate evaluates to NaN -- an order comparison of a number
+off the real line, `i < 0`, the complex numbers not being ordered -- made the whole piecewise NaN,
+even where another case held. It holds no more than a false predicate does now: the case is never
+taken, and the cases after it are read as before. The derivative of an antiderivative written with
+an arm for each sign of a quantity that is not real, `x^2 provided not x = 0` beside
+`x^3 provided -13/10 i - 3/5 < 0`, came out NaN that way, where it is `2x`.
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"piecewise(1 provided i < 0, 2 provided 1 > 0)".ToEntity().InnerSimplified` | `NaN` | `2` |
+| `"piecewise(2 * x provided not x = 0, 3 * x ^ 2 provided i - 1 < 0)".ToEntity().InnerSimplified` | `NaN` | `2 * x` where `x` is not 0 |
+| `"piecewise(1 provided i < 0, 2 provided i > 0)".ToEntity().InnerSimplified` | `NaN` | `NaN`, as before: no case holds |
+
 ### The factorial far from zero, and a quotient by a number whose modulus is nearly whole
 
 The numerical factorial is Spouge's approximation, and it holds right of zero. Used left of zero it
@@ -740,6 +755,19 @@ inner-simplified now, and declined in seconds where the parts do not separate
 | `"x^4*e^(2*i*atan(a + b*x))".ToEntity().Integrate("x")` | `integral(...)` | a polynomial, logarithms and arctangents of `a + b x` |
 | `"sec(c + d*x)^2/(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `ln(i a d tan(c + d x) + a d)/(i a d)` | `ln(i tan(c + d x) + 1)/(i a d)`, the same up to a constant |
 
+### A root of a square in a trigonometric function is its modulus
+
+**Answers where there were none.** `(a + b sin(x)) sqrt(b^2 + 2 a b sin(x) + a^2 sin(x)^2)` was
+declined or past the budget, with the rest of Rubi's 4.7.7 half-odd powers of a perfect square in a
+sine, tangent or secant. The radicand is `a^2 (f + b/a)^2`, so its root is `sqrt(a^2) |f + b/a|`,
+written with the sign of `f + b/a` in front of the integral, as a root of a perfect square in `x`
+already was ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a + b*sin(x))*sqrt(b^2 + 2*a*b*sin(x) + a^2*sin(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(sin(x) + b/a) sqrt(a^2)` times an expression in `x`, `cos(x)` and `sin(2x)`, `provided a^2 > 0` |
+| `"(a + b*tan(x))/sqrt(b^2 + 2*a*b*tan(x) + a^2*tan(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(tan(x) + b/a) a/sqrt(a^2)` times the antiderivative of `(a + b tan(x))/(a tan(x) + b)`, `provided a^2 > 0` |
+
 ### `NaN` was returned as the antiderivative of something that has one
 
 **A wrong answer, not a missing one.** `1/(a*x^2)` came back as `NaN + C`, and `NaN` is this
@@ -827,6 +855,19 @@ number; the zero is a power `1/x`, whose integral is a logarithm. A symbolic `b`
 | `"tan(a + i*ln(x))".ToEntity().Integrate("x")` | `integral(...)` | a rational function of `x` and `e^(i a)`, with a logarithm |
 | `"sin(a + ln(c*x^2)*sqrt(-1/4))".ToEntity().Integrate("x")` | `integral(...)` | powers of `x` and `c x^2` and a logarithm, through `e^(i a)` |
 | `"1/cos(a - 2*i*ln(c*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | an arctangent and a logarithm of a root, through `e^(i a)` |
+
+### A constant plus an imaginary cosine and sine is an exponential
+
+**Answers where there were none.** `(A + B cos(x))/(a + b cos(x) + i b sin(x))` was declined, with the
+rest of Rubi's 4.7.7 over `a + b cos(x) ± i b sin(x)`. That denominator is `a + b e^(±i x)`, and with
+the cosine and sine above it written as exponentials too the integrand is rational in `e^(i x)`;
+`1/(a + b cos(x) + i b sin(x))`, answered on the unreleased master by the half-angle tangent, is
+answered in the exponential now ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(k + q*cos(x))/(a + b*cos(x) + i*b*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | logarithms in `e^(i x)` and a term `e^(-i x)/a`, piecewise in the symbols |
+| `"1/(a + b*cos(x) + i*b*sin(x))".ToEntity().Integrate("x")` | `integral(...)` | a logarithm in `e^(i x)`, piecewise in `b = 0` |
 
 ### `e^(n i arctan(a x))` to a power that is not whole is integrated
 
