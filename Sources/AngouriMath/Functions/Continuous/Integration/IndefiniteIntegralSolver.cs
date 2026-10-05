@@ -16599,9 +16599,12 @@ namespace AngouriMath.Functions.Algebra
             }
 
             var dxdt = xInT.Differentiate(t);
+            // `Q^(k/2)` is the root to the `k`th power, and a whole power `Q^n` the root to the
+            // `2n`th: read as the `n`th, it was `Q^(n/2)`, and `Q^2/(x + sqrt(Q))` was answered as
+            // `Q/(x + sqrt(Q))`. https://github.com/asc-community/AngouriMath/issues/1770
             var rewritten = expr.Replace(node =>
-                node is Powf(var @base, Number.Rational half) && @base == radicand
-                    ? MathS.Pow(rootInT, Number.Integer.Create(half.ERational.Numerator))
+                node is Powf(var @base, Number.Rational power) && @base == radicand
+                    ? MathS.Pow(rootInT, Number.Integer.Create(power is Number.Integer ? power.ERational.Numerator.Multiply(2) : power.ERational.Numerator))
                     : node)
                 .Substitute(x, xInT) * dxdt;
             if (powered)

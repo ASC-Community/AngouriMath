@@ -210,6 +210,19 @@ answer on the far side of a root gets a real expression where it used to get a c
 | `1/(x*(-4+x^2)^4)` | 8,472 ms | 1,878 ms |
 | `1/((1+x)^3*(2+x)^3)` | 1,343 ms | 492 ms |
 
+### A whole power of the radicand under Euler's substitution is read as one
+
+**Answers where there were none, and none where they were wrong.** Euler's substitution writes the
+radicand's powers in its variable as powers of the root, and read a whole power `Q^n` as the root
+to the `n`th, which is `Q^(n/2)`, so it integrated another integrand than the one asked. It reads
+it as the root to the `2n`th now. `(x^2 + 3)^2/(x + sqrt(x^2 + 3))`, past the substitution's
+bound on the degree once read rightly, is declined, as 2.5.0 declined it; the unreleased master
+answered it wrongly ([#1770](https://github.com/asc-community/AngouriMath/issues/1770)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((x^2 + 3)^2*(x + sqrt(x^2 + 3)))".ToEntity().Integrate("x")` | `integral(...)` | `-2/((sqrt(x^2 + 3) + x)^2 + 3)^2` |
+
 ### A whole power of a sum of two square roots below the bar is rationalised
 
 **Answers where there were none.** `x/(sqrt(a + b x) + sqrt(c + b x))^3` was declined, while the
