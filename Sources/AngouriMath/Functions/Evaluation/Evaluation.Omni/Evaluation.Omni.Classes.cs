@@ -470,8 +470,15 @@ namespace AngouriMath
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
             {
+                // A predicate that evaluates to NaN -- `i < 0`, the complex numbers not being
+                // ordered -- holds no more than a false one does: the case is never taken, and the
+                // cases after it are read as they would be. Kept, it made the whole piecewise NaN,
+                // so that `piecewise(2x provided not x = 0, 3x^2 provided i - 1 < 0)` had no value
+                // at any point, and the derivative of an antiderivative written with an arm for
+                // each sign of a quantity that is not real came out NaN where it is `2x`.
                 foreach (var oneCase in Cases)
                 {
+                    if (oneCase.Predicate.Evaled.IsNaN) continue;
                     if (oneCase.Predicate.Evaled is not Boolean) goto notYetDecidable;
                     if (oneCase.Predicate.Evaled == Boolean.True) return oneCase.Expression.InnerSimplified(isExact);
                 }
@@ -479,7 +486,7 @@ namespace AngouriMath
             notYetDecidable:
                 var res = new List<Providedf>();
                 foreach (var (@case, srcCase) in (Cases, Cases.Select(c => c.New(c.Expression.InnerSimplified(isExact), c.Predicate.InnerSimplified(isExact)))).Zip()) {
-                    if (@case.Predicate.Evaled == Boolean.False) continue;
+                    if (@case.Predicate.Evaled == Boolean.False || @case.Predicate.Evaled.IsNaN) continue;
                     var toAdd = srcCase.Expression is Providedf(var inner, var pred) ? new Providedf(inner, (srcCase.Predicate & pred).InnerSimplified(isExact)) : srcCase;
 
                     // A piecewise takes its first matching case, and both rules below follow
