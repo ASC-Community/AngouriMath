@@ -125,6 +125,17 @@ namespace AngouriMath.Tests.Calculus
         public void WithoutASumOrWithXRaisedFromNothing(string integrand)
             => DifferentiatesBackWithParametersPinned(integrand, Points);
 
+        /// <summary>
+        /// The derivative written out as a sum, the common powers in each term: they come out in
+        /// front and the rest is the bracket, where split into its terms neither is elementary.
+        /// Rubi's 1.1.3.2.
+        /// </summary>
+        [Theory]
+        [InlineData("-1/2*b*n*x^(-1+m+n)/(a+b*x^n)^(3/2)+m*x^(-1+m)/sqrt(a+b*x^n)")]
+        [InlineData("m*x^(m-1)*(a+b*x^n)^p + b*n*p*x^(m+n-1)*(a+b*x^n)^(p-1)")]
+        public void ASumWithTheCommonPowersInEachTerm(string integrand)
+            => DifferentiatesBackWithParametersPinned(integrand, Points);
+
         /// <summary>A product of powers that is no such derivative is still declined: <c>sqrt(1 + x^3)</c> is elliptic.</summary>
         [Fact]
         public void APowerThatIsNoDerivativeIsDeclined()
