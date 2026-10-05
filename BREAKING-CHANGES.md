@@ -787,6 +787,20 @@ but `sqrt(q)^2 = q` ([#1598](https://github.com/asc-community/AngouriMath/issues
 | `"1/sqrt(-x^2 + i)".Integrate("x")` | `-arcsin(-2x/sqrt(4i)) + C` | `ln(-2x + 2i sqrt(-x^2 + i))/i + C`, an antiderivative as before, in the logarithm |
 | `"1/(sqrt(x)*sqrt(1 + i*x))".Integrate("x")`, and Rubi 4.3.2.1's `sqrt(tan(c + d x))/(a + i a tan(c + d x))^(5/2)` | `integral(...)` | the antiderivative |
 
+### A power of a constant times a whole power of a polynomial is integrated as that power
+
+**Answers where there were none.** `(c S^k)^p`, a constant times a whole power past the first of a
+polynomial in `x` under a power that is not whole, was declined where it was not a function of a
+linear: `x^2 (c (a + b x^2)^2)^(3/2)` is a polynomial times a factor that is constant wherever
+`a + b x^2` is not zero. It is integrated as `K S^(k p)` now, with `K = c^q (c S^k)^r/S^(k r)` for the
+whole part `q` and the rest `r` of `p`. Rubi's 1.3.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^2*(c*(a + b*x^2)^2)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `c (c (a + b x^2)^2)^(1/2)/(a + b x^2)` times `a^3 x^3/3 + 3 a^2 b x^5/5 + 3 a b^2 x^7/7 + b^3 x^9/9` |
+| `"(c*(a + b*x)^3)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `c (c (a + b x)^3)^(1/2)/(a + b x)^(3/2)` times `(a + b x)^(11/2)/((11/2) b)` |
+
 ### Trigonometric functions of multiples of one linear argument are written in it
 
 `csc(a + b x) csc(2a + 2b x)^2` was left unevaluated, and `csc(1 + x) csc(2 + 2x)^2` ran twenty

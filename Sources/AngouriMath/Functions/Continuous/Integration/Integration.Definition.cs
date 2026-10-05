@@ -708,6 +708,10 @@ namespace AngouriMath.Functions.Algebra
             // And a fractional power of a sum whose every term has x in it, the power of x taken out
             // with the factor that is constant where it is not zero: `1/sqrt(a x^2 + b x^5)`.
             if ((answer = IndefiniteIntegralSolver.SolveByTakingAPowerOfXOutOfAFractionalPower(expr, x, integrateByParts)) is { }) return answer;
+            // And a constant times a whole power of something of x under a power that is not
+            // whole, the whole power taken out with the factor constant where it is not zero:
+            // `x^2 (c (a + b x^2)^2)^(3/2)` is that factor times a polynomial.
+            if ((answer = IndefiniteIntegralSolver.SolveByTakingAWholePowerOutOfAPowerOfAProduct(expr, x, integrateByParts)) is { }) return answer;
             // A power of a multiple of a quadratic's derivative beside a power of the quadratic is
             // a binomial in the derivative: `(b d + 2 c d x)^m (a + b x + c x^2)^p`.
             if ((answer = IndefiniteIntegralSolver.SolveByTheDerivativeOfAQuadraticAsTheVariable(expr, x, integrateByParts)) is { }) return answer;
