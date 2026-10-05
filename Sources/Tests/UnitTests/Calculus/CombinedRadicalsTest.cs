@@ -120,6 +120,79 @@ namespace AngouriMath.Tests.Calculus
             Assert.True(compared >= 4, $"only {compared} of {points.Length} points were comparable for {integrand}");
         }
 
+        /// <summary>
+        /// The same with a symbol for an exponent, the power of the sum whole or not:
+        /// <c>1/(a x + b x^n)</c> is <c>1/(x (a + b x^(n - 1)))</c>. Beside it a power of
+        /// <c>c x</c> is a power of x times a constant.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(a*x + b*x^n)")]
+        [InlineData("1/sqrt(x^(2 - n)*(a + b*x^n))")]
+        [InlineData("1/sqrt(x*(b*x + a*x^(n - 1)))")]
+        [InlineData("sqrt(c*x)/(a*x + b*x^n)^(3/2)")]
+        [InlineData("1/(x + x^sqrt(2))")]
+        [InlineData("(b + 2*c*x^n)/(b*x + c*x^(1 + n))")]
+        // A power of a monomial past the first degree alone.
+        [InlineData("(c*x^3)^n")]
+        public void APowerOfXComesOutWhereAnExponentIsASymbol(string integrand)
+            => DifferentiatesBackPinned(integrand, new[] { -2.6, -1.7, -0.9, -0.3, 0.3, 0.9, 1.7, 2.6 }, c: 0.4);
+
+        /// <summary>
+        /// A symbol in an exponent does not confine the integrand to a positive x. Two rows of
+        /// Rubi's 1.2.4.2 are real for a negative x and any <c>n</c>, the phases of the principal
+        /// powers cancelling to a sign; for <c>n = 2.3</c> that sign is -1, and the factor in
+        /// front of the integral is what carries it.
+        /// </summary>
+        [Theory]
+        [InlineData("x^(3/2*(n - 1))/(a*x^(n - 1) + b*x^n + c*x^(n + 1))^(3/2)")]
+        [InlineData("x^((n - 1)/2)/sqrt(a*x^(n - 1) + b*x^n + c*x^(n + 1))")]
+        public void ASymbolInAnExponentLeavesTheNegativeSideReal(string integrand)
+            => DifferentiatesBackPinned(integrand, new[] { -2.6, -1.7, -0.9, -0.3, 0.3, 0.9, 1.7, 2.6 }, c: 0.4, n: 2.3);
+
+        /// <summary>
+        /// An odd power of x out of a root of a sum of whole powers past x times a linear, which
+        /// no rule reads as written: real on both sides of 0, and answered on both with the
+        /// factor in front, which is constant on each. <c>x/sqrt(a x + b x^4)</c> is real where
+        /// <c>x &lt; -(a/b)^(1/3)</c> as well, and <c>sqrt(c x)</c> with a negative <c>c</c> is
+        /// real there only.
+        /// </summary>
+        [Theory]
+        [InlineData("x/sqrt(a*x + b*x^4)", 0.4)]
+        [InlineData("1/(x^5*sqrt(a*x + b*x^4))", 0.4)]
+        [InlineData("1/sqrt((a + b*x^3)/x)", 0.4)]
+        [InlineData("sqrt((1 + x)/x^5)", 0.4)]
+        [InlineData("sqrt(c*x)/(a*x + b*x^4)^(3/2)", -0.4)]
+        public void AnOddPowerOfXComesOutOfARootPastAQuadratic(string integrand, double c)
+            => DifferentiatesBackPinned(integrand, new[] { -2.3, -1.9, -1.6, 0.4, 1.2, 2.3 }, c);
+
+        /// <summary>
+        /// <see cref="DifferentiatesBack"/> with <c>a = 1.3</c>, <c>b = 0.7</c>, <paramref name="c"/>
+        /// and <paramref name="n"/> put in after integrating, compared off the real line as well.
+        /// </summary>
+        private static void DifferentiatesBackPinned(string integrand, double[] points, double c, double n = 1.7)
+        {
+            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.7).Substitute("c", c).Substitute("n", n);
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            Assert.DoesNotContain("NaN", integral.Stringize());
+            var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
+            var original = Pinned(integrand.ToEntity());
+            var compared = 0;
+            foreach (var at in points)
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                if (got.IsNaN || want.IsNaN)
+                    continue;
+                compared++;
+                var difference = Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart);
+                var scale = Math.Max(1.0, Math.Abs((double)want.RealPart) + Math.Abs((double)want.ImaginaryPart));
+                Assert.True(difference / scale < 1e-8,
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+            Assert.True(compared >= 3, $"only {compared} of {points.Length} points were comparable for {integrand}");
+        }
+
         /// <summary>Inside <c>(-1, 1)</c>, where <c>sqrt(1 - x^2)</c> is real.</summary>
         private static readonly double[] InsideTheUnitInterval = { -0.7, -0.3, 0.2, 0.55, 0.85 };
 

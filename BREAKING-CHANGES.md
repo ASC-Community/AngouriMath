@@ -1227,6 +1227,32 @@ either now; and the secant quotient was simplified to `cos/(b^(5/2) d)` through
 `(1/cos)^(3/2) = cos^(-3/2)`, which is wrong for every negative cosine and cancelled against the
 same wrong step on the denominator. On the 1774-problem independent suites this is 1707 to 1705, the two `asin` rows, with the sign error gone.
 
+### A power of `x` with a symbol in its exponent comes out of a sum, and an odd one out of a root past a quadratic
+
+**Answers where there were none.** The power of `x` common to the terms of a sum came out only where
+every exponent was a rational number and the sum's power was not whole, and an odd one not at all
+from a sum of whole powers. Now:
+- an exponent may be a symbol, or a number that is not rational, and the sum's power may be whole:
+  `1/(a x + b x^n)` is `1/(x (a + b x^(n - 1)))`. The factor in front is written as for a number:
+  `x^(3 (n - 1)/2)/(a x^(n - 1) + b x^n + c x^(n + 1))^(3/2)` is real for a negative `x` and any
+  `n`, the phases of the two principal powers cancelling to a sign, and the factor is that sign;
+- an odd power comes out of a root of a sum of whole powers past `x` times a linear, which no rule
+  reads as written, and the answer holds on both sides of 0 with the factor in front;
+- a power of `c x` beside such a sum is a power of `x` times `c^q (c x)^r/x^r`, for the whole part
+  `q` and the rest `r` of its exponent, a constant on either side of 0, and so is a power of
+  `d x^3` with nothing else of `x` beside it, `(d x^3)^n`;
+- the power comes out of a sum inside a product as well, `x (b x + a x^n)`.
+
+Rubi's 1.1.4.2, `(c x)^m (a x^j + b x^n)^p` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a*x + b*x^n)".Integrate("x")` | left unevaluated | `ln(b x^(n - 1)/(a + b x^(n - 1)))/(a (n - 1))`, written through the roots of a quadratic |
+| `"1/sqrt(x^(2 - n)*(a + b*x^n))".Integrate("x")` | left unevaluated | `K` times an arctangent of `sqrt(-b) x^(n/2)/sqrt(a + b x^n)` over `n` for `b < 0`, and a logarithm for `b > 0`; `K` is 1 for a positive `x` |
+| `"sqrt(c*x)/(a*x + b*x^n)^(3/2)".Integrate("x")` | left unevaluated | `K` times `2/(a (n - 1) sqrt(a + b x^(n - 1)))` and a logarithm or an arctangent of `sqrt(a + b x^(n - 1))`; `K` is `sqrt(c)` for a positive `x` |
+| `"x/sqrt(a*x + b*x^4)".Integrate("x")` | left unevaluated | `K` times `2 ln(2 b x^(3/2) + 2 sqrt(b) sqrt(a + b x^3))/(3 sqrt(b))` for `b > 0`, an arcsine for `b < 0`; real where `x < -(a/b)^(1/3)` as well, where `K` is `-1` |
+| `"x^(3/2*(n - 1))/(a*x^(n - 1) + b*x^n + c*x^(n + 1))^(3/2)".Integrate("x")` | left unevaluated | `K (2 b + 4 c x)/((4 a c - b^2) sqrt(a + b x + c x^2))`; `K` is 1 for a positive `x`, and a sign for a negative one, `-1` for `n = 2.3` |
+
 ### Symbolic powers of `a ± a sin` beside a power of the cosine are integrated through the sine
 
 **Answers where there were none.** `(a + a sin(h + f x))^m sqrt(c - c sin(h + f x))` and its kin,
@@ -1253,8 +1279,9 @@ a whole number below `-2` it is declined still
 was integrated only where the sum factored over the rationals. Now `x^j` comes out:
 `(a x^j + b x^n)^p` is `K x^(j p) (a + b x^(n - j))^p` with `K = (a x^j + b x^n)^p / (x^(j p) (a + b x^(n - j))^p)`,
 which is constant wherever x and the sum are not zero and goes in front of the integral. For an even
-whole `j` and a whole `j p` it is `sgn(x)^(j p)`. An odd whole `j` out of a sum of whole powers is
-left as it was, since the sum is real on both sides of 0 and `x^(j p)` is not. Rubi's 1.1.4.2 and
+whole `j` and a whole `j p` it is `sgn(x)^(j p)`. An odd whole `j` out of `x` times a linear, or a
+linear over `x`, is left as it was, since the sum is real on both sides of 0 and `x^(j p)` is not, and
+the rules for the root of a quadratic answer it on both. Rubi's 1.1.4.2 and
 1.1.4.3, `(c x)^m (a x^j + b x^n)^p` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
