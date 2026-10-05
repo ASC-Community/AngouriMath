@@ -46,5 +46,32 @@ namespace AngouriMath.Tests.Calculus
                     $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
             }
         }
+
+        /// <summary>
+        /// One linear twice is not two: `x + a/b` beside `a c + b c x` has a cross term
+        /// `a/b (b c) - a c` that is zero with symbols in it, and the formula divided by it, for an
+        /// answer with no value anywhere. Rubi's 1.2.1.3:2459.
+        /// https://github.com/asc-community/AngouriMath/issues/1793
+        /// </summary>
+        [Theory]
+        [InlineData("(a*c + b*c*x)^(-3 - 2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p")]
+        [InlineData("(x + a/b)^(2*p)*(a*c + b*c*x)^(-3 - 2*p)*(f + g*x)")]
+        public void OneLinearTwiceHasAValue(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.7).Substitute("c", 1.1)
+                .Substitute("f", 0.3).Substitute("g", 1.7).Substitute("p", 0.29);
+            var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
+            var original = Pinned(integrand.ToEntity());
+            foreach (var at in new[] { 0.3, 0.8, 1.5, 2.4 })
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.False(got.IsNaN, $"the antiderivative of {integrand} has no derivative at x = {at}: {integral}");
+                Assert.True(Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart) < 1e-9 * Math.Max(1.0, Math.Abs((double)want.RealPart)),
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+        }
     }
 }

@@ -17,7 +17,8 @@ namespace AngouriMath.Tests.Calculus
     /// the real line, so the integrand is a constant on every interval where it is continuous times
     /// a power of the secant and an exponential. Rubi's 4.3.1.2. The integrands are complex along
     /// the real line and are compared as complex numbers, where the cosine is negative as well,
-    /// which is where the fourth row's answer on master was off by a constant factor.
+    /// which is where the fourth row's answer on master was off by a constant factor. A symbol
+    /// for the powers, adding up to a whole number, as well.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/718">#718</a>
     /// </summary>
     [Trait("Area", "Calculus")]
@@ -29,12 +30,16 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("(a + i*a*tan(x))^(3/2)/(k*sec(x))^(7/2)")]
         [InlineData("(k*sec(x))^(5/2)/(a + i*a*tan(x))^(5/2)")]
         [InlineData("(k*sec(c + d*x))^(3/2)*(a - i*a*tan(c + d*x))^(3/2)")]
+        // A symbol for the powers, adding up to -4, -1 and 0.
+        [InlineData("(k*sec(c + d*x))^(-4 - n)*(a + i*a*tan(c + d*x))^n")]
+        [InlineData("(k*sec(c + d*x))^(-1 - n)*(a + i*a*tan(c + d*x))^n")]
+        [InlineData("(a + i*a*tan(c + d*x))^n/(k*sec(c + d*x))^n")]
         public void AsTheExponentialItIs(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
             Assert.DoesNotContain("NaN", integral.Stringize());
-            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("k", 0.8).Substitute("c", 0.4).Substitute("d", 1.1);
+            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("k", 0.8).Substitute("c", 0.4).Substitute("d", 1.1).Substitute("n", 0.6);
             var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
             var original = Pinned(integrand.ToEntity());
             var compared = 0;
