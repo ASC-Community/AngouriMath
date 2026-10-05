@@ -30,6 +30,7 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("cot(c + d*x)^2*(k + q*tan(c + d*x))/(a + i*a*tan(c + d*x))^4")]
         [InlineData("(a + i*a*tan(c + d*x))/(q - i*q*tan(c + d*x))^(3/2)")]
         [InlineData("sqrt(q - i*q*tan(c + d*x))/(a + i*a*tan(c + d*x))")]
+        [InlineData("(a + i*a*tan(c + d*x))^2/sqrt(q - i*q*tan(c + d*x))")]
         public void IsIntegratedInTheSum(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");

@@ -23833,7 +23833,21 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             var s = Variable.CreateUnique(expr, "s_imaginary_tangent");
             var tangent = (s - constant) / coefficient;
-            var rewritten = expr.Replace(node => node == @base ? s : node).Replace(node => node switch
+            // The other sum, `q + c' tan(z)`, written as the linear in `S` it is, `(c'/c) (S - r)`
+            // for `r = a - q c/c'`, its root spelled `2 a` where it is that: there it cancels the
+            // `S - 2a` of `dz` as written, where `q + c' (S - a)/c` cancelled nothing, and the pole
+            // it left made `(a + i a tan(z))^2/sqrt(q - i q tan(z))` fourteen thousand characters.
+            Entity? other = null, otherInS = null;
+            if (sums.Count == 2)
+            {
+                var (otherBase, otherConstant, otherCoefficient, _) = sums[0].Base == @base ? sums[1] : sums[0];
+                var ratio = Functions.PartialFractions.InLowestTermsOverTheSymbols(otherCoefficient / coefficient);
+                var root = Functions.PartialFractions.InLowestTermsOverTheSymbols(constant - otherConstant * coefficient / otherCoefficient);
+                if (Functions.PartialFractions.IsZeroAsAValue(root - 2 * constant))
+                    root = 2 * constant;
+                (other, otherInS) = (otherBase, ratio * (s - root));
+            }
+            var rewritten = expr.Replace(node => node == @base ? s : other is not null && node == other ? otherInS! : node).Replace(node => node switch
             {
                 Tanf(var y) when y == argument => tangent,
                 Cotanf(var y) when y == argument => 1 / tangent,
