@@ -839,6 +839,19 @@ read them as nonzero. They are now decided over one bar, expanded, and at pinned
 | `"e^(3*acoth(a*x))/(c-a*c*x)^3".Integrate("x")`, and over `(c - a c x)^4` | left unevaluated | an antiderivative in `sqrt((a x + 1)/(a x - 1))` |
 | `"e^(2*acoth(a*x))*sqrt(c-a*c*x)/x".Integrate("x")`, and over `x^2` | left unevaluated | an antiderivative in `sqrt(c - a c x)`, by cases on the sign of `c` |
 
+### Two tangents of arguments a constant apart are written apart
+
+**Answers where there were none.** `tan(a + b x) tan(c + b x)` was declined, with the secants,
+cotangents and cosecants the same way and the products whose arguments add to a constant, Rubi's
+4.7.7. By the addition formulas each such product is the functions of the two arguments apart:
+`tan(A) tan(B) = cot(A - B) (tan(A) - tan(B)) - 1` and its kin, for `A - B` or `A + B` a constant
+that is not a multiple of `pi` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"tan(a + b*x)*tan(c + b*x)".ToEntity().Integrate("x")` | `integral(...)` | `cot(a - c) (ln(cos(c + b x)) - ln(cos(a + b x)))/b - x` |
+| `"sec(c - b*x)*sec(a + b*x)".ToEntity().Integrate("x")` | `integral(...)` | `csc(a + c) (ln(cos(c - b x)) - ln(cos(a + b x)))/b` |
+
 ### A trigonometric function of an imaginary multiple of a logarithm is integrated in exponentials
 
 **Answers where there were none.** `tan(a + i ln(x))` and `sin(a + ln(c x^2) sqrt(-1/4))` were
@@ -996,6 +1009,23 @@ written in `u = c + d x` first. Rubi's 1.1.3.2, 1.2.3.2 and 1.3.1 write whole se
 | `"(c + d*x)^4/(a + b*(c + d*x)^3)".ToEntity().Integrate("x")` | ran for more than eighty seconds | `(c + d x)^2/(2 b)`, and the same logarithms and arctangent |
 | `"(c*m + d*m*x)^3/(a + b*(c + d*x)^3)^2".ToEntity().Integrate("x")` | `integral(...)` | `m^3` times a rational function of `c + d x`, the logarithms and the arctangent |
 | `"(c + d*x)^4/(a + b*(c + d*x)^2 + k*(c + d*x)^4)^2".ToEntity().Integrate("x")` | `integral(...)` | a rational function of `c + d x` and arctangents |
+
+### A trigonometric function times its reciprocal is integrated
+
+**Answers where there were none, and shorter ones where 2.5.0 had them.** `sin(x) csc(x)` and
+`tan(x) cot(x)` were declined: the rule for products of powers of the six functions reads them as
+powers of the sine and cosine, and refused a product whose powers cancel. That product is the
+constant wherever it is defined, and its integral the constant times `x`. `cos(x)^2 sec(x)^2`,
+`csc(x)^2 (1 + sin(x)^2)` and Rubi's 4.7.7 `(1 + cos(x)^2) sec(x)^2`, which 2.5.0 answered at length
+and the unreleased master declined, are answered again, more briefly
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin(x)*csc(x)".ToEntity().Integrate("x")` | `integral(...)` | `x` |
+| `"tan(x)*cot(x)".ToEntity().Integrate("x")` | `integral(...)` | `x` |
+| `"cos(x)^2*sec(x)^2".ToEntity().Integrate("x")` | `cos(x)^2 tan(x) + x - sin(2x)/2` | `x` |
+| `"(1 + cos(x)^2)*sec(x)^2".ToEntity().Integrate("x")` | `cos(x)^2 tan(x) + x - sin(2x)/2 + tan(x)` | `x + tan(x)` |
 
 ### A root of a square inside a sum is integrated on each side of the square's zero
 

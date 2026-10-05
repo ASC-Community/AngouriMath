@@ -884,6 +884,9 @@ namespace AngouriMath.Functions.Algebra
             // search, which reads the quotient term by term.
             if ((answer = IndefiniteIntegralSolver.SolveACosineAndASineOverAPowerOfAnother(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByWritingMultiplesOfOneLinearArgument(expr, x, integrateByParts)) is { }) return answer;
+            // Two tangents, cotangents, secants or cosecants of arguments a constant apart, written
+            // as functions of each alone by the addition formulas.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingTwoFunctionsOfShiftedArgumentsApart(expr, x, integrateByParts)) is { }) return answer;
             // A constant out of a fractional power of a trigonometric factor: `sqrt(b sec(x))` is
             // `sqrt(b) sqrt(sec(x))` for a positive `b`, which meets the other powers of the
             // secant beside it. After the rules that answer the same shapes for any real
