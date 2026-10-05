@@ -496,6 +496,24 @@ power up each step, and what reaches the first power is integrated once over the
 | `"1/(a + b*x^2 + c*x^4)^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"x/(a + b*x^3 + c*x^6)^2".ToEntity().Integrate("x")` | `integral(...)` | a polynomial over `a + b x^3 + c x^6`, and the integral of a polynomial over it |
 
+### `a + i a tan(z)` below the bar is integrated beside a root of the tangent, and beside `q - i q tan(z)` above it
+
+**Answers where there were none.** `sqrt(tan(c + d x)) (A + B tan(c + d x))/(a + i a tan(c + d x))`
+ran past the budget, with the rest of Rubi's 4.3.3.1 beside a root of the tangent or the
+cotangent, and so did `(a + i a tan(z))^2 (A + B tan(z))/(q - i q tan(z))^4` and the other whole
+powers of the two sums on the two sides of the bar. `a + i a tan(z)` below the bar is
+`a e^(i z)/cos(z)`, and the integrand was written so wherever the sum was found. Beside a root of
+the tangent that spelling is read by nothing, and the integrand is left to the substitution
+`t = tan(z)`, which answers it as written. Above the bar, `q - i q tan(z)` was left in sines and
+cosines, a sum of exponentials that nothing gathered; it is `q e^(-i z)/cos(z)` the same way now,
+and the two together are a polynomial in `e^(i z)` and its reciprocal, multiplied out
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(tan(c + d*x))*(A + B*tan(c + d*x))/(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | arctangents and logarithms of `sqrt(tan(c + d x))` |
+| `"(a + i*a*tan(c + d*x))^2*(A + B*tan(c + d*x))/(q - i*q*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | a sum of multiples of `e^(k i (c + d x))` |
+
 ### A polynomial over a power of one linear with a symbol in it is written in powers of the linear
 
 **Answers where there were none.** `t^9/(a + b t)^8` is a polynomial and eight powers of `1/(a + b t)`,
