@@ -606,6 +606,22 @@ improper fraction is declined before the first division rather than after the la
 | `"(1 - b*x^2)^3/(c*(1 - b*x^2) + a*d*x^2)^3".ToEntity().Integrate("x")` | no answer within a minute | the antiderivative |
 | `"(a + b*x)^(5/2)/(c + d*x)^4".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative |
 
+### Four nested roots with a closed form are integrated
+
+**Answers where there were none.** Rubi's 1.3.3 gives four nested roots a closed form, and they were
+declined: `sqrt(a + b sqrt(c + d x^2))` with `a^2 = b^2 c`, which is
+`2 b^2 d x^3/(3 S^(3/2)) + 2 a x/sqrt(S)` for the root `S`; `sqrt(c x^2 + d sqrt(a + b x^4))/sqrt(a + b x^4)`
+with `c^2 = b d^2`, and `1/((a + b x^n) sqrt(c x^2 + d (a + b x^n)^(2/n)))`, each the derivative of
+`w = x/sqrt(S)` over `1 - k w^2`; and `sqrt(a x^2 + b x sqrt(c + d x^2))/(x sqrt(c + d x^2))` with
+`a^2 = b^2 d` and `b^2 c + a = 0`, in `t = a x + b sqrt(c + d x^2)`. Rubi's 1.3.2 and the Welz and
+Timofeev suites ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(1 + sqrt(1 - x^2))".ToEntity().Integrate("x")` | `integral(...)` | `-2 x^3/(3 (1 + sqrt(1 - x^2))^(3/2)) + 2 x/sqrt(1 + sqrt(1 - x^2))` |
+| `"sqrt(x^2 + sqrt(1 + x^4))/sqrt(1 + x^4)".ToEntity().Integrate("x")` | `integral(...)` | a logarithm of `x/sqrt(x^2 + sqrt(1 + x^4))`, over `2 sqrt(2)` |
+| `"1/((1 + x^4)*sqrt(-x^2 + sqrt(1 + x^4)))".ToEntity().Integrate("x")` | `integral(...)` | `arctan(x/sqrt(-x^2 + sqrt(1 + x^4)))` |
+
 ### A decline is held at the depth it was made at
 
 **Answers where there were none.** The integrator remembers what it has worked out, declines

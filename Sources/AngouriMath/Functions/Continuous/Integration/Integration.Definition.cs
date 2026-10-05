@@ -706,6 +706,9 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveByTakingARootOfAPerfectSquare(expr, x, integrateByParts)) is { }) return answer;
             // And a square in one trigonometric function, at the top: the modulus of the linear in it.
             if ((answer = IndefiniteIntegralSolver.SolveByTakingARootOfAPerfectSquareInATrigonometricFunction(expr, x, integrateByParts)) is { }) return answer;
+            // Four nested roots with a closed form: `sqrt(1 + sqrt(1 - x^2))`,
+            // `sqrt(x^2 + sqrt(1 + x^4))/sqrt(1 + x^4)` and the two beside them in Rubi's 1.3.3.
+            if ((answer = IndefiniteIntegralSolver.SolveANestedRootByItsClosedForm(expr, x, integrateByParts)) is { }) return answer;
             // And any power of a square in any power of x, as the power of its root times a factor
             // constant where the root is not zero: `x^2 (a^2 + 2 a b x^3 + b^2 x^6)^p`.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAPowerOfASquareAsAPowerOfItsRoot(expr, x, integrateByParts)) is { }) return answer;
