@@ -26688,6 +26688,107 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// Powers of the two conjugate sums <c>a + i a tan(z)</c> and <c>c - i c tan(z)</c>, not both
+        /// whole and adding up to a whole number <c>k</c>, beside a function of the tangent, the
+        /// secant or the cosine of the same argument, integrated as the exponential they are:
+        /// <c>a + i a tan(z)</c> is <c>a sec(z) e^(i z)</c> on the real line and
+        /// <c>c - i c tan(z)</c> is <c>c sec(z) e^(-i z)</c>, so the pair is a constant on every
+        /// interval where it is continuous times <c>sec(z)^k e^(i (p - q) z)</c>, and in
+        /// <c>w = e^(i z)</c> the whole is a rational function of <c>w</c> times a power of it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>(a + i a tan(x))^(7/2) (A + B tan(x))/(c - i c tan(x))^(9/2)</c> is
+        /// <c>e^(8 i x) (A cos(x) + B sin(x))</c> up to that constant, and ran past the budget with
+        /// the rest of Rubi's 4.3.2.1 and 4.3.3.1 that put half-odd powers on both sums: the rule for
+        /// one of them integrates in it beside a whole power of the other, and with both half-odd
+        /// neither is.
+        /// </para>
+        /// <para>
+        /// The constant is not written, as for one sum beside the secant: the answer is the integrand
+        /// times the antiderivative in <c>w</c> over what that differentiates back to, a quotient
+        /// constant wherever it is continuous. The antiderivative in <c>w</c> is checked there, where
+        /// it is the only thing computed; checked at sampled <c>x</c>, the quotient's constant need
+        /// not be the same on both sides of the points, and right answers were declined.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAConjugatePairOfImaginaryTangentSums(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Tanf))
+                return null;
+            Entity? argument = null;
+            Entity? plusPower = null, minusPower = null;
+            Entity constant = Number.Integer.One;
+            Entity varying = Number.Integer.One;
+            Entity rest = Number.Integer.One;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                varying = underneath ? varying / factor : varying * factor;
+                var (@base, power) = factor is Powf(var b, var p) && !p.ContainsNode(x)
+                    ? (b, p.Evaled is Number.Rational r ? r : p)
+                    : (factor, (Entity)Number.Integer.One);
+                if (underneath)
+                    power = power is Number.Rational numeric ? -numeric : (-power).InnerSimplified;
+                if (TryReadAnImaginaryTangent(@base, x, out var tangentOf, out var isPlus))
+                {
+                    if (argument is not null && argument != tangentOf || (isPlus ? plusPower : minusPower) is not null)
+                        return null;
+                    argument = tangentOf;
+                    if (isPlus)
+                        plusPower = power;
+                    else
+                        minusPower = power;
+                    continue;
+                }
+                rest = underneath ? rest / factor : rest * factor;
+            }
+            if (plusPower is null || minusPower is null || argument is null
+                || plusPower is Number.Integer && minusPower is Number.Integer
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
+                return null;
+            var sum = (plusPower + minusPower).InnerSimplified;
+            if (sum is not Number && sum.Complexity <= 40)
+                sum = sum.Simplify();
+            if (sum is not Number.Integer { EInteger: var whole } || !whole.CanFitInInt32())
+                return null;
+            var k = whole.ToInt32Checked();
+            var phase = (plusPower - minusPower).InnerSimplified;
+            if (phase is not Number && phase.Complexity <= 40)
+                phase = phase.Simplify();
+            // The rest in w = e^(i z): a function of the tangent, the secant, the cosine and the sine
+            // of the argument alone, and rational in w once they are written so.
+            var w = Variable.CreateUnique(expr, "w_exp");
+            var secantInW = 2 * w / (MathS.Sqr(w) + 1);
+            var tangentInW = -MathS.i * (MathS.Sqr(w) - 1) / (MathS.Sqr(w) + 1);
+            var restInW = rest.Replace(node => node switch
+            {
+                Tanf(var inner) when inner == argument => tangentInW,
+                Secantf(var inner) when inner == argument => secantInW,
+                Cosf(var inner) when inner == argument => 1 / secantInW,
+                Sinf(var inner) when inner == argument => tangentInW / secantInW,
+                _ => node,
+            });
+            if (restInW.ContainsNode(x))
+                return null;
+            // sec(z)^k e^(i p z) R dz is (2 w/(w^2 + 1))^k w^(p - 1) R(w) dw/i, with dz = dw/(i w).
+            var inW = Functions.SingleQuotient.Combine(
+                (k == 0 ? Number.Integer.One : MathS.Pow(secantInW, k)) * MathS.Pow(w, (phase - 1).InnerSimplified) * restInW).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inW, w, integrateByParts) is not { } inWAnswer
+                || inWAnswer.Nodes.Any(node => node == MathS.NaN)
+                || !Functions.PartialFractions.HoldsAtSampledPoints(inWAnswer.Differentiate(w), inW, w))
+                return null;
+            var exponential = MathS.Pow(MathS.e, MathS.i * argument);
+            var differentiatesBackTo = (k == 0 ? Number.Integer.One : MathS.Pow(MathS.Sec(argument), k)) * MathS.Pow(exponential, phase) * rest;
+            return constant * varying * inWAnswer.Substitute(w, exponential) / (MathS.i * slope * differentiatesBackTo);
+        }
+
+        /// <summary>
         /// <c>A cos(y) + i A sin(y)</c> below the bar, written as the exponential it is:
         /// <c>A e^(i y)</c>, and <c>A cos(y) - i A sin(y)</c> as <c>A e^(-i y)</c>. Beside a power
         /// of the cosine above the bar that is an exponential times a power of a cosine, which
