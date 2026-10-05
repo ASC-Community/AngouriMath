@@ -658,6 +658,21 @@ leading coefficient once expanded, and declined: it is read expanded and bare no
 | `"sin(x)/(a+b*sin(x))^3".Integrate("x")`, Rubi's 4.1.2.1 row 242 | `integral(...)` | the antiderivative |
 | `"4*x*(1+x^2)/(a*x^2+2*b*x+a)^3".Integrate("x")` | `integral(...)` | the antiderivative |
 
+### A linear over a linear beside the root of a cubic binomial is integrated where that is elementary
+
+**Answers where there were none.** `(1 + x + sqrt(3))/((1 + x - sqrt(3)) sqrt(1 + x^3))` and the rest
+of Rubi's 1.3.2 quotients of linears, and of quadratics, beside the reciprocal of the root of
+`a + b x^3` were declined. The curve is elliptic, and the integral elementary only at coefficients
+where it is a constant times an arctangent or an inverse hyperbolic tangent of `(1 + p x)/sqrt(a + b x^3)`,
+or of its square over the root. Rubi's 1.3.3 names those coefficients, and its rules are taken
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(2^(2/3) - 2*x)/((2^(2/3) + x)*sqrt(1 + x^3))".ToEntity().Integrate("x")` | `integral(...)` | `2 2^(2/3) arctan(sqrt(3) (1 + 2^(1/3) x)/sqrt(1 + x^3))/sqrt(3)` |
+| `"(c - 2*d*x)/((c + d*x)*sqrt(c^3 + 4*d^3*x^3))".ToEntity().Integrate("x")` | `integral(...)` | `2 c/d` times an arctangent of `sqrt(3 c^3) (1 + 2 d x/c)/sqrt(c^3 + 4 d^3 x^3)` over `sqrt(3 c^3)`, or an inverse hyperbolic tangent, by the sign of `c^3` |
+| `"(1+x)/((x-2)*sqrt(1+x^3))".ToEntity().Integrate("x")` | `integral(...)` | `-(2/3) artanh((1 + x)^2/(3 sqrt(1 + x^3)))`, written as a logarithm |
+
 ### `x^2` over a three-quarter power of a quadratic binomial beside another is integrated where that is elementary
 
 **Answers where there were none.** `x^2/((A + B x^2)^(3/4) (C + D x^2))` at `B C - 2 A D = 0`, Rubi's
