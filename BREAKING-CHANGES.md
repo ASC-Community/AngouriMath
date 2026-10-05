@@ -755,6 +755,19 @@ inner-simplified now, and declined in seconds where the parts do not separate
 | `"x^4*e^(2*i*atan(a + b*x))".ToEntity().Integrate("x")` | `integral(...)` | a polynomial, logarithms and arctangents of `a + b x` |
 | `"sec(c + d*x)^2/(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `ln(i a d tan(c + d x) + a d)/(i a d)` | `ln(i tan(c + d x) + 1)/(i a d)`, the same up to a constant |
 
+### A root of a square in a trigonometric function is its modulus
+
+**Answers where there were none.** `(a + b sin(x)) sqrt(b^2 + 2 a b sin(x) + a^2 sin(x)^2)` was
+declined or past the budget, with the rest of Rubi's 4.7.7 half-odd powers of a perfect square in a
+sine, tangent or secant. The radicand is `a^2 (f + b/a)^2`, so its root is `sqrt(a^2) |f + b/a|`,
+written with the sign of `f + b/a` in front of the integral, as a root of a perfect square in `x`
+already was ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a + b*sin(x))*sqrt(b^2 + 2*a*b*sin(x) + a^2*sin(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(sin(x) + b/a) sqrt(a^2)` times an expression in `x`, `cos(x)` and `sin(2x)`, `provided a^2 > 0` |
+| `"(a + b*tan(x))/sqrt(b^2 + 2*a*b*tan(x) + a^2*tan(x)^2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(tan(x) + b/a) a/sqrt(a^2)` times the antiderivative of `(a + b tan(x))/(a tan(x) + b)`, `provided a^2 > 0` |
+
 ### `NaN` was returned as the antiderivative of something that has one
 
 **A wrong answer, not a missing one.** `1/(a*x^2)` came back as `NaN + C`, and `NaN` is this
