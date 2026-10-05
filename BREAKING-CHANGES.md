@@ -984,6 +984,23 @@ written in `u = c + d x` first. Rubi's 1.1.3.2, 1.2.3.2 and 1.3.1 write whole se
 | `"(c*m + d*m*x)^3/(a + b*(c + d*x)^3)^2".ToEntity().Integrate("x")` | `integral(...)` | `m^3` times a rational function of `c + d x`, the logarithms and the arctangent |
 | `"(c + d*x)^4/(a + b*(c + d*x)^2 + k*(c + d*x)^4)^2".ToEntity().Integrate("x")` | `integral(...)` | a rational function of `c + d x` and arctangents |
 
+### A trigonometric function times its reciprocal is integrated
+
+**Answers where there were none, and shorter ones where 2.5.0 had them.** `sin(x) csc(x)` and
+`tan(x) cot(x)` were declined: the rule for products of powers of the six functions reads them as
+powers of the sine and cosine, and refused a product whose powers cancel. That product is the
+constant wherever it is defined, and its integral the constant times `x`. `cos(x)^2 sec(x)^2`,
+`csc(x)^2 (1 + sin(x)^2)` and Rubi's 4.7.7 `(1 + cos(x)^2) sec(x)^2`, which 2.5.0 answered at length
+and the unreleased master declined, are answered again, more briefly
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin(x)*csc(x)".ToEntity().Integrate("x")` | `integral(...)` | `x` |
+| `"tan(x)*cot(x)".ToEntity().Integrate("x")` | `integral(...)` | `x` |
+| `"cos(x)^2*sec(x)^2".ToEntity().Integrate("x")` | `cos(x)^2 tan(x) + x - sin(2x)/2` | `x` |
+| `"(1 + cos(x)^2)*sec(x)^2".ToEntity().Integrate("x")` | `cos(x)^2 tan(x) + x - sin(2x)/2 + tan(x)` | `x + tan(x)` |
+
 ### A root of a square inside a sum is integrated on each side of the square's zero
 
 **Answers where there were none.** `1/(1 + (x^2)^(3/2))` is `1/(1 + x^3)` for a positive `x` and
