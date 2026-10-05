@@ -960,17 +960,46 @@ namespace AngouriMath.Functions.Algebra
             var sqrtNegDiscriminant = MathS.Sqrt(-discriminant);
             var lnCase = numerator * AntiderivativeLog((twoAxPlusB - sqrtNegDiscriminant) / (twoAxPlusB + sqrtNegDiscriminant)) / sqrtNegDiscriminant;
             
-            // Return as piecewise based on a and discriminant
+            // Return as piecewise based on a and discriminant, without the arms no real
+            // coefficients reach: see ReachesAPositiveDiscriminant and ReachesAZeroDiscriminant.
             var cases = new List<Entity.Providedf>();
             if (!denominatorVanishesWithoutA)
                 cases.Add(new Entity.Providedf(linearCase, a.EqualTo(0)));
             if (ArmOffTheRealLine(arctanCase, discriminant) is { } offTheRealLine)
                 cases.Add(offTheRealLine);
-            cases.Add(new Entity.Providedf(arctanCase, discriminant > 0));
-            cases.Add(new Entity.Providedf(perfectSquareCase, discriminant.EqualTo(0)));
+            if (ReachesAPositiveDiscriminant(b, c))
+                cases.Add(new Entity.Providedf(arctanCase, discriminant > 0));
+            if (ReachesAZeroDiscriminant(b, c))
+                cases.Add(new Entity.Providedf(perfectSquareCase, discriminant.EqualTo(0)));
             cases.Add(new Entity.Providedf(lnCase, discriminant < 0));
             return MathS.Piecewise(cases).InnerSimplified;
         }
+
+        /// <summary>
+        /// Whether <c>4 a c - b^2</c> can be positive past the arms before it: not with no
+        /// constant term and a real <c>b</c>, where it is <c>-b^2</c>. <c>1/(u (a + b u))</c>,
+        /// which every <c>1/(x (a + b x^n))</c> comes to, carried an arctangent on
+        /// <c>-a^2 > 0</c>. Real as written only: symbols and real numbers by arithmetic and
+        /// whole powers. Under `sqrt(-(a + b x)^2)` the coefficient is `sqrt(-b^2) a/b`, and the
+        /// discriminant is `a^2`.
+        /// </summary>
+        private static bool ReachesAPositiveDiscriminant(Entity b, Entity c)
+            => !TreeAnalyzer.IsZero(c) || !b.InnerSimplified.Nodes.All(node => node switch
+            {
+                Entity.Variable or Entity.Number.Real => true,
+                Entity.Sumf or Entity.Minusf or Entity.Mulf or Entity.Divf => true,
+                Entity.Powf(_, Entity.Number.Integer) => true,
+                _ => false
+            });
+
+        /// <summary>
+        /// Whether <c>4 a c - b^2</c> can be zero where <c>a</c> is not, which the first arm
+        /// takes: not with no linear term and a number other than 0 for the constant one, where it
+        /// is <c>4 a c</c>. <c>1/(1 + q u^2)</c> carried a perfect-square arm on <c>4 q = 0</c>,
+        /// dividing by <c>q</c>.
+        /// </summary>
+        private static bool ReachesAZeroDiscriminant(Entity b, Entity c)
+            => !TreeAnalyzer.IsZero(b) || c is not Entity.Number || c.Evaled is Entity.Number.Complex { IsZero: true };
 
         /// <summary>
         /// ∫ k / (a x^2 + b x + c)^n dx for a whole n of two or more, by the reduction that
@@ -1040,15 +1069,14 @@ namespace AngouriMath.Functions.Algebra
                 : 2 * MathS.Arctan(derivative / sqrtDiscriminant) / sqrtDiscriminant;
             Entity firstPowerLog = withoutTheFirstPower ? Entity.Number.Integer.Zero
                 : AntiderivativeLog((derivative - sqrtNegDiscriminant) / (derivative + sqrtNegDiscriminant)) / sqrtNegDiscriminant;
-            var arms = new List<Entity.Providedf>
-            {
-                new Entity.Providedf(linearCase, a.EqualTo(0)),
-                new Entity.Providedf(perfectSquareCase, discriminant.EqualTo(0))
-            };
+            var arms = new List<Entity.Providedf> { new Entity.Providedf(linearCase, a.EqualTo(0)) };
+            if (ReachesAZeroDiscriminant(b, c))
+                arms.Add(new Entity.Providedf(perfectSquareCase, discriminant.EqualTo(0)));
             var arctanArm = Reduce(firstPowerArctan);
             if (ArmOffTheRealLine(arctanArm, discriminant) is { } offTheRealLine)
                 arms.Add(offTheRealLine);
-            arms.Add(new Entity.Providedf(arctanArm, discriminant > 0));
+            if (ReachesAPositiveDiscriminant(b, c))
+                arms.Add(new Entity.Providedf(arctanArm, discriminant > 0));
             arms.Add(new Entity.Providedf(Reduce(firstPowerLog), discriminant < 0));
             return MathS.Piecewise(arms).InnerSimplified;
 

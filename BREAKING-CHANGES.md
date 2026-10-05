@@ -358,6 +358,21 @@ also how the substitution `u = x^2` writes `x/(a + c x^4)^2` since 2.5.0, having
 | `"(x/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"x/(a + c*x^4)^2".ToEntity().Integrate("x")` | the answer, in 0.1 s; 22 s on the unreleased master | the answer, in 0.06 s |
 
+### Arms no real coefficients reach are left out of a symbolic quadratic's antiderivative
+
+**Shorter answers.** An integrand over a quadratic with symbols in it is answered by arms on its
+leading coefficient and on the sign of its discriminant `4 a c - b^2`, and two of them could not be
+reached: with no linear term and a number for the constant one the discriminant is zero only where
+the leading coefficient is, which the first arm takes -- and that arm divided by it; and with no
+constant term the discriminant is `-b^2`, never positive for a real `b`. Both are left out, which is
+up to a third of such an answer, and of every answer built on one, as `1/(x (a + b x^n))` is
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(1 + q*x^2)".ToEntity().Integrate("x")` | four arms, the third `-2/(2 q x)` on `4 q = 0` | three, without it |
+| `"1/(x*(a + b*x))".ToEntity().Integrate("x")` | four arms, the second an arctangent on `-a^2 > 0` | three, without it |
+
 ### A polynomial with symbols in it that is a binomial or an even quartic in a shifted variable is integrated in it
 
 **Answers where there were none.** `1/(c^2 x^3 + 3 b c x^2 + 3 b^2 x + 3 a b)` was left unevaluated,
