@@ -96,5 +96,19 @@ namespace AngouriMath.Tests.Calculus
                 return;
             DifferentiatesBack(integrand);
         }
+
+        /// <summary>
+        /// A root above the bar and numbers below it: under the tangent <c>1 + i u</c> beside
+        /// <c>1 + u^2</c> shares the root <c>u = i</c> with it, and that was taken out only where a
+        /// symbol stood below the bar, so <c>a + i a tan(x)</c> was answered and
+        /// <c>1 + i tan(x)</c> declined.
+        /// https://github.com/asc-community/AngouriMath/issues/1788
+        /// </summary>
+        [Theory]
+        [InlineData("sqrt(c + d*tan(x))/(1 + i*tan(x))")]
+        [InlineData("sqrt(c + d*tan(x))/(2 + 2*i*tan(x))")]
+        [InlineData("sqrt(c + d*tan(x))/(1 - i*tan(x))")]
+        [InlineData("(c + d*tan(x))^(3/2)/(1 + i*tan(x))")]
+        public void ARootOverANumberTimesAnImaginaryTangentSum(string integrand) => DifferentiatesBack(integrand);
     }
 }
