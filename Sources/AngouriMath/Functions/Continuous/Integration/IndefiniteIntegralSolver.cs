@@ -8822,6 +8822,76 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A product of two tangents, cotangents, secants or cosecants of linear arguments whose
+        /// difference or sum is a constant, written as the functions of each apart: with
+        /// <c>d = A - B</c>, <c>tan(A) tan(B) = cot(d) (tan(A) - tan(B)) - 1</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The addition formulas, read for the product: for a constant <c>d = A - B</c>,
+        /// <c>tan(A) tan(B) = cot(d) (tan(A) - tan(B)) - 1</c>,
+        /// <c>cot(A) cot(B) = cot(d) (cot(B) - cot(A)) - 1</c>,
+        /// <c>sec(A) sec(B) = csc(d) (tan(A) - tan(B))</c> and
+        /// <c>csc(A) csc(B) = csc(d) (cot(B) - cot(A))</c>; for a constant <c>s = A + B</c>,
+        /// <c>tan(A) tan(B) = 1 - cot(s) (tan(A) + tan(B))</c>,
+        /// <c>cot(A) cot(B) = 1 + cot(s) (cot(A) + cot(B))</c>,
+        /// <c>sec(A) sec(B) = csc(s) (tan(A) + tan(B))</c> and
+        /// <c>csc(A) csc(B) = csc(s) (cot(A) + cot(B))</c>. Each holds wherever both sides are
+        /// defined, for <c>d</c> or <c>s</c> not a multiple of <c>pi</c>, which a symbolic one is
+        /// taken not to be, as everywhere in this integrator. Rubi's 4.7.7 has
+        /// <c>tan(a + b x) tan(c + b x)</c> and the rest, and nothing read two arguments.
+        /// </para>
+        /// <para>
+        /// The same question in another spelling, so asked as it. A constant times the product
+        /// only, and the two functions of one kind.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByWritingTwoFunctionsOfShiftedArgumentsApart(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            Entity constant = Number.Integer.One;
+            Entity? first = null, second = null;
+            foreach (var factor in Mulf.LinearChildren(expr))
+            {
+                if (!factor.ContainsNode(x))
+                    constant = constant == Number.Integer.One ? factor : constant * factor;
+                else if (first is null)
+                    first = factor;
+                else if (second is null)
+                    second = factor;
+                else
+                    return null;
+            }
+            if (first is null || second is null || first.GetType() != second.GetType()
+                || first is not (Tanf or Cotanf or Secantf or Cosecantf))
+                return null;
+            var a = first.DirectChildren.First();
+            var b = second.DirectChildren.First();
+            if (a == b || !TreeAnalyzer.TryGetPolyLinear(a, x, out var slopeOfA, out _) || slopeOfA.ContainsNode(x)
+                || !TreeAnalyzer.TryGetPolyLinear(b, x, out var slopeOfB, out _) || slopeOfB.ContainsNode(x))
+                return null;
+            static bool IsZero(Entity value) => value.Expand().InnerSimplified.Evaled is Number.Complex { IsZero: true };
+            var sameSlope = IsZero(slopeOfA - slopeOfB);
+            if (!sameSlope && !IsZero(slopeOfA + slopeOfB))
+                return null;
+            var shift = (sameSlope ? a - b : a + b).Expand().InnerSimplified;
+            if (shift.ContainsNode(x) || shift.Evaled is Number.Complex { IsZero: true })
+                return null;
+            Entity apart = first switch
+            {
+                Tanf => sameSlope
+                    ? MathS.Cotan(shift) * (MathS.Tan(a) - MathS.Tan(b)) - 1
+                    : 1 - MathS.Cotan(shift) * (MathS.Tan(a) + MathS.Tan(b)),
+                Cotanf => sameSlope
+                    ? MathS.Cotan(shift) * (MathS.Cotan(b) - MathS.Cotan(a)) - 1
+                    : 1 + MathS.Cotan(shift) * (MathS.Cotan(a) + MathS.Cotan(b)),
+                Secantf => MathS.Cosec(shift) * (sameSlope ? MathS.Tan(a) - MathS.Tan(b) : MathS.Tan(a) + MathS.Tan(b)),
+                _ => MathS.Cosec(shift) * (sameSlope ? MathS.Cotan(b) - MathS.Cotan(a) : MathS.Cotan(a) + MathS.Cotan(b)),
+            };
+            return Integration.ComputeAsTheSameQuestion(constant == Number.Integer.One ? apart : constant * apart, x, integrateByParts);
+        }
+
+        /// <summary>
         /// A quotient of two <b>homogeneous</b> polynomials in <c>sin(u)</c> and <c>cos(u)</c>,
         /// integrated by <c>t = tan(u)</c> — which turns it into a rational function of <c>t</c>
         /// whenever the two degrees differ by an even number.
