@@ -79,8 +79,8 @@ namespace AngouriMath.Tests.Calculus
 
         /// <summary>
         /// That step reads <c>u</c> as a non-negative real, which it is only where the radical
-        /// is real, and the answer says so: <c>1/sqrt(x + x^(3/2))</c> comes back
-        /// <c>provided x &gt;= 0</c>. Beyond the radicand's zero <c>u</c> is imaginary, and the
+        /// is real, and the answer says so: <c>sqrt(x)/sqrt(x + x^2)</c> comes back
+        /// <c>provided x + 1 &gt;= 0</c>. Beyond the radicand's zero <c>u</c> is imaginary, and the
         /// integrand can still be real there -- Rubi's <c>x sqrt(c - a c x) / e^(3 atanh(a x))</c>
         /// above <c>a x = 1</c> is the product of two imaginary factors -- while the answer built
         /// for a real <c>u</c> is not its antiderivative: with <c>a = 3.1</c>, <c>c = 0.7</c> at
@@ -93,8 +93,8 @@ namespace AngouriMath.Tests.Calculus
         [Fact]
         public void TheEvenRootStepSaysWhereItHolds()
         {
-            var conditioned = "1/sqrt(x + x^(3/2))".ToEntity().Integrate("x");
-            Assert.Contains("provided x >= 0", conditioned.Stringize());
+            var conditioned = "sqrt(x)/sqrt(x + x^2)".ToEntity().Integrate("x");
+            Assert.Contains("provided x + 1 >= 0", conditioned.Stringize());
 
             var integrand = "x * sqrt(c - a*c*x) / e^(3 * atanh(a*x))".ToEntity();
             var integral = integrand.Integrate("x");
