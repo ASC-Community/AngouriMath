@@ -1097,13 +1097,14 @@ but `sqrt(q)^2 = q` ([#1598](https://github.com/asc-community/AngouriMath/issues
 polynomial in `x` under a power that is not whole, was declined where it was not a function of a
 linear: `x^2 (c (a + b x^2)^2)^(3/2)` is a polynomial times a factor that is constant wherever
 `a + b x^2` is not zero. It is integrated as `K S^(k p)` now, with `K = c^q (c S^k)^r/S^(k r)` for the
-whole part `q` and the rest `r` of `p`. Rubi's 1.3.2
+whole part `q` and the rest `r` of `p`, where the substitution search, asked first, declines it. Rubi's
+1.3.2
 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
 | `"x^2*(c*(a + b*x^2)^2)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `c (c (a + b x^2)^2)^(1/2)/(a + b x^2)` times `a^3 x^3/3 + 3 a^2 b x^5/5 + 3 a b^2 x^7/7 + b^3 x^9/9` |
-| `"(c*(a + b*x)^3)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `c (c (a + b x)^3)^(1/2)/(a + b x)^(3/2)` times `(a + b x)^(11/2)/((11/2) b)` |
+| `"(c*(a + b*x^2)^3)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `c (c (a + b x^2)^3)^(1/2)/(a + b x^2)^(3/2)` times an antiderivative of `(a + b x^2)^(9/2)` |
 
 ### A quotient by the square of a base is integrated by parts against the base's reciprocal
 
