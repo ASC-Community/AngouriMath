@@ -991,6 +991,12 @@ namespace AngouriMath.Functions.Algebra
             // elliptic term to the whole chain and spend a minute finding that out.
             if ((answer = IndefiniteIntegralSolver.SolveAPairOfHyperbolicPowersTwoApart(expr, x, integrateByParts)) is { })
                 return answer;
+            // A power of `d + e x + f sqrt(Q)` with `e^2 = a f^2`, `a` the leading coefficient of
+            // `Q`, is a power of Euler's variable: before the expanding split, which wrote
+            // `Q^2 (d + e x + f sqrt(Q))^n` as five terms and answered each on its own, at ten
+            // times the length of the one answer.
+            if (IndefiniteIntegralSolver.HoldsAPowerOfASumWithARoot(expr, x)
+                && (answer = IndefiniteIntegralSolver.SolveByEulerSubstitution(expr, x, onlyBySumItWrites: true)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveBySplittingSum(expr, x, integrateByParts)) is { }) return answer;
             // A sum whose terms all carry the same power of one linear form, as that power times
             // the sum of the rest: `x cosh(x)^(3/2) - x sqrt(cosh(x))/3` is `x` times a pair
