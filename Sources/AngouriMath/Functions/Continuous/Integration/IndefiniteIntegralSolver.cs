@@ -25178,6 +25178,94 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power that is not whole of a constant times a whole power of something of x,
+        /// <c>(c S^k)^p</c> for a whole <c>k</c> past 1, as <c>K S^(k p)</c>, with
+        /// <c>K = c^q (c S^k)^r/S^(k r)</c> for the whole part <c>q</c> of <c>p</c> and the rest
+        /// <c>r</c>: Rubi's 1.3.2 <c>x^m (c (a + b x^2)^2)^(3/2)</c> is <c>K x^m (a + b x^2)^3</c>,
+        /// a polynomial, and was declined.
+        /// </summary>
+        /// <remarks>
+        /// <c>K</c> is constant on every interval where <c>S</c> is not zero: its logarithmic
+        /// derivative is <c>r (k S'/S - k S'/S)</c>. So it goes in front of the integral, and over it
+        /// for a factor below the bar, as the factor of
+        /// <see cref="SolveByTakingAPowerOfXOutOfAFractionalPower"/> does. A whole power of the
+        /// constant times the power distributes exactly, which is why only the rest of <c>p</c> is
+        /// in <c>K</c>. Only factors of the integrand, where <c>K</c> is a factor of the whole; only
+        /// something of x by arithmetic, since a power of a function is the rules' for that function,
+        /// which write its sign; and at the top only, where the answer is the caller's.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByTakingAWholePowerOutOfAPowerOfAProduct(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAsked)
+                return null;
+            var (above, below) = Functions.SingleQuotient.Of(expr);
+            Entity constant = Number.Integer.One;
+            var changed = false;
+            var top = Rewritten(above, Number.Integer.One);
+            var bottom = Rewritten(below, Number.Integer.MinusOne);
+            if (!changed)
+                return null;
+            var question = (bottom == Number.Integer.One ? top : top / bottom).InnerSimplified;
+            if (Integration.ComputeIndefiniteIntegral(question, x, integrateByParts) is not { } integral)
+                return null;
+            var answer = constant * integral;
+            return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+
+            Entity Rewritten(Entity side, Number.Integer sign)
+            {
+                Entity product = Number.Integer.One;
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    var written = factor;
+                    if (factor is Powf(var @base, var power) && power is not Number.Integer && !power.ContainsNode(x)
+                        && @base is Mulf or Divf && ConstantTimesAWholePower(@base, x) is var (c, inner, k))
+                    {
+                        written = MathS.Pow(inner, (k * power).InnerSimplified);
+                        var signed = (sign * power).InnerSimplified;
+                        Entity whole = Number.Integer.Zero;
+                        var fraction = signed;
+                        if (signed is Number.Rational rational)
+                        {
+                            whole = Number.Integer.Create(rational.ERational.Numerator.Divide(rational.ERational.Denominator));
+                            fraction = (signed - whole).InnerSimplified;
+                        }
+                        var turned = MathS.Pow(@base, fraction) / MathS.Pow(inner, (k * fraction).InnerSimplified);
+                        var turn = whole == Number.Integer.Zero || c == Number.Integer.One ? turned : MathS.Pow(c, whole) * turned;
+                        constant = constant == Number.Integer.One ? turn : constant * turn;
+                        changed = true;
+                    }
+                    product = product == Number.Integer.One ? written : product * written;
+                }
+                return product;
+            }
+
+            // A product of constants and one whole power past 1 of something of x: the constant,
+            // the something and the power.
+            static (Entity Constant, Entity Inner, Number.Integer Power)? ConstantTimesAWholePower(Entity @base, Entity.Variable x)
+            {
+                Entity c = Number.Integer.One;
+                (Entity Inner, Number.Integer Power)? found = null;
+                foreach (var part in Mulf.LinearChildren(@base))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        c = c == Number.Integer.One ? part : c * part;
+                        continue;
+                    }
+                    if (found is not null || part is not Powf(var inner, Number.Integer { EInteger: var k } whole) || k.CompareTo(2) < 0)
+                        return null;
+                    // Of x by arithmetic alone: a power of a function of x is the rules' for that
+                    // function, which write its sign.
+                    if (inner.Nodes.Any(node => node.ContainsNode(x) && node is not (Sumf or Minusf or Mulf or Divf or Powf or Variable)))
+                        return null;
+                    found = (inner, whole);
+                }
+                return found is var (i, w) ? (c, i, w) : null;
+            }
+        }
+
+        /// <summary>
         /// A fractional or symbolic power of a monomial, distributed: <c>(c x^n)^b</c> is
         /// <c>c^b x^(n b)</c> for a positive <c>c</c> and a <c>n</c> that is not whole.
         /// </summary>

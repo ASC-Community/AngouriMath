@@ -913,6 +913,12 @@ namespace AngouriMath.Functions.Algebra
             // number `n`.
             if ((answer = IndefiniteIntegralSolver.SolveByAPowerOfXWithASymbolicExponent(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveBySubstitution(expr, x, integrateByParts)) is { }) return answer;
+            // A constant times a whole power of something of x under a power that is not whole, the
+            // whole power taken out with the factor constant where it is not zero:
+            // `x^2 (c (a + b x^2)^2)^(3/2)` is that factor times a polynomial. After the substitution
+            // search, which answers a power of a linear and an odd power of x beside a function of
+            // x^2 more shortly: `1/(c (a + b x)^2)^(5/2)` in 64 characters, where this writes 98.
+            if ((answer = IndefiniteIntegralSolver.SolveByTakingAWholePowerOutOfAPowerOfAProduct(expr, x, integrateByParts)) is { }) return answer;
             // A logarithmic derivative the substitution above could not read for a symbol in
             // an exponent: `(x^(n-1) - 1)/(x^n - n x)`.
             if ((answer = IndefiniteIntegralSolver.SolveALogarithmicDerivativeWithASymbolicExponent(expr, x)) is { }) return answer;
