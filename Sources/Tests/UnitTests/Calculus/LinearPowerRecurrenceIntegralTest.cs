@@ -27,6 +27,22 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("1/(x^3*(c + d*x)^(5/2))")]
         [InlineData("x/((a + b*x)^4*sqrt(c + d*x))")]
         public void ByTheRecurrence(string integrand)
+            => DifferentiatesBack(integrand, new[] { -2.4, -1.5, 0.3, 0.8, 1.5, 2.4 });
+
+        /// <summary>
+        /// Beside a root of a multiple of the same linear, where the determinant the recurrence
+        /// divides by is zero only as a value, <c>b a c - a b c</c>: it was divided by, and the
+        /// answer had no value anywhere.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1776">#1776</a>
+        /// </summary>
+        [Theory]
+        [InlineData("(a + b*x)^(-3)/sqrt(c*a + c*b*x)")]
+        [InlineData("1/(c*(a + b*x)^3)^(3/2)")]
+        [InlineData("1/(c*(a + b*x)^3)^(5/2)")]
+        public void BesideAMultipleOfTheSameLinear(string integrand)
+            => DifferentiatesBack(integrand, new[] { -1.2, -0.6, 0.3, 0.8, 1.5, 2.4 });
+
+        private static void DifferentiatesBack(string integrand, double[] points)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
@@ -35,7 +51,7 @@ namespace AngouriMath.Tests.Calculus
                 .Substitute("s", 0.6);
             var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
             var original = Pinned(integrand.ToEntity());
-            foreach (var at in new[] { -2.4, -1.5, 0.3, 0.8, 1.5, 2.4 })
+            foreach (var at in points)
             {
                 var want = original.Substitute("x", at).EvalNumerical();
                 var got = derivative.Substitute("x", at).EvalNumerical();
