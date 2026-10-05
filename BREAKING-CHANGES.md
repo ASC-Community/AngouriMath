@@ -947,6 +947,21 @@ the variable: `(a + i a tan(z))/(q - i q tan(z))^(3/2)`, from 4.3.2.1, ran past 
 | `"cot(c + d*x)^2*(k + q*tan(c + d*x))/(a + i*a*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | powers and logarithms of `a + i a tan(c + d x)`, of `a - i a tan(c + d x)` and of `tan(c + d x)` |
 | `"(a + i*a*tan(c + d*x))/(q - i*q*tan(c + d*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `-2 i a (q - i q tan(c + d x))^(-3/2)/(3d)`, written longer |
 
+### A symbolic power of one of two conjugate tangent sums is integrated in that sum
+
+**Answers where there were none.** `(a + i a tan(c + d x))^m (q - i q tan(c + d x))^4` and the rest
+of Rubi's 4.3.2.1 and 4.3.3.1 that put a symbolic power on one of `a + i a tan(z)` and
+`q - i q tan(z)` and a whole power on the other were declined or ran past the budget. The sum under
+a power that is not whole is the variable they are integrated in, and a symbol was not read as one;
+in that sum the other is a whole power of a linear, and the integral a polynomial in it beside a
+power of it ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a + i*a*tan(c + d*x))^m*(q - i*q*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | powers of `a + i a tan(c + d x)` from `m` to `m + 3`, each over its exponent |
+| `"(a + i*a*tan(c + d*x))^m*(q - i*q*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | `-i q (a + i a tan(c + d x))^m/(m d)` where `a` is not 0 |
+| `"(a + i*a*tan(c + d*x))^2*(k + p*tan(c + d*x))*(q - i*q*tan(c + d*x))^n".ToEntity().Integrate("x")` | `integral(...)` | powers of `q - i q tan(c + d x)` from `n` to `n + 2`, each over its exponent |
+
 ### A rational function with complex coefficients is integrated through its real and imaginary parts
 
 **Answers where there were none.** `1/((1 + i x)^2 (1 + x^2))` was declined: the rational
@@ -1584,6 +1599,20 @@ that this one answers now, so the rule ahead finishes where it used to decline. 
 out shorter and five longer -- `1/((c x)^(5/3) (a + b x^2)^(2/3))` was
 `-3/(2 a) x (c x)^(-5/3) (a + b x^2)^(1/3)` there, and is the same function written in `x^(1/3)`.
 2.5.0 declined all nine.
+
+### A binomial differential with a symbol in its exponents is integrated in Chebyshev's third case
+
+**Answers where there were none.** `1/(a + b x^n)^((1 + 2 n)/n)` and the rest of `x^m (a + b x^n)^p`
+with a symbol in the exponents where `(m + 1)/n + p + 1` is a whole number at most 0 were declined,
+but for `x^m` beside the binomial at 0. Rubi's reduction raises `p` by one,
+`J(p) = -x^(m+1) (a + b x^n)^(p+1)/(a n (p + 1)) + (m + 1 + n (p + 1))/(a n (p + 1)) J(p + 1)`, and as many
+steps of it as the number says reach `x^(m + 1) (a + b x^n)^(p + 1)/(a (m + 1))`. Rubi's 1.1.3.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a + b*x^n)^((1 + n)/n)".ToEntity().Integrate("x")` | `integral(...)` | `x (a + b x^n)^(-1/n)/a` |
+| `"1/(a + b*x^n)^((1 + 2*n)/n)".ToEntity().Integrate("x")` | `integral(...)` | `x (a + b x^n)^(-1 - 1/n)/(a (n + 1)) + n x (a + b x^n)^(-1/n)/(a^2 (n + 1))` |
 
 ### A power of a multiple of a quadratic's derivative beside a power of the quadratic is a binomial
 

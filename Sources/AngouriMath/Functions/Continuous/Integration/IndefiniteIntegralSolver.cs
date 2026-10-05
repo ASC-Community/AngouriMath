@@ -12980,6 +12980,118 @@ namespace AngouriMath.Functions.Algebra
             return null;
         }
 
+
+        /// <summary>
+        /// A binomial differential <c>x^m (a + b x^n)^p</c> with a symbol in its exponents, in
+        /// Chebyshev's third case at a whole <c>(m + 1)/n + p + 1 = -k</c> of at most 0: Rubi's
+        /// <c>1/(a + b x^n)^((1 + 2 n)/n)</c>.
+        /// </summary>
+        /// <remarks>
+        /// At <c>k = 0</c> the integral is <c>x^(m + 1) (a + b x^n)^(p + 1)/(a (m + 1))</c>, whose
+        /// derivative is the integrand there. Below it Rubi's reduction raises <c>p</c> by one,
+        /// <code>
+        /// J(p) = -x^(m + 1) (a + b x^n)^(p + 1)/(a n (p + 1)) + (m + 1 + n (p + 1))/(a n (p + 1)) J(p + 1)
+        /// </code>
+        /// and <c>k</c> steps of it reach the first. <see cref="SolveABinomialDifferential(Entity, Entity.Variable)"/> reads
+        /// the three cases with numbers for the exponents; with a symbol, a power of x beside the
+        /// binomial at <c>k = 0</c> is <see cref="SolveAsTheDerivativeOfAProductOfPowers"/>'s, which
+        /// leaves a power on its own and every <c>k</c> past 0, and those were declined: Rubi's
+        /// 1.1.3.2:3301-3304. The answer is differentiated back at sampled points before it is
+        /// returned.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveABinomialInTheThirdCaseWithASymbolicExponent(Entity expr, Entity.Variable x)
+        {
+            Entity constant = Number.Integer.One;
+            Entity m = Number.Integer.Zero;
+            Entity? sum = null, p = null;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                var (@base, exponent) = factor is Powf(var factorBase, var factorExponent) && !factorExponent.ContainsNode(x) ? (factorBase, factorExponent) : (factor, (Entity)Number.Integer.One);
+                if (underneath)
+                    exponent = -exponent;
+                if (@base == x)
+                {
+                    m = m + exponent;
+                    continue;
+                }
+                if (sum is not null || @base is not (Sumf or Minusf))
+                    return null;
+                (sum, p) = (@base, exponent);
+            }
+            if (sum is null || p is null || ABinomial(sum) is not var (a, b, n))
+                return null;
+            m = m.InnerSimplified;
+            p = p.InnerSimplified;
+            // A symbol among the exponents: with numbers only it is the binomial differential's.
+            if (!m.Vars.Any() && !n.Vars.Any() && !p.Vars.Any())
+                return null;
+            var s = Simplified((m + 1) / n + p + 1);
+            if (s is not Number.Integer { EInteger: var whole } || whole.Sign > 0 || whole.CompareTo(-6) < 0)
+                return null;
+            var k = -whole.ToInt32Checked();
+            static bool Zero(Entity value) => Functions.PartialFractions.IsZeroAsAValue(value);
+            if (Zero(m + 1) || Zero(a))
+                return null;
+            // Each coefficient in lowest terms over the symbols: the first step's
+            // `(-3) n/(a n (-3 - 1/n))` is `3 n/(a (3 n + 1))`.
+            var raisedX = MathS.Pow(x, Simplified(m + 1));
+            Entity? answer = null;
+            Entity coefficient = Number.Integer.One;
+            for (var j = 0; j < k; j++)
+            {
+                var raised = Simplified(p + j + 1);
+                if (Zero(raised))
+                    return null;
+                var term = LowestOverTheSymbols(-coefficient / (a * n * raised)) * raisedX * MathS.Pow(sum, raised);
+                answer = answer is null ? term : answer + term;
+                coefficient = LowestOverTheSymbols(coefficient * (m + 1 + n * raised) / (a * n * raised));
+            }
+            var last = LowestOverTheSymbols(coefficient / (a * (m + 1))) * raisedX * MathS.Pow(sum, Simplified(p + k + 1));
+            answer = constant * (answer is null ? last : answer + last);
+            return Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x) ? answer : null;
+
+            // `a + b x^n`, `b x^n + a`: the constant, the coefficient and the power, each free of x.
+            (Entity, Entity, Entity)? ABinomial(Entity binomial)
+            {
+                Entity? free = null, coefficient = null, power = null;
+                foreach (var term in Sumf.LinearChildren(binomial))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        if (free is not null)
+                            return null;
+                        free = term;
+                        continue;
+                    }
+                    if (coefficient is not null)
+                        return null;
+                    Entity c = Number.Integer.One;
+                    foreach (var part in Mulf.LinearChildren(term))
+                        if (!part.ContainsNode(x))
+                            c = c == Number.Integer.One ? part : c * part;
+                        else if (part == x && power is null)
+                            power = Number.Integer.One;
+                        else if (part is Powf(var powerBase, var powerExponent) && powerBase == x && !powerExponent.ContainsNode(x) && power is null)
+                            power = powerExponent;
+                        else
+                            return null;
+                    coefficient = c;
+                }
+                return free is null || coefficient is null || power is null ? null : (free, coefficient, power);
+            }
+
+            // A short exponent simplified: `p + 1 + 1` is `p + 2`, which the inner simplification
+            // leaves as written, and `1/n - (1 + n)/n + 1` is 0, which the simplification gives with
+            // `n` not 0 beside it.
+            static Entity Simplified(Entity exponent)
+                => exponent.InnerSimplified is var inner && (inner is Number || inner.Complexity > 40) ? inner : Functions.PartialFractions.Bare(inner.Simplify());
+        }
         /// <summary>
         /// Powers of two linears whose exponents sum to a whole number <c>-k</c>, <c>k &gt;= 2</c>,
         /// beside a polynomial of degree at most <c>k - 2</c>: <c>(a + b x)^m (c + d x)^(-3 - m)</c>,
@@ -26151,7 +26263,10 @@ namespace AngouriMath.Functions.Algebra
         /// Beside a second such sum of the same argument, <c>q - i q tan(z)</c>, which is linear in
         /// the first, the one under a power that is not whole is the variable and the other a whole
         /// power of a linear in it: <c>(a + i a tan(z))/(q - i q tan(z))^(3/2)</c>, Rubi's 4.3.2.1,
-        /// ran past the budget too.
+        /// ran past the budget too. A symbol for the power is not whole either:
+        /// <c>(a + i a tan(z))^m (q - i q tan(z))^4</c> is <c>S^(m - 1)</c> times a polynomial in
+        /// <c>S</c>, and was declined or past the budget with the rest of 4.3.2.1 and 4.3.3.1 that
+        /// write a symbolic power of one sum beside a whole one of the other.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </para>
         /// </remarks>
@@ -26207,9 +26322,10 @@ namespace AngouriMath.Functions.Algebra
                 sums.Add((node, sum, factor, inner));
             }
             // Two such sums, `a + i a tan(z)` and `c - i c tan(z)`, are each linear in the other: in
-            // the one under a power that is not whole the other is a whole power of a linear, where
-            // in the other it would be the root of one. Where both or neither are, declined.
-            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == sum && p is not Number.Integer);
+            // the one under a power that is not whole -- a fraction or a symbol -- the other is a
+            // whole power of a linear, where in the other it would be the root of one. Where both or
+            // neither are, declined.
+            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, var p) && b == sum && p is not Number.Integer && (p is Number.Rational || !p.ContainsNode(x)));
             var chosen = sums.Count switch
             {
                 1 => sums[0],
@@ -26224,8 +26340,7 @@ namespace AngouriMath.Functions.Algebra
             // Below the bar, or to a power that is not whole: a positive whole power alone is a
             // polynomial in the tangent.
             var below = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr)).Denominator;
-            if (!below.Nodes.Contains(@base)
-                && !expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == @base && p is not Number.Integer))
+            if (!below.Nodes.Contains(@base) && !NotWhole(@base))
                 return null;
             var s = Variable.CreateUnique(expr, "s_imaginary_tangent");
             var tangent = (s - constant) / coefficient;
@@ -26260,6 +26375,10 @@ namespace AngouriMath.Functions.Algebra
             var inS = (rewritten * coefficient / (s * (s - 2 * constant)) / rate).InnerSimplified;
             if (Integration.ComputeAsAQuestionOfItsOwn(inS, s, integrateByParts) is not { } inTermsOfS)
                 return null;
+            // A short sum of symbols simplified, which the power rule leaves as it wrote it:
+            // `S^(m + -1 + 1)/(m + -1 + 1)` is `S^m/m`.
+            inTermsOfS = inTermsOfS.Replace(node => node is Sumf or Minusf && !node.ContainsNode(s) && node.Vars.Any() && node.Complexity <= 20
+                ? node.Simplify() : node);
             return inTermsOfS.Substitute(s, @base);
         }
 

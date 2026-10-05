@@ -777,6 +777,10 @@ namespace AngouriMath.Functions.Algebra
             // of the powers raised by one -- `e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))` -- read off
             // the sum, for symbolic exponents too. Before the split, which loses it.
             if ((answer = IndefiniteIntegralSolver.SolveAsTheDerivativeOfAProductOfPowers(expr, x)) is { }) return answer;
+            // And a power of a binomial in x^n beside a power of x, with a symbol in the exponents,
+            // where Chebyshev's third case is a whole number at most 0: by Rubi's reduction, which
+            // the rule above does not read for a power on its own or past the first step.
+            if ((answer = IndefiniteIntegralSolver.SolveABinomialInTheThirdCaseWithASymbolicExponent(expr, x)) is { }) return answer;
             // Powers of two linears whose exponents sum to a whole number below -2, beside a polynomial of
             // low degree, by t = L1/L2: a power of t beside a polynomial. The rule above reads the sum -2.
             if ((answer = IndefiniteIntegralSolver.SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(expr, x)) is { }) return answer;
