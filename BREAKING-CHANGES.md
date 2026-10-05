@@ -411,8 +411,8 @@ square and the cube keep the Hermite reduction's answers. Rubi's 1.1.3.8 `P(x) (
 
 **Answers where there were none.** `sin(1 + 2/(1 + x))` was answered under `u = 1 + x`, and
 `sin(1 + 2/(1 - x))` was declined: the substitution search offered every sum in the integrand as a
-candidate and no difference, so `u = 1 - x` was never tried. A difference is offered now wherever a
-sum is ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+candidate and no difference, so `u = 1 - x` was never tried. A difference in the integrand as asked
+is offered now as a sum is ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
