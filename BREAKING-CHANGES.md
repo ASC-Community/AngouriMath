@@ -161,6 +161,22 @@ the division's; with it on, the rounding is the setting's own and stays
 | `"(-60.5)!"` at 30 digits, downcasting off | `5.86118478907722232671451280188E-81` | `2.93059239453861116335725639905E-81` |
 | `"abs(75 + 316.22776601683796i)"`, downcasting off | `325` | `325.000000000000026076735749…` |
 
+### A power of a constant below `1e-50` is no longer simplified to zero
+
+**Answers that were wrong.** Evaluation rounds a value within `1e-50` of an integer onto it, and
+inner simplification takes a node's value where that value is an exact number, so `1/pi^136`,
+about `2.4e-68`, became `0`, and so did whatever held it. A product, a quotient or a power of
+numbers that are not zero, or a sum of such numbers of one sign, is kept as written now. Its
+evaluation still rounds. `Simplify` raises constants to such powers on the way, and returned `0`
+for expressions that are not zero; the integrator, simplifying under a substitution, answered such
+integrals with `0` ([#1769](https://github.com/asc-community/AngouriMath/issues/1769)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/pi^136".ToEntity().InnerSimplified` | `0` | `1 / pi ^ 136` |
+| `"e^(-160)".ToEntity().InnerSimplified` | `0` | `e ^ (-160)` |
+| `"x^n*((1 - d^2)/x - x)^3*(1 + x^2 - d*x)/(x - d)/pi^2".ToEntity().Simplify()` | `0 provided not x - d = 0 and ...` | `x ^ n * ((1 - d ^ 2) / x - x) ^ 3 * (1 - d * x + x ^ 2) / (pi ^ 2 * (x - d))` |
+
 ### A rational function with symbols in it beside a root of a linear is split into partial fractions first
 
 **Answers where there were none.** `1/(x (1 + x^2) sqrt(a + b x))` was declined, while
