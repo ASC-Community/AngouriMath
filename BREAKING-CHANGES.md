@@ -417,6 +417,21 @@ of the third to the sixth degree, with a symbol in it, that written in `y = x + 
 | `"1/(3*a*b + 3*b^2*x + 3*b*c*x^2 + c^2*x^3)".ToEntity().Integrate("x")`, and its square | `integral(...)` | two logarithms and an arctangent in `x + b/c` |
 | `"x/(a + 8*x - 8*x^2 + 4*x^3 - x^4)".ToEntity().Integrate("x")`, and `1` over it | `integral(...)` | the antiderivative in `x - 1` |
 
+### The powers of a symbolic quadratic share their arms
+
+**Shorter answers.** The reduction that takes a power off `1/(a x^2 + b x + c)^n` put its arms on
+`4 a c - b^2` as written, and the rule for the first power put them on it expanded. A split hands a
+quadratic's powers to the integrator side by side, and the piecewise that adds their answers read
+`4 (-c - d) = 0` and `(-4) c + (-4) d = 0` as two conditions, so the arms multiplied. Both rules write
+the discriminant expanded now
+([#1788](https://github.com/asc-community/AngouriMath/issues/1788)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(x^2 - c - d)^3 + 1/(x^2 - c - d)".ToEntity().Integrate("x")` | 9 arms, 2,290 characters | 3 arms, 846 characters |
+| `"2*d^3*x^2/((x^2 - c - d)^3*(x^2 - c + d))".ToEntity().Integrate("x")` | `integral(...)`; 27 arms and 18,355 characters on the unreleased master | 9 arms, 6,265 characters |
+| `"x^2/(a*x^2 + b*x + c)^2".ToEntity().Integrate("x")` | `integral(...)`; 16 arms on the unreleased master | 10 arms |
+
 ### Half-odd powers of `a + i a sinh` are integrated by the half angle at which they are squares
 
 **Answers where there were none.** `x^3 sqrt(a + i a sinh(g + f x))` was declined, with the rest of
