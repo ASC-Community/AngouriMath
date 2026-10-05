@@ -25730,7 +25730,9 @@ namespace AngouriMath.Functions.Algebra
         /// cosine is positive, and was declined, with every other power of the pair whose exponents
         /// add up to a whole number: a root of a sum with the imaginary unit in it beside a root of the
         /// secant is read by no rule, and <c>e^(i x/2)/cos(x)</c>, what the positive sums leave, is
-        /// declined as well. Rubi's 4.3.1.2.
+        /// declined as well. Rubi's 4.3.1.2. A symbol for the powers is read too:
+        /// <c>(pe sec(z))^(-4 - n) (a + i a tan(z))^n</c> adds up to -4, and the integral in <c>w</c>
+        /// is <c>w^(n - 5) (w^2 + 1)^4</c>, a sum of powers.
         /// </para>
         /// <para>
         /// The constant is not written: the answer is the integrand times the antiderivative in
@@ -25747,7 +25749,7 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             Entity? argument = null;
             var plus = false;
-            Number.Rational? tangentPower = null, secantPower = null;
+            Entity? tangentPower = null, secantPower = null;
             Entity constant = Number.Integer.One;
             Entity varying = Number.Integer.One;
             foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
@@ -25758,11 +25760,13 @@ namespace AngouriMath.Functions.Algebra
                     continue;
                 }
                 varying = underneath ? varying / factor : varying * factor;
-                var (@base, power) = factor is Powf(var b, var p) && p.Evaled is Number.Rational r
-                    ? (b, r)
-                    : (factor, (Number.Rational)Number.Integer.One);
+                // A number or a symbol for the power: `(pe sec(z))^(-4 - n) (a + i a tan(z))^n`
+                // adds up to a whole number all the same.
+                var (@base, power) = factor is Powf(var b, var p) && !p.ContainsNode(x)
+                    ? (b, p.Evaled is Number.Rational r ? r : p)
+                    : (factor, (Entity)Number.Integer.One);
                 if (underneath)
-                    power = (Number.Rational)(-power);
+                    power = power is Number.Rational numeric ? -numeric : (-power).InnerSimplified;
                 if (TryReadAnImaginaryTangent(@base, x, out var tangentOf, out var isPlus))
                 {
                     if (tangentPower is not null || argument is not null && argument != tangentOf)
@@ -25783,22 +25787,34 @@ namespace AngouriMath.Functions.Algebra
             }
             if (tangentPower is null || secantPower is null || argument is null
                 || tangentPower is Number.Integer && secantPower is Number.Integer
-                || (tangentPower + secantPower) is not Number.Integer { EInteger: var whole } || !whole.CanFitInInt32()
+                || SumOfThePowers(tangentPower, secantPower) is not Number.Integer { EInteger: var whole } || !whole.CanFitInInt32()
                 || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
                 return null;
             var k = whole.ToInt32Checked();
-            var phase = plus ? tangentPower : (Number.Rational)(-tangentPower);
+            var phase = plus ? tangentPower : (-tangentPower).InnerSimplified;
             // In w = e^(i z): sec(z)^k e^(i n z) dz is (2 w)^k (w^2 + 1)^(-k) w^(n - 1) dw / i.
             var w = Variable.CreateUnique(expr, "w_exp");
-            var inW = k >= 0
+            // At k = 0 the power of w alone: `(w^2 + 1)^0` is 1 only where `w^2 + 1` is not 0, and
+            // the integral of `w^(n - 1)` with that condition beside it was declined.
+            var inW = k == 0
+                ? MathS.Pow(w, (phase - 1).InnerSimplified)
+                : k > 0
                 ? MathS.Pow(2, k) * MathS.Pow(w, (phase + k - 1).InnerSimplified) / MathS.Pow(MathS.Sqr(w) + 1, k)
                 : MathS.Pow(2, k) * MathS.Pow(MathS.Sqr(w) + 1, -k) * MathS.Pow(w, (phase + k - 1).InnerSimplified);
             if (Integration.ComputeAsAQuestionOfItsOwn(inW.InnerSimplified, w, integrateByParts) is not { } inWAnswer
                 || inWAnswer.Nodes.Any(node => node == MathS.NaN))
                 return null;
+            // A short sum of symbols simplified, which the power rule leaves as it wrote it:
+            // `w^(n + -4 - 1 + 1)/(n + -4 - 1 + 1)` is `w^(n - 4)/(n - 4)`.
+            inWAnswer = inWAnswer.Replace(node => node is Sumf or Minusf && !node.ContainsNode(w) && node.Vars.Any() && node.Complexity <= 20
+                ? node.Simplify() : node);
             var exponential = MathS.Pow(MathS.e, MathS.i * argument);
             var differentiatesBackTo = MathS.Pow(MathS.Sec(argument), k) * MathS.Pow(exponential, phase);
             return constant * varying * inWAnswer.Substitute(w, exponential) / (MathS.i * slope * differentiatesBackTo);
+
+            // `n + (-4 - n)` is -4, which the inner simplification leaves as written.
+            static Entity SumOfThePowers(Entity first, Entity second)
+                => (first + second).InnerSimplified is var sum && (sum is Number || sum.Complexity > 40) ? sum : sum.Simplify();
         }
 
         /// <summary>

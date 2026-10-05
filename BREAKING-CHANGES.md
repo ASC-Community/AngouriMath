@@ -824,6 +824,19 @@ wherever the cosine is negative; they are answered with the rest now
 | `"sqrt(c*sec(x))*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the integrand times an antiderivative in `e^(i x/2)` over its derivative |
 | `"(c*sec(x))^(5/2)/(a + i*a*tan(x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | the integrand times a power of `e^(i x)` |
 
+### A symbolic power of `a + i a tan` beside a power of the secant is integrated as an exponential
+
+**Answers where there were none.** `(k sec(c + d x))^(-4 - n) (a + i a tan(c + d x))^n` and the rest
+of Rubi's 4.3.1.2 whose two powers are symbols adding up to a whole number were declined: the powers
+were read as numbers only. In `w = e^(i z)` the integral is a power of `w` beside a whole power of
+`w^2 + 1`, a sum of powers of `w`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(k*sec(c + d*x))^(-4 - n)*(a + i*a*tan(c + d*x))^n".ToEntity().Integrate("x")` | `integral(...)` | the integrand times powers of `e^(i (c + d x))` from `n - 4` to `n + 4`, each over its exponent |
+| `"(a + i*a*tan(c + d*x))^n/(k*sec(c + d*x))^n".ToEntity().Integrate("x")` | `integral(...)` | the integrand over `i d n` |
+
 ### A rational function of the tangent beside a power of `a + i a tan` is integrated in that sum
 
 **Answers where there were none.** `(A + B tan(c + d x))/sqrt(a + i a tan(c + d x))` and the rest of
