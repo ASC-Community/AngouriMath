@@ -287,6 +287,20 @@ rules' already
 | `"asin(sqrt(1 + x) - sqrt(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `arcsin(sqrt(1 + x) - sqrt(x))` |
 | `"x^3*atan(-sqrt(x)+sqrt(1+x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in the arctangent |
 
+### A function of `x^n` for a symbolic `n` beside a power of `x` is integrated in a power of `x`
+
+**Answers where there were none.** `x^(-1 + 4n)/(a + b x^n + c x^(2n))` and the rest of Rubi's
+1.2.3.2 functions of `x^n` beside a power `x^m` with `(m + 1)/n` rational were declined: the
+substitution search reads `x^(2n)` as a power of `x^n` only for a number `n`, and offered nothing
+for `x^(n/2)`, which is not written. Under `u = x^(n/d)` every such power is a whole power of `u`,
+and `dx/x` is `(d/n) du/u` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^(-1+4*n)/(a+b*x^n+c*x^(2*n))".ToEntity().Integrate("x")` | `integral(...)` | powers of `x^n`, a logarithm and an arctangent of it, over `n` |
+| `"1/(x*(a+b*x^n+c*x^(2*n)))".ToEntity().Integrate("x")` | `integral(...)` | `ln(x^n)/(a n)`, a logarithm and an arctangent of `x^n` |
+| `"x^(-1+n/2)/(a+b*x^n+c*x^(2*n))".ToEntity().Integrate("x")` | `integral(...)` | arctangents of `x^(n/2)` over the roots of `a + b u + c u^2`, over `n` |
+
 ### Rational functions of `x` and `x^n` with symbols in them are taken apart
 
 **Answers where there were none.** The partial fractions took apart a denominator with symbols in it
