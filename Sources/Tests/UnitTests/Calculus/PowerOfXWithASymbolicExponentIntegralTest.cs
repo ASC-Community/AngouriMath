@@ -30,7 +30,23 @@ namespace AngouriMath.Tests.Calculus
         // Under u = x^(n/2).
         [InlineData("x^(-1 + n/2)/(a + b*x^n + c*x^(2*n))")]
         [InlineData("sqrt(a + b*x^n + c*x^(2*n))/x")]
-        public void IsIntegratedInAPowerOfX(string integrand)
+        // A perfect square, which stays one in u: its coefficients are not named apart.
+        [InlineData("1/(x*(a^2 + 2*a*b*x^n + b^2*x^(2*n))^(3/2))")]
+        public void IsIntegratedInAPowerOfX(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
+        /// <c>coth(a + b ln(c x^n))^3/x</c> is written through the exponential form as a rational
+        /// function of <c>x^(2 n b)</c> with <c>(e^a)^2 (c^b)^2</c> in it, and its integral in
+        /// <c>u</c> is asked with that constant named: carried through the partial fractions as
+        /// written it was past half a minute, where named it is under one. A regression makes
+        /// this crawl rather than fail.
+        /// </summary>
+        [Theory]
+        [InlineData("coth(a + b*ln(c*x^n))^3/x")]
+        [InlineData("tanh(a + b*ln(c*x^n))^3/x")]
+        public void ACompoundConstantIsNamedInThePower(string integrand) => DifferentiatesBack(integrand);
+
+        private static void DifferentiatesBack(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());

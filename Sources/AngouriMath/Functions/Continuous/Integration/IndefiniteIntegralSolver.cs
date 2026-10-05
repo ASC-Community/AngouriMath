@@ -24606,6 +24606,13 @@ namespace AngouriMath.Functions.Algebra
         {
             if (!expr.Nodes.Any(node => node is Powf(var @base, var exponent) && @base == x && exponent is not Number && !exponent.ContainsNode(x)))
                 return null;
+            // An algebraic function of the powers only. Under a function the power is the
+            // function's, and the search finds the substitution for it: `coth(a + b ln(c x^n))^3/x`
+            // is `t = ln(c x^n)`, and in `u = x^n` it was `coth(a + b ln(c u))^3/u`, the same
+            // question in another letter at the cost of a second search.
+            if (expr.Nodes.Any(node => node.ContainsNode(x)
+                    && node is not (Sumf or Minusf or Mulf or Divf or Variable) && !(node is Powf(_, var exponent) && !exponent.ContainsNode(x))))
+                return null;
             // Over one bar first, so that an x inside `(x (a + b x^n))^(-1)` is a factor to gather.
             var g = Patterns.GatherPowersOfOneBase(Functions.SingleQuotient.Combine(x * expr));
             var exponents = g.Nodes.OfType<Powf>().Where(power => power.Base == x && power.Exponent is not Number && !power.Exponent.ContainsNode(x))
@@ -24633,10 +24640,58 @@ namespace AngouriMath.Functions.Algebra
                     // Divided by u through the gathering, where `u/u` left in is a quotient the
                     // chain declines; the constant `d/n` outside it.
                     var overU = Functions.PartialFractions.Bare(Patterns.GatherPowersOfOneBase(Functions.SingleQuotient.Combine(inU) * MathS.Pow(u, -1)).InnerSimplified);
-                    if (Integration.ComputeIndefiniteIntegral(overU, u, integrateByParts) is not { } inTermsOfU)
+                    // Each constant with a symbol in it that is not built from symbols by arithmetic
+                    // and whole powers -- `e^a`, `c^b`, a function of the symbols -- named while the
+                    // integral in u is asked, and written back into what it gives:
+                    // `coth(a + b ln(c x^n))^3/x` arrives here as
+                    // `((e^a)^2 (c^b)^2 x^(2 n b) + 1)^3/(...)^3/x`, whose integral in u was past half a
+                    // minute with `(e^a)^2 (c^b)^2` carried through the partial fractions, and is under
+                    // one in `k^2 m^2`. Those only: a coefficient named whole hides what relates it to
+                    // the others, and `a^2 + 2 a b u + b^2 u^2` named so is a quadratic with no double
+                    // root, answered wrongly.
+                    var named = new List<(Variable Name, Entity Value)>();
+                    var namedOverU = NameTheAtoms(overU);
+                    if (Integration.ComputeIndefiniteIntegral(namedOverU, u, integrateByParts) is not { } inTermsOfU)
                         return null;
+                    foreach (var (name, value) in named)
+                        inTermsOfU = inTermsOfU.Substitute(name, value);
                     var answer = (d / unit * inTermsOfU).Substitute(u, MathS.Pow(x, step)).InnerSimplified;
                     return answer.Nodes.Any(node => node is Number.Complex { IsNaN: true }) ? null : answer;
+
+                    // Arithmetic and whole powers taken apart; a root of something with u in it keeps
+                    // its exponent; any other constant with a symbol in it is an atom, and named.
+                    Entity NameTheAtoms(Entity e)
+                    {
+                        switch (e)
+                        {
+                            case Number or Variable:
+                                return e;
+                            case Sumf(var left, var right):
+                                return NameTheAtoms(left) + NameTheAtoms(right);
+                            case Minusf(var left, var right):
+                                return NameTheAtoms(left) - NameTheAtoms(right);
+                            case Mulf(var left, var right):
+                                return NameTheAtoms(left) * NameTheAtoms(right);
+                            case Divf(var above, var below):
+                                return NameTheAtoms(above) / NameTheAtoms(below);
+                            case Powf(var @base, Number.Integer whole):
+                                return MathS.Pow(NameTheAtoms(@base), whole);
+                            case Powf(var @base, var exponent) when @base.ContainsNode(u) && !exponent.ContainsNode(u):
+                                return MathS.Pow(NameTheAtoms(@base), exponent);
+                            default:
+                                return !e.ContainsNode(u) && e.Vars.Any() ? Named(e) : e;
+                        }
+                    }
+
+                    Entity Named(Entity value)
+                    {
+                        foreach (var (name, earlier) in named)
+                            if (earlier == value)
+                                return name;
+                        var fresh = Variable.CreateUnique(overU + named.Aggregate((Entity)Number.Integer.Zero, (sum, pair) => sum + pair.Name), "k_named");
+                        named.Add((fresh, value));
+                        return fresh;
+                    }
                 }
             return null;
         }
