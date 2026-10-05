@@ -403,6 +403,23 @@ up to a third of such an answer, and of every answer built on one, as `1/(x (a +
 | `"1/(1 + q*x^2)".ToEntity().Integrate("x")` | four arms, the third `-2/(2 q x)` on `4 q = 0` | three, without it |
 | `"1/(x*(a + b*x))".ToEntity().Integrate("x")` | four arms, the second an arctangent on `-a^2 > 0` | three, without it |
 
+### A constant with `i` in it is put in lowest terms when a rational function is split
+
+**Shorter answers.** `(c + d tan(x))^(5/2)/(a + i a tan(x))^2` is `2 d^3 t^2/((t^2 - c - i d)^3 (t^2 - c + i d))`
+over `a^2` in `t = sqrt(c + d tan(x))`, and splitting that into partial fractions carries `c + i d` through
+every step of the inverse modulo the cube of its quadratic. The polynomial gcd reads coefficients in the
+rationals, and `i` is not one, so no step cancelled anything: the coefficients came out with `d^572` in them,
+and the answer at 813,000 characters, which the default precision could not evaluate. A constant with `i`
+among its coefficients is written as its real and imaginary parts over a real denominator now, the three
+without a common factor
+([#1788](https://github.com/asc-community/AngouriMath/issues/1788)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c + d*tan(x))^(5/2)/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 813,280 characters on the unreleased master | 83,614 characters |
+| `"(c + d*tan(x))^(3/2)/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 470,119 characters on the unreleased master | 77,377 characters |
+| `"(c + d*tan(x))^(1/2)/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 258,943 characters on the unreleased master | 71,266 characters |
+
 ### A polynomial with symbols in it that is a binomial or an even quartic in a shifted variable is integrated in it
 
 **Answers where there were none.** `1/(c^2 x^3 + 3 b c x^2 + 3 b^2 x + 3 a b)` was left unevaluated,
