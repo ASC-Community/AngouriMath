@@ -847,6 +847,19 @@ namespace AngouriMath.Functions.Algebra
                     ?? Integration.ComputeIndefiniteIntegral(inY, y, integrateByParts)) is { } inTheShiftedVariable)
                 return inTheShiftedVariable.Substitute(y, (x + shift).InnerSimplified);
 
+            // A written factor that is a sum of two squares, `P^2 + Q^2` with the greater of their
+            // degrees two, beside a repeated factor: it is `(P - i Q)(P + i Q)`, and over those two
+            // the split by residues above reads every factor. `1 + u^2` beside a root of a
+            // linear is `(t^2 - c)^2 + d^2` under `t = sqrt(c + d u)`, a quartic nothing splits, and
+            // the Hermite reduction below solved for its numerators with the symbols in every entry:
+            // `(c + d tan(x))^(3/2)/(a + b tan(x))^2` ran past two minutes. Once: what this writes
+            // has no such factor left.
+            if (Mulf.LinearChildren(denominator).Any(f => f.ContainsNode(x) && f is Powf(_, Number.Integer { EInteger.Sign: > 0 } e) && e != Number.Integer.One)
+                && OverTheConjugatesOfASumOfTwoSquares(denominator, x) is { } overTheConjugates
+                && (SolveByPartialFractions(numerator / overTheConjugates, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(numerator / overTheConjugates, x, integrateByParts)) is { } overConjugates)
+                return overConjugates;
+
             // A denominator with a written repeated factor takes the Hermite reduction first:
             // the rational part of the answer in one linear solve, and what is left is a proper
             // fraction over a squarefree denominator for the splits below. `(1 + x^2)/(x (1 + x^3)^2)`
@@ -14145,6 +14158,43 @@ namespace AngouriMath.Functions.Algebra
                 Entity constantPart = content.IsConstant ? monomial : lowest.IsZero ? content.ToEntity(variables) : content.ToEntity(variables) * monomial;
                 product *= power == Number.Integer.One ? constantPart * primitivePart : MathS.Pow(constantPart, power) * MathS.Pow(primitivePart, power);
                 changed = true;
+            }
+            return changed ? product : null;
+        }
+
+        /// <summary>
+        /// <paramref name="denominator"/> with every written factor <c>P^2 + Q^2</c>, <c>P</c> and
+        /// <c>Q</c> polynomials in <paramref name="x"/> the greater of whose degrees is two, written
+        /// as <c>(P - i Q)(P + i Q)</c>, with its power; <see langword="null"/> where there is none,
+        /// or where nothing in the quotient is a symbol: with numbers alone the split over the reals
+        /// reads a biquadratic as it is. Not of the first degree: <c>(a + b x)^2 + k^2</c> is a
+        /// quadratic every rule reads, by an arctangent.
+        /// </summary>
+        private static Entity? OverTheConjugatesOfASumOfTwoSquares(Entity denominator, Entity.Variable x)
+        {
+            static int? DegreeOfAPolynomial(Entity expr, Entity.Variable x)
+                => !expr.ContainsNode(x) ? 0
+                : TreeAnalyzer.TryGetPolynomial(expr, x, out var read) && read.Count > 0 && read.Values.All(coefficient => !coefficient.ContainsNode(x))
+                    && read.Keys.All(power => power.Sign >= 0 && power.CanFitInInt32())
+                ? read.Keys.Max()!.ToInt32Unchecked() : null;
+            if (!denominator.Vars.Any(symbol => symbol != x))
+                return null;
+            var changed = false;
+            Entity product = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+            {
+                var (@base, power) = factor is Powf(var b, Number.Integer { EInteger.Sign: > 0 } p) ? (b, p) : (factor, Number.Integer.One);
+                if (@base is Sumf(Powf(var first, Number.Integer(2)), Powf(var second, Number.Integer(2)))
+                    && (first.ContainsNode(x) || second.ContainsNode(x))
+                    && DegreeOfAPolynomial(first, x) is { } firstDegree && DegreeOfAPolynomial(second, x) is { } secondDegree
+                    && System.Math.Max(firstDegree, secondDegree) == 2)
+                {
+                    var (minus, plus) = (first - MathS.i * second, first + MathS.i * second);
+                    product *= power == Number.Integer.One ? minus * plus : MathS.Pow(minus, power) * MathS.Pow(plus, power);
+                    changed = true;
+                    continue;
+                }
+                product *= factor;
             }
             return changed ? product : null;
         }
