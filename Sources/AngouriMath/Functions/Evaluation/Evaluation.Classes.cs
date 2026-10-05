@@ -241,28 +241,103 @@ namespace AngouriMath
         private static (bool Always, Entity? Undecided) Contradiction(Entity predicate)
         {
             var tests = new List<(Entity Quantity, int Relation)>();
+            var choices = new List<Entity>();
             foreach (var conjunct in Conjuncts(predicate))
                 if (SignTest(conjunct) is { } test)
                     tests.Add(test);
+                else if (conjunct is Orf)
+                    choices.Add(conjunct);
             Entity? undecided = null;
             for (var i = 0; i < tests.Count; i++)
                 for (var j = i + 1; j < tests.Count; j++)
+                    switch (Against(tests[i], tests[j]))
+                    {
+                        case (true, _):
+                            return (true, null);
+                        case (false, { } quantity):
+                            undecided = quantity;
+                            break;
+                    }
+            // A disjunction beside them contradicts them where each of its arms does: the arm a
+            // quadratic off the real line owes, `not D in RR or D > 0`, against `D = 0` is false
+            // for every value, and against `D < 0` false for a real one and NaN off the real
+            // line. Read as neither, the sum of the antiderivatives over three powers of one
+            // quadratic kept every pairing of their arms, 45 for
+            // `2 d^3 t^2/((t^2 - c - i d)^3 (t^2 - c + i d))` where 9 hold every case.
+            // https://github.com/asc-community/AngouriMath/issues/1788
+            foreach (var choice in choices)
+            {
+                var (always, quantity, read) = (true, (Entity?)null, true);
+                foreach (var arm in Disjuncts(choice))
                 {
-                    if (tests[i].Quantity != tests[j].Quantity)
+                    if (SignTest(arm) is not { } armTest)
+                    {
+                        read = false;
+                        break;
+                    }
+                    var (armAlways, armQuantity) = (false, (Entity?)null);
+                    foreach (var test in tests)
+                        switch (Against(armTest, test))
+                        {
+                            case (true, _):
+                                armAlways = true;
+                                break;
+                            case (false, { } q):
+                                armQuantity ??= q;
+                                break;
+                        }
+                    if (armAlways)
                         continue;
-                    var (r1, r2) = (tests[i].Relation, tests[j].Relation);
-                    // 0 is "= 0", 2 is "not = 0", 1 and -1 the signs.
-                    if (r1 == 0 && r2 != 0 || r2 == 0 && r1 != 0)
-                        return (true, null);
-                    if (r1 * r2 == -1)
-                        undecided = tests[i].Quantity;
+                    if (armQuantity is null || quantity is not null && quantity != armQuantity)
+                    {
+                        read = false;
+                        break;
+                    }
+                    (always, quantity) = (false, armQuantity);
                 }
+                if (!read)
+                    continue;
+                if (always)
+                    return (true, null);
+                undecided = quantity;
+            }
             return (false, undecided);
+        }
+
+        /// <summary>
+        /// Two tests of one quantity <c>q</c>: in <c>Always</c> where no value satisfies both,
+        /// and otherwise the quantity where a real one satisfies neither together and one off the
+        /// real line makes a sign NaN; null where they do not test one quantity or agree.
+        /// </summary>
+        private static (bool Always, Entity? Undecided) Against((Entity Quantity, int Relation) first, (Entity Quantity, int Relation) second)
+        {
+            if (first.Quantity != second.Quantity)
+                return (false, null);
+            var (r1, r2) = (first.Relation, second.Relation);
+            // 0 is "= 0", 2 is "not = 0", 1 and -1 the signs, 3 "not in RR": zero is real.
+            if (r1 == 0 && r2 != 0 || r2 == 0 && r1 != 0)
+                return (true, null);
+            if (r1 * r2 == -1 || r1 == 3 && r2 is 1 or -1 || r2 == 3 && r1 is 1 or -1)
+                return (false, first.Quantity);
+            return (false, null);
+        }
+
+        private static IEnumerable<Entity> Disjuncts(Entity condition)
+        {
+            if (condition is Orf(var left, var right))
+            {
+                foreach (var disjunct in Disjuncts(left))
+                    yield return disjunct;
+                foreach (var disjunct in Disjuncts(right))
+                    yield return disjunct;
+            }
+            else
+                yield return condition;
         }
 
         /// <summary>Whether <paramref name="predicate"/> has a conjunct testing <paramref name="quantity"/> against zero.</summary>
         private static bool TestsTheSignOf(Entity predicate, Entity quantity)
-            => Conjuncts(predicate).Any(conjunct => SignTest(conjunct) is var (q, relation) && q == quantity && relation != 2);
+            => Conjuncts(predicate).Any(conjunct => SignTest(conjunct) is var (q, relation) && q == quantity && relation is 0 or 1 or -1);
 
         /// <summary>
         /// A comparison of a quantity with zero as the quantity, with any constant factor taken
@@ -281,11 +356,13 @@ namespace AngouriMath
                 Lessf(var zero, var q) when zero == Integer.Zero => (q, 1),
                 Lessf(var q, var zero) when zero == Integer.Zero => (q, -1),
                 Greaterf(var zero, var q) when zero == Integer.Zero => (q, -1),
+                Notf(Inf(var q, SpecialSet.Reals)) => (q, 3),
                 _ => null,
             };
             if (read is not var (quantity, relation))
                 return null;
-            // The constant factor out: `4 f (-d)` is `f (-d)`, and `2 f` is `f`.
+            // The constant factor out: `4 f (-d)` is `f (-d)`, and `2 f` is `f`. A real one, which
+            // leaves `not in RR` as it is.
             if (quantity is Mulf(Real factor, var rest) && !factor.IsZero)
                 (quantity, relation) = (rest, relation is 1 or -1 && factor.IsNegative ? -relation : relation);
             return (quantity, relation);

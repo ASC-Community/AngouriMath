@@ -433,6 +433,20 @@ whatever `a` is ([#718](https://github.com/asc-community/AngouriMath/issues/718)
 | `"sqrt(a + i*a*sinh(g + f*x))/x".ToEntity().Integrate("x")` | `integral(...)` | `Shi` and `Chi` of half of `f x` |
 | `"1/sqrt(a + i*a*sinh(g + f*x))".ToEntity().Integrate("x")` | `integral(...)` | arctangents and logarithms of `e^((g + f x)/2)` |
 
+### The arm for a quadratic off the real line excludes the arms on the sign of its discriminant
+
+**Shorter answers.** An antiderivative over a quadratic with `i` among its coefficients has an arm
+off the real line, `not D in RR or D > 0`, beside the arms `D = 0` and `D < 0`. A sum of two such
+answers pairs their arms and drops a pair whose conditions contradict each other, and that arm was
+read against neither, though `D = 0` asks `D` to be real and `D < 0` is NaN off the real line. Those
+pairs are dropped now
+([#1788](https://github.com/asc-community/AngouriMath/issues/1788)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x^2/(x^2 + a + i*b)^3".ToEntity().Integrate("x")` | 10 arms, and no value at a real `x`; 7 arms and 2,722 characters on the unreleased master | 3 arms, 1,069 characters |
+| `"1/(x^2 + i*a)^2 + 1/(x^2 + i*a)^3".ToEntity().Integrate("x")` | 9 arms, and no value at a real `x`; 7 arms and 1,994 characters on the unreleased master | 3 arms, 779 characters |
+
 ### The hyperbolic functions have antiderivatives, and so does anything rational in `e^(k x)`
 
 An integrand rational in `e^(k x)` becomes a rational function of one variable under

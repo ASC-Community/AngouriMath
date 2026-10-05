@@ -100,6 +100,33 @@ namespace AngouriMath.Tests.Core
         }
 
         /// <summary>
+        /// The arm an antiderivative owes a quadratic off the real line, <c>not q in RR or q &gt; 0</c>,
+        /// against the arms on the sign of <c>q</c>: an equality asks <c>q</c> to be real, and a
+        /// strict sign is NaN off the real line, so neither pairing is ever true, and a sum of
+        /// such piecewises stays at three cases. The antiderivative of
+        /// <c>2 d^3 t^2/((t^2 - c - i d)^3 (t^2 - c + i d))</c> kept 45.
+        /// https://github.com/asc-community/AngouriMath/issues/1788
+        /// </summary>
+        [Fact]
+        public void TheArmOffTheRealLineExcludesTheSignArms()
+        {
+            const string arms = "piecewise(1 provided not q in RR or q > 0, 2 provided q = 0, 3 provided q < 0)";
+            var sum = (arms.ToEntity() + arms.ToEntity()).InnerSimplified;
+            Assert.Equal(3, CaseCount(sum));
+            Assert.Equal(Number.Integer.Create(2), sum.Substitute("q", 1).Evaled);
+            Assert.Equal(Number.Integer.Create(4), sum.Substitute("q", 0).Evaled);
+            Assert.Equal(Number.Integer.Create(6), sum.Substitute("q", -1).Evaled);
+            Assert.Equal(Number.Integer.Create(2), sum.Substitute("q", "i").Evaled);
+
+            var chain = sum;
+            for (var i = 0; i < 4; i++)
+                chain = (chain + arms.ToEntity()).InnerSimplified;
+            Assert.Equal(3, CaseCount(chain));
+            Assert.Equal(Number.Integer.Create(6), chain.Substitute("q", "1 + i").Evaled);
+            Assert.Equal(Number.Integer.Create(18), chain.Substitute("q", -2).Evaled);
+        }
+
+        /// <summary>
         /// A quantity is read up to a constant factor: <c>f = 0</c> and <c>not 2 f = 0</c>
         /// contradict each other, which is how the integrator's case for a vanishing leading
         /// coefficient meets the cases that divide by it.
