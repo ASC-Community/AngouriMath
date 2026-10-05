@@ -3174,7 +3174,10 @@ namespace AngouriMath.Core.Transformations.Matching
                 bound => new Powf(bound["c"], bound["d"])
                     * new Powf(bound["a"], 1 - (Number)bound["d"]),
                 Soundness.SoundUnderAssumptions,
-                description: "(c / a) ^ d * a = c ^ d * a ^ (1 - d), for numeric c and d",
+                // Splitting the power of the quotient moves the branch for a negative a unless d
+                // is whole, or an odd root over a positive c: see AReciprocalPowerSplits.
+                when: bound => Functions.Patterns.AReciprocalPowerSplits((Number)bound["c"], (Number)bound["d"]),
+                description: "(c / a) ^ d * a = c ^ d * a ^ (1 - d), for numeric c and d, d whole or an odd root over a positive c",
                 // The two numbers are leaves and 1 - d folds to one; the base is matched twice
                 // and written once, and the second power is one node more than the quotient it
                 // replaces: the delta is 1 - |a|, nothing at a leaf and a shrink beyond it.
@@ -3190,7 +3193,11 @@ namespace AngouriMath.Core.Transformations.Matching
                 bound => new Powf(bound["c"], bound["d"])
                     * new Powf(bound["a"], (Number)bound["e"] - (Number)bound["d"]),
                 Soundness.SoundUnderAssumptions,
-                description: "(c / a) ^ d * a ^ e = c ^ d * a ^ (e - d), for numeric c, d and e",
+                // As above, and the two powers of a combine only where both read a negative a the
+                // same way: an odd root beside a principal one does not.
+                when: bound => Functions.Patterns.AReciprocalPowerSplits((Number)bound["c"], (Number)bound["d"])
+                               && (bound["d"] is Integer || Functions.Patterns.IsWholeOrAnOddRoot((Number)bound["e"])),
+                description: "(c / a) ^ d * a ^ e = c ^ d * a ^ (e - d), for numeric c, d and e, d whole or an odd root over a positive c",
                 // The three numbers are leaves and e - d folds to one; the base is matched twice
                 // and written once, and the quotient goes: the delta is -1 - |a|, at most -2.
                 growth: RewriteRuleGrowth.Collects),
