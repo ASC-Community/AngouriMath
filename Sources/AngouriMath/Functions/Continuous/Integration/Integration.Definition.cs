@@ -781,6 +781,11 @@ namespace AngouriMath.Functions.Algebra
             // the polynomial written in powers of the linear at its root: the part the power
             // divides goes over the rest alone. Before the split, so that the whole polynomial
             // is reduced once rather than each of its terms.
+            // A linear over a linear beside the root of a cubic binomial, or a quadratic over a
+            // quadratic, at the coefficients where the integral is elementary: Rubi's
+            // `(1 + x + sqrt(3))/((1 + x - sqrt(3)) sqrt(1 + x^3))`. Before the reduction over the
+            // linear, which writes it as `1` and `2 sqrt(3)` over the linear, neither elementary.
+            if ((answer = IndefiniteIntegralSolver.SolveAPseudoEllipticQuotientOverTheRootOfACubicBinomial(expr, x)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByReducingThePolynomialOverALinearFactor(expr, x, integrateByParts)) is { }) return answer;
             if (expr is Entity.Sumf or Entity.Minusf
                 && (answer = IndefiniteIntegralSolver.SolveBySplittingSum(expr, x, integrateByParts)) is { })

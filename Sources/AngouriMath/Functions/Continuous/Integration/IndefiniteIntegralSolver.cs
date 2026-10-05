@@ -4385,6 +4385,108 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A linear over a linear, or a quadratic over a quadratic, beside the reciprocal of the
+        /// square root of a cubic binomial <c>a + b x^3</c>, at the coefficients where its
+        /// integral is elementary: Rubi's <c>(1 + x + sqrt(3))/((1 + x - sqrt(3)) sqrt(1 + x^3))</c>,
+        /// <c>(c - 2 d x)/((c + d x) sqrt(c^3 + 4 d^3 x^3))</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The curve <c>y^2 = a + b x^3</c> is elliptic, and the integral of <c>(e + f x)/((c + d x) y)</c>
+        /// is elementary only where the coefficients make it so. Rubi's 1.3.3 names those places,
+        /// and at each the integral is a constant times <c>int du/(1 + K u^2)</c> at
+        /// <c>u = (1 + p x)/y</c>, or <c>(1 + p x)^2/y</c>:
+        /// <code>
+        /// b c^3 = 4 a d^3,  2 d e + c f = 0:   (2 e/d)          int 1/(1 + 3 a u^2),        u = (1 + 2 d x/c)/y
+        /// b c^3 = -8 a d^3, 2 d e + c f = 0:   (-2 e/(9 d))     int 1/(1 - (a/9) u^2),      u = (1 + f x/e)^2/y
+        /// b^2 c^6 - 20 a b c^3 d^3 - 8 a^2 d^6 = 0, 6 a d^4 e = c f (b c^3 - 22 a d^3), k = (d e + 2 c f)/(c f):
+        ///                                      ((1 + k) e/d)    int 1/(1 + (3 + 2k) a u^2), u = (1 + (1 + k) d x/c)/y
+        /// </code>
+        /// and over a quadratic, <c>(f + g x + h x^2)/((c + d x + e x^2) y)</c> where
+        /// <c>b g^3 = 8 a h^3</c>, <c>g^2 + 2 f h = 0</c> and <c>b d f + b c g = 4 a e h</c>:
+        /// <c>-(g/e) int 1/(1 - M u^2)</c>, <c>M = (b d f - 2 a e h)/(2 e h)</c>, at <c>u = (1 + 2 h x/g)/y</c>.
+        /// Each conditions is decided at sampled values of the symbols, the inner integral is an
+        /// arctangent or an inverse hyperbolic tangent by the sign of its constant, and the answer
+        /// is differentiated back at sampled points before it is returned.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAPseudoEllipticQuotientOverTheRootOfACubicBinomial(Entity expr, Entity.Variable x)
+        {
+            var (numerator, denominator) = Functions.SingleQuotient.Of(expr);
+            Entity? radicand = null;
+            Entity below = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+                if (factor is Powf(var @base, Number.Rational half) && half.ERational.Equals(ERational.Create(1, 2)) && @base.ContainsNode(x))
+                {
+                    if (radicand is not null)
+                        return null;
+                    radicand = @base;
+                }
+                else
+                    below *= factor;
+            if (radicand is null || numerator.Nodes.Any(node => node is Powf(_, Number.Rational r) && r is not Number.Integer && node.ContainsNode(x))
+                || !TreeAnalyzer.TryGetPolynomial(radicand, x, out var cubic) || cubic.Count != 2
+                || !cubic.TryGetValue(EInteger.Zero, out var a) || !cubic.TryGetValue(EInteger.FromInt32(3), out var b)
+                || !TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) || !TreeAnalyzer.TryGetPolynomial(below, x, out var under))
+                return null;
+            Entity Coefficient(Dictionary<EInteger, Entity> read, int power)
+                => read.TryGetValue(EInteger.FromInt32(power), out var value) ? value : Number.Integer.Zero;
+            int Degree(Dictionary<EInteger, Entity> read) => read.Count == 0 ? -1 : read.Keys.Max()!.ToInt32Unchecked();
+            if (Degree(above) > 2 || Degree(under) is not (1 or 2) || Degree(above) > Degree(under))
+                return null;
+            // A condition is decided as a value, at pinned symbols where nothing simplifies it
+            // to zero -- `6 a d^4 e - c f (b c^3 - 22 a d^3)` at `c = 1 - sqrt(3)` and
+            // `d = (b/a)^(1/3)` is one -- since the answer is checked by its derivative anyway.
+            static bool Zero(Entity condition) => Functions.PartialFractions.IsZeroAsAValue(condition);
+            var y = MathS.Sqrt(radicand);
+            var u = Variable.CreateUnique(expr, "u_pseudo");
+            // int du/(1 + K u^2), by the sign of K.
+            Entity OverOnePlus(Entity k)
+            {
+                var kLowest = LowestOverTheSymbols(k);
+                return BySign(kLowest,
+                    MathS.Arctan(MathS.Sqrt(kLowest) * u) / MathS.Sqrt(kLowest),
+                    MathS.Hyperbolic.Artanh(MathS.Sqrt(LowestOverTheSymbols(-kLowest)) * u) / MathS.Sqrt(LowestOverTheSymbols(-kLowest)));
+            }
+            Entity? answer = null;
+            if (Degree(under) == 1)
+            {
+                var (e, f) = (Coefficient(above, 0), Coefficient(above, 1));
+                var (c, d) = (Coefficient(under, 0), Coefficient(under, 1));
+                if (Zero(d * e - c * f) || Zero(c))
+                    return null;
+                if (Zero(b * MathS.Pow(c, 3) - 4 * a * MathS.Pow(d, 3)) && Zero(2 * d * e + c * f))
+                    answer = (2 * e / d * OverOnePlus(3 * a)).Substitute(u, (1 + 2 * d * x / c) / y);
+                else if (!Zero(e) && Zero(b * MathS.Pow(c, 3) + 8 * a * MathS.Pow(d, 3)) && Zero(2 * d * e + c * f))
+                    answer = (-2 * e / (9 * d) * OverOnePlus(-a / 9)).Substitute(u, MathS.Pow(1 + f * x / e, 2) / y);
+                else if (!Zero(f)
+                    && Zero(MathS.Pow(b, 2) * MathS.Pow(c, 6) - 20 * a * b * MathS.Pow(c, 3) * MathS.Pow(d, 3) - 8 * MathS.Pow(a, 2) * MathS.Pow(d, 6))
+                    && Zero(6 * a * MathS.Pow(d, 4) * e - c * f * (b * MathS.Pow(c, 3) - 22 * a * MathS.Pow(d, 3))))
+                {
+                    var k = LowestOverTheSymbols((d * e + 2 * c * f) / (c * f));
+                    answer = ((1 + k) * e / d * OverOnePlus((3 + 2 * k) * a)).Substitute(u, (1 + (1 + k) * d * x / c) / y);
+                }
+            }
+            else
+            {
+                var (f, g, h) = (Coefficient(above, 0), Coefficient(above, 1), Coefficient(above, 2));
+                var (c, d, e) = (Coefficient(under, 0), Coefficient(under, 1), Coefficient(under, 2));
+                if (!Zero(g) && !Zero(h)
+                    && Zero(b * MathS.Pow(g, 3) - 8 * a * MathS.Pow(h, 3)) && Zero(MathS.Pow(g, 2) + 2 * f * h)
+                    && Zero(b * d * f + b * c * g - 4 * a * e * h) && !Zero(b * d * f - 2 * a * e * h))
+                    answer = (-g / e * OverOnePlus(-(b * d * f - 2 * a * e * h) / (2 * e * h))).Substitute(u, (1 + 2 * h * x / g) / y);
+            }
+            if (answer is null)
+                return null;
+            answer = answer.InnerSimplified;
+            bool holds;
+            using (MathS.Settings.DowncastingEnabled.Set(false))
+                holds = Functions.PartialFractions.HoldsAtSampledPoints(answer.Differentiate(x), expr, x);
+            return holds ? answer : null;
+        }
+
+        /// <summary>
         /// A root of a quadratic binomial beside another, <c>1/((A + B x^2)^(1/3) (C + D x^2))</c>
         /// with <c>B C + 3 A D = 0</c> or <c>B C - 9 A D = 0</c>, and
         /// <c>1/((A + B x^2)^(1/4) (C + D x^2))</c> with <c>B C - 2 A D = 0</c>: the ratios at which
