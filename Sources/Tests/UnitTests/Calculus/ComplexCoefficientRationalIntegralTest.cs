@@ -26,9 +26,10 @@ namespace AngouriMath.Tests.Calculus
     {
         private static readonly double[] Points = { -0.7, 0.3, 0.9, 1.3, 2.2 };
 
-        private static void DifferentiatesBack(string integrand)
+        private static void DifferentiatesBack(string integrand) => DifferentiatesBack(integrand, integrand.ToEntity().Integrate("x"));
+
+        private static void DifferentiatesBack(string integrand, Entity integral)
         {
-            var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());
             var derivative = integral.Substitute("C", 0).Differentiate("x");
             Entity original = integrand.ToEntity();
@@ -79,6 +80,27 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("(A + B*tan(x))/(a + i*a*tan(x))^2")]
         [InlineData("1/(a + i*a*tan(c + d*x))^3")]
         public void APowerOfAPlusIATangent(string integrand) => DifferentiatesBack(integrand);
+
+        /// <summary>
+        /// A root of a tangent sum over the square of <c>a + i a tan</c>: under the root it is
+        /// <c>2 d^3 t^2/((t^2 - c - i d)^3 (t^2 - c + i d))</c> over <c>a^2</c>, and the split of that
+        /// carries <c>c + i d</c> through the inverse modulo the cube of its quadratic. Nothing with
+        /// <c>i</c> in it was put in lowest terms, and the coefficients came out with <c>d^572</c>
+        /// in them: answers of 259,000, 470,000 and 813,000 characters, which the default precision
+        /// could not evaluate.
+        /// https://github.com/asc-community/AngouriMath/issues/1788
+        /// </summary>
+        [Theory]
+        [InlineData("(c + d*tan(x))^(1/2)/(a + i*a*tan(x))^2")]
+        [InlineData("(c + d*tan(x))^(3/2)/(a + i*a*tan(x))^2")]
+        [InlineData("(c + d*tan(x))^(5/2)/(a + i*a*tan(x))^2")]
+        public void ARootOfATangentSumOverTheSquareOfAPlusIATangent(string integrand)
+        {
+            var integral = integrand.ToEntity().Integrate("x");
+            var length = integral.Stringize().Length;
+            Assert.True(length < 150_000, $"the antiderivative of {integrand} is {length} characters long");
+            DifferentiatesBack(integrand, integral);
+        }
 
         /// <summary>
         /// A power of a quotient of linears with the imaginary unit in it, beside a power of x the
