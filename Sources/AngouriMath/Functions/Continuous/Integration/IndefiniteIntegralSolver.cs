@@ -16849,6 +16849,254 @@ namespace AngouriMath.Functions.Algebra
             => VanishesIdentically(b * b - Number.Integer.Create(4) * a * c);
 
         /// <summary>
+        /// Four nested roots with a closed form, Rubi's 1.3.3: <c>sqrt(a + b sqrt(c + d x^2))</c>
+        /// with <c>a^2 = b^2 c</c>; <c>sqrt(c x^2 + d sqrt(a + b x^4))/sqrt(a + b x^4)</c> with
+        /// <c>c^2 = b d^2</c>; <c>1/((a + b x^n) sqrt(c x^2 + d (a + b x^n)^(2/n)))</c>; and
+        /// <c>sqrt(a x^2 + b x sqrt(c + d x^2))/(x sqrt(c + d x^2))</c> with <c>a^2 = b^2 d</c> and
+        /// <c>b^2 c + a = 0</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The first is <c>2 b^2 d x^3/(3 S^(3/2)) + 2 a x/sqrt(S)</c> for the root <c>S</c>. The
+        /// second and third are the derivative of <c>w = x/sqrt(S)</c> over <c>1 - 2c w^2</c> and
+        /// <c>1 - c w^2</c>: <c>sqrt(S)/R</c> for the inner root <c>R</c> is <c>d w'/(1 - 2c w^2)</c>, since
+        /// <c>S' = 2 c x S/(d R)</c> where <c>c^2 = b d^2</c>, and <c>1 - 2c w^2 = d R/S</c>. The fourth is
+        /// <c>sqrt(2) b/a</c> times <c>1/sqrt(1 + t^2/a)</c> in <c>t = a x + b sqrt(c + d x^2)</c>. The
+        /// integral in <c>w</c> or <c>t</c> is asked of the integrator with its coefficient named, and
+        /// the answer is differentiated back before it is returned. Rubi's 1.3.2 and the Welz and
+        /// Timofeev suites declined all of them.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveANestedRootByItsClosedForm(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            // The factors with x in them as powers, those below the bar negated, and the constant
+            // in front: `sqrt(S)/sqrt(P)` arrives as `sqrt(S) (sqrt(P))^(-1)`.
+            Entity constant = Number.Integer.One;
+            var factors = new List<Entity>();
+            var (above, below) = Functions.SingleQuotient.Of(expr);
+            foreach (var (side, sign) in new[] { (above, 1), (below, -1) })
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    if (!factor.ContainsNode(x))
+                    {
+                        if (factor == Number.Integer.One)
+                            continue;
+                        var k = sign > 0 ? factor : 1 / factor;
+                        constant = constant == Number.Integer.One ? k : constant * k;
+                        continue;
+                    }
+                    factors.Add(factor is Powf(var b, var p) && !p.ContainsNode(x)
+                        ? MathS.Pow(b, sign > 0 ? p : (-p).InnerSimplified)
+                        : sign > 0 ? factor : MathS.Pow(factor, Number.Integer.MinusOne));
+                }
+            if (factors.Count is < 1 or > 3)
+                return null;
+            var half = Number.Rational.Create(1, 2);
+            var answer = factors.Count switch
+            {
+                1 => ARootOfAConstantPlusARootOfAQuadratic(factors[0]),
+                2 => ARootOverTheRootInsideIt(factors) ?? AReciprocalOfTheRootInsideIt(factors),
+                _ => AProductRootOverTheRootInsideIt(factors),
+            };
+            if (answer is null)
+                return null;
+            answer = constant == Number.Integer.One ? answer : constant * answer;
+            return Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x) ? answer : null;
+
+            // sqrt(a + b sqrt(c + d x^2)), a^2 = b^2 c: 2 b^2 d x^3/(3 S^(3/2)) + 2 a x/sqrt(S).
+            Entity? ARootOfAConstantPlusARootOfAQuadratic(Entity factor)
+            {
+                if (factor is not Powf(var sum, var power) || power != half || ConstantPlusMultipleOfARoot(sum) is not var (a, b, inner)
+                    || Coefficients(inner, 0, 2) is not [var c, var d])
+                    return null;
+                if (!Functions.PartialFractions.IsZeroAsAValue(a * a - b * b * c))
+                    return null;
+                return 2 * b * b * d * MathS.Pow(x, 3) / (3 * MathS.Pow(sum, Number.Rational.Create(3, 2))) + 2 * a * x / MathS.Pow(sum, half);
+            }
+
+            // sqrt(c x^2 + d sqrt(P))/sqrt(P), P = a + b x^4, c^2 = b d^2: d G(x/sqrt(S)), G' = 1/(1 - 2c w^2).
+            Entity? ARootOverTheRootInsideIt(List<Entity> pair)
+            {
+                if (pair.Find(f => f is Powf(_, var p) && p == half) is not Powf(var sum, _)
+                    || pair.Find(f => f is Powf(_, var p) && p == -half) is not Powf(var radicand, _)
+                    || Coefficients(radicand, 0, 4) is not [_, var b]
+                    || SquareOfXPlusMultipleOfRoot(sum, radicand, half) is not var (c, d)
+                    || !Functions.PartialFractions.IsZeroAsAValue(c * c - b * d * d))
+                    return null;
+                return InW(d, 2 * c, x / MathS.Pow(sum, half));
+            }
+
+            // 1/((a + b x^n) sqrt(c x^2 + d (a + b x^n)^(2/n))): (1/a) H(x/sqrt(S)), H' = 1/(1 - c w^2).
+            Entity? AReciprocalOfTheRootInsideIt(List<Entity> pair)
+            {
+                if (pair.Find(f => f is Powf(_, var p) && p == -half) is not Powf(var sum, _)
+                    || pair.Find(f => f is Powf(_, var p) && p == Number.Integer.MinusOne) is not Powf(var outer, _)
+                    || Sumf.LinearChildren(outer) is not { Count: 2 } terms)
+                    return null;
+                var a = terms.FirstOrDefault(t => !t.ContainsNode(x));
+                var power = terms.FirstOrDefault(t => t.ContainsNode(x)) is { } t2 && ConstantTimesAWholePowerOfX(t2) is var (_, n) ? n : null;
+                if (a is null || power is null)
+                    return null;
+                if (SquareOfXPlusMultipleOfRoot(sum, outer, Number.Rational.Create(2, power.EInteger)) is not var (c, _))
+                    return null;
+                return InW(1 / a, c, x / MathS.Pow(sum, half));
+            }
+
+            // sqrt(a x^2 + b x sqrt(Q))/(x sqrt(Q)), Q = c + d x^2, a^2 = b^2 d, b^2 c + a = 0:
+            // sqrt(2) b/a K(a x + b sqrt(Q)), K' = 1/sqrt(1 + t^2/a).
+            Entity? AProductRootOverTheRootInsideIt(List<Entity> three)
+            {
+                if (three.Find(f => f is Powf(_, var p) && p == half) is not Powf(var sum, _)
+                    || three.Find(f => f is Powf(_, var p) && p == -half) is not Powf(var radicand, _)
+                    || !three.Any(f => f is Powf(var bx, var p) && bx == x && p == Number.Integer.MinusOne)
+                    || Coefficients(radicand, 0, 2) is not [var c, var d])
+                    return null;
+                // a x^2 + b x sqrt(Q), as two terms.
+                Entity? a = null, b = null;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (ConstantTimesAWholePowerOfX(term) is var (k, two) && two.EInteger.Equals(EInteger.FromInt32(2)))
+                        a = k;
+                    else if (MultipleOf(term, MathS.Pow(x, 1) * MathS.Pow(radicand, half)) is { } m)
+                        b = m;
+                    else
+                        return null;
+                }
+                if (a is null || b is null || !Functions.PartialFractions.IsZeroAsAValue(a * a - b * b * d)
+                    || !Functions.PartialFractions.IsZeroAsAValue(b * b * c + a))
+                    return null;
+                var t = Variable.CreateUnique(expr, "t_nested");
+                var reciprocal = Lowest(1 / a);
+                Entity q = reciprocal.Vars.Any() ? Variable.CreateUnique(expr, "q_nested") : reciprocal;
+                if (Integration.ComputeIndefiniteIntegral(1 / MathS.Sqrt(1 + MathS.Pow(t, 2) * q), t, integrateByParts) is not { } inT)
+                    return null;
+                var inX = inT.Substitute(t, a * x + b * MathS.Pow(radicand, half));
+                return MathS.Sqrt(2) * b / a * (q is Variable named ? inX.Substitute(named, reciprocal) : inX);
+            }
+
+            // multiple times the integral of 1/(1 - q w^2) at w = at, with q named while it is asked.
+            Entity? InW(Entity multiple, Entity coefficient, Entity at)
+            {
+                // Named only where it has symbols in it: a number put in afterwards is not folded,
+                // and `sqrt(4 q)` at `q = 2` was written `2/1 * 2^(1/2)`.
+                var w = Variable.CreateUnique(expr, "w_nested");
+                var lowest = Lowest(coefficient);
+                Entity q = lowest.Vars.Any() ? Variable.CreateUnique(expr, "q_nested") : lowest;
+                if (Integration.ComputeIndefiniteIntegral(1 / (1 - q * MathS.Pow(w, 2)), w, integrateByParts) is not { } inW)
+                    return null;
+                var written = inW.Substitute(w, at);
+                return Lowest(multiple) * (q is Variable named ? written.Substitute(named, lowest) : written);
+            }
+
+            // A constant in lowest terms over its symbols, and a number as the number it is: the
+            // lowest terms of `2` are `2/1`.
+            static Entity Lowest(Entity constant)
+                => constant.Vars.Any() ? Functions.PartialFractions.InLowestTermsOverTheSymbols(constant) : constant.InnerSimplified;
+
+            // c x^2 + d R^power, with R as given: (c, d).
+            (Entity C, Entity D)? SquareOfXPlusMultipleOfRoot(Entity sum, Entity root, Entity power)
+            {
+                Entity? c = null, d = null;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (ConstantTimesAWholePowerOfX(term) is var (k, two) && two.EInteger.Equals(EInteger.FromInt32(2)))
+                        c = c is null ? k : null;
+                    else if (MultipleOf(term, MathS.Pow(root, power)) is { } m)
+                        d = d is null ? m : null;
+                    else
+                        return null;
+                }
+                return c is null || d is null ? null : (c, d);
+            }
+
+            // a + b sqrt(Q), with Q holding x: (a, b, Q).
+            (Entity A, Entity B, Entity Inner)? ConstantPlusMultipleOfARoot(Entity sum)
+            {
+                Entity? a = null, b = null, inner = null;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        a = a is null ? term : a + term;
+                        continue;
+                    }
+                    if (inner is not null)
+                        return null;
+                    Entity k = Number.Integer.One;
+                    foreach (var part in Mulf.LinearChildren(term))
+                        if (!part.ContainsNode(x))
+                            k = k == Number.Integer.One ? part : k * part;
+                        else if (inner is null && part is Powf(var r, var p) && p == half)
+                            inner = r;
+                        else
+                            return null;
+                    b = k;
+                }
+                return a is null || b is null || inner is null ? null : (a, b, inner);
+            }
+
+            // term = m times the given product of factors with x, m free of x.
+            Entity? MultipleOf(Entity term, Entity product)
+            {
+                var wanted = Mulf.LinearChildren(product).Where(f => f != Number.Integer.One).ToList();
+                Entity m = Number.Integer.One;
+                foreach (var part in Mulf.LinearChildren(term))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        m = m == Number.Integer.One ? part : m * part;
+                        continue;
+                    }
+                    var at = wanted.FindIndex(w => w == part || (part == x && w is Powf(var wb, var wp) && wb == x && wp == Number.Integer.One));
+                    if (at < 0)
+                        return null;
+                    wanted.RemoveAt(at);
+                }
+                return wanted.Count == 0 ? m : null;
+            }
+
+            // c x^n with n whole: (c, n); a constant is n = 0.
+            (Entity Coefficient, Number.Integer Power)? ConstantTimesAWholePowerOfX(Entity term)
+            {
+                Entity k = Number.Integer.One;
+                Number.Integer? n = null;
+                foreach (var part in Mulf.LinearChildren(term))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        k = k == Number.Integer.One ? part : k * part;
+                        continue;
+                    }
+                    if (n is not null)
+                        return null;
+                    n = part == x ? Number.Integer.One : part is Powf(var bx, Number.Integer e) && bx == x ? e : null;
+                    if (n is null)
+                        return null;
+                }
+                return (k, n ?? Number.Integer.Zero);
+            }
+
+            // The coefficients of a polynomial in x with terms of the two degrees given and no other.
+            Entity[]? Coefficients(Entity polynomial, int low, int high)
+            {
+                Entity? lowCoefficient = null, highCoefficient = null;
+                foreach (var term in Sumf.LinearChildren(polynomial))
+                {
+                    if (ConstantTimesAWholePowerOfX(term) is not var (k, n))
+                        return null;
+                    if (n.EInteger.Equals(EInteger.FromInt32(low)))
+                        lowCoefficient = lowCoefficient is null ? k : lowCoefficient + k;
+                    else if (n.EInteger.Equals(EInteger.FromInt32(high)))
+                        highCoefficient = highCoefficient is null ? k : highCoefficient + k;
+                    else
+                        return null;
+                }
+                return lowCoefficient is null || highCoefficient is null ? null : new[] { lowCoefficient, highCoefficient };
+            }
+        }
+
+        /// <summary>
         /// A square root of a perfect square in <paramref name="x"/> is the modulus:
         /// <c>sqrt(x^2)</c> is <c>|x|</c>, which for a real <c>x</c> is <c>sgn(x) x</c>, and
         /// <c>sqrt(a (x + h)^2)</c> is <c>sqrt(a) sgn(x + h) (x + h)</c> for a positive number
