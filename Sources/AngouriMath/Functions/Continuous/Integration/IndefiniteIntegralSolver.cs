@@ -26357,7 +26357,7 @@ namespace AngouriMath.Functions.Algebra
                 // and not a subexpression anyone wrote: `1 + 2x^2` and `1 + 2x^2 + 4x^3` are
                 // the left-nested partial sums of Hearn's radicand `1 + 2x^2 + 4x^3 + x^4`,
                 // and each was half a second of rewriting and simplifying to be refused.
-                if (u is Sumf && IsOnlyAPartialSum(expr, u))
+                if (u is Sumf or Minusf && IsOnlyAPartialSum(expr, u))
                     continue;
 
                 // A candidate that does not vary with x is no substitution at all, and its
@@ -27238,8 +27238,14 @@ namespace AngouriMath.Functions.Algebra
                     case var special when IsASpecialFunction(special) && TheDifferentialCanBeThere(special, expr, x):
                         candidates.Add(node);
                         break;
-                    case Sumf(var aug, var add) when !rational && !large && node.Complexity <= LargestSumOffered:
-                        if (aug.ContainsNode(x) || add.ContainsNode(x)) candidates.Add(node); // Linear expressions ax + b
+                    // A difference as a sum: `1 - x` below the bar of `sin(1 + 2/(1 - x))` is the
+                    // substitution that `1 + x` is for `sin(1 + 2/(1 + x))`, and was never offered.
+                    // In the question asked only: below it every substitution writes differences,
+                    // `x = (u^2 - c)/d`, and offering them was two fifths more search on Rubi's
+                    // `(c + d x)^(5/2)/(x (a + b x)^2)`, past the harness's patience.
+                    case Sumf or Minusf when !rational && !large && node.Complexity <= LargestSumOffered
+                        && (node is Sumf || Integration.AnsweringTheQuestionAsked):
+                        if (node.DirectChildren.Any(child => child.ContainsNode(x))) candidates.Add(node); // Linear expressions ax + b
                         break;
                 }
             // Sort by complexity - try simpler substitutions first
