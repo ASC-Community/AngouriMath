@@ -13059,8 +13059,11 @@ namespace AngouriMath.Functions.Algebra
             var k = -sum.ToInt32Checked();
             if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var b1, out var a1) || !TreeAnalyzer.TryGetPolyLinear(second, x, out var b2, out var a2))
                 return null;
+            // Zero as a value, not only as a number: `x + a/b` beside `a c + b c x` is one linear
+            // twice, their cross term `a/b (b c) - a c` has symbols in it and is zero, and the
+            // formula below divided by it -- an answer with no value anywhere.
             var d = (a1 * b2 - a2 * b1).InnerSimplified;
-            if (d.Evaled is Number.Complex { IsZero: true })
+            if (Functions.PartialFractions.IsZeroAsAValue(d))
                 return null;
             Entity product = Number.Integer.One;
             foreach (var (factor, _) in polynomial)

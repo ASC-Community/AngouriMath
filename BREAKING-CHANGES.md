@@ -161,6 +161,21 @@ the division's; with it on, the rounding is the setting's own and stays
 | `"(-60.5)!"` at 30 digits, downcasting off | `5.86118478907722232671451280188E-81` | `2.93059239453861116335725639905E-81` |
 | `"abs(75 + 316.22776601683796i)"`, downcasting off | `325` | `325.000000000000026076735749…` |
 
+### One linear twice is not two linear powers
+
+**Answers that had no value.** `(a c + b c x)^(-3 - 2 p) (f + g x) (a^2 + 2 a b x + b^2 x^2)^p` was answered
+on the unreleased master with `(1/b a b c - a c)^(-2)` in it, which is zero to a negative power: the
+answer had no value anywhere. The square is written as a power of its root, `(x + a/b)^(2 p)`, beside
+`a c + b c x`, which is `b c (x + a/b)`, and the rule for two linear powers whose exponents sum to a whole
+number divides by the two linears' cross term, declining where it is zero -- tested as a number, which
+with symbols in it it is not. It is tested as a value now, and the integral is answered by the rules
+after it
+([#1793](https://github.com/asc-community/AngouriMath/issues/1793)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
+
 ### A power of a constant below `1e-50` is no longer simplified to zero
 
 **Answers that were wrong.** Evaluation rounds a value within `1e-50` of an integer onto it, and
