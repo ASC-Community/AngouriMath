@@ -10117,8 +10117,11 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var b, out var a) || !TreeAnalyzer.TryGetPolyLinear(second, x, out var d, out var c))
                 return null;
+            // Zero as a value, not only as written: for `a + b x` beside `c a + c b x` it is
+            // `b a c - a b c`, and the recurrence divided by it -- an answer with no value anywhere.
+            // https://github.com/asc-community/AngouriMath/issues/1776
             var determinant = (b * c - a * d).InnerSimplified;
-            if (determinant.Evaled is Number.Complex { IsZero: true })
+            if (Functions.PartialFractions.IsZeroAsAValue(determinant))
                 return null;
             // The polynomial in powers of the first linear: x = (t - a)/b.
             var t = Variable.CreateUnique(expr, "t_linear");

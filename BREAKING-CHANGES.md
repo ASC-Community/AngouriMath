@@ -1433,13 +1433,17 @@ polynomial, is integrated now by the recurrence
 `int L1^m L2^n = L1^(m + 1) L2^(n + 1)/((m + 1) D) - (m + n + 2) d/((m + 1) D) int L1^(m + 1) L2^n`,
 `D = b c - a d`, down to `int L2^n/L1`, the polynomial written in powers of `L1` first. The
 answers are the same functions as master's where master gave one, written as powers of the two
-linears ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+linears ([#718](https://github.com/asc-community/AngouriMath/issues/718)). Beside a multiple of the
+same linear, where `D` is zero only as a value -- `b a c - a b c` for `a + b x` beside
+`c a + c b x` -- the recurrence is not taken: it divided by `D`, and the answer had no value anywhere
+([#1776](https://github.com/asc-community/AngouriMath/issues/1776)).
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
 | `"1/((a + b*x)^4*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `a/b + x` beside `sqrt(c + d x)`, and the arctangent or logarithm `1/((a + b x) sqrt(c + d x))` integrates to |
 | `"(p + q*x + r*x^2 + s*x^3)/((a + b*x)^5*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | the same, term by term |
 | `"x/((a + b*x)^4*sqrt(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"(a + b*x)^(-3)/sqrt(c*a + c*b*x)".ToEntity().Integrate("x")` | `integral(...)` | `-2/(5 b) (a + b x)^(-2) (c a + c b x)^(-1/2)` |
 
 ### A polynomial over a power of a linear beside the root of a quadratic is integrated
 
