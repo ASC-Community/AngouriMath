@@ -990,6 +990,23 @@ the variable: `(a + i a tan(z))/(q - i q tan(z))^(3/2)`, from 4.3.2.1, ran past 
 | `"cot(c + d*x)^2*(k + q*tan(c + d*x))/(a + i*a*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | powers and logarithms of `a + i a tan(c + d x)`, of `a - i a tan(c + d x)` and of `tan(c + d x)` |
 | `"(a + i*a*tan(c + d*x))/(q - i*q*tan(c + d*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `-2 i a (q - i q tan(c + d x))^(-3/2)/(3d)`, written longer |
 
+### Half-odd powers of two conjugate tangent sums are integrated as the exponential they make
+
+**Answers in time where they were not.** `(a + i a tan(e + f x))^(7/2) (A + B tan(e + f x))/(c - i c tan(e + f x))^(9/2)`
+ran past the budget, with the rest of Rubi's 4.3.2.1 and 4.3.3.1 that put half-odd powers on both sums: the
+rule for one of the sums integrates in it beside a whole power of the other, and with both half-odd neither
+is. `a + i a tan(z)` is `a sec(z) e^(i z)` on the real line and `c - i c tan(z)` is `c sec(z) e^(-i z)`, so
+two powers of them adding up to a whole number `k` are a constant on every interval where they are
+continuous times `sec(z)^k e^(i (p - q) z)`, rational in `w = e^(i z)` beside any function of the tangent,
+the secant, the cosine or the sine of `z`. They are integrated in `w` now, and the answer is the integrand
+times the antiderivative in `w` over what that differentiates back to
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(a+i*a*tan(pe+f*x))^(7/2)*(A+B*tan(pe+f*x))/(c-i*c*tan(pe+f*x))^(9/2)".ToEntity().Integrate("x")` | `integral(...)`; past 20 s on the unreleased master | in a tenth of a second |
+| `"1/((a+i*a*tan(pe+f*x))^(7/2)*(c-i*c*tan(pe+f*x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past 20 s on the unreleased master | the same |
+
 ### A symbolic power of one of two conjugate tangent sums is integrated in that sum
 
 **Answers where there were none.** `(a + i a tan(c + d x))^m (q - i q tan(c + d x))^4` and the rest
