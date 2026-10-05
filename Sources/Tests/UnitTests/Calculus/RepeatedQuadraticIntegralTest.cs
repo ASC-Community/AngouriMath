@@ -5,6 +5,7 @@
 // Website: https://am.angouri.org.
 //
 
+using System.Linq;
 using AngouriMath;
 using AngouriMath.Extensions;
 using Xunit;
@@ -129,6 +130,38 @@ namespace AngouriMath.Tests.Calculus
             Assert.DoesNotContain("integral(", answer);
             Assert.Contains("piecewise", answer);
             Assert.Contains("arctan", answer);
+        }
+
+        /// <summary>
+        /// The reduction's arms are on the discriminant as the first power's rule writes it,
+        /// expanded: a split hands a quadratic's powers to the integrator side by side, and the
+        /// piecewise that adds their answers read <c>4 (-c - d) = 0</c> and
+        /// <c>(-4) c + (-4) d = 0</c> as two conditions, so their arms multiplied. The second
+        /// row came back with 27 arms and 18,355 characters, where nine hold every case.
+        /// </summary>
+        [Theory]
+        [InlineData("1 / (x ^ 2 - c - d) ^ 3 + 1 / (x ^ 2 - c - d)", 3)]
+        [InlineData("2 * d ^ 3 * x ^ 2 / ((x ^ 2 - c - d) ^ 3 * (x ^ 2 - c + d))", 9)]
+        [InlineData("x ^ 2 / (a * x ^ 2 + b * x + c) ^ 2", 10)]
+        public void ThePowersOfAQuadraticShareTheirArms(string integrand, int arms)
+        {
+            var answer = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", answer.Stringize());
+            var most = answer.Nodes.OfType<Entity.Piecewise>().Max(piecewise => piecewise.Cases.Count());
+            Assert.True(most <= arms, $"the antiderivative of {integrand} has {most} arms: {answer}");
+            // One set of values on each side of the discriminant's sign.
+            foreach (var (a, b, c, d) in new[] { (1.3, 0.4, 0.7, 0.4), (0.9, -0.3, -2.0, 0.5) })
+            {
+                Entity Pinned(Entity e) => e.Substitute("a", a).Substitute("b", b).Substitute("c", c).Substitute("d", d);
+                var derivative = Pinned(answer.Substitute("C", 0)).Differentiate("x");
+                var original = Pinned(integrand.ToEntity());
+                foreach (var point in new[] { 0.2, 1.4, -2.3 })
+                {
+                    var expected = original.Substitute("x", point).EvalNumerical().RealPart.EDecimal.ToDouble();
+                    var actual = derivative.Substitute("x", point).EvalNumerical().RealPart.EDecimal.ToDouble();
+                    Assert.Equal(expected, actual, 8);
+                }
+            }
         }
 
         // Already answered before this rule, by the power rule and by partial fractions, and
