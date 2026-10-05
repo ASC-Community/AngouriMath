@@ -758,9 +758,13 @@ namespace AngouriMath.Functions.Algebra
             // repeated linear over the rationals, and read as a quadratic with `a` in it the
             // split computed its digits modulo `(1 + u^2)^6` with `a` in every coefficient, for
             // an answer twice the length. Once: a primitive factor has no content to take out.
+            // And the powers of x it takes out joined to the ones beside them: `x (a x + b x^3 + c x^5)^2`
+            // is `x^3 (a + b x^2 + c x^4)^2`, and written `x x^2 (a + b x^2 + c x^4)^2` the splits
+            // below read `x` and `x^2` as two factors and the search ran past a minute.
             if (WithTheContentOutOfEachSumFactor(denominator, x) is { } primitive
-                && (SolveByPartialFractions(numerator / primitive, x, integrateByParts)
-                    ?? Integration.ComputeIndefiniteIntegral(numerator / primitive, x, integrateByParts)) is { } overPrimitives)
+                && Patterns.GatherPowersOfOneBase(numerator / primitive) is var overThePrimitives
+                && (SolveByPartialFractions(overThePrimitives, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(overThePrimitives, x, integrateByParts)) is { } overPrimitives)
                 return overPrimitives;
 
             // Written factors with a symbol in them that share a factor, or repeat one inside,
