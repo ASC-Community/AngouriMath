@@ -10698,7 +10698,7 @@ namespace AngouriMath.Functions.Algebra
                 var r = LowestOverTheSymbols(d / b);
                 answer = answer + BySign(r,
                     ofTheLogarithm * MathS.Ln((1 + MathS.Sqrt(r) * root) / (1 - MathS.Sqrt(r) * root)) / MathS.Sqrt(r),
-                    2 * ofTheLogarithm * MathS.Arctan(MathS.Sqrt(-r) * root) / MathS.Sqrt(-r));
+                    2 * ofTheLogarithm * MathS.Arctan(MathS.Sqrt(-r) * root) / MathS.Sqrt(-r), alsoOffTheRealLine: true);
             }
             if (ofTheThirdKind != Number.Integer.Zero)
             {
@@ -10708,7 +10708,7 @@ namespace AngouriMath.Functions.Algebra
                 var rho = LowestOverTheSymbols(-atThePole[1] / atThePole[0]);
                 answer = answer + BySign(rho,
                     -2 * ofTheThirdKind * MathS.Arctan(MathS.Sqrt(rho) * root) / MathS.Sqrt(rho),
-                    -ofTheThirdKind * MathS.Ln((1 + MathS.Sqrt(-rho) * root) / (1 - MathS.Sqrt(-rho) * root)) / MathS.Sqrt(-rho));
+                    -ofTheThirdKind * MathS.Ln((1 + MathS.Sqrt(-rho) * root) / (1 - MathS.Sqrt(-rho) * root)) / MathS.Sqrt(-rho), alsoOffTheRealLine: true);
             }
             return (constantBelow == Number.Integer.One ? answer : answer / constantBelow).InnerSimplified;
         }
@@ -11316,10 +11316,21 @@ namespace AngouriMath.Functions.Algebra
         // where it holds, for a quantity with symbols in it, as `1/(a - x^2)` is answered. A
         // number times even powers of symbols has the number's sign wherever the symbols are
         // real and not zero, which is the generic case: `-b^2` in `a^2 - b^2 x^2` is negative.
-        private static Entity BySign(Entity quantity, Entity wherePositive, Entity whereNegative)
-            => SignOfANumberTimesEvenPowers(quantity) is { } sign
-                ? (sign < 0 ? whereNegative : wherePositive)
-                : MathS.Piecewise((wherePositive, new Greaterf(quantity, Number.Integer.Zero)), (whereNegative, new Lessf(quantity, Number.Integer.Zero)));
+        // Off the real line neither sign holds, the complex numbers not being ordered, and the
+        // piecewise had no arm there: `1/(sqrt(x) sqrt(a + b x) (1 - i x))` was answered with
+        // nothing at any point. Where the caller's form for a positive quantity uses nothing about
+        // its root but `sqrt(z)^2 = z`, as an arctangent or a logarithm does and an arcsine does
+        // not, it is an antiderivative wherever the quantity is not zero, whatever its phase -- the
+        // sign only chooses the form that is real on the real line -- and the caller says so with
+        // alsoOffTheRealLine: a quantity with the imaginary unit in it then takes that form alone.
+        private static Entity BySign(Entity quantity, Entity wherePositive, Entity whereNegative, bool alsoOffTheRealLine = false)
+        {
+            if (SignOfANumberTimesEvenPowers(quantity) is { } sign)
+                return sign < 0 ? whereNegative : wherePositive;
+            if (alsoOffTheRealLine && HoldsTheImaginaryUnit(quantity.InnerSimplified))
+                return wherePositive;
+            return MathS.Piecewise((wherePositive, new Greaterf(quantity, Number.Integer.Zero)), (whereNegative, new Lessf(quantity, Number.Integer.Zero)));
+        }
 
         // The same where the form for a positive first quantity is chosen by the sign of a second,
         // as one piecewise rather than one inside another.
