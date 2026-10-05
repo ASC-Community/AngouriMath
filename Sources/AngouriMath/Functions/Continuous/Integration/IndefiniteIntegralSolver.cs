@@ -4839,7 +4839,7 @@ namespace AngouriMath.Functions.Algebra
         /// and over a quadratic, <c>(f + g x + h x^2)/((c + d x + e x^2) y)</c> where
         /// <c>b g^3 = 8 a h^3</c>, <c>g^2 + 2 f h = 0</c> and <c>b d f + b c g = 4 a e h</c>:
         /// <c>-(g/e) int 1/(1 - M u^2)</c>, <c>M = (b d f - 2 a e h)/(2 e h)</c>, at <c>u = (1 + 2 h x/g)/y</c>.
-        /// Each conditions is decided at sampled values of the symbols, the inner integral is an
+        /// Each condition is decided at sampled values of the symbols, the inner integral is an
         /// arctangent or an inverse hyperbolic tangent by the sign of its constant, and the answer
         /// is differentiated back at sampled points before it is returned.
         /// https://github.com/asc-community/AngouriMath/issues/718
