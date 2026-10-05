@@ -777,6 +777,10 @@ namespace AngouriMath.Functions.Algebra
             // of the powers raised by one -- `e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))` -- read off
             // the sum, for symbolic exponents too. Before the split, which loses it.
             if ((answer = IndefiniteIntegralSolver.SolveAsTheDerivativeOfAProductOfPowers(expr, x)) is { }) return answer;
+            // And a power of a binomial in x^n beside a power of x, with a symbol in the exponents,
+            // where Chebyshev's third case is a whole number at most 0: by Rubi's reduction, which
+            // the rule above does not read for a power on its own or past the first step.
+            if ((answer = IndefiniteIntegralSolver.SolveABinomialInTheThirdCaseWithASymbolicExponent(expr, x)) is { }) return answer;
             // Powers of two linears whose exponents sum to a whole number below -2, beside a polynomial of
             // low degree, by t = L1/L2: a power of t beside a polynomial. The rule above reads the sum -2.
             if ((answer = IndefiniteIntegralSolver.SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(expr, x)) is { }) return answer;
@@ -807,6 +811,9 @@ namespace AngouriMath.Functions.Algebra
             // `(1 + x + sqrt(3))/((1 + x - sqrt(3)) sqrt(1 + x^3))`. Before the reduction over the
             // linear, which writes it as `1` and `2 sqrt(3)` over the linear, neither elementary.
             if ((answer = IndefiniteIntegralSolver.SolveAPseudoEllipticQuotientOverTheRootOfACubicBinomial(expr, x)) is { }) return answer;
+            // x over a cubic binomial beside the root of another, at the two ratios where that is
+            // elementary: Welz's `x/((4 - x^3) sqrt(1 - x^3))`.
+            if ((answer = IndefiniteIntegralSolver.SolveXOverACubicBinomialBesideTheRootOfAnother(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByReducingThePolynomialOverALinearFactor(expr, x, integrateByParts)) is { }) return answer;
             if (expr is Entity.Sumf or Entity.Minusf
                 && (answer = IndefiniteIntegralSolver.SolveBySplittingSum(expr, x, integrateByParts)) is { })
