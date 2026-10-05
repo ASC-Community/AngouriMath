@@ -26151,7 +26151,10 @@ namespace AngouriMath.Functions.Algebra
         /// Beside a second such sum of the same argument, <c>q - i q tan(z)</c>, which is linear in
         /// the first, the one under a power that is not whole is the variable and the other a whole
         /// power of a linear in it: <c>(a + i a tan(z))/(q - i q tan(z))^(3/2)</c>, Rubi's 4.3.2.1,
-        /// ran past the budget too.
+        /// ran past the budget too. A symbol for the power is not whole either:
+        /// <c>(a + i a tan(z))^m (q - i q tan(z))^4</c> is <c>S^(m - 1)</c> times a polynomial in
+        /// <c>S</c>, and was declined or past the budget with the rest of 4.3.2.1 and 4.3.3.1 that
+        /// write a symbolic power of one sum beside a whole one of the other.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </para>
         /// </remarks>
@@ -26207,9 +26210,10 @@ namespace AngouriMath.Functions.Algebra
                 sums.Add((node, sum, factor, inner));
             }
             // Two such sums, `a + i a tan(z)` and `c - i c tan(z)`, are each linear in the other: in
-            // the one under a power that is not whole the other is a whole power of a linear, where
-            // in the other it would be the root of one. Where both or neither are, declined.
-            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == sum && p is not Number.Integer);
+            // the one under a power that is not whole -- a fraction or a symbol -- the other is a
+            // whole power of a linear, where in the other it would be the root of one. Where both or
+            // neither are, declined.
+            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, var p) && b == sum && p is not Number.Integer && (p is Number.Rational || !p.ContainsNode(x)));
             var chosen = sums.Count switch
             {
                 1 => sums[0],
@@ -26224,8 +26228,7 @@ namespace AngouriMath.Functions.Algebra
             // Below the bar, or to a power that is not whole: a positive whole power alone is a
             // polynomial in the tangent.
             var below = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr)).Denominator;
-            if (!below.Nodes.Contains(@base)
-                && !expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == @base && p is not Number.Integer))
+            if (!below.Nodes.Contains(@base) && !NotWhole(@base))
                 return null;
             var s = Variable.CreateUnique(expr, "s_imaginary_tangent");
             var tangent = (s - constant) / coefficient;
@@ -26260,6 +26263,10 @@ namespace AngouriMath.Functions.Algebra
             var inS = (rewritten * coefficient / (s * (s - 2 * constant)) / rate).InnerSimplified;
             if (Integration.ComputeAsAQuestionOfItsOwn(inS, s, integrateByParts) is not { } inTermsOfS)
                 return null;
+            // A short sum of symbols simplified, which the power rule leaves as it wrote it:
+            // `S^(m + -1 + 1)/(m + -1 + 1)` is `S^m/m`.
+            inTermsOfS = inTermsOfS.Replace(node => node is Sumf or Minusf && !node.ContainsNode(s) && node.Vars.Any() && node.Complexity <= 20
+                ? node.Simplify() : node);
             return inTermsOfS.Substitute(s, @base);
         }
 
