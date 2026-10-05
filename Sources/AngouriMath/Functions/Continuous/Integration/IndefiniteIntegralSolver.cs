@@ -10042,7 +10042,12 @@ namespace AngouriMath.Functions.Algebra
                 .Combine(inU / (1 + MathS.Sqr(uSub))).Simplify();
             if (integrand is Providedf(var withoutCondition, _))
                 integrand = withoutCondition;
-            return Integration.ComputeIndefiniteIntegral(integrand, uSub, integrateByParts) is { } result
+            // Asked as the same question: the rewrite renames the variable and adds no step of
+            // its own, and a rule scoped to the question asked or one below it reads the integrand
+            // in u as it reads it asked directly. Asked a level down, the split of
+            // `cot(x)^(3/2) (a + b tan(x))^(3/2)` in the root of its quotient was out of every such
+            // rule's reach, and the integral was declined where its integrand in u is answered.
+            return Integration.ComputeAsTheSameQuestion(integrand, uSub, integrateByParts) is { } result
                 ? result.Substitute(uSub, tangent)
                 : null;
         }
@@ -27521,6 +27526,9 @@ namespace AngouriMath.Functions.Algebra
                 || node is Tanf(var argument) && argument == u
                 || node is Cotanf(var cotangentArgument) && cotangentArgument == u);
 
+        /// <summary>Whether a linear renaming is being asked as the same question on this thread.</summary>
+        [System.ThreadStatic] private static bool renamingLinearly;
+
         internal static Entity? SolveBySubstitution(Entity expr, Entity.Variable x, bool integrateByParts = true)
         {
             // A rational function over written linear factors with symbols in their
@@ -27780,7 +27788,25 @@ namespace AngouriMath.Functions.Algebra
 
                 if (integrandInU.ContainsNode(x))
                     continue;
-                if (Integration.ComputeIndefiniteIntegral(integrandInU, uSub, integrateByParts) is { } resultInU)
+                // Under a linear candidate the integrand is the same question with its argument
+                // renamed, and is asked as one, at the depth it was asked at: the rules scoped to the
+                // question asked or one below it then read `cot(c + d x)^(3/2) (a + b tan(c + d x))^(3/2)`
+                // as they read `cot(x)^(3/2) (a + b tan(x))^(3/2)`, where a level spent on the renaming
+                // put the split they answer it by out of reach. Once: a renaming asked inside another
+                // spends its level, so that two linear arguments renaming each other in turn are
+                // bounded by the descent as before.
+                var renaming = !renamingLinearly
+                    && TreeAnalyzer.TryGetPolyLinear(u, x, out var linearSlope, out var linearOffset) && !linearSlope.ContainsNode(x) && !linearOffset.ContainsNode(x);
+                Entity? inU;
+                if (renaming)
+                {
+                    renamingLinearly = true;
+                    try { inU = Integration.ComputeAsTheSameQuestion(integrandInU, uSub, integrateByParts); }
+                    finally { renamingLinearly = false; }
+                }
+                else
+                    inU = Integration.ComputeIndefiniteIntegral(integrandInU, uSub, integrateByParts);
+                if (inU is { } resultInU)
                 {
                     // An even root is not negative wherever it is real, so a sign or a modulus
                     // of it that a rule below put in -- the answer for u > 0 extended by parity
