@@ -1437,6 +1437,20 @@ out shorter and five longer -- `1/((c x)^(5/3) (a + b x^2)^(2/3))` was
 `-3/(2 a) x (c x)^(-5/3) (a + b x^2)^(1/3)` there, and is the same function written in `x^(1/3)`.
 2.5.0 declined all nine.
 
+### A binomial differential with a symbol in its exponents is integrated in Chebyshev's third case
+
+**Answers where there were none.** `1/(a + b x^n)^((1 + 2 n)/n)` and the rest of `x^m (a + b x^n)^p`
+with a symbol in the exponents where `(m + 1)/n + p + 1` is a whole number at most 0 were declined,
+but for `x^m` beside the binomial at 0. Rubi's reduction raises `p` by one,
+`J(p) = -x^(m+1) (a + b x^n)^(p+1)/(a n (p + 1)) + (m + 1 + n (p + 1))/(a n (p + 1)) J(p + 1)`, and as many
+steps of it as the number says reach `x^(m + 1) (a + b x^n)^(p + 1)/(a (m + 1))`. Rubi's 1.1.3.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a + b*x^n)^((1 + n)/n)".ToEntity().Integrate("x")` | `integral(...)` | `x (a + b x^n)^(-1/n)/a` |
+| `"1/(a + b*x^n)^((1 + 2*n)/n)".ToEntity().Integrate("x")` | `integral(...)` | `x (a + b x^n)^(-1 - 1/n)/(a (n + 1)) + n x (a + b x^n)^(-1/n)/(a^2 (n + 1))` |
+
 ### A power of a multiple of a quadratic's derivative beside a power of the quadratic is a binomial
 
 **Improvement, not silent.** `(b d + 2 c d x)^m (a + b x + c x^2)^p`, with a power that is not whole,
