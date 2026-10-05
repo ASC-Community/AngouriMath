@@ -723,6 +723,10 @@ namespace AngouriMath.Functions.Algebra
             // And of quotients, which a substitution leaves where it has simplified a sum over
             // the bar: `(c/(a + c u^2))^2` is read by nothing that reads `c^2/(a + c u^2)^2`.
             if ((answer = IndefiniteIntegralSolver.SolveByDistributingWholePowersOfQuotients(expr, x, integrateByParts)) is { }) return answer;
+            // The derivative of a power of x over a binomial, over a multiple of the binomial's
+            // square plus a power of x: an arctangent of the quotient, which nothing else reads
+            // past a quartic -- `(e - 4 f x^3)/(e^2 + 4 d f x^2 + 4 e f x^3 + 4 f^2 x^6)`.
+            if ((answer = IndefiniteIntegralSolver.SolveAsTheArctangentOfAPowerOfXOverABinomial(expr, x, integrateByParts)) is { }) return answer;
             // And a fractional or symbolic power of a monomial: `(c x^n)^b` is `c^b x^(n b)`
             // for a positive `c`, on the `x > 0` where a symbolic `n` leaves the integrand real.
             if ((answer = IndefiniteIntegralSolver.SolveByDistributingAPowerOfAMonomial(expr, x, integrateByParts)) is { }) return answer;

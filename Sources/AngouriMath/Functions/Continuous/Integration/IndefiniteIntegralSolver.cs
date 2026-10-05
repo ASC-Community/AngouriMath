@@ -18914,6 +18914,114 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// The derivative of <c>w = x^k/L</c>, for a binomial <c>L = x^p + l</c>, over a multiple of
+        /// <c>L^2</c> plus a power of x, <c>c L^2 + d x^(2k)</c>: the integrand is
+        /// <c>(m/c) w'/(1 + (d/c) w^2)</c>, an arctangent of <c>w</c> or a hyperbolic one. Rubi's
+        /// 1.3.2 <c>(e - 4 f x^3)/(e^2 + 4 d f x^2 + 4 e f x^3 + 4 f^2 x^6)</c> is
+        /// <c>arctan(2 sqrt(d f) x/(e + 2 f x^3))/(2 sqrt(d f))</c>, and its rows in symbolic
+        /// powers of x are the same in <c>w = x^(m + 1)/(e + 2 f x^n)</c>.
+        /// </summary>
+        /// <remarks>
+        /// The denominator is read as four terms, each a constant times a power of x: one is
+        /// <c>d x^(2k)</c>, and the other three are <c>a + b x^p + c x^(2p)</c> with
+        /// <c>b^2 = 4 a c</c>, which is <c>c L^2</c> for <c>L = x^p + b/(2c)</c>. The numerator is
+        /// a constant multiple of <c>k x^(k - 1) L - p x^(k + p - 1)</c>, which is <c>w' L^2</c>;
+        /// the constant is read at <c>x = 1</c>, and the answer is differentiated back. Past a
+        /// quartic these were declined: partial fractions over a sextic in x, or over a sum of
+        /// symbolic powers of it, are out of reach, and nothing read the quotient.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveAsTheArctangentOfAPowerOfXOverABinomial(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var (above, below) = Functions.SingleQuotient.Of(expr);
+            if (!below.ContainsNode(x))
+                return null;
+            var terms = Sumf.LinearChildren(below);
+            if (terms.Count != 4)
+                return null;
+            var read = new (Entity Coefficient, Entity Exponent)[4];
+            for (var i = 0; i < 4; i++)
+                if (ConstantTimesAPowerOfX(terms[i], x) is { } term)
+                    read[i] = term;
+                else
+                    return null;
+            for (var i = 0; i < 4; i++)
+            {
+                // The i-th as d x^(2k), and the other three as a + b x^p + c x^(2p).
+                Entity? a = null;
+                var powers = new List<(Entity Coefficient, Entity Exponent)>();
+                for (var j = 0; j < 4; j++)
+                    if (j != i)
+                    {
+                        if (Functions.PartialFractions.IsZeroAsAValue(read[j].Exponent))
+                            a = a is null ? read[j].Coefficient : null;
+                        else
+                            powers.Add(read[j]);
+                    }
+                if (a is null || powers.Count != 2)
+                    continue;
+                if (!Functions.PartialFractions.IsZeroAsAValue(powers[1].Exponent - 2 * powers[0].Exponent))
+                    powers.Reverse();
+                var ((b, p), (c, twiceP)) = (powers[0], powers[1]);
+                if (!Functions.PartialFractions.IsZeroAsAValue(twiceP - 2 * p)
+                    || !Functions.PartialFractions.IsZeroAsAValue(b * b - 4 * a * c))
+                    continue;
+                var (d, twiceK) = read[i];
+                var k = Exponent(twiceK / 2);
+                var binomial = MathS.Pow(x, p) + Exponent(b / (2 * c));
+                // w' L^2, and the constant the numerator is of it.
+                var derivative = k * MathS.Pow(x, Exponent(k - 1)) * binomial - p * MathS.Pow(x, Exponent(k + p - 1));
+                var atOne = derivative.Substitute(x, 1).InnerSimplified;
+                if (Functions.PartialFractions.IsZeroAsAValue(atOne))
+                    continue;
+                // The constants in lowest terms: `(e - 4 f)/(1 + e/(2 f) - 3)` is `2 f`.
+                var multiple = Functions.PartialFractions.InLowestTermsOverTheSymbols(above.Substitute(x, 1) / (atOne * c));
+                var ratio = Functions.PartialFractions.InLowestTermsOverTheSymbols(d / c);
+                // The ratio named while it is integrated: as a quotient of symbols it is read as
+                // the coefficient of a general quadratic, with an arm for a double root that 1 + q u^2
+                // never has.
+                var u = Variable.CreateUnique(expr, "u_quotient");
+                var q = Variable.CreateUnique(expr, "q_ratio");
+                if (Integration.ComputeIndefiniteIntegral(1 / (1 + q * MathS.Pow(u, 2)), u, integrateByParts) is not { } inU)
+                    return null;
+                var answer = multiple * inU.Substitute(u, MathS.Pow(x, k) / binomial).Substitute(q, ratio);
+                return Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x) ? answer : null;
+            }
+            return null;
+
+            // An exponent as it simplifies: `(2 + 2 m)/2` is `1 + m`. Exponents are small.
+            static Entity Exponent(Entity exponent)
+                => exponent.InnerSimplified is var inner && (inner is Number || inner.Complexity > 40) ? inner : inner.Simplify();
+
+            // A constant times a power of x, `c x^e` with `e` free of x and not 0 unless the term
+            // is free of x; null otherwise.
+            static (Entity Coefficient, Entity Exponent)? ConstantTimesAPowerOfX(Entity term, Entity.Variable x)
+            {
+                Entity coefficient = Number.Integer.One;
+                Entity? exponent = null;
+                foreach (var part in Mulf.LinearChildren(term))
+                {
+                    if (!part.ContainsNode(x))
+                    {
+                        coefficient = coefficient == Number.Integer.One ? part : coefficient * part;
+                        continue;
+                    }
+                    if (exponent is not null)
+                        return null;
+                    exponent = part switch
+                    {
+                        Variable v when v == x => Number.Integer.One,
+                        Powf(var @base, var e) when @base == x && !e.ContainsNode(x) => e,
+                        _ => null
+                    };
+                    if (exponent is null)
+                        return null;
+                }
+                return (coefficient, exponent ?? Number.Integer.Zero);
+            }
+        }
+
+        /// <summary>
         /// A power of a square written out, <c>(A + B w + C w^2)^p</c> with <c>B^2 = 4 A C</c> and
         /// <c>w = x^k</c>, as the power of its root, <c>L = w + B/(2 C)</c>: the integral is
         /// <c>F</c> times the integral with <c>L^(2p)</c> in its place, where
