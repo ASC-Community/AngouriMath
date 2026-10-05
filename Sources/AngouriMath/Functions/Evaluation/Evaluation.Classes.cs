@@ -34,6 +34,60 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// Whether <paramref name="value"/>, the exact number <paramref name="node"/> evaluates
+        /// to, is a zero that rounding alone made: <paramref name="node"/> is a product, a quotient
+        /// or a power of numbers none of which is zero, or a sum of numbers of one sign, and is
+        /// not zero itself.
+        /// </summary>
+        /// <remarks>
+        /// Evaluation rounds a value within <see cref="MathS.Settings.DowncastingTolerance"/> of an
+        /// integer onto it, ten to the minus fifty at the default hundred digits, which is what
+        /// makes the residual of a cancellation the zero it is. A product cancels nothing, and was
+        /// rounded the same way: <c>1/pi^136</c>, about <c>2.4e-68</c>, evaluated to <c>0</c>, and
+        /// that zero, being an exact number, was taken as its value. The common denominator
+        /// raises constants to such powers, and <c>Simplify</c> returned <c>0</c> for
+        /// <c>x^n ((1 - d^2)/x - x)^3 (1 + x^2 - d x)/(x - d)/pi^2</c>. A sum whose terms have
+        /// one sign cancels nothing either; any other sum's zero may be a cancellation's, and is
+        /// taken as it was.
+        /// https://github.com/asc-community/AngouriMath/issues/1769
+        /// </remarks>
+        private static bool IsAZeroOnlyRoundingMade(Entity node, Entity value)
+            => value is Integer { IsZero: true }
+               && (node is Mulf or Divf or Powf && CannotBeZero(node) || node is Sumf or Minusf && SignOfANonzero(node) is not null);
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is a number or a constant that is not zero, or a product,
+        /// a quotient or a power of those with a finite divisor or exponent.
+        /// </summary>
+        private static bool CannotBeZero(Entity expr) => expr switch
+        {
+            Complex number => !number.IsZero && number.IsFinite,
+            Variable { IsConstant: true } constant => constant.Evaled is Complex { IsZero: false, IsFinite: true },
+            Mulf(var left, var right) => CannotBeZero(left) && CannotBeZero(right),
+            Divf(var dividend, var divisor) => CannotBeZero(dividend) && divisor.Evaled is Complex { IsFinite: true },
+            Powf(var @base, var exponent) => CannotBeZero(@base) && exponent.Evaled is Complex { IsFinite: true },
+            _ => SignOfANonzero(expr) is not null
+        };
+
+        /// <summary>
+        /// The sign of <paramref name="expr"/> where it is a real number or a constant that is not
+        /// zero, or a product, a quotient, a power or a sum of those whose sign the parts decide;
+        /// <see langword="null"/> where they do not.
+        /// </summary>
+        private static int? SignOfANonzero(Entity expr) => expr switch
+        {
+            Real number => !number.IsZero && number.IsFinite ? (number.IsPositive ? 1 : -1) : null,
+            Variable { IsConstant: true } constant => constant.Evaled is Real { IsZero: false } value ? (value.IsPositive ? 1 : -1) : null,
+            Mulf(var left, var right) => SignOfANonzero(left) * SignOfANonzero(right),
+            Divf(var dividend, var divisor) => SignOfANonzero(dividend) * SignOfANonzero(divisor),
+            Powf(var @base, Integer power) => SignOfANonzero(@base) is { } sign ? (power.EInteger.IsEven ? 1 : sign) : null,
+            Powf(var @base, var exponent) => SignOfANonzero(@base) == 1 && exponent.Evaled is Real { IsFinite: true } ? 1 : null,
+            Sumf(var left, var right) => SignOfANonzero(left) is { } sign && SignOfANonzero(right) == sign ? sign : null,
+            Minusf(var left, var right) => SignOfANonzero(left) is { } sign && SignOfANonzero(right) == -sign ? sign : null,
+            _ => null
+        };
+
+        /// <summary>
         /// For two-argument nodes
         /// Used in InnerSimplify and InnerEval
         /// Allows to avoid looking over all the combinations with piecewise, tensor, finiteset
@@ -74,7 +128,7 @@ namespace AngouriMath
             bool propagateSet = true,
             bool settlesNaN = false)
         {
-            if (isExact && this.Evaled is (Number { IsExact: true } or Boolean) and var n)
+            if (isExact && this.Evaled is (Number { IsExact: true } or Boolean) and var n && !IsAZeroOnlyRoundingMade(this, n))
                 return n;
             left = left.InnerSimplified(isExact);
             right = right.InnerSimplified(isExact);
@@ -97,7 +151,7 @@ namespace AngouriMath
             {
                 if (operation(a, b) is { } res)
                     return res;
-                if (isExact && defaultCtor(this, a, b).Evaled is Number { IsExact: true } n)
+                if (isExact && defaultCtor(this, a, b) is var built && built.Evaled is Number { IsExact: true } n && !IsAZeroOnlyRoundingMade(built, n))
                     return n;
                 return defaultCtor(this, a, b);
             }

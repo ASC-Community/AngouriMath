@@ -367,6 +367,81 @@ namespace AngouriMath.Functions.Algebra
             return Integration.ComputeAsTheSameQuestion(written, x, integrateByParts);
         }
 
+        /// <summary>
+        /// A quotient by the square of a base, by parts against the base's reciprocal, where the
+        /// base's derivative makes the rest exact: <c>N/(M v^2)</c> is <c>g v'/v^2</c> with
+        /// <c>g = N/(M v')</c>, and <c>v'/v^2</c> is the derivative of <c>-1/v</c>, so the integral
+        /// is <c>-g/v</c> plus the integral of <c>g'/v</c>; taken only where <c>v</c> cancels from
+        /// that, with the functions of <paramref name="x"/> in it taken for indeterminates.
+        /// </summary>
+        /// <remarks>
+        /// <c>x^2/(a x cos(a x) - sin(a x))^2</c> was declined, with the rest of Rubi's 4.7.7 by the
+        /// square of <c>a x cos(a x) - sin(a x)</c> or <c>cos(a x) + a x sin(a x)</c>: the base's
+        /// derivative is <c>-a^2 x sin(a x)</c>, so <c>g</c> is <c>-x csc(a x)/a^2</c>, and
+        /// <c>g'</c> is <c>a^2 v/(a^2 sin(a x))^2</c>, whose integral is <c>-cot(a x)/a^3</c>. Only
+        /// for a base with a function of <paramref name="x"/> in it that is not a polynomial, since
+        /// a quotient of polynomials is the partial fractions', and only where <c>v</c> cancels,
+        /// since otherwise the remainder is the harder question.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByPartsAgainstTheReciprocalOfASquaredBase(Entity expr, Entity.Variable x)
+        {
+            if (!TryReadAsQuotient(expr, out var numerator, out var denominator) || !denominator.ContainsNode(x))
+                return null;
+            Entity? squared = null;
+            Entity rest = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+                if (squared is null && factor is Powf(var @base, Number.Integer { EInteger: var power }) && power.Equals(EInteger.FromInt32(2))
+                    && @base is Sumf or Minusf && @base.ContainsNode(x)
+                    && @base.Nodes.Any(node => node.ContainsNode(x) && IsAFunctionOfTheVariable(node))
+                    // The variable outside the functions as well, as in `a x cos(a x) - sin(a x)`: a
+                    // base that is a function of `sin(x)` alone, `(a + b sin(x))^2`, is the
+                    // substitutions' and the reductions', and was answered in a second where this
+                    // ran past the budget.
+                    && @base.Replace(node => IsAFunctionOfTheVariable(node) ? Number.Integer.One : node).ContainsNode(x))
+                    squared = @base;
+                else
+                    rest = rest * factor;
+            if (squared is null)
+                return null;
+            // A power of x every term of the base has goes to the rest: `x^2 v^2` arrives as
+            // `(a x^2 cos(a x) - x sin(a x))^2`, the square of `x v`.
+            var lowest = Sumf.LinearChildren(squared).Select(term => Mulf.LinearChildren(term)
+                .Select(factor => factor == x ? 1 : factor is Powf(var b, Number.Integer { EInteger: var n }) && b == x && n.CanFitInInt32() ? n.ToInt32Unchecked() : 0)
+                .Sum()).Min();
+            if (lowest > 0)
+            {
+                squared = (squared / MathS.Pow(x, lowest)).Expand().InnerSimplified;
+                rest = rest * MathS.Pow(x, 2 * lowest);
+            }
+            // Expanded, since the derivative of `a x cos(a x)` and of `sin(a x)` each have an
+            // `a cos(a x)`, which cancel only once multiplied out.
+            var derivative = squared.Differentiate(x).Expand().InnerSimplified;
+            // A derivative of one term, so that what it leaves below the bar of the remainder is
+            // no new square of a sum to take apart the same way.
+            if (TreeAnalyzer.IsZero(derivative) || derivative is Sumf or Minusf)
+                return null;
+            // The ring's answer first, where it has one: `x^2/(x cos(x) - sin(x))^2` is
+            // `(x sin(x) + cos(x))/(x cos(x) - sin(x))` there, continuous across the zeros of the
+            // base's derivative, where `-g/v` and the remainder each have a pole that cancels.
+            if (SolveByTrigonometricTowerAnsatz(expr, x) is { } fromTheRing)
+                return fromTheRing;
+            var (gTop, gBottom) = CancelledWithFunctionsAsIndeterminates(numerator, rest * derivative, x, expr);
+            // g' over v, cancelled: (A' B - A B')/(B^2 v) for g = A/B.
+            var above = (gTop.Differentiate(x) * gBottom - gTop * gBottom.Differentiate(x)).InnerSimplified;
+            var (rTop, rBottom) = CancelledWithFunctionsAsIndeterminates(above, MathS.Pow(gBottom, 2) * squared, x, expr);
+            if (rBottom.Nodes.Any(node => node == squared) || !rTop.ContainsNode(x) && !rBottom.ContainsNode(x) && TreeAnalyzer.IsZero(rTop))
+                return null;
+            var remainder = Functions.PartialFractions.Bare(rTop / rBottom);
+            if (Integration.ComputeIndefiniteIntegral(remainder, x) is not { } integral || integral.Nodes.Any(node => node is Integralf))
+                return null;
+            return -gTop / (gBottom * squared) + integral;
+        }
+
+        /// <summary>Whether <paramref name="node"/> is a trigonometric function, a logarithm or an exponential.</summary>
+        private static bool IsAFunctionOfTheVariable(Entity node)
+            => node is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf or Logf or Powf(Number, _);
+
         /// <summary>Whether <paramref name="expr"/> holds a fractional power of something in <paramref name="x"/>.</summary>
         private static bool HasARadicalOf(Entity expr, Entity.Variable x)
             => expr.Nodes.Any(node => node is Powf(var @base, Number.Rational power) && power is not Number.Integer && @base.ContainsNode(x));
@@ -2173,9 +2248,17 @@ namespace AngouriMath.Functions.Algebra
                     // The exponent negated as a number rather than as a tree: `-power` on the
                     // node `2` is `2 * (-1)`, and `sin(x)^(2 * (-1))` is a shape the closed rule
                     // for a power of the sine does not read, so `c/sin(x)^2` went to the
-                    // half-angle substitution for what is `-c cot(x)`.
+                    // half-angle substitution for what is `-c cot(x)`. And where the power is not
+                    // whole asked as the same question, since `c/g^p` and `c g^(-p)` are one: a
+                    // level down the rules scoped to the question asked, the ones for a root, did
+                    // not see it, and `1/csch(2 ln(x))^(1/2)` reached the fold of its exponentials
+                    // there and was declined, where asked at the top it is answered. A whole power
+                    // keeps its level: asked as the same question, `(c + d x)/(a + a tanh(e + f x))^3`
+                    // ran past the budget where it is answered in a second.
                     over is Entity.Powf(var @base, var power) ?
-                        Integration.ComputeIndefiniteIntegral(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts)?.Pipe(i => div * i) :
+                        (power is Number.Rational and not Number.Integer
+                            ? Integration.ComputeAsTheSameQuestion(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts)
+                            : Integration.ComputeIndefiniteIntegral(MathS.Pow(@base, (-power).InnerSimplified), x, integrateByParts))?.Pipe(i => div * i) :
                     // A constant over a product is the reciprocal of the product, asked as the
                     // same question with the constant in front, and not the product to the
                     // power -1: `pe/(x (d + e x) sqrt(1 - c^2 x^2))` handed on as
@@ -3468,6 +3551,148 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>(a + b cos(y) + c sin(y))^n</c> for <c>a^2 = b^2 + c^2</c>, <c>y</c> linear in
+        /// <c>x</c> and <c>n</c> half-odd or a negative whole number, in closed form.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>b cos(y) + c sin(y)</c> is <c>R cos(y - phi)</c> for <c>R = sqrt(b^2 + c^2)</c>, so
+        /// the base is <c>a (1 ± cos(y - phi))</c>, a square of the half angle as
+        /// <c>a + a sin(y)</c> is, and <see cref="SolveAHalfPowerOfOnePlusASine"/>'s identity
+        /// holds for it. Rubi's <c>sqrt(5 + 4 cos(x) + 3 sin(x))</c> and the rest of its 4.7.7
+        /// with <c>a^2 = b^2 + c^2</c> were declined or past the budget. The answer needs no
+        /// <c>phi</c>: with <c>S</c> the base and <c>T = b sin(y) - c cos(y)</c>,
+        /// <c>T' = S - a</c>, <c>S' = -T</c> and <c>T^2 = S (2a - S)</c>, the last of which is
+        /// <c>a^2 = b^2 + c^2</c>, and from them
+        /// </para>
+        /// <code>
+        ///     d/dy (T S^(n-1)) = n S^n - a (2n - 1) S^(n-1)
+        /// </code>
+        /// <para>
+        /// which steps <c>n</c> down to <c>1/2</c>, where the integral is <c>2T/sqrt(S)</c>, or
+        /// up to <c>-1/2</c> or <c>-1</c>, where it is
+        /// <c>(2/sqrt(2a)) atanh(T/(sqrt(2a) sqrt(S)))</c> and <c>T/(a S)</c>. Each base is
+        /// checked by differentiating it with those three identities alone.
+        /// </para>
+        /// <para>
+        /// For a real <c>a</c> of either sign: the derivations use only
+        /// <c>S^(3/2) = S sqrt(S)</c> and <c>(sqrt(2a) sqrt(S))^2 = 2a S</c>, which hold for
+        /// the principal powers, and the argument of the hyperbolic arctangent stays between
+        /// <c>-1</c> and <c>1</c>, one less its square being <c>S/(2a)</c>, which is not negative
+        /// since <c>S</c> has the sign of <c>a</c>. An antiderivative on every interval between
+        /// the zeros of <c>S</c>, where <c>T</c> changes sign. <c>a^2 = b^2 + c^2</c> is decided,
+        /// not assumed, and the cosine and the sine are both there: one alone is
+        /// <see cref="SolveAHalfPowerOfOnePlusASine"/>'s.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAPowerOfACosineAndASinePlusTheirAmplitude(Entity expr, Entity.Variable x)
+        {
+            // A constant times one power of the base, the power above the bar or below it.
+            if (!TryReadAsQuotient(expr, out var above, out var below))
+                (above, below) = (expr, Number.Integer.One);
+            Entity constant = Number.Integer.One;
+            Entity? @base = null;
+            ERational? exponent = null;
+            foreach (var (side, sign) in new[] { (above, 1), (below, -1) })
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    if (!factor.ContainsNode(x))
+                    {
+                        constant = sign > 0 ? constant * factor : constant / factor;
+                        continue;
+                    }
+                    if (@base is not null)
+                        return null;
+                    (@base, exponent) = factor is Powf(var inner, var power) && power.Evaled is Number.Rational rational
+                        ? (inner, rational.ERational)
+                        : (factor, ERational.One);
+                    if (sign < 0)
+                        exponent = exponent.Negate();
+                }
+            if (@base is null || exponent is null)
+                return null;
+            var n = exponent;
+            // Half-odd, or a negative whole number, and of a modest size: a positive whole power
+            // is a polynomial in the sine and cosine.
+            var isHalfOdd = n.Denominator.Equals(EInteger.FromInt32(2));
+            if (!isHalfOdd && !(n.Denominator.Equals(EInteger.One) && n.Sign < 0)
+                || n.Abs().CompareTo(ERational.FromInt32(MaximumAmplitudePower)) > 0)
+                return null;
+            // a + b cos(y) + c sin(y), read off the sum.
+            Entity a = Number.Integer.Zero;
+            Entity? b = null, c = null, argument = null;
+            foreach (var term in Sumf.LinearChildren(@base))
+            {
+                if (!term.ContainsNode(x))
+                {
+                    a = a == Number.Integer.Zero ? term : a + term;
+                    continue;
+                }
+                Entity coefficient = Number.Integer.One;
+                Entity? function = null;
+                foreach (var factor in Mulf.LinearChildren(term))
+                    if (!factor.ContainsNode(x))
+                        coefficient = coefficient == Number.Integer.One ? factor : coefficient * factor;
+                    else if (function is null && factor is Sinf or Cosf)
+                        function = factor;
+                    else
+                        return null;
+                var inner = function?.DirectChildren.First();
+                if (inner is null || argument is not null && inner != argument)
+                    return null;
+                argument = inner;
+                if (function is Cosf)
+                {
+                    if (b is not null) return null;
+                    b = coefficient;
+                }
+                else
+                {
+                    if (c is not null) return null;
+                    c = coefficient;
+                }
+            }
+            if (b is null || c is null || argument is null || a == Number.Integer.Zero)
+                return null;
+            if (!TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
+                || rate.Evaled is Number.Complex { IsZero: true })
+                return null;
+            // a^2 = b^2 + c^2, decided rather than assumed.
+            var excess = (MathS.Sqr(a) - MathS.Sqr(b) - MathS.Sqr(c)).InnerSimplified;
+            if (excess.Evaled is not Number.Complex { IsZero: true }
+                && !(excess.Vars.Any() && Functions.PartialFractions.Bare(excess.Simplify()).Evaled is Number.Complex { IsZero: true }))
+                return null;
+            if (a.Evaled is Number.Complex { IsZero: true })
+                return null;
+
+            var s = @base;
+            var t = b * MathS.Sin(argument) - c * MathS.Cos(argument);
+            var half = ERational.Create(1, 2);
+            Entity Integral(ERational power)
+            {
+                if (power.CompareTo(half) == 0)
+                    return 2 * t / MathS.Sqrt(s);
+                if (power.CompareTo(half.Negate()) == 0)
+                    return 2 / MathS.Sqrt(2 * a) * MathS.Hyperbolic.Artanh(t / (MathS.Sqrt(2 * a) * MathS.Sqrt(s)));
+                if (power.CompareTo(ERational.FromInt32(-1)) == 0)
+                    return t / (a * s);
+                var current = Number.Rational.Create(power);
+                if (power.Sign > 0)
+                    return t * MathS.Pow(s, Number.Rational.Create(power.Subtract(ERational.One))) / current
+                        + a * (2 * current - 1) / current * Integral(power.Subtract(ERational.One));
+                return ((current + 1) * Integral(power.Add(ERational.One)) - t * MathS.Pow(s, current)) / (a * (2 * current + 1));
+            }
+            return (constant * Integral(n) / rate).InnerSimplified;
+        }
+
+        /// <summary>
+        /// The largest power, either way, that <see cref="SolveAPowerOfACosineAndASinePlusTheirAmplitude"/>
+        /// steps through: each step is a term of the answer.
+        /// </summary>
+        private const int MaximumAmplitudePower = 8;
+
+        /// <summary>
         /// Fractional powers of <c>a ± a sin(y)</c>, or of <c>a ± a cos(y)</c>, beside anything
         /// rational in the sine and cosine of <c>y</c>, by the half angle at which they are
         /// squares: <c>1 + sin(y)</c> is <c>2 sin(u)^2</c> and <c>1 - sin(y)</c> is
@@ -3598,6 +3823,159 @@ namespace AngouriMath.Functions.Algebra
             var back = sineKind ? argument / 2 + MathS.pi / 4 : argument / 2;
             var answer = (signs == Number.Integer.One ? result : signs * result).Substitute(u, back);
             return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+        }
+
+        /// <summary>
+        /// Powers of <c>a ± a sin(y)</c> with a symbolic exponent, beside a power of
+        /// <c>g cos(y)</c> and anything else in the sine alone, under <c>u = sin(y)</c>:
+        /// <c>(1 + sin(y))(1 - sin(y))</c> is <c>cos(y)^2</c>, so each factor is a power of
+        /// <c>1 + u</c> or of <c>1 - u</c> up to a factor constant on each interval where it is
+        /// defined, and <c>dy = du/cos(y)</c> is one more pair of half powers. The cosine's the
+        /// same way, by <c>u = cos(y)</c> beside a power of <c>g sin(y)</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>(a + b sin)^m (c + d sin)^n</c> files with <c>a^2 = b^2</c> and
+        /// <c>c^2 = d^2</c> hold about a hundred and twenty problems with a symbolic exponent,
+        /// <c>(a + a sin(e + f x))^m sqrt(c - c sin(e + f x))</c> the plainest, and none was
+        /// answered: the half angle at which <c>1 ± sin(y)</c> is a square, the rule before this
+        /// one, wants numeric powers, and the substitution search spent the budget on them. What
+        /// is asked in <c>u</c> is <c>(1 + u)^A (1 - u)^B R(u)</c>, which is elementary where one
+        /// of <c>A</c>, <c>B</c> and <c>A + B</c> is a whole number and the rest is a
+        /// polynomial, and is declined where it is not.
+        /// </para>
+        /// <para>
+        /// The answer is <c>K G(sin(y))/F</c>, for <c>G</c> the antiderivative in <c>u</c>,
+        /// <c>F</c> the slope of <c>y</c> and <c>K</c> the powers as written over the form they
+        /// were rewritten to and over <c>cos(y)</c>: a quotient whose logarithmic derivative is
+        /// zero, so the answer holds whatever <c>a</c>, <c>g</c> and the exponents are --
+        /// <c>(a (1 + u))^m</c> is not <c>a^m (1 + u)^m</c> for every <c>a</c>, and the quotient
+        /// of the two is constant on each interval either way. At the question asked only, and
+        /// only where an exponent is symbolic: numeric half powers are the half angle's.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveSymbolicPowersOfOnePlusMinusASineThroughTheSine(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAsked)
+                return null;
+            Entity? argument = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (TrigonometricArgument(node) is not { } thisArgument || !thisArgument.ContainsNode(x))
+                    continue;
+                if (argument is null)
+                    argument = thisArgument;
+                else if (argument != thisArgument)
+                    return null;
+            }
+            if (argument is null || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _)
+                || rate.ContainsNode(x) || TreeAnalyzer.IsZero(rate))
+                return null;
+            var sine = MathS.Sin(argument);
+            var cosine = MathS.Cos(argument);
+            // Each factor as a base and an exponent, a power of a power read as one power: the
+            // quotient of the two spellings is constant on each interval, and K carries it.
+            var factors = new List<(Entity Factor, Entity Base, Entity Exponent)>();
+            foreach (var factor in Mulf.LinearChildren(expr))
+            {
+                Entity @base = factor, exponent = Number.Integer.One;
+                while (@base is Powf(var inner, var power))
+                {
+                    @base = inner;
+                    exponent = power * exponent;
+                }
+                if (exponent.ContainsNode(x))
+                    return null;
+                factors.Add((factor, @base, exponent.InnerSimplified));
+            }
+            // Which function the sums are of: all of one kind.
+            bool? ofTheSine = null;
+            foreach (var (_, @base, _) in factors)
+                if (@base.ContainsNode(x) && ReadAsOnePlusMinusAFunction(@base, sine, cosine) is var (_, _, isSine))
+                {
+                    if (ofTheSine is { } kind && kind != isSine)
+                        return null;
+                    ofTheSine = isSine;
+                }
+            if (ofTheSine is not { } sineKind)
+                return null;
+            var function = sineKind ? sine : cosine;
+            var complement = sineKind ? cosine : sine;
+            var u = Variable.CreateUnique(expr, "u_one_plus_minus");
+            // The exponents of 1 + f, of 1 - f and of the complement, the factors that carry
+            // them as they stand, and the rest in u.
+            Entity plus = Number.Integer.Zero, minus = Number.Integer.Zero, ofTheComplement = Number.Integer.Zero;
+            Entity asItIs = Number.Integer.One, rest = Number.Integer.One;
+            var symbolic = false;
+            foreach (var (factor, @base, exponent) in factors)
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    rest *= factor;
+                    continue;
+                }
+                if (ReadAsOnePlusMinusAFunction(@base, sine, cosine) is var (_, isPlus, _))
+                {
+                    if (isPlus)
+                        plus += exponent;
+                    else
+                        minus += exponent;
+                    asItIs *= factor;
+                    symbolic |= exponent is not Number;
+                    continue;
+                }
+                if (AsAPowerOfTheComplement(@base) is { } sign)
+                {
+                    ofTheComplement += sign * exponent;
+                    asItIs *= factor;
+                    symbolic |= exponent is not Number;
+                    continue;
+                }
+                var inU = factor.Substitute(function, u);
+                if (inU.ContainsNode(x))
+                    return null;
+                rest *= inU;
+            }
+            if (!symbolic)
+                return null;
+            // dy = du/complement takes one more half power of each.
+            var half = Number.Rational.Create(1, 2);
+            var a = (plus + ofTheComplement * half - half).Simplify();
+            var b = (minus + ofTheComplement * half - half).Simplify();
+            // A zero exponent leaves its factor out: `(1 - u)^0` is one provided `u` is not one, and
+            // the condition would stand between the question and the rules that answer it.
+            Entity PowerOf(Entity @base, Entity exponent) => exponent == Number.Integer.Zero ? Number.Integer.One : MathS.Pow(@base, exponent);
+            var integrand = (PowerOf(1 + u, a) * PowerOf(1 - u, b) * rest).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(integrand, u, integrateByParts) is not { } result)
+                return null;
+            // d sin(y) = cos(y) dy and d cos(y) = -sin(y) dy.
+            Entity constant = asItIs * PowerOf(1 + function, (-a).InnerSimplified) * PowerOf(1 - function, (-b).InnerSimplified) / (rate * complement);
+            if (!sineKind)
+                constant = -constant;
+            var answer = constant * result.Substitute(u, function);
+            return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+
+            // 1 for a constant times the complement, -1 for a constant times its reciprocal
+            // function, null for anything else.
+            int? AsAPowerOfTheComplement(Entity @base)
+            {
+                int? found = null;
+                foreach (var part in Mulf.LinearChildren(@base))
+                {
+                    if (!part.ContainsNode(x))
+                        continue;
+                    if (found is not null)
+                        return null;
+                    if (part == complement)
+                        found = 1;
+                    else if (sineKind ? part is Secantf(var s) && s == argument : part is Cosecantf(var c) && c == argument)
+                        found = -1;
+                    else
+                        return null;
+                }
+                return found;
+            }
         }
 
         /// <summary>
@@ -3772,6 +4150,56 @@ namespace AngouriMath.Functions.Algebra
             // is real where the cosine is negative -- and there each written apart may have
             // turned its sign where the other did not. The answer says where it holds.
             return roots < 2 ? answer : answer.Provided((secantKind ? MathS.Cos(argument) : MathS.Sin(argument)) >= Number.Integer.Zero);
+        }
+
+        /// <summary>
+        /// <c>tan(y) tan(2y)</c> written <c>sec(2y) - 1</c>, and the integrand asked again in the
+        /// one argument <c>2y</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>tan(y)</c> is <c>(1 - cos(2y))/sin(2y)</c>, so <c>tan(y) tan(2y)</c> is
+        /// <c>(1 - cos(2y))/cos(2y)</c>, which is <c>sec(2y) - 1</c> wherever both sides are
+        /// defined; at the zeros of <c>cos(y)</c> the left is <c>-2</c> as a limit, which the right
+        /// is. Rubi's 4.7.7 has <c>sec(2(a + b x))^k sqrt(c tan(a + b x) tan(2(a + b x)))</c> and
+        /// its kin, a half-odd power of <c>c sec(2y) - c</c> beside powers of the secant or cosine
+        /// of <c>2y</c>, which <see cref="SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant"/>
+        /// answers in that one argument; with two arguments nothing read them.
+        /// </para>
+        /// <para>
+        /// The same question in another spelling, so asked as the same question. The answer is
+        /// what that rule gives, exact where the integrand is real.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByWritingATangentTimesThatOfItsDoubleThroughTheSecant(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            static bool IsTwice(Entity twice, Entity once)
+                => (twice - 2 * once).Expand().InnerSimplified.Evaled is Number.Complex { IsZero: true };
+            var found = false;
+            var rewritten = expr.Replace(node =>
+            {
+                if (node is not Mulf || !node.ContainsNode(x))
+                    return node;
+                var factors = Mulf.LinearChildren(node).ToList();
+                var single = factors.FindIndex(factor => factor is Tanf(var y) && y.ContainsNode(x)
+                    && factors.Any(other => other is Tanf(var z) && z != y && IsTwice(z, y)));
+                if (single < 0)
+                    return node;
+                var once = ((Tanf)factors[single]).Argument;
+                var twice = factors.FindIndex(other => other is Tanf(var z) && z != once && IsTwice(z, once));
+                var doubled = ((Tanf)factors[twice]).Argument;
+                Entity others = Number.Integer.One;
+                for (var i = 0; i < factors.Count; i++)
+                    if (i != single && i != twice)
+                        others = others == Number.Integer.One ? factors[i] : others * factors[i];
+                found = true;
+                // Spread over the difference, so that a root of it reads as `c sec(2y) - c`.
+                return others == Number.Integer.One ? MathS.Sec(doubled) - 1 : others * MathS.Sec(doubled) - others;
+            });
+            if (!found)
+                return null;
+            return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
         }
 
         /// <summary>
@@ -4000,11 +4428,17 @@ namespace AngouriMath.Functions.Algebra
         {
             if (!asked && !Integration.AnsweringTheQuestionAsked)
                 return null;
-            if (!TryReadSineCosinePowers(expr, out var argument, out var sinePower, out var cosinePower, out var factor, out var throughAProduct))
+            if (!TryReadSineCosinePowers(expr, out var argument, out var sinePower, out var cosinePower, out var factor, out var throughAProduct,
+                    aConstantProduct: true))
                 return null;
             if (!TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.Evaled == 0)
                 return null;
-            if (IntegrateAPowerOfSineTimesAPowerOfCosine(argument, sinePower, cosinePower, factor, rate) is not { } integral)
+            // Powers that cancel, `cos(x)^2 sec(x)^2`, are the constant wherever the integrand is
+            // defined, and its integral is the constant times x.
+            var integral = sinePower.IsZero && cosinePower.IsZero
+                ? factor * x
+                : IntegrateAPowerOfSineTimesAPowerOfCosine(argument, sinePower, cosinePower, factor, rate);
+            if (integral is null)
                 return null;
             if (!throughAProduct)
                 return integral;
@@ -4382,6 +4816,108 @@ namespace AngouriMath.Functions.Algebra
                 }
             c = constant;
             return !c.ContainsNode(x) && n >= 1;
+        }
+
+        /// <summary>
+        /// A linear over a linear, or a quadratic over a quadratic, beside the reciprocal of the
+        /// square root of a cubic binomial <c>a + b x^3</c>, at the coefficients where its
+        /// integral is elementary: Rubi's <c>(1 + x + sqrt(3))/((1 + x - sqrt(3)) sqrt(1 + x^3))</c>,
+        /// <c>(c - 2 d x)/((c + d x) sqrt(c^3 + 4 d^3 x^3))</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The curve <c>y^2 = a + b x^3</c> is elliptic, and the integral of <c>(e + f x)/((c + d x) y)</c>
+        /// is elementary only where the coefficients make it so. Rubi's 1.3.3 names those places,
+        /// and at each the integral is a constant times <c>int du/(1 + K u^2)</c> at
+        /// <c>u = (1 + p x)/y</c>, or <c>(1 + p x)^2/y</c>:
+        /// <code>
+        /// b c^3 = 4 a d^3,  2 d e + c f = 0:   (2 e/d)          int 1/(1 + 3 a u^2),        u = (1 + 2 d x/c)/y
+        /// b c^3 = -8 a d^3, 2 d e + c f = 0:   (-2 e/(9 d))     int 1/(1 - (a/9) u^2),      u = (1 + f x/e)^2/y
+        /// b^2 c^6 - 20 a b c^3 d^3 - 8 a^2 d^6 = 0, 6 a d^4 e = c f (b c^3 - 22 a d^3), k = (d e + 2 c f)/(c f):
+        ///                                      ((1 + k) e/d)    int 1/(1 + (3 + 2k) a u^2), u = (1 + (1 + k) d x/c)/y
+        /// </code>
+        /// and over a quadratic, <c>(f + g x + h x^2)/((c + d x + e x^2) y)</c> where
+        /// <c>b g^3 = 8 a h^3</c>, <c>g^2 + 2 f h = 0</c> and <c>b d f + b c g = 4 a e h</c>:
+        /// <c>-(g/e) int 1/(1 - M u^2)</c>, <c>M = (b d f - 2 a e h)/(2 e h)</c>, at <c>u = (1 + 2 h x/g)/y</c>.
+        /// Each condition is decided at sampled values of the symbols, the inner integral is an
+        /// arctangent or an inverse hyperbolic tangent by the sign of its constant, and the answer
+        /// is differentiated back at sampled points before it is returned.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAPseudoEllipticQuotientOverTheRootOfACubicBinomial(Entity expr, Entity.Variable x)
+        {
+            var (numerator, denominator) = Functions.SingleQuotient.Of(expr);
+            Entity? radicand = null;
+            Entity below = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+                if (factor is Powf(var @base, Number.Rational half) && half.ERational.Equals(ERational.Create(1, 2)) && @base.ContainsNode(x))
+                {
+                    if (radicand is not null)
+                        return null;
+                    radicand = @base;
+                }
+                else
+                    below *= factor;
+            if (radicand is null || numerator.Nodes.Any(node => node is Powf(_, Number.Rational r) && r is not Number.Integer && node.ContainsNode(x))
+                || !TreeAnalyzer.TryGetPolynomial(radicand, x, out var cubic) || cubic.Count != 2
+                || !cubic.TryGetValue(EInteger.Zero, out var a) || !cubic.TryGetValue(EInteger.FromInt32(3), out var b)
+                || !TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) || !TreeAnalyzer.TryGetPolynomial(below, x, out var under))
+                return null;
+            Entity Coefficient(Dictionary<EInteger, Entity> read, int power)
+                => read.TryGetValue(EInteger.FromInt32(power), out var value) ? value : Number.Integer.Zero;
+            int Degree(Dictionary<EInteger, Entity> read) => read.Count == 0 ? -1 : read.Keys.Max()!.ToInt32Unchecked();
+            if (Degree(above) > 2 || Degree(under) is not (1 or 2) || Degree(above) > Degree(under))
+                return null;
+            // A condition is decided as a value, at pinned symbols where nothing simplifies it
+            // to zero -- `6 a d^4 e - c f (b c^3 - 22 a d^3)` at `c = 1 - sqrt(3)` and
+            // `d = (b/a)^(1/3)` is one -- since the answer is checked by its derivative anyway.
+            static bool Zero(Entity condition) => Functions.PartialFractions.IsZeroAsAValue(condition);
+            var y = MathS.Sqrt(radicand);
+            var u = Variable.CreateUnique(expr, "u_pseudo");
+            // int du/(1 + K u^2), by the sign of K.
+            Entity OverOnePlus(Entity k)
+            {
+                var kLowest = LowestOverTheSymbols(k);
+                return BySign(kLowest,
+                    MathS.Arctan(MathS.Sqrt(kLowest) * u) / MathS.Sqrt(kLowest),
+                    MathS.Hyperbolic.Artanh(MathS.Sqrt(LowestOverTheSymbols(-kLowest)) * u) / MathS.Sqrt(LowestOverTheSymbols(-kLowest)));
+            }
+            Entity? answer = null;
+            if (Degree(under) == 1)
+            {
+                var (e, f) = (Coefficient(above, 0), Coefficient(above, 1));
+                var (c, d) = (Coefficient(under, 0), Coefficient(under, 1));
+                if (Zero(d * e - c * f) || Zero(c))
+                    return null;
+                if (Zero(b * MathS.Pow(c, 3) - 4 * a * MathS.Pow(d, 3)) && Zero(2 * d * e + c * f))
+                    answer = (2 * e / d * OverOnePlus(3 * a)).Substitute(u, (1 + 2 * d * x / c) / y);
+                else if (!Zero(e) && Zero(b * MathS.Pow(c, 3) + 8 * a * MathS.Pow(d, 3)) && Zero(2 * d * e + c * f))
+                    answer = (-2 * e / (9 * d) * OverOnePlus(-a / 9)).Substitute(u, MathS.Pow(1 + f * x / e, 2) / y);
+                else if (!Zero(f)
+                    && Zero(MathS.Pow(b, 2) * MathS.Pow(c, 6) - 20 * a * b * MathS.Pow(c, 3) * MathS.Pow(d, 3) - 8 * MathS.Pow(a, 2) * MathS.Pow(d, 6))
+                    && Zero(6 * a * MathS.Pow(d, 4) * e - c * f * (b * MathS.Pow(c, 3) - 22 * a * MathS.Pow(d, 3))))
+                {
+                    var k = LowestOverTheSymbols((d * e + 2 * c * f) / (c * f));
+                    answer = ((1 + k) * e / d * OverOnePlus((3 + 2 * k) * a)).Substitute(u, (1 + (1 + k) * d * x / c) / y);
+                }
+            }
+            else
+            {
+                var (f, g, h) = (Coefficient(above, 0), Coefficient(above, 1), Coefficient(above, 2));
+                var (c, d, e) = (Coefficient(under, 0), Coefficient(under, 1), Coefficient(under, 2));
+                if (!Zero(g) && !Zero(h)
+                    && Zero(b * MathS.Pow(g, 3) - 8 * a * MathS.Pow(h, 3)) && Zero(MathS.Pow(g, 2) + 2 * f * h)
+                    && Zero(b * d * f + b * c * g - 4 * a * e * h) && !Zero(b * d * f - 2 * a * e * h))
+                    answer = (-g / e * OverOnePlus(-(b * d * f - 2 * a * e * h) / (2 * e * h))).Substitute(u, (1 + 2 * h * x / g) / y);
+            }
+            if (answer is null)
+                return null;
+            answer = answer.InnerSimplified;
+            bool holds;
+            using (MathS.Settings.DowncastingEnabled.Set(false))
+                holds = Functions.PartialFractions.HoldsAtSampledPoints(answer.Differentiate(x), expr, x);
+            return holds ? answer : null;
         }
 
         /// <summary>
@@ -7152,8 +7688,14 @@ namespace AngouriMath.Functions.Algebra
         /// and whether a fractional power of a product was read as the product of the powers:
         /// true only up to a constant on each interval where the factors keep their signs.
         /// </summary>
+        /// <remarks>
+        /// A product whose powers cancel, <c>sin(u) csc(u)</c>, is read only where
+        /// <paramref name="aConstantProduct"/> asks for it: it is the constant where it is
+        /// defined, and the readers that go on to divide by a power have nothing to divide.
+        /// </remarks>
         private static bool TryReadSineCosinePowers(
-            Entity expr, out Entity argument, out ERational sinePower, out ERational cosinePower, out Entity factor, out bool throughAProduct)
+            Entity expr, out Entity argument, out ERational sinePower, out ERational cosinePower, out Entity factor, out bool throughAProduct,
+            bool aConstantProduct = false)
         {
             Entity? common = null;
             var sine = ERational.Zero;
@@ -7166,7 +7708,7 @@ namespace AngouriMath.Functions.Algebra
             cosinePower = cosine;
             factor = constant;
             throughAProduct = distributed;
-            return read && common is not null && !(sine.IsZero && cosine.IsZero);
+            return read && common is not null && (aConstantProduct || !(sine.IsZero && cosine.IsZero));
 
             bool Agrees(Entity candidate)
             {
@@ -8382,6 +8924,76 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A product of two tangents, cotangents, secants or cosecants of linear arguments whose
+        /// difference or sum is a constant, written as the functions of each apart: with
+        /// <c>d = A - B</c>, <c>tan(A) tan(B) = cot(d) (tan(A) - tan(B)) - 1</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The addition formulas, read for the product: for a constant <c>d = A - B</c>,
+        /// <c>tan(A) tan(B) = cot(d) (tan(A) - tan(B)) - 1</c>,
+        /// <c>cot(A) cot(B) = cot(d) (cot(B) - cot(A)) - 1</c>,
+        /// <c>sec(A) sec(B) = csc(d) (tan(A) - tan(B))</c> and
+        /// <c>csc(A) csc(B) = csc(d) (cot(B) - cot(A))</c>; for a constant <c>s = A + B</c>,
+        /// <c>tan(A) tan(B) = 1 - cot(s) (tan(A) + tan(B))</c>,
+        /// <c>cot(A) cot(B) = 1 + cot(s) (cot(A) + cot(B))</c>,
+        /// <c>sec(A) sec(B) = csc(s) (tan(A) + tan(B))</c> and
+        /// <c>csc(A) csc(B) = csc(s) (cot(A) + cot(B))</c>. Each holds wherever both sides are
+        /// defined, for <c>d</c> or <c>s</c> not a multiple of <c>pi</c>, which a symbolic one is
+        /// taken not to be, as everywhere in this integrator. Rubi's 4.7.7 has
+        /// <c>tan(a + b x) tan(c + b x)</c> and the rest, and nothing read two arguments.
+        /// </para>
+        /// <para>
+        /// The same question in another spelling, so asked as it. A constant times the product
+        /// only, and the two functions of one kind.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByWritingTwoFunctionsOfShiftedArgumentsApart(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            Entity constant = Number.Integer.One;
+            Entity? first = null, second = null;
+            foreach (var factor in Mulf.LinearChildren(expr))
+            {
+                if (!factor.ContainsNode(x))
+                    constant = constant == Number.Integer.One ? factor : constant * factor;
+                else if (first is null)
+                    first = factor;
+                else if (second is null)
+                    second = factor;
+                else
+                    return null;
+            }
+            if (first is null || second is null || first.GetType() != second.GetType()
+                || first is not (Tanf or Cotanf or Secantf or Cosecantf))
+                return null;
+            var a = first.DirectChildren.First();
+            var b = second.DirectChildren.First();
+            if (a == b || !TreeAnalyzer.TryGetPolyLinear(a, x, out var slopeOfA, out _) || slopeOfA.ContainsNode(x)
+                || !TreeAnalyzer.TryGetPolyLinear(b, x, out var slopeOfB, out _) || slopeOfB.ContainsNode(x))
+                return null;
+            static bool IsZero(Entity value) => value.Expand().InnerSimplified.Evaled is Number.Complex { IsZero: true };
+            var sameSlope = IsZero(slopeOfA - slopeOfB);
+            if (!sameSlope && !IsZero(slopeOfA + slopeOfB))
+                return null;
+            var shift = (sameSlope ? a - b : a + b).Expand().InnerSimplified;
+            if (shift.ContainsNode(x) || shift.Evaled is Number.Complex { IsZero: true })
+                return null;
+            Entity apart = first switch
+            {
+                Tanf => sameSlope
+                    ? MathS.Cotan(shift) * (MathS.Tan(a) - MathS.Tan(b)) - 1
+                    : 1 - MathS.Cotan(shift) * (MathS.Tan(a) + MathS.Tan(b)),
+                Cotanf => sameSlope
+                    ? MathS.Cotan(shift) * (MathS.Cotan(b) - MathS.Cotan(a)) - 1
+                    : 1 + MathS.Cotan(shift) * (MathS.Cotan(a) + MathS.Cotan(b)),
+                Secantf => MathS.Cosec(shift) * (sameSlope ? MathS.Tan(a) - MathS.Tan(b) : MathS.Tan(a) + MathS.Tan(b)),
+                _ => MathS.Cosec(shift) * (sameSlope ? MathS.Cotan(b) - MathS.Cotan(a) : MathS.Cotan(a) + MathS.Cotan(b)),
+            };
+            return Integration.ComputeAsTheSameQuestion(constant == Number.Integer.One ? apart : constant * apart, x, integrateByParts);
+        }
+
+        /// <summary>
         /// A quotient of two <b>homogeneous</b> polynomials in <c>sin(u)</c> and <c>cos(u)</c>,
         /// integrated by <c>t = tan(u)</c> — which turns it into a rational function of <c>t</c>
         /// whenever the two degrees differ by an even number.
@@ -8456,6 +9068,161 @@ namespace AngouriMath.Functions.Algebra
                 ? result.Substitute(t, MathS.Tan(argument))
                 : null;
         }
+
+        /// <summary>
+        /// <c>(A + B cos(y) + C sin(y))/(a + b cos(y) + c sin(y))^n</c>, for a whole <c>n</c>, by
+        /// the denominator, its derivative and a constant: the numerator is
+        /// <c>alpha S + beta S' + gamma</c> for <c>S</c> the base, and each power of <c>S</c>
+        /// comes down to <c>1/S</c>, which the half-angle tangent answers.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>S' = c cos(y) - b sin(y)</c>, matching the cosine, the sine and the constant
+        /// gives <c>alpha = (B b + C c)/(b^2 + c^2)</c>, <c>beta = (B c - C b)/(b^2 + c^2)</c> and
+        /// <c>gamma = A - a alpha</c>; <c>beta S'/S^n</c> integrates to a logarithm or a power of
+        /// <c>S</c>. For the powers, with <c>T = b sin(y) - c cos(y) = -S'</c>,
+        /// <c>T^2 = b^2 + c^2 - (S - a)^2</c>, from which
+        /// </para>
+        /// <code>
+        ///     d/dy (T S^m) = (1 + m) S^(m+1) - a (1 + 2m) S^m + m (a^2 - b^2 - c^2) S^(m-1)
+        /// </code>
+        /// <para>
+        /// which for <c>m = 1 - k</c> writes <c>int S^(-k)</c> through <c>int S^(1-k)</c> and
+        /// <c>int S^(2-k)</c>, down to <c>int 1/S</c> and <c>y</c>. Rubi's
+        /// <c>(A + B cos(x) + C sin(x))/(a + b cos(x) + c sin(x))</c> and its kin were declined:
+        /// under the half-angle tangent each is a rational function over a quadratic with every
+        /// coefficient a symbol, beside <c>1 + t^2</c>, and the square of the denominator was
+        /// answered with coefficients past the fiftieth degree in them.
+        /// </para>
+        /// <para>
+        /// Exact, as the answer for <c>1/S</c> it is built on: a linear combination and an
+        /// identity of derivatives. <c>a^2 = b^2 + c^2</c>, where the base is a square of the
+        /// half angle and the recurrence divides by zero, is declined here, as is
+        /// <c>b^2 + c^2 = 0</c>, where the base is <c>a + b e^(±i y)</c>; both decided. A constant
+        /// numerator over the first power is <c>1/S</c> itself, left to the rules that answer it.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveACosineAndASineOverAPowerOfAnother(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!TryReadAsQuotient(expr, out var numerator, out var denominator))
+                return null;
+            var (@base, power) = denominator is Powf(var inner, var exponent) && exponent.Evaled is Number.Integer { EInteger: var whole }
+                ? (inner, whole)
+                : (denominator, EInteger.One);
+            if (power.Sign <= 0 || power.CompareTo(EInteger.FromInt32(MaximumPowerOfACosineAndASine)) > 0)
+                return null;
+            Entity? argument = null;
+            bool TryRead(Entity sum, out Entity constant, out Entity cosine, out Entity sine)
+            {
+                constant = cosine = sine = Number.Integer.Zero;
+                foreach (var term in Sumf.LinearChildren(sum))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        constant = constant == Number.Integer.Zero ? term : constant + term;
+                        continue;
+                    }
+                    Entity coefficient = Number.Integer.One;
+                    Entity? function = null;
+                    foreach (var factor in Mulf.LinearChildren(term))
+                        if (!factor.ContainsNode(x))
+                            coefficient = coefficient == Number.Integer.One ? factor : coefficient * factor;
+                        else if (function is null && factor is Sinf or Cosf)
+                            function = factor;
+                        else
+                            return false;
+                    var inner = function!.DirectChildren.First();
+                    if (argument is not null && inner != argument)
+                        return false;
+                    argument = inner;
+                    if (function is Cosf)
+                    {
+                        if (cosine != Number.Integer.Zero) return false;
+                        cosine = coefficient;
+                    }
+                    else
+                    {
+                        if (sine != Number.Integer.Zero) return false;
+                        sine = coefficient;
+                    }
+                }
+                return true;
+            }
+            // The base with a constant, a cosine and a sine: with one of the two functions alone the
+            // half angle reads it, and without the constant it is one cosine turned by a phase,
+            // which the rotation answers.
+            if (!TryRead(@base, out var a, out var b, out var c) || a == Number.Integer.Zero || b == Number.Integer.Zero
+                || c == Number.Integer.Zero || !TryRead(numerator, out var bigA, out var bigB, out var bigC) || argument is null)
+                return null;
+            if (power.Equals(EInteger.One) && bigB == Number.Integer.Zero && bigC == Number.Integer.Zero)
+                return null;
+            if (!TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
+                || rate.Evaled is Number.Complex { IsZero: true })
+                return null;
+            static bool IsZero(Entity value)
+            {
+                var simplified = value.InnerSimplified;
+                return simplified.Evaled is Number.Complex { IsZero: true }
+                    || simplified.Vars.Any() && Functions.PartialFractions.Bare(simplified.Simplify()).Evaled is Number.Complex { IsZero: true };
+            }
+            var squares = MathS.Sqr(b) + MathS.Sqr(c);
+            var discriminant = MathS.Sqr(a) - squares;
+            if (IsZero(squares) || IsZero(discriminant))
+                return null;
+
+            var s = @base;
+            var t = b * MathS.Sin(argument) - c * MathS.Cos(argument);
+            var alpha = (bigB * b + bigC * c) / squares;
+            var beta = (bigB * c - bigC * b) / squares;
+            var gamma = bigA - a * alpha;
+            // int S^(-k) dx, from int 1/S as the integrator answers it and x.
+            Entity? reciprocal = null;
+            var computed = new Dictionary<int, Entity>();
+            Entity? Reciprocal(int k)
+            {
+                if (k == 0)
+                    return x;
+                if (computed.TryGetValue(k, out var known))
+                    return known;
+                Entity? result;
+                if (k == 1)
+                    result = reciprocal ??= Integration.ComputeIndefiniteIntegral(1 / s, x, integrateByParts);
+                else
+                {
+                    if (Reciprocal(k - 1) is not { } previous || Reciprocal(k - 2) is not { } beforeThat)
+                        return null;
+                    result = (t * MathS.Pow(s, 1 - k) / rate - (2 - k) * beforeThat + a * (3 - 2 * k) * previous)
+                        / ((1 - k) * discriminant);
+                }
+                if (result is not null)
+                    computed[k] = result;
+                return result;
+            }
+            var n = power.ToInt32Checked();
+            Entity answer = Number.Integer.Zero;
+            if (alpha != Number.Integer.Zero && !IsZero(alpha))
+            {
+                if (Reciprocal(n - 1) is not { } lower)
+                    return null;
+                answer += alpha * lower;
+            }
+            if (beta != Number.Integer.Zero && !IsZero(beta))
+                answer += beta / rate * (n == 1 ? MathS.Ln(s) : MathS.Pow(s, 1 - n) / (1 - n));
+            if (gamma != Number.Integer.Zero && !IsZero(gamma))
+            {
+                if (Reciprocal(n) is not { } same)
+                    return null;
+                answer += gamma * same;
+            }
+            return answer == Number.Integer.Zero ? null : answer;
+        }
+
+        /// <summary>
+        /// The largest power of the denominator <see cref="SolveACosineAndASineOverAPowerOfAnother"/>
+        /// steps through: each step is a term of the answer.
+        /// </summary>
+        private const int MaximumPowerOfACosineAndASine = 6;
 
         /// <summary>
         /// A sum of a cosine and a sine of one argument turned into one cosine:
@@ -8854,33 +9621,38 @@ namespace AngouriMath.Functions.Algebra
                 var (@base, power) = factor is Powf(var b, var p) && p.Evaled is Number.Rational r
                     ? (b, r)
                     : (factor, (Number.Rational)Number.Integer.One);
-                // A constant multiple of a function, and a whole power of one inside the power:
-                // `(b tan(z)^3)^(3/2)`.
-                if (@base is Mulf(var left, var right))
-                    @base = !left.ContainsNode(x) ? right : !right.ContainsNode(x) ? left : @base;
-                if (@base is Powf(var inner, Number.Integer innerPower))
-                    (@base, power) = (inner, (Number.Rational)(power * innerPower));
                 if (underneath)
                     power = (Number.Rational)(-power);
-                if (power is not Number.Integer)
-                    notWhole = true;
-                // The powers of the sine and of the cosine each function is.
-                (Entity Of, int OnSine, int OnCosine)? read = @base switch
-                {
-                    Sinf(var of) => (of, 1, 0),
-                    Cosf(var of) => (of, 0, 1),
-                    Tanf(var of) => (of, 1, -1),
-                    Cotanf(var of) => (of, -1, 1),
-                    Secantf(var of) => (of, 0, -1),
-                    Cosecantf(var of) => (of, -1, 0),
-                    _ => null
-                };
-                if (read is null || argument is not null && argument != read.Value.Of)
+                // Inside the power, a constant multiple of a product and quotient of whole powers of
+                // the functions: `(b tan(z)^3)^(3/2)`, and `(cos(z)^2/sin(z))^(5/2)`, which is how
+                // `(csc(z) - sin(z))^(5/2)` is written. Not whole where some function's power is not:
+                // `(a csc(z)^2)^(-7/2)` is a whole power of the modulus of the cosecant, which the rule for
+                // an even power under a root answers with its sign.
+                if (!TryReadAMonomialInTheTrigonometricFunctions(@base, x, out var parts))
                     return null;
-                var (functionOf, onSine, onCosine) = read.Value;
-                argument = functionOf;
-                sine = (Number.Rational)(sine + power * onSine);
-                cosine = (Number.Rational)(cosine + power * onCosine);
+                foreach (var (function, times) in parts)
+                {
+                    // The powers of the sine and of the cosine each function is.
+                    (Entity Of, int OnSine, int OnCosine)? read = function switch
+                    {
+                        Sinf(var of) => (of, 1, 0),
+                        Cosf(var of) => (of, 0, 1),
+                        Tanf(var of) => (of, 1, -1),
+                        Cotanf(var of) => (of, -1, 1),
+                        Secantf(var of) => (of, 0, -1),
+                        Cosecantf(var of) => (of, -1, 0),
+                        _ => null
+                    };
+                    if (read is null || argument is not null && argument != read.Value.Of)
+                        return null;
+                    var (functionOf, onSine, onCosine) = read.Value;
+                    argument = functionOf;
+                    var weight = (Number.Rational)(power * Number.Integer.Create(times));
+                    if (weight is not Number.Integer)
+                        notWhole = true;
+                    sine = (Number.Rational)(sine + weight * onSine);
+                    cosine = (Number.Rational)(cosine + weight * onCosine);
+                }
             }
             if (argument is null || !notWhole
                 || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
@@ -8913,6 +9685,87 @@ namespace AngouriMath.Functions.Algebra
             return constant * varying * answer / form;
         }
 
+
+        /// <summary>
+        /// A difference of a trigonometric function and its reciprocal's partner written as the
+        /// quotient it is: <c>csc(z) - sin(z)</c> is <c>cos(z)^2/sin(z)</c> and <c>sec(z) - cos(z)</c>
+        /// is <c>sin(z)^2/cos(z)</c>, so that a power of either is a product of powers of the sine
+        /// and cosine; the integrand so written is asked as the same question.
+        /// </summary>
+        /// <remarks>
+        /// <c>(csc(x) - sin(x))^(5/2)</c> was declined, with the rest of Rubi's 4.7.7 to a power that
+        /// is not whole of either difference, either way up. As the quotient it is a product of
+        /// powers of the sine and cosine, which the rule beside it reads through the tangent.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingADifferenceOfReciprocalFunctionsAsAQuotient(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var rewritten = expr.Replace(node =>
+            {
+                if (!node.ContainsNode(x))
+                    return node;
+                // Each term a signed function: `csc(z)`, `-sin(z)`, `-1 * cos(z)`.
+                (Entity Function, int Sign) Signed(Entity term, int sign) => term switch
+                {
+                    Mulf(Number.Integer { EInteger: var one }, var f) when one.Equals(EInteger.FromInt32(-1)) => (f, -sign),
+                    Mulf(var f, Number.Integer { EInteger: var one }) when one.Equals(EInteger.FromInt32(-1)) => (f, -sign),
+                    _ => (term, sign)
+                };
+                List<(Entity Function, int Sign)>? signed = node switch
+                {
+                    Minusf(var minuend, var subtrahend) => new() { Signed(minuend, 1), Signed(subtrahend, -1) },
+                    Sumf(var left, var right) when left is not (Sumf or Minusf) && right is not (Sumf or Minusf) => new() { Signed(left, 1), Signed(right, 1) },
+                    _ => null
+                };
+                if (signed is null)
+                    return node;
+                var (first, second) = (signed[0], signed[1]);
+                if (first.Sign == second.Sign)
+                    return node;
+                var (positive, negative) = first.Sign > 0 ? (first.Function, second.Function) : (second.Function, first.Function);
+                return (positive, negative) switch
+                {
+                    (Cosecantf(var a), Sinf(var b)) when a == b => MathS.Pow(MathS.Cos(a), 2) / MathS.Sin(a),
+                    (Sinf(var a), Cosecantf(var b)) when a == b => -MathS.Pow(MathS.Cos(a), 2) / MathS.Sin(a),
+                    (Secantf(var a), Cosf(var b)) when a == b => MathS.Pow(MathS.Sin(a), 2) / MathS.Cos(a),
+                    (Cosf(var a), Secantf(var b)) when a == b => -MathS.Pow(MathS.Sin(a), 2) / MathS.Cos(a),
+                    _ => node
+                };
+            });
+            return rewritten == expr ? null : Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
+        }
+
+        /// <summary>
+        /// <paramref name="expr"/> read as a constant times a product of whole powers of the six
+        /// trigonometric functions, each with how many times it divides or multiplies; false where
+        /// anything else holds <paramref name="x"/>.
+        /// </summary>
+        private static bool TryReadAMonomialInTheTrigonometricFunctions(Entity expr, Entity.Variable x, out List<(Entity Function, int Times)> parts)
+        {
+            var read = new List<(Entity Function, int Times)>();
+            parts = read;
+            return Read(expr, 1);
+
+            bool Read(Entity e, int times)
+            {
+                switch (e)
+                {
+                    case var constant when !constant.ContainsNode(x):
+                        return true;
+                    case Mulf(var left, var right):
+                        return Read(left, times) && Read(right, times);
+                    case Divf(var above, var below):
+                        return Read(above, times) && Read(below, -times);
+                    case Powf(var inner, Number.Integer { EInteger: var power }) when power.CanFitInInt32():
+                        return Read(inner, times * power.ToInt32Unchecked());
+                    case Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf:
+                        read.Add((e, times));
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
 
         /// <summary>
         /// <paramref name="factors"/> with a whole power of a product read as the product of the
@@ -9262,6 +10115,157 @@ namespace AngouriMath.Functions.Algebra
             }
             return integrand;
         }
+
+        /// <summary>
+        /// A whole power <c>m &lt;= -2</c> of a linear beside a power that is not whole of another,
+        /// times a polynomial: <c>1/((a + b x)^4 sqrt(c + d x))</c>,
+        /// <c>(A + B x + C x^2)/((a + b x)^3 (c + d x)^(3/2))</c>. The polynomial is written in powers
+        /// of the first linear, and each negative power is raised to <c>-1</c> by the recurrence
+        /// <c>int L1^m L2^n = L1^(m + 1) L2^(n + 1)/((m + 1) D) - (m + n + 2) d/((m + 1) D) int L1^(m + 1) L2^n</c>,
+        /// <c>L1 = a + b x</c>, <c>L2 = c + d x</c>, <c>D = b c - a d</c>; what is left are the
+        /// questions <c>int L2^n/L1</c> and <c>int L1^k L2^n</c> for <c>k &gt;= 0</c>, which the
+        /// integrator answers in a step.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The recurrence is the derivative of <c>L1^(m + 1) L2^(n + 1)</c>, which is
+        /// <c>L1^m L2^n ((m + 1) D + (m + n + 2) d L1)</c>, read back. Under <c>v = sqrt(c + d x)</c>
+        /// the same integrand is a rational function over a power of a quadratic with symbols in
+        /// it, and the reduction of that took four seconds at the square and twenty at the fourth
+        /// power; and the partial fractions of a rational function beside a root are terms of
+        /// exactly this shape, so it is their cost too.
+        /// </para>
+        /// <para>
+        /// A closed reduction to smaller questions of another shape, so at any depth.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveANegativePowerOfALinearBesideAPowerOfAnotherByTheRecurrence(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            Entity constant = Number.Integer.One;
+            var linears = new List<(Entity Base, Entity Exponent)>();
+            Entity polynomial = Number.Integer.One;
+            // The factors with their exponents, a whole power of a product read through: the question
+            // comes back as `((a/b + x)^4 sqrt(c + d x))^(-1)` once a constant is out of the bar.
+            var factors = new List<(Entity Base, Entity Exponent)>();
+            void Gather(Entity node, int times)
+            {
+                switch (node)
+                {
+                    case Mulf(var left, var right):
+                        Gather(left, times);
+                        Gather(right, times);
+                        break;
+                    case Divf(var numerator, var denominator):
+                        Gather(numerator, times);
+                        Gather(denominator, -times);
+                        break;
+                    case Powf(Mulf or Divf or Powf, Number.Integer whole) when whole.EInteger.CanFitInInt32() && System.Math.Abs(whole.EInteger.ToInt32Checked()) <= MaximumRecurrenceDepth:
+                        Gather(((Powf)node).Base, times * whole.EInteger.ToInt32Checked());
+                        break;
+                    case Powf(var powerBase, var power):
+                        factors.Add((powerBase, times == 1 ? power : (power * times).InnerSimplified));
+                        break;
+                    default:
+                        factors.Add((node, Number.Integer.Create(times)));
+                        break;
+                }
+            }
+            Gather(expr, 1);
+            foreach (var (@base, exponent) in factors)
+            {
+                if (!@base.ContainsNode(x))
+                {
+                    constant *= MathS.Pow(@base, exponent);
+                    continue;
+                }
+                if (exponent.ContainsNode(x))
+                    return null;
+                if (TreeAnalyzer.TryGetPolyLinear(@base, x, out var slope, out _) && !TreeAnalyzer.IsZero(slope))
+                {
+                    var index = linears.FindIndex(pair => pair.Base == @base);
+                    if (index >= 0)
+                        linears[index] = (@base, (linears[index].Exponent + exponent).InnerSimplified);
+                    else
+                        linears.Add((@base, exponent));
+                    continue;
+                }
+                if (exponent is not Number.Integer { EInteger.Sign: > 0 } whole || !whole.EInteger.CanFitInInt32())
+                    return null;
+                polynomial *= whole == Number.Integer.One ? @base : MathS.Pow(@base, whole);
+            }
+            // The whole power below the bar, the power that is not whole, and the linears that are
+            // whole powers above it, which belong to the polynomial.
+            (Entity Base, int Power)? below = null;
+            (Entity Base, Entity Exponent)? beside = null;
+            foreach (var (@base, exponent) in linears)
+            {
+                if (exponent is Number.Integer whole && whole.EInteger.CanFitInInt32())
+                {
+                    var power = whole.EInteger.ToInt32Checked();
+                    if (power >= 0)
+                        polynomial *= power == 1 ? @base : MathS.Pow(@base, power);
+                    else if (power <= -2 && power >= -MaximumRecurrenceDepth && below is null)
+                        below = (@base, power);
+                    else
+                        return null;
+                }
+                else if (beside is null && exponent is not Number.Integer)
+                    beside = (@base, exponent);
+                else
+                    return null;
+            }
+            if (below is not var (first, m) || beside is not var (second, n))
+                return null;
+            if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var b, out var a) || !TreeAnalyzer.TryGetPolyLinear(second, x, out var d, out var c))
+                return null;
+            // Zero as a value, not only as written: for `a + b x` beside `c a + c b x` it is
+            // `b a c - a b c`, and the recurrence divided by it -- an answer with no value anywhere.
+            // https://github.com/asc-community/AngouriMath/issues/1776
+            var determinant = (b * c - a * d).InnerSimplified;
+            if (Functions.PartialFractions.IsZeroAsAValue(determinant))
+                return null;
+            // The polynomial in powers of the first linear: x = (t - a)/b.
+            var t = Variable.CreateUnique(expr, "t_linear");
+            if (!TreeAnalyzer.TryGetPolynomial(polynomial.Substitute(x, (t - a) / b), t, out var inT)
+                || inT.Keys.Any(power => power.Sign < 0 || !power.CanFitInInt32()))
+                return null;
+            // int L1^k L2^n for k from -1 down to m, each from the one above it.
+            var lowest = m + inT.Keys.Min(power => power.ToInt32Checked());
+            var raised = new Dictionary<int, Entity>();
+            if (lowest <= -1)
+            {
+                if (Integration.ComputeIndefiniteIntegral(MathS.Pow(second, n) / first, x, integrateByParts) is not { } overTheFirst
+                    || overTheFirst.Nodes.Any(node => node is Integralf))
+                    return null;
+                raised[-1] = overTheFirst;
+                for (var k = -2; k >= lowest; k--)
+                    raised[k] = MathS.Pow(first, k + 1) * MathS.Pow(second, n + 1) / ((k + 1) * determinant)
+                        - (k + n + 2) * d / ((k + 1) * determinant) * raised[k + 1];
+            }
+            Entity answer = Number.Integer.Zero;
+            foreach (var pair in inT)
+            {
+                var (k, coefficient) = (m + pair.Key.ToInt32Checked(), pair.Value);
+                if (!raised.TryGetValue(k, out var integral))
+                {
+                    var question = k == 0 ? MathS.Pow(second, n) : MathS.Pow(first, k) * MathS.Pow(second, n);
+                    if (Integration.ComputeIndefiniteIntegral(question, x, integrateByParts) is not { } answered
+                        || answered.Nodes.Any(node => node is Integralf))
+                        return null;
+                    integral = answered;
+                }
+                answer += coefficient.InnerSimplified * integral;
+            }
+            return constant * answer;
+        }
+
+        /// <summary>
+        /// The most negative whole power
+        /// <see cref="SolveANegativePowerOfALinearBesideAPowerOfAnotherByTheRecurrence"/> takes down
+        /// the recurrence: each step is one term more in the answer.
+        /// </summary>
+        private const int MaximumRecurrenceDepth = 12;
 
         /// <summary>
         /// An integrand holding a fractional power of something <b>linear</b> in the variable,
@@ -9796,7 +10800,7 @@ namespace AngouriMath.Functions.Algebra
                 var r = LowestOverTheSymbols(d / b);
                 answer = answer + BySign(r,
                     ofTheLogarithm * MathS.Ln((1 + MathS.Sqrt(r) * root) / (1 - MathS.Sqrt(r) * root)) / MathS.Sqrt(r),
-                    2 * ofTheLogarithm * MathS.Arctan(MathS.Sqrt(-r) * root) / MathS.Sqrt(-r));
+                    2 * ofTheLogarithm * MathS.Arctan(MathS.Sqrt(-r) * root) / MathS.Sqrt(-r), alsoOffTheRealLine: true);
             }
             if (ofTheThirdKind != Number.Integer.Zero)
             {
@@ -9806,7 +10810,7 @@ namespace AngouriMath.Functions.Algebra
                 var rho = LowestOverTheSymbols(-atThePole[1] / atThePole[0]);
                 answer = answer + BySign(rho,
                     -2 * ofTheThirdKind * MathS.Arctan(MathS.Sqrt(rho) * root) / MathS.Sqrt(rho),
-                    -ofTheThirdKind * MathS.Ln((1 + MathS.Sqrt(-rho) * root) / (1 - MathS.Sqrt(-rho) * root)) / MathS.Sqrt(-rho));
+                    -ofTheThirdKind * MathS.Ln((1 + MathS.Sqrt(-rho) * root) / (1 - MathS.Sqrt(-rho) * root)) / MathS.Sqrt(-rho), alsoOffTheRealLine: true);
             }
             return (constantBelow == Number.Integer.One ? answer : answer / constantBelow).InnerSimplified;
         }
@@ -10414,10 +11418,21 @@ namespace AngouriMath.Functions.Algebra
         // where it holds, for a quantity with symbols in it, as `1/(a - x^2)` is answered. A
         // number times even powers of symbols has the number's sign wherever the symbols are
         // real and not zero, which is the generic case: `-b^2` in `a^2 - b^2 x^2` is negative.
-        private static Entity BySign(Entity quantity, Entity wherePositive, Entity whereNegative)
-            => SignOfANumberTimesEvenPowers(quantity) is { } sign
-                ? (sign < 0 ? whereNegative : wherePositive)
-                : MathS.Piecewise((wherePositive, new Greaterf(quantity, Number.Integer.Zero)), (whereNegative, new Lessf(quantity, Number.Integer.Zero)));
+        // Off the real line neither sign holds, the complex numbers not being ordered, and the
+        // piecewise had no arm there: `1/(sqrt(x) sqrt(a + b x) (1 - i x))` was answered with
+        // nothing at any point. Where the caller's form for a positive quantity uses nothing about
+        // its root but `sqrt(z)^2 = z`, as an arctangent or a logarithm does and an arcsine does
+        // not, it is an antiderivative wherever the quantity is not zero, whatever its phase -- the
+        // sign only chooses the form that is real on the real line -- and the caller says so with
+        // alsoOffTheRealLine: a quantity with the imaginary unit in it then takes that form alone.
+        private static Entity BySign(Entity quantity, Entity wherePositive, Entity whereNegative, bool alsoOffTheRealLine = false)
+        {
+            if (SignOfANumberTimesEvenPowers(quantity) is { } sign)
+                return sign < 0 ? whereNegative : wherePositive;
+            if (alsoOffTheRealLine && HoldsTheImaginaryUnit(quantity.InnerSimplified))
+                return wherePositive;
+            return MathS.Piecewise((wherePositive, new Greaterf(quantity, Number.Integer.Zero)), (whereNegative, new Lessf(quantity, Number.Integer.Zero)));
+        }
 
         // The same where the form for a positive first quantity is chosen by the sign of a second,
         // as one piecewise rather than one inside another.
@@ -10517,6 +11532,97 @@ namespace AngouriMath.Functions.Algebra
             var placeholder = Variable.CreateUnique(expr, "trig");
             var inPlaceholder = expr.Substitute(functions[0], placeholder);
             return !inPlaceholder.ContainsNode(x) && TreeAnalyzer.TryGetPolynomial(inPlaceholder, placeholder, out _);
+        }
+
+        /// <summary>
+        /// A function whose argument is a quotient of two linears, <c>(a + b x)/(c + d x)</c>, with
+        /// that argument written over the denominator: <c>b/d + (a d - b c)/(d (c + d x))</c>, a
+        /// constant plus a multiple of the reciprocal of a linear.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>sin((a + b x)/(c + d x))</c> and its powers were declined, and the hyperbolic
+        /// sine and cosine of the same, written in exponentials, likewise, where
+        /// <c>sin(a + k/(c + d x))</c> is answered in sines and cosine integrals and
+        /// <c>e^(a + k/(c + d x))</c> in exponential integrals: those rules read a reciprocal of a
+        /// linear, and a quotient of two linears is one plus a constant. Exact: polynomial division,
+        /// for <c>d</c> and <c>a d - b c</c> not zero, as everywhere in the integrator.
+        /// </para>
+        /// <para>
+        /// The arguments of the sine, cosine, tangent, cotangent, secant and cosecant and the
+        /// exponents of the exponential, each written so; the same question in another spelling.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByWritingAQuotientOfLinearsOverItsDenominator(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var names = new Dictionary<Variable, Entity>();
+            Entity? Divided(Entity argument)
+            {
+                // Written as a quotient, or a constant times one: the sum this writes is neither,
+                // so the same question asked again does not divide it a second time.
+                Entity factor = Number.Integer.One;
+                var quotient = argument;
+                // The product's two children as written: read through, `-(a + b x)/(c + d x)` as a
+                // constant times a quotient is a quotient taken apart into its factors.
+                if (argument is Mulf(var left, var right))
+                    (factor, quotient) = left.ContainsNode(x) ? (right, left) : (left, right);
+                if (factor.ContainsNode(x))
+                    return null;
+                if (quotient is not Divf(var above, var below))
+                    return null;
+                if (!below.ContainsNode(x) || !above.ContainsNode(x)
+                    || !TreeAnalyzer.TryGetPolyLinear(above, x, out var b, out var a) || b.ContainsNode(x) || a.ContainsNode(x)
+                    || !TreeAnalyzer.TryGetPolyLinear(below, x, out var d, out var c) || d.ContainsNode(x) || c.ContainsNode(x))
+                    return null;
+                var remainder = (a * d - b * c).InnerSimplified;
+                if (remainder.Evaled is Number.Complex { IsZero: true } || d.Evaled is Number.Complex { IsZero: true })
+                    return null;
+                // The constant and the multiple named, each a symbol of its own while the question
+                // is asked: `sin(b/d + ((a d - b c)/d)/(c + d x))` was declined where
+                // `sin(p + k/(c + d x))` is answered, the rules reading a symbol where they meet a
+                // quotient of symbols.
+                Entity Named(Entity value)
+                {
+                    value = value.InnerSimplified;
+                    if (value is Variable || value is Number)
+                        return value;
+                    foreach (var pair in names)
+                        if (pair.Value == value)
+                            return pair.Key;
+                    var name = Variable.CreateUnique(expr + names.Keys.Aggregate((Entity)Number.Integer.Zero, (sum, v) => sum + v), "k_quotient");
+                    names[name] = value;
+                    return name;
+                }
+                // A constant in front stays in front, so that `e^Q` and `e^(-Q)` keep one argument
+                // and their product is 1.
+                var divided = Named(b / d) + Named(remainder / d) / below;
+                return factor == Number.Integer.One ? divided : factor * divided;
+            }
+            var changed = false;
+            var rewritten = expr.Replace(node =>
+            {
+                Entity? divided;
+                switch (node)
+                {
+                    case Sinf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Sin(divided);
+                    case Cosf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Cos(divided);
+                    case Tanf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Tan(divided);
+                    case Cotanf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Cotan(divided);
+                    case Secantf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Sec(divided);
+                    case Cosecantf(var y) when (divided = Divided(y)) is not null: changed = true; return MathS.Cosec(divided);
+                    case Powf(var @base, var exponent) when @base == MathS.e && (divided = Divided(exponent)) is not null:
+                        changed = true;
+                        return MathS.Pow(MathS.e, divided);
+                    default:
+                        return node;
+                }
+            });
+            if (!changed || Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts) is not { } answer)
+                return null;
+            foreach (var pair in names)
+                answer = answer.Substitute(pair.Key, pair.Value);
+            return answer;
         }
 
         /// <summary>
@@ -11774,6 +12880,129 @@ namespace AngouriMath.Functions.Algebra
             }
             return null;
         }
+
+        /// <summary>
+        /// Powers of two linears whose exponents sum to a whole number <c>-k</c>, <c>k &gt;= 2</c>,
+        /// beside a polynomial of degree at most <c>k - 2</c>: <c>(a + b x)^m (c + d x)^(-3 - m)</c>,
+        /// <c>x^(n - 4)/(a + b x)^n</c>, <c>(e + f x)^2 (a + b x)^m (c + d x)^(-4 - m)</c>. Under
+        /// <c>t = L1/L2</c> each is <c>t^A</c> beside a polynomial in <c>t</c>, so the answer is
+        /// the two powers as written times a polynomial in <c>x</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>L1 = a1 + b1 x</c>, <c>L2 = a2 + b2 x</c> and <c>D = a1 b2 - a2 b1</c>, the
+        /// substitution makes <c>x = (a1 - a2 t)/(b2 t - b1)</c>, <c>L2 = D/(b2 t - b1)</c> and
+        /// <c>dx = -D dt/(b2 t - b1)^2</c>, so <c>L1^A L2^B P(x) dx</c> is, up to a factor constant
+        /// on each interval, <c>-D^(1 - k) t^A S(t) dt</c> for the polynomial
+        /// <c>S(t) = sum_j p_j (a1 - a2 t)^j (b2 t - b1)^(k - 2 - j)</c>. Its antiderivative is
+        /// <c>sum_i s_i t^(A + i + 1)/(A + i + 1)</c>, and since <c>t^(A + i + 1)</c> is
+        /// <c>t^A t^(i + 1)</c> for a whole <c>i + 1</c>, the constant factor and <c>t^A</c> come
+        /// back as the two powers as written: the answer is
+        /// <c>L1^A L2^B sum_i -D^(1 - k) s_i L1^(i + 1) L2^(k - 1 - i)/(A + i + 1)</c>, exact
+        /// wherever the integrand is defined. The generic case, as the integrator answers
+        /// everywhere: <c>A + i + 1</c> is taken to be nonzero.
+        /// </para>
+        /// <para>
+        /// Only the sum <c>-2</c> was answered, as the derivative of the product of the two powers
+        /// raised by one; Rubi's <c>(a + b x)^m (c + d x)^n</c> files hold the rest, and under
+        /// <c>u = sin(y)</c> so do the powers of <c>1 ± sin(y)</c> beside one another. A closed
+        /// rule, so at any depth. https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber(Entity expr, Entity.Variable x)
+        {
+            Entity constant = Number.Integer.One;
+            var powers = new List<(Entity Base, Entity Exponent)>();
+            var polynomial = new List<(Entity Factor, bool Underneath)>();
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                var (@base, exponent) = factor is Powf(var powerBase, var power) ? (powerBase, power) : (factor, (Entity)Number.Integer.One);
+                if (exponent.ContainsNode(x))
+                    return null;
+                if (underneath)
+                    exponent = (-exponent).InnerSimplified;
+                var index = powers.FindIndex(pair => pair.Base == @base);
+                if (index >= 0)
+                    powers[index] = (@base, (powers[index].Exponent + exponent).InnerSimplified);
+                else if (exponent is Number.Integer)
+                    polynomial.Add((factor, underneath));
+                else
+                    powers.Add((@base, exponent));
+            }
+            if (powers.Count != 2)
+                return null;
+            // A whole power of a base that turned out to be one of the two goes into its exponent.
+            for (var i = polynomial.Count - 1; i >= 0; i--)
+            {
+                var (factor, underneath) = polynomial[i];
+                var (@base, exponent) = factor is Powf(var powerBase, Number.Integer power) ? (powerBase, (Entity)power) : (factor, (Entity)Number.Integer.One);
+                var index = powers.FindIndex(pair => pair.Base == @base);
+                if (index < 0)
+                {
+                    if (underneath)
+                        return null;
+                    continue;
+                }
+                powers[index] = (@base, (powers[index].Exponent + (underneath ? -exponent : exponent)).InnerSimplified);
+                polynomial.RemoveAt(i);
+            }
+            var ((first, a), (second, b)) = (powers[0], powers[1]);
+            if (a is Number.Integer || b is Number.Integer)
+                return null;
+            if ((a + b).Simplify() is not Number.Integer { EInteger: var sum } || sum.CompareTo(EInteger.FromInt32(-2)) > 0
+                || sum.CompareTo(EInteger.FromInt32(-MaximumLinearPowerSum)) < 0)
+                return null;
+            var k = -sum.ToInt32Checked();
+            if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var b1, out var a1) || !TreeAnalyzer.TryGetPolyLinear(second, x, out var b2, out var a2))
+                return null;
+            var d = (a1 * b2 - a2 * b1).InnerSimplified;
+            if (d.Evaled is Number.Complex { IsZero: true })
+                return null;
+            Entity product = Number.Integer.One;
+            foreach (var (factor, _) in polynomial)
+                product *= factor;
+            if (!TreeAnalyzer.TryGetPolynomial(product, x, out var coefficients)
+                || coefficients.Keys.Any(power => power.Sign < 0 || power.CompareTo(EInteger.FromInt32(k - 2)) > 0))
+                return null;
+            var t = Variable.CreateUnique(expr, "t_quotient");
+            // Whole powers written out, so that what is read as a polynomial in t is one.
+            static Entity Raised(Entity @base, int power) => power switch
+            {
+                0 => Number.Integer.One,
+                1 => @base,
+                _ => MathS.Pow(@base, power),
+            };
+            Entity inT = Number.Integer.Zero;
+            foreach (var pair in coefficients)
+            {
+                var j = pair.Key.ToInt32Checked();
+                inT += pair.Value * Raised(a1 - a2 * t, j) * Raised(b2 * t - b1, k - 2 - j);
+            }
+            if (!TreeAnalyzer.TryGetPolynomial(inT.InnerSimplified, t, out var ofT))
+                return null;
+            Entity polynomialInX = Number.Integer.Zero;
+            foreach (var pair in ofT)
+            {
+                var (i, s) = (pair.Key.ToInt32Checked(), pair.Value);
+                if (i < 0 || i > k - 2)
+                    return null;
+                polynomialInX += s / (a + (i + 1)) * Raised(first, i + 1) * Raised(second, k - 1 - i);
+            }
+            var answer = (-constant * MathS.Pow(d, 1 - k)).InnerSimplified * MathS.Pow(first, a) * MathS.Pow(second, b) * polynomialInX.InnerSimplified;
+            return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+        }
+
+        /// <summary>
+        /// The most negative sum of the two exponents
+        /// <see cref="SolveTwoLinearPowersWhoseExponentsSumToAWholeNumber"/> takes: the polynomial
+        /// it writes has <c>k - 1</c> terms, each a product of powers summing to <c>k</c>.
+        /// </summary>
+        private const int MaximumLinearPowerSum = 12;
 
         /// <summary>
         /// The constant <c>k</c> with <paramref name="left"/> equal to <c>k</c> times
@@ -15411,9 +16640,17 @@ namespace AngouriMath.Functions.Algebra
         /// splits cannot factor is declined by them at a cost that grows with it. Asked, not
         /// volunteered, like every rule that lands on a search of any size.
         /// </para>
+        /// <para>
+        /// <b>The sum the integrand writes.</b> Where the integrand holds <c>d + e x + f sqrt(Q)</c>
+        /// with <c>e^2</c> the leading coefficient of <c>Q</c> times <c>f^2</c>, that sum is the
+        /// variable, and its powers are powers of it: Rubi's
+        /// <c>(d + e x + f sqrt(a + b x + e^2 x^2/f^2))^n</c>. Asked with only that, the rule
+        /// answers through such a sum or not at all, which is how it is asked before the split
+        /// that would expand the powers of <c>Q</c> beside one.
+        /// </para>
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </remarks>
-        internal static Entity? SolveByEulerSubstitution(Entity expr, Entity.Variable x)
+        internal static Entity? SolveByEulerSubstitution(Entity expr, Entity.Variable x, bool onlyBySumItWrites = false)
         {
 
             // One square root of a quadratic in x, and otherwise a rational function of x --
@@ -15546,15 +16783,15 @@ namespace AngouriMath.Functions.Algebra
             // monomials in `t` to the power `a`, the second a rational function of `sqrt(t)`,
             // and each is handed to the chain in `t` rather than to the rational integrator,
             // since neither is a quotient of polynomials.
-            var powered = false;
-            if (powersOfTheSubstitution.Count > 0)
+            var root = MathS.Pow(radicand, Number.Rational.Create(1, 2));
+            // `x - sqrt(Q)` is the same substitution with the root's sign flipped:
+            // `t = x - sqrt(Q)` gives the same `x(t)`, `sqrt(Q) = x - t` in place of `t - x`,
+            // and `t = x - sqrt(Q)` on the way back. Both signs in one integrand is neither.
+            // Whether the powers are flipped so, or null where they are not powers of either.
+            bool? FlippedForThePowers()
             {
                 if (which != 1 || !(a.Evaled is Number.Integer { IsZero: false } aOne && aOne.EInteger.Equals(EInteger.One)))
                     return null;
-                // `x - sqrt(Q)` is the same substitution with the root's sign flipped:
-                // `t = x - sqrt(Q)` gives the same `x(t)`, `sqrt(Q) = x - t` in place of `t - x`,
-                // and `t = x - sqrt(Q)` on the way back. Both signs in one integrand is neither.
-                var root = MathS.Pow(radicand, Number.Rational.Create(1, 2));
                 var flipped = (bool?)null;
                 foreach (var power in powersOfTheSubstitution)
                 {
@@ -15566,20 +16803,92 @@ namespace AngouriMath.Functions.Algebra
                         flipped = minus;
                     else if (flipped != minus)
                         return null;
-                    expr = expr.Substitute(power, MathS.Pow(t, power.Exponent));
                 }
-                if (flipped == true)
+                return flipped;
+            }
+            var flippedForThePowers = powersOfTheSubstitution.Count > 0 ? FlippedForThePowers() : null;
+
+            // **The sum the integrand writes, as the variable.** `(d + e x + f sqrt(Q))^n` with
+            // `e^2 = a f^2` -- Rubi's, with `Q = c + b x + (e^2/f^2) x^2` -- is the first
+            // substitution shifted and scaled: `t = d + e x + f sqrt(Q)` squares, as
+            // `(t - d - e x)^2 = f^2 Q`, to an equation linear in x, the `e^2 x^2` on the left
+            // being the `a f^2 x^2` on the right. So `x = ((t - d)^2 - c f^2)/(2 e (t - d) + b f^2)`
+            // and `sqrt(Q) = (t - d - e x)/f`, exactly, with no root of `a` taken; and a power of
+            // the sum is a power of t, whatever its exponent. Taken where the substitution as
+            // written does not reach it: a symbol for `a`, whose root the generic case writes as
+            // `sqrt(e^2/f^2)`, which cancels against nothing, and a power of the sum besides
+            // `x ± sqrt(Q)`.
+            Entity? writtenSum = null;
+            Entity? writtenDerivative = null;
+            var named = new List<(Variable Name, Entity Value)>();
+            if ((aValue is null || powersOfTheSubstitution.Count > 0 && flippedForThePowers is null)
+                && TheSumOfALinearAndTheRoot(expr, root, a, x) is var (sum, d, e, f))
+            {
+                if (powersOfTheSubstitution.Any(power => power.Base != sum))
+                    return null;
+                writtenSum = sum;
+                // With `rho = d - b f^2/(2e)` and `kappa = c f^2 - (b f^2/(2e))^2`,
+                // `2 e (t - d) + b f^2` is `2 e (t - rho)`, `sqrt(Q)` is
+                // `((t - rho)^2 + kappa)/(2 f (t - rho))` and `dx/dt` is
+                // `((t - rho)^2 + kappa)/(2 e (t - rho)^2)`. Each is named while the question is
+                // asked, since the rules read a symbol where they would meet the compound:
+                // `sqrt(d + e x + f sqrt(a + b x + e^2 x^2/f^2))` took most of a minute unnamed.
+                // Simplified once, while they are small: `b = 2 d e/f^2` makes `kappa` `c f^2 - d^2`.
+                var shiftValue = Functions.PartialFractions.Bare((d - b * MathS.Sqr(f) / (2 * e)).Simplify());
+                var kappaValue = Functions.PartialFractions.Bare((c * MathS.Sqr(f) - MathS.Sqr(b * MathS.Sqr(f) / (2 * e))).Simplify());
+                Entity shift = Number.Integer.Zero;
+                if (!VanishesIdentically(shiftValue))
                 {
-                    rootInT = xInT - t;
-                    backSubstitution = x - root;
+                    var shiftName = Variable.CreateUnique(expr, "k_euler");
+                    named.Add((shiftName, shiftValue));
+                    shift = shiftName;
+                }
+                var kappa = Variable.CreateUnique(expr * shift, "k_euler");
+                named.Add((kappa, kappaValue));
+                xInT = (MathS.Sqr(t - d) - c * MathS.Sqr(f)) / (2 * e * (t - shift));
+                rootInT = (MathS.Sqr(t - shift) + kappa) / (2 * f * (t - shift));
+                writtenDerivative = (MathS.Sqr(t - shift) + kappa) / (2 * e * MathS.Sqr(t - shift));
+                backSubstitution = sum;
+                expr = expr.Replace(node => node == sum ? t : node);
+            }
+            if (onlyBySumItWrites && writtenSum is null)
+                return null;
+
+            var powered = false;
+            if (powersOfTheSubstitution.Count > 0)
+            {
+                if (writtenSum is null)
+                {
+                    if (flippedForThePowers is not { } flipped)
+                        return null;
+                    foreach (var power in powersOfTheSubstitution)
+                        expr = expr.Substitute(power, MathS.Pow(t, power.Exponent));
+                    if (flipped)
+                    {
+                        rootInT = xInT - t;
+                        backSubstitution = x - root;
+                    }
                 }
                 powered = true;
             }
 
-            var dxdt = xInT.Differentiate(t);
+            var dxdt = writtenDerivative ?? xInT.Differentiate(t);
+            // Back in x: the variable, then the names the written sum's constants were given.
+            Entity InX(Entity inT)
+            {
+                // Inner-simplified while the names stand for the constants, which is half the
+                // length of the answer for a half-odd power: written out, they repeat in every term.
+                var back = (named.Count > 0 ? inT.InnerSimplified : inT).Substitute(t, backSubstitution);
+                foreach (var (name, value) in named)
+                    back = back.Substitute(name, value);
+                return back.InnerSimplified;
+            }
+            // `Q^(k/2)` is the root to the `k`th power, and a whole power `Q^n` the root to the
+            // `2n`th: read as the `n`th, it was `Q^(n/2)`, and `Q^2/(x + sqrt(Q))` was answered as
+            // `Q/(x + sqrt(Q))`. https://github.com/asc-community/AngouriMath/issues/1770
             var rewritten = expr.Replace(node =>
-                node is Powf(var @base, Number.Rational half) && @base == radicand
-                    ? MathS.Pow(rootInT, Number.Integer.Create(half.ERational.Numerator))
+                node is Powf(var @base, Number.Rational power) && @base == radicand
+                    ? MathS.Pow(rootInT, Number.Integer.Create(power is Number.Integer ? power.ERational.Numerator.Multiply(2) : power.ERational.Numerator))
                     : node)
                 .Substitute(x, xInT) * dxdt;
             if (powered)
@@ -15604,13 +16913,22 @@ namespace AngouriMath.Functions.Algebra
                 Entity cancelledPowered = polynomialAbove / poweredBelow;
                 if (Functions.PolynomialGcd.TryCancel(polynomialAbove.InnerSimplified, poweredBelow.InnerSimplified, out var poweredByGcd) && poweredByGcd is not null)
                     cancelledPowered = Functions.PartialFractions.Bare(poweredByGcd);
+                // A polynomial in t over a monomial in it, beside the powers, is integrated term
+                // by term by the power rule. That is what the written sum makes of
+                // `Q^k (d + e x + f sqrt(Q))^n` where `b f^2 = 2 d e`, `2 e (t - d) + b f^2` being
+                // `2 e t` there; the chain took seconds a term over it.
+                if (ByThePowerRuleTermByTerm(setAside * cancelledPowered, t) is { } termByTerm)
+                {
+                    var byTerms = InX(termByTerm);
+                    return byTerms.Nodes.Any(n => n is Number.Complex { IsNaN: true }) ? null : byTerms;
+                }
                 var poweredInT = Functions.SingleQuotient.Combine(setAside * cancelledPowered).Simplify();
                 if (poweredInT is Providedf(var bareInT, _))
                     poweredInT = bareInT;
                 var inTByTheChain = Integration.ComputeIndefiniteIntegral(poweredInT, t, integrateByParts: true);
                 if (inTByTheChain is null)
                     return null;
-                var poweredAnswer = inTByTheChain.Substitute(t, backSubstitution).InnerSimplified;
+                var poweredAnswer = InX(inTByTheChain);
                 return poweredAnswer.Nodes.Any(n => n is Number.Complex { IsNaN: true }) ? null : poweredAnswer;
             }
             var (numerator, denominator) = Functions.SingleQuotient.Of(rewritten.InnerSimplified);
@@ -15686,9 +17004,113 @@ namespace AngouriMath.Functions.Algebra
                    ?? (cleanDenominator.Evaled is Number ? Integration.ComputeIndefiniteIntegral(rational, t, integrateByParts: false) : null);
             if (inT is null)
                 return null;
-            var answer = inT.Substitute(t, backSubstitution).InnerSimplified;
+            var answer = InX(inT);
             // Not answering is legitimate; answering NaN is not.
             return answer.Nodes.Any(n => n is Number.Complex { IsNaN: true }) ? null : answer;
+        }
+
+        /// <summary>
+        /// The antiderivative of <paramref name="integrand"/> where it is a product of powers of
+        /// <paramref name="t"/> times a polynomial in it over a constant multiple of one whole
+        /// power of it: the sum of the power rule's antiderivatives of its terms, the generic
+        /// case where an exponent is a symbol. <see langword="null"/> where it is not of that shape.
+        /// </summary>
+        private static Entity? ByThePowerRuleTermByTerm(Entity integrand, Entity.Variable t)
+        {
+            var (above, below) = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(Functions.PartialFractions.Bare(integrand)));
+            Entity exponent = Number.Integer.Zero;
+            Entity polynomialAbove = Number.Integer.One;
+            Entity polynomialBelow = Number.Integer.One;
+            foreach (var (side, sign) in new[] { (above, 1), (below, -1) })
+                foreach (var factor in Mulf.LinearChildren(side))
+                    if (factor is Powf(var @base, var power) && @base == t && power is not Number.Integer && !power.ContainsNode(t))
+                        exponent = sign > 0 ? exponent + power : exponent - power;
+                    else if (sign > 0)
+                        polynomialAbove *= factor;
+                    else
+                        polynomialBelow *= factor;
+            if (exponent == Number.Integer.Zero)
+                return null;
+            // Read as polynomials in every symbol, which collects like terms as it multiplies:
+            // the expansion of the substitution's cubes and squares, term by term, passes the
+            // expansion's bound before anything cancels.
+            var variables = polynomialAbove.Vars.Concat(polynomialBelow.Vars).Append(t).Distinct()
+                .OrderBy(variable => variable.Name, System.StringComparer.Ordinal).ToArray();
+            if (variables.Length > Functions.MultivariatePolynomial.MaxVariables)
+                return null;
+            var indices = new Dictionary<Variable, int>();
+            for (var i = 0; i < variables.Length; i++)
+                indices[variables[i]] = i;
+            if (Functions.MultivariatePolynomial.TryParse(polynomialAbove, indices) is not { } top
+                || Functions.MultivariatePolynomial.TryParse(polynomialBelow, indices) is not { } bottom
+                || bottom.CoefficientsIn(indices[t]) is not { Count: 1 } belowRead || top.IsZero)
+                return null;
+            var lowest = belowRead.Single();
+            if (lowest.Value.IsZero)
+                return null;
+            // Each coefficient over the one below the bar in lowest terms: the substitution's
+            // powers of f and e cancel, and left in they were most of a two-page answer.
+            var order = Enumerable.Range(0, variables.Length).ToArray();
+            var belowPrimitive = lowest.Value.Normalized(out var belowScale);
+            Entity Coefficient(Functions.MultivariatePolynomial coefficient)
+            {
+                var abovePrimitive = coefficient.Normalized(out var aboveScale);
+                var belowPart = belowPrimitive;
+                if (Functions.PolynomialGcd.Gcd(abovePrimitive, belowPart, order, 0) is { IsConstant: false } common
+                    && abovePrimitive.DivideExact(common) is { } reducedAbove && belowPart.DivideExact(common) is { } reducedBelow)
+                    (abovePrimitive, belowPart) = (reducedAbove, reducedBelow);
+                // Each polynomial is its primitive part over its scale.
+                Entity number = Number.Rational.Create(belowScale.Divide(aboveScale));
+                return (number * abovePrimitive.ToEntity(variables) / belowPart.ToEntity(variables)).InnerSimplified;
+            }
+            Entity? answer = null;
+            foreach (var term in top.CoefficientsIn(indices[t]))
+            {
+                var raised = (exponent + Number.Integer.Create(term.Key - lowest.Key + 1)).InnerSimplified;
+                var antiderivative = raised.Evaled is Number.Complex { IsZero: true }
+                    ? MathS.Ln(t)
+                    : MathS.Pow(t, raised) / raised;
+                var summand = Coefficient(term.Value) * antiderivative;
+                answer = answer is null ? summand : answer + summand;
+            }
+            return answer;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> holds a power, not a whole one, of a sum with a square
+        /// root in it: the shape <see cref="SolveByEulerSubstitution"/> takes as its variable
+        /// where the sum is <c>d + e x + f sqrt(Q)</c> with <c>e^2 = a f^2</c>.
+        /// </summary>
+        internal static bool HoldsAPowerOfASumWithARoot(Entity expr, Entity.Variable x)
+            => expr.Nodes.Any(node => node is Powf(Sumf or Minusf, var exponent) power
+                && exponent is not Number.Integer && !exponent.ContainsNode(x)
+                && power.Base.Nodes.Any(inner => inner is Powf(var radicand, Number.Rational half)
+                    && half.ERational.Denominator.Equals(EInteger.FromInt32(2)) && radicand.ContainsNode(x)));
+
+        /// <summary>
+        /// The one sum <c>d + e x + f sqrt(Q)</c> in <paramref name="expr"/> with <c>e^2 = a f^2</c>,
+        /// <c>a</c> the <paramref name="leading"/> coefficient of <c>Q</c>, and its <c>d</c>,
+        /// <c>e</c> and <c>f</c>; <see langword="null"/> where there is none, or more than one.
+        /// </summary>
+        private static (Entity Sum, Entity Constant, Entity Slope, Entity OfTheRoot)? TheSumOfALinearAndTheRoot(
+            Entity expr, Entity root, Entity leading, Entity.Variable x)
+        {
+            var r = Entity.Variable.CreateUnique(expr, "r_euler");
+            (Entity Sum, Entity Constant, Entity Slope, Entity OfTheRoot)? found = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(root))
+                    continue;
+                if (!TreeAnalyzer.TryGetPolyLinear(node.Substitute(root, r), r, out var ofTheRoot, out var rest)
+                    || ofTheRoot.ContainsNode(x) || !TreeAnalyzer.TryGetPolyLinear(rest, x, out var slope, out var constant)
+                    || VanishesIdentically(ofTheRoot) || VanishesIdentically(slope)
+                    || !VanishesIdentically(slope * slope - leading * ofTheRoot * ofTheRoot))
+                    continue;
+                if (found is { } other && other.Sum != node)
+                    return null;
+                found = (node, constant, slope, ofTheRoot);
+            }
+            return found;
         }
 
         /// <summary>
@@ -16513,7 +17935,20 @@ namespace AngouriMath.Functions.Algebra
                 var folded = FoldTheExponent(exponent, x);
                 return folded ?? node;
             });
-            return folded == expr ? null : Integration.ComputeAsAQuestionOfItsOwn(folded, x, integrateByParts);
+            if (folded == expr)
+                return null;
+            // A radicand with its negative powers written below the bar, which is where the rules
+            // for a root read a denominator: `(1/((x^2 - x^(-2))/2))^(-3/2)` was declined where
+            // `(1/((x^2 - 1/x^2)/2))^(-3/2)` is answered. Only under a power that is not whole: a
+            // whole power of a sum is expanded, and the power rule reads its terms as `x^(-k)`,
+            // through which `sinh(a + b ln(c x^n))^4` is answered in a second and was searched for
+            // six with them below the bar.
+            folded = folded.Replace(node => node is Powf(var radicand, var exponent) && exponent.Evaled is not Number.Integer && radicand.ContainsNode(x)
+                ? MathS.Pow(radicand.Replace(inside => inside is Powf(var @base, Number.Integer { EInteger: var power }) && power.Sign < 0 && @base.ContainsNode(x)
+                    ? Number.Integer.One / (power.Equals(EInteger.FromInt32(-1)) ? @base : MathS.Pow(@base, Number.Integer.Create(-power)))
+                    : inside), exponent)
+                : node);
+            return Integration.ComputeAsAQuestionOfItsOwn(folded, x, integrateByParts);
         }
 
         /// <summary>
@@ -16735,6 +18170,44 @@ namespace AngouriMath.Functions.Algebra
                 if (pair.Value % 2 != 0)
                     answer = MathS.Signum(pair.Key) * answer;
             return answer;
+        }
+
+        /// <summary>
+        /// A half-odd power of a constant over a polynomial whose sign changes, among the factors
+        /// of the integrand, written apart with the factor that keeps it right on both sides of the
+        /// polynomial's zeros: for a real <c>Q</c> other than zero, <c>(A/Q)^r</c> is
+        /// <c>K Q^(-r)</c> with <c>K = (A/Q)^r Q^r</c>, whose derivative is zero wherever it has one,
+        /// and for a positive number <c>A</c> that is <c>A^r</c> times the sign of <c>Q</c>, the
+        /// root of a negative being <c>i</c> times the root of its modulus on both sides of the bar.
+        /// </summary>
+        /// <remarks>
+        /// <c>sqrt(1/(1 - x^2))</c> is <c>sgn(1 - x^2)/sqrt(1 - x^2)</c>, the arcsine's derivative
+        /// where it is real, and was declined, with every such power over a polynomial that is not
+        /// positive: the reading that writes a power of a quotient apart does so only where it is.
+        /// Late in the chain, after the substitutions, which answer some of these without the
+        /// factor -- <c>x sqrt(1/(4 - x^2))</c> is <c>-(1/(4 - x^2))^(-1/2)</c> -- and asked as the
+        /// same question, as the sign taken out above is.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingAHalfOddPowerOfAReciprocalWithItsSign(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (underneath || factor is not Powf(var @base, Number.Rational exponent)
+                    || !exponent.ERational.Denominator.Equals(EInteger.FromInt32(2)) || !@base.ContainsNode(x))
+                    continue;
+                var (above, below) = Functions.SingleQuotient.Of(@base);
+                if (below == Number.Integer.One || above.ContainsNode(x) || !below.ContainsNode(x)
+                    || !TreeAnalyzer.TryGetPolynomial(below, x, out var read) || read.Count == 0
+                    || read.Keys.Max()!.CompareTo(EInteger.FromInt32(4)) > 0 || IsPositiveForReal(below, x))
+                    continue;
+                var positive = above.Evaled is Number.Real { IsPositive: true };
+                var inFront = positive ? MathS.Signum(below) : factor * MathS.Pow(below, exponent);
+                var replacement = positive ? MathS.Pow(above, exponent) * MathS.Pow(below, -exponent) : MathS.Pow(below, -exponent);
+                var written = expr.Replace(node => node == factor ? replacement : node);
+                return Integration.ComputeAsTheSameQuestion(written, x, integrateByParts) is { } answer ? inFront * answer : null;
+            }
+            return null;
         }
 
         /// <summary>
@@ -17039,26 +18512,125 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A half-odd power of a perfect square in one trigonometric function of <paramref name="x"/>
+        /// is that power of the modulus: <c>sqrt(b^2 + 2 a b sin(y) + a^2 sin(y)^2)</c> is
+        /// <c>sqrt(a^2) |sin(y) + b/a|</c>, which is <c>sqrt(a^2) sgn(sin(y) + b/a) (sin(y) + b/a)</c>,
+        /// the sign constant between the zeros of the linear in the sine.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="SolveByTakingARootOfAPerfectSquare"/>'s reading, with the function for the
+        /// variable: Rubi's 4.7.7 has <c>(a + b sin(d + e x)) sqrt(b^2 + 2 a b sin(d + e x) + a^2 sin(d + e x)^2)</c>
+        /// and the same with a tangent or a secant, at the half-odd powers either way, and they
+        /// were declined or past the budget where with the modulus written the rest is rational in
+        /// the function. At the top only, and only where each such root is a factor of the
+        /// integrand, so that its sign goes in front; a leading coefficient a number or one of
+        /// known sign for a real parameter, whose condition travels with the answer, as that
+        /// rule's does.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveByTakingARootOfAPerfectSquareInATrigonometricFunction(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAsked)
+                return null;
+            var factors = FactorsOfTheIntegrand(expr).Select(pair => pair.Factor).ToList();
+            var changed = false;
+            var declined = false;
+            Entity assumed = Entity.Boolean.True;
+            Entity signs = Number.Integer.One;
+            var written = expr.Replace(node =>
+            {
+                if (declined || node is not Powf(var radicand, Number.Rational r) || r is Number.Integer
+                    || !r.ERational.Denominator.Equals(EInteger.FromInt32(2)) || !radicand.ContainsNode(x)
+                    || radicand.Complexity > 40 || TreeAnalyzer.TryGetPolynomial(radicand, x, out _))
+                    return node;
+                var functions = radicand.Nodes.Where(inner => inner.ContainsNode(x)
+                    && inner is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf).Distinct().ToList();
+                if (functions.Count != 1)
+                    return node;
+                var function = functions[0];
+                var w = Variable.CreateUnique(expr, "w_sq");
+                var inW = radicand.Replace(inner => inner == function ? w : inner);
+                if (inW.ContainsNode(x) || !TreeAnalyzer.TryGetPolynomial(inW, w, out var monomials)
+                    || monomials.Keys.Max() is not { } degree || !degree.Equals(EInteger.FromInt32(2))
+                    || monomials.Keys.Any(k => k.Sign < 0))
+                    return node;
+                var a = monomials[degree];
+                var b = monomials.TryGetValue(EInteger.One, out var b1) ? b1 : Number.Integer.Zero;
+                var c = monomials.TryGetValue(EInteger.Zero, out var c0) ? c0 : Number.Integer.Zero;
+                if (b.Evaled is Number.Complex and not Number.Real || c.Evaled is Number.Complex and not Number.Real
+                    || !IsAPerfectSquareDiscriminant(a, b, c))
+                    return node;
+                if (a.Evaled is not Number.Real { IsPositive: true })
+                {
+                    if (!IsPositiveForARealParameter(a, x, out var leadingAssumed, assumed))
+                        return node;
+                    assumed = leadingAssumed;
+                }
+                // The sign in front of the integral, which needs the root to be a factor of it.
+                if (factors.Count(factor => factor == node) < expr.Nodes.Count(inner => inner == node))
+                {
+                    declined = true;
+                    return node;
+                }
+                var h = (b / (Number.Integer.Create(2) * a)).InnerSimplified;
+                if (h.Vars.Any())
+                    h = Functions.PartialFractions.Bare(h.Simplify());
+                var linear = h == Number.Integer.Zero ? function : (function + h).InnerSimplified;
+                var twoR = Number.Integer.Create(r.ERational.Numerator);
+                signs = signs * MathS.Signum(linear);
+                changed = true;
+                return MathS.Pow(a, r) * (twoR == Number.Integer.One ? linear : MathS.Pow(linear, twoR));
+            });
+            if (declined || !changed)
+                return null;
+            if (Integration.ComputeAsTheSameQuestion(written, x, integrateByParts) is not { } answer)
+                return null;
+            answer = signs * answer;
+            return assumed == Entity.Boolean.True ? answer : answer.Provided(assumed);
+        }
+
+        /// <summary>
         /// A fractional power of a sum whose every term has x to a power in it,
         /// <c>(a x^j + b x^n)^p</c> with <c>0 &lt; j &lt; n</c>, as <c>K x^(j p) (a + b x^(n - j))^p</c>:
         /// the integral is <c>K</c> times the integral with <c>x^(j p) (a + b x^(n - j))^p</c> in its
-        /// place, where <c>K = (a x^j + b x^n)^p / (x^(j p) (a + b x^(n - j))^p)</c>.
+        /// place, where <c>K = (a x^j + b x^n)^p / (x^(j p) (a + b x^(n - j))^p)</c>. And so a power
+        /// of a product of powers of x and a sum, <c>(x^m (a + b x^n))^p</c>, a whole power where
+        /// an exponent of x is not a rational number, <c>1/(a x + b x^n)</c>, and beside either a
+        /// power of a monomial, <c>(c x)^m</c>, which is <c>x^m</c> times a constant.
         /// </summary>
         /// <remarks>
         /// <para>
         /// <c>K</c> is constant on every interval where x and the sum are not zero: with
         /// <c>S = x^j T</c>, its logarithmic derivative is <c>p (S'/S - j/x - T'/T)</c>, and
         /// <c>S'/S = j/x + T'/T</c>. So it goes in front of the integral, as the factor of a square
-        /// does in <see cref="SolveByWritingAPowerOfASquareAsAPowerOfItsRoot"/>. For an even whole
-        /// <c>j</c> and a whole <c>j p</c> it is <c>sgn(x)^(j p)</c>: <c>x^j</c> is not negative for a
-        /// real x, so <c>(x^j T)^p</c> is <c>|x|^(j p) T^p</c>.
+        /// does in <see cref="SolveByWritingAPowerOfASquareAsAPowerOfItsRoot"/>, and over it for a
+        /// factor below the bar. Only the fractional part of <c>p</c> is in it, since a whole
+        /// power of <c>x^j T</c> distributes. For an even whole <c>j</c> and a whole <c>j p</c> it
+        /// is <c>sgn(x)^(j p)</c>: <c>x^j</c> is not negative for a real x, so <c>(x^j T)^p</c> is
+        /// <c>|x|^(j p) T^p</c>. A symbol in an exponent does not confine the integrand to a
+        /// positive x: <c>x^(3 (n - 1)/2)/(a x^(n - 1) + b x^n + c x^(n + 1))^(3/2)</c> is real for
+        /// a negative x and any <c>n</c>, the phases of the two principal powers cancelling to a
+        /// sign, and <c>K</c> is that sign; so it is written there too, and is 1 for a positive x.
+        /// </para>
+        /// <para>
+        /// <c>(c x^e)^m</c> for a whole <c>e</c> is <c>x^(e m)</c> times <c>c^q (c x^e)^r/x^(e r)</c>,
+        /// for the whole part <c>q</c> and the rest <c>r</c> of <c>m</c>, constant on either side
+        /// of 0 by the same argument; for a positive x it is <c>c^m</c>, whatever <c>c</c> is. It
+        /// is taken apart beside the sum, and alone where <c>e</c> is past 1, <c>(d x^3)^n</c>:
+        /// <c>(c x)^m</c> alone is a power of a linear, a substitution's, and for an <c>e</c> that
+        /// is not whole it is <see cref="SolveByDistributingAPowerOfAMonomial"/>'s.
         /// </para>
         /// <para>
         /// Rubi's 1.1.4.2 and 1.1.4.3 write these by the hundred: <c>1/sqrt(a x^2 + b x^5)</c> and
         /// <c>1/(x sqrt(b x^(2/3) + a x))</c> were declined, the first since the factorization
         /// over the rationals does not read a symbol, and the second since nothing took the power
-        /// of x out of the root. With it out, the binomial is what the rules for
-        /// <c>x^m (a + b x^n)^p</c> read. At the top only, where the answer is the caller's.
+        /// of x out of the root; and so were <c>1/(a x + b x^n)</c>, <c>sqrt(c x)/(a x + b x^n)^(3/2)</c>
+        /// and <c>1/sqrt(x^(2 - n) (a + b x^n))</c>. With it out, the binomial is what the rules for
+        /// <c>x^m (a + b x^n)^p</c> read. At the top only, where the answer is the caller's: below
+        /// it, integration by parts integrates the answer again, and <c>x^2 sqrt(a x + b x^4)</c>,
+        /// whose integral is not elementary, was half a minute of that before it was declined.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </para>
         /// </remarks>
@@ -17068,58 +18640,197 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             // The sum as a factor of the integrand, above the bar or below it.
             var (above, below) = Functions.SingleQuotient.Of(expr);
-            (Entity Sum, Entity Exponent, Number.Rational Lowest, Entity Quotient, bool Below)? found = null;
-            foreach (var (side, isBelow) in new[] { (above, false), (below, true) })
+            (Entity Factor, Entity Sum, Entity Exponent, Entity Lowest, Entity Quotient)? found = null;
+            foreach (var side in new[] { above, below })
                 foreach (var factor in Mulf.LinearChildren(side))
                 {
-                    if (factor is not Powf(var sum, var power) || power is Number.Integer || power.ContainsNode(x)
-                        || !sum.ContainsNode(x) || sum.Complexity > 60)
+                    var (sum, power) = factor is Powf(var @base, var p) && !p.ContainsNode(x) ? (@base, p) : (factor, (Entity)Number.Integer.One);
+                    if (!sum.ContainsNode(x) || sum.Complexity > 60)
+                        continue;
+                    // A whole power is the rules' for the sum as written, unless x is in the sum to a
+                    // power that is not a rational number, which nothing else reads.
+                    if (power is Number.Integer && !HoldsAPowerOfXOffTheRationals(sum, x))
                         continue;
                     if ((OutOfASum(sum) ?? OutOfAProduct(sum)) is not var (lowest, rest))
                         continue;
-                    // An odd whole power of x out of a sum of whole powers: the sum is real on both
-                    // sides of 0 and x^(j p) is not, and the rules for the sum as written answer it
-                    // on both. An even one comes out as its sign, and a fractional one is real for a
-                    // positive x only, as the sum already was.
-                    if (lowest is Number.Integer { EInteger.IsEven: false } && !sum.Nodes.Any(node => node is Powf(var @base, Number.Rational r) && @base == x && r is not Number.Integer))
+                    // x to an odd power out of a sum of whole powers that is x times a linear, or a
+                    // linear over x: the sum is real on both sides of 0 and x^(j p) is not, and the
+                    // rules for the root of a quadratic answer it on both -- `x/sqrt(x^2 - 2 x)` is
+                    // the secant substitution's. And out of a product of x and more than one sum,
+                    // which the factor does not make any easier: `((1 - x) x (1 - k x))^(1/3)` was a
+                    // minute of search to be declined, where as written it is five seconds. Past those
+                    // nothing reads the sum as written, and the factor below answers both sides:
+                    // `x/sqrt(a x + b x^4)`. An even power comes out as its sign, and a fractional one
+                    // is real for a positive x only, as the sum already was.
+                    if (lowest is Number.Integer { EInteger.IsEven: false } odd && odd.EInteger.Abs().Equals(EInteger.One)
+                        && !sum.Nodes.Any(node => node is Powf(var @base, var r) && @base == x && r is not Number.Integer)
+                        && (Mulf.LinearChildren(rest).Where(part => part.ContainsNode(x)).ToList() is not [Sumf or Minusf]
+                            || Sumf.LinearChildren(rest).All(term => PowerOfX(term, x) is (_, Number.Integer { EInteger: var degree }) && degree.CompareTo(1) <= 0 && degree.Sign >= 0)))
                         continue;
                     // Two such would want two factors.
                     if (found is { })
                         return null;
-                    found = (sum, power, lowest, rest, isBelow);
+                    found = (factor, sum, power, lowest, rest);
                 }
-            if (found is not var (theSum, exponentOfTheSum, j, theRest, sumIsBelow)
-                || above.Nodes.Concat(below.Nodes).Count(node => node == theSum) != 1)
+            // With no such sum, a power of a monomial past the first degree with nothing of x
+            // beside it but powers of x, `(d x^3)^n`, which nothing else reads: `(c x)^m` is a
+            // power of a linear, and a substitution's.
+            if (found is null ? !OnlyMonomialsBeside(above, below, x)
+                : above.Nodes.Concat(below.Nodes).Count(node => node == found.Value.Sum) != 1)
                 return null;
-            var outside = (j * exponentOfTheSum).InnerSimplified;
-            Entity Without(Entity side)
+            var outside = found is var (_, _, powerOfTheSum, lowestPower, _) ? Simplified(lowestPower * powerOfTheSum) : Number.Integer.Zero;
+            Entity constant = Number.Integer.One;
+            var (top, powerAbove) = Rewritten(above, Number.Integer.One);
+            var (bottom, powerBelow) = Rewritten(below, Number.Integer.MinusOne);
+            // Every power of x as one: a negative whole one below the bar and the question
+            // simplified, since `x^(-1) sqrt(a + b x^m)` is answered with `1/(1/x)` in it where
+            // `sqrt(a + b x^m)/x` is not; any other number above the bar and simplified, since
+            // `1/(x^(11/2) sqrt(a + b x^3))` is answered for a positive x only where
+            // `x^(-11/2)/sqrt(a + b x^3)` is answered on both sides; and a symbol above the bar
+            // and not simplified back below it, where the rules for `x^m (a + b x^n)^p` read it --
+            // `1/(x^(1 - n/2) sqrt(a + b x^n))` is declined where `x^(-1 + n/2)/sqrt(a + b x^n)`
+            // is answered.
+            var powerOfX = Shifted(powerAbove, powerBelow, subtract: true);
+            Entity question;
+            if (powerOfX is Number.Integer { EInteger.Sign: < 0 } negative)
+                question = (top / Times(bottom, MathS.Pow(x, Number.Integer.Create(negative.EInteger.Negate())))).InnerSimplified;
+            else if (powerOfX is Number)
             {
-                Entity product = Number.Integer.One;
-                foreach (var factor in Mulf.LinearChildren(side))
-                    if (!(factor is Powf(var sum, var power) && sum == theSum && power == exponentOfTheSum))
-                        product = product == Number.Integer.One ? factor : product * factor;
-                return product;
+                var abovePart = Functions.PartialFractions.IsZeroAsAValue(powerOfX) ? top : Times(top, MathS.Pow(x, powerOfX));
+                question = (bottom == Number.Integer.One ? abovePart : abovePart / bottom).InnerSimplified;
             }
-            var replacement = MathS.Pow(x, outside) * MathS.Pow(theRest, exponentOfTheSum);
-            var written = sumIsBelow ? Without(above) / (replacement * Without(below)) : replacement * Without(above) / below;
-            if (Integration.ComputeIndefiniteIntegral(written.InnerSimplified, x, integrateByParts) is not { } integral)
+            else
+            {
+                var abovePart = Functions.PartialFractions.IsZeroAsAValue(powerOfX) ? top : Times(top, MathS.Pow(x, powerOfX));
+                question = bottom == Number.Integer.One ? abovePart : abovePart / bottom;
+            }
+            if (Integration.ComputeIndefiniteIntegral(question, x, integrateByParts) is not { } integral)
                 return null;
-            // K: the sign of x to the power j p where that is all it is, which is its own reciprocal,
-            // and the quotient otherwise.
-            var aSign = j is Number.Integer { EInteger.IsEven: true } && outside is Number.Integer;
-            Entity constant = aSign
-                ? (((Number.Integer)outside).EInteger.IsEven ? Number.Integer.One : MathS.Signum(x))
-                : MathS.Pow(theSum, exponentOfTheSum) / replacement;
-            var answer = constant == Number.Integer.One ? integral : sumIsBelow && !aSign ? integral / constant : constant * integral;
+            var answer = constant == Number.Integer.One ? integral : constant * integral;
             return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
 
-            // A sum, each term a coefficient times a rational power of x: the lowest power, not 0,
-            // and what is left with it taken out of every term.
-            (Number.Rational, Entity)? OutOfASum(Entity sum)
+            // A side of the bar with the sum and every monomial beside it written so, and its
+            // powers of x apart, as one exponent; and the constant each rewriting costs gathered:
+            // the factor written over what is written for it, or the reverse below the bar.
+            (Entity Others, Entity PowerOfX) Rewritten(Entity side, Number.Integer sign)
+            {
+                Entity product = Number.Integer.One;
+                Entity exponent = Number.Integer.Zero;
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    var written = factor;
+                    Entity turn = Number.Integer.One;
+                    if (factor == x || factor is Powf(var bx, var ex) && bx == x && !ex.ContainsNode(x))
+                    {
+                        exponent = Shifted(exponent, factor is Powf(_, var e) ? e : Number.Integer.One, subtract: false);
+                        continue;
+                    }
+                    if (found is var (theFactor, theSum, exponentOfTheSum, j, theRest) && factor == theFactor)
+                    {
+                        exponent = Shifted(exponent, outside, subtract: false);
+                        written = exponentOfTheSum == Number.Integer.One ? theRest : MathS.Pow(theRest, exponentOfTheSum);
+                        if (exponentOfTheSum is Number.Integer)
+                            turn = Number.Integer.One;
+                        // The sign of x to the power j p where that is all it is, which is its own
+                        // reciprocal.
+                        else if (j is Number.Integer { EInteger.IsEven: true } && outside is Number.Integer whole)
+                            turn = whole.EInteger.IsEven ? Number.Integer.One : MathS.Signum(x);
+                        else
+                        {
+                            var fraction = FractionalPart((sign * exponentOfTheSum).InnerSimplified).Fraction;
+                            turn = MathS.Pow(theSum, fraction) / (MathS.Pow(x, Simplified(j * fraction)) * MathS.Pow(theRest, fraction));
+                        }
+                    }
+                    else if (AMonomial(factor, x) is var (@base, c, e, m))
+                    {
+                        exponent = Shifted(exponent, Simplified(e * m), subtract: false);
+                        written = Number.Integer.One;
+                        var (whole, fraction) = FractionalPart((sign * m).InnerSimplified);
+                        var turned = MathS.Pow(@base, fraction) / MathS.Pow(x, Simplified(e * fraction));
+                        turn = whole == Number.Integer.Zero ? turned : MathS.Pow(c, whole) * turned;
+                    }
+                    if (turn != Number.Integer.One)
+                        constant = constant == Number.Integer.One ? turn : constant * turn;
+                    if (written != Number.Integer.One)
+                        product = product == Number.Integer.One ? written : product * written;
+                }
+                return (product, exponent);
+            }
+
+            static Entity Times(Entity product, Entity factor)
+                => product == Number.Integer.One ? factor : factor * product;
+
+            // An exponent written as it simplifies: `1 + n - 1` is `n`, which the inner
+            // simplification leaves standing, and an answer carried it. Exponents are small.
+            static Entity Simplified(Entity exponent)
+                => exponent.InnerSimplified is var inner && (inner is Number || inner.Complexity > 40) ? inner : inner.Simplify();
+
+            // Every factor free of x, a power of x, or a power of a monomial past the first
+            // degree that is not whole, and one of those at least.
+            static bool OnlyMonomialsBeside(Entity above, Entity below, Entity.Variable x)
+            {
+                var any = false;
+                foreach (var factor in Mulf.LinearChildren(above).Concat(Mulf.LinearChildren(below)))
+                {
+                    if (!factor.ContainsNode(x) || factor == x || factor is Powf(var b, var e) && b == x && !e.ContainsNode(x))
+                        continue;
+                    if (AMonomial(factor, x) is not (_, _, var degree, _) || degree.EInteger.Abs().CompareTo(1) <= 0)
+                        return false;
+                    any = true;
+                }
+                return any;
+            }
+
+            // A number as its whole part, toward 0, and the rest; anything else as all rest.
+            static (Entity Whole, Entity Fraction) FractionalPart(Entity number)
+            {
+                if (number is not Number.Rational rational)
+                    return (Number.Integer.Zero, number);
+                var whole = rational.ERational.Numerator.Divide(rational.ERational.Denominator);
+                return (Number.Integer.Create(whole), Number.Rational.Create(rational.ERational.Subtract(ERational.FromEInteger(whole))));
+            }
+
+            static bool HoldsAPowerOfXOffTheRationals(Entity expr, Entity.Variable x)
+                => expr.Nodes.Any(node => node is Powf(var @base, var exponent) && @base == x && exponent is not Number.Rational);
+
+            // `(c x^e)^m` for a constant `c` that is not 1, a whole `e` that is not 0 and an `m`
+            // that is not whole: the base, `c`, `e` and `m`.
+            static (Entity Base, Entity Constant, Number.Integer Degree, Entity Power)? AMonomial(Entity factor, Entity.Variable x)
+            {
+                if (factor is not Powf(var @base, var power) || @base is not (Mulf or Divf) || power is Number.Integer || power.ContainsNode(x))
+                    return null;
+                Entity constant = Number.Integer.One;
+                var degree = EInteger.Zero;
+                foreach (var part in Mulf.LinearChildren(@base))
+                    switch (part)
+                    {
+                        case Entity.Variable v when v == x:
+                            degree = degree.Add(EInteger.One);
+                            break;
+                        case Powf(var b, Number.Integer k) when b == x:
+                            degree = degree.Add(k.EInteger);
+                            break;
+                        // A divisor's power of x is read so, `(x^k)^(-1)`.
+                        case Powf(Powf(var b, Number.Integer k), Number.Integer l) when b == x:
+                            degree = degree.Add(k.EInteger.Multiply(l.EInteger));
+                            break;
+                        case var other when !other.ContainsNode(x):
+                            constant = constant == Number.Integer.One ? other : constant * other;
+                            break;
+                        default:
+                            return null;
+                    }
+                return degree.IsZero || constant == Number.Integer.One ? null : (@base, constant, Number.Integer.Create(degree), power);
+            }
+
+            // A sum, each term a coefficient times a power of x: the lowest power where every
+            // exponent is a rational number and the first otherwise, not 0, and what is left with
+            // it taken out of every term.
+            (Entity, Entity)? OutOfASum(Entity sum)
             {
                 if (sum is not (Sumf or Minusf))
                     return null;
-                var terms = new List<(Entity Coefficient, Number.Rational Exponent)>();
+                var terms = new List<(Entity Coefficient, Entity Exponent)>();
                 foreach (var term in Sumf.LinearChildren(sum))
                 {
                     if (PowerOfX(term, x) is not { } read)
@@ -17128,43 +18839,57 @@ namespace AngouriMath.Functions.Algebra
                 }
                 if (terms.Count < 2)
                     return null;
-                var lowest = terms.Select(term => term.Exponent).Aggregate((least, next) => next.ERational.CompareTo(least.ERational) < 0 ? next : least);
-                if (lowest.ERational.IsZero)
+                var lowest = terms.All(term => term.Exponent is Number.Rational)
+                    ? terms.Select(term => (Number.Rational)term.Exponent).Aggregate((least, next) => next.ERational.CompareTo(least.ERational) < 0 ? next : least)
+                    : terms[0].Exponent;
+                if (Functions.PartialFractions.IsZeroAsAValue(lowest))
                     return null;
                 Entity rest = Number.Integer.Zero;
                 foreach (var (coefficient, exponent) in terms)
                 {
-                    var shifted = Number.Rational.Create(exponent.ERational.Subtract(lowest.ERational));
-                    rest += shifted is Number.Integer { EInteger.IsZero: true } ? coefficient
+                    var shifted = Shifted(exponent, lowest, subtract: true);
+                    rest += Functions.PartialFractions.IsZeroAsAValue(shifted) ? coefficient
                         : coefficient * (shifted == Number.Integer.One ? x : MathS.Pow(x, shifted));
                 }
                 return (lowest, rest);
             }
             // A product or a quotient with powers of x among its factors and something else of x:
-            // `x^2 (a + b x^3)`, `(a + b x^3)/x`.
-            (Number.Rational, Entity)? OutOfAProduct(Entity product)
+            // `x^2 (a + b x^3)`, `(a + b x^3)/x`, and the power out of a sum among them as well,
+            // `x (b x + a x^n)`.
+            (Entity, Entity)? OutOfAProduct(Entity product)
             {
                 if (product is not (Mulf or Divf))
                     return null;
                 var (numerator, denominator) = Functions.SingleQuotient.Of(product);
-                var exponent = ERational.Zero;
+                Entity exponent = Number.Integer.Zero;
                 Entity rest = Number.Integer.One;
-                foreach (var (side, sign) in new[] { (numerator, 1), (denominator, -1) })
+                foreach (var (side, subtract) in new[] { (numerator, false), (denominator, true) })
                     foreach (var factor in Mulf.LinearChildren(side))
                     {
                         if (factor == x)
-                            exponent = sign > 0 ? exponent.Add(ERational.One) : exponent.Subtract(ERational.One);
-                        else if (factor is Powf(var @base, Number.Rational power) && @base == x)
-                            exponent = sign > 0 ? exponent.Add(power.ERational) : exponent.Subtract(power.ERational);
+                            exponent = Shifted(exponent, Number.Integer.One, subtract);
+                        else if (factor is Powf(var @base, var power) && @base == x && !power.ContainsNode(x))
+                            exponent = Shifted(exponent, power, subtract);
+                        else if (OutOfASum(factor) is var (lowest, inner))
+                        {
+                            exponent = Shifted(exponent, lowest, subtract);
+                            rest = subtract ? rest / inner : rest * inner;
+                        }
                         else
-                            rest = sign > 0 ? rest * factor : rest / factor;
+                            rest = subtract ? rest / factor : rest * factor;
                     }
-                return exponent.IsZero || !rest.ContainsNode(x) ? null : (Number.Rational.Create(exponent), rest);
+                return Functions.PartialFractions.IsZeroAsAValue(exponent) || !rest.ContainsNode(x) ? null : (exponent, rest);
             }
 
-            // A term as a coefficient free of x and a rational exponent of x, through products and
-            // quotients.
-            static (Entity Coefficient, Number.Rational Exponent)? PowerOfX(Entity term, Entity.Variable x)
+            // The sum or difference of two exponents, as a number where both are rational.
+            static Entity Shifted(Entity exponent, Entity by, bool subtract)
+                => exponent is Number.Rational left && by is Number.Rational right
+                    ? Number.Rational.Create(subtract ? left.ERational.Subtract(right.ERational) : left.ERational.Add(right.ERational))
+                    : Simplified(subtract ? exponent - by : exponent + by);
+
+            // A term as a coefficient free of x and an exponent of x free of it, through products
+            // and quotients.
+            static (Entity Coefficient, Entity Exponent)? PowerOfX(Entity term, Entity.Variable x)
             {
                 if (!term.ContainsNode(x))
                     return (term, Number.Integer.Zero);
@@ -17172,16 +18897,16 @@ namespace AngouriMath.Functions.Algebra
                 {
                     case Entity.Variable v when v == x:
                         return (Number.Integer.One, Number.Integer.One);
-                    case Powf(var @base, Number.Rational power) when @base == x:
+                    case Powf(var @base, var power) when @base == x && !power.ContainsNode(x):
                         return (Number.Integer.One, power);
                     case Mulf(var left, var right):
                         if (PowerOfX(left, x) is not var (lc, le) || PowerOfX(right, x) is not var (rc, re))
                             return null;
-                        return (lc * rc, Number.Rational.Create(le.ERational.Add(re.ERational)));
+                        return (lc * rc, Shifted(le, re, subtract: false));
                     case Divf(var left, var right):
                         if (PowerOfX(left, x) is not var (nc, ne) || PowerOfX(right, x) is not var (dc, de))
                             return null;
-                        return (nc / dc, Number.Rational.Create(ne.ERational.Subtract(de.ERational)));
+                        return (nc / dc, Shifted(ne, de, subtract: true));
                     default:
                         return null;
                 }
@@ -20255,19 +21980,33 @@ namespace AngouriMath.Functions.Algebra
             Entity rest = Number.Integer.One;
             foreach (var factor in Mulf.LinearChildren(denominator))
             {
-                if (conjugate is null && factor is Sumf or Minusf && Sumf.LinearChildren(factor).ToList() is { Count: 2 } terms
+                // Or a whole power of the pair, whose conjugate is the power of the pair's:
+                // `x/(sqrt(a + b x) + sqrt(c + b x))^3` was declined where its square was answered.
+                var (pair, power) = factor is Powf(var raised, Number.Integer { EInteger: var whole }) && whole.Sign > 0 && whole.CompareTo(EInteger.FromInt32(8)) <= 0
+                    ? (raised, whole.ToInt32Checked())
+                    : (factor, 1);
+                if (conjugate is null && pair is Sumf or Minusf && Sumf.LinearChildren(pair).ToList() is { Count: 2 } terms
                     && terms.All(term => IsARootOfAPolynomial(term)))
                 {
                     // The conjugate flips the sign of the second term; the product is the
                     // difference of the squares, each square a polynomial.
                     var first = terms[0];
                     var second = terms[1];
-                    conjugate = first - second;
+                    conjugate = power == 1 ? first - second : MathS.Pow(first - second, power).Expand();
                     product = (SquareOf(first) - SquareOf(second)).InnerSimplified;
                     // Not the same radicand twice: the difference is zero, the factor is zero
                     // or a multiple of one root, and neither is this rule's.
                     if (product.Evaled is Number.Complex { IsZero: true } || product.Simplify().Evaled is Number.Complex { IsZero: true })
                         return null;
+                    // An even power of the conjugate has the root of the product of the radicands
+                    // in it, `2 sqrt(A B)` in the square, which over a constant difference leaves a
+                    // root of a quadratic where the power as written was answered: the squares over
+                    // `sqrt(a + b x) + sqrt(c + b x)` ran past the budget so, and were answered in a
+                    // second as they stood.
+                    if (power % 2 == 0 && !product.Simplify().ContainsNode(x))
+                        return null;
+                    if (power != 1)
+                        product = MathS.Pow(product, power);
                     continue;
                 }
                 rest = rest * factor;
@@ -21934,6 +23673,113 @@ namespace AngouriMath.Functions.Algebra
                 return null;
             var answer = signs == Number.Integer.One ? result : signs * result;
             return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
+        }
+
+        /// <summary>
+        /// Half-odd powers of <c>a ± i a sinh(y)</c> beside anything in the hyperbolic functions of
+        /// <c>y</c>, by the half angle at which they are squares: <c>1 + i sinh(y)</c> is
+        /// <c>(cosh(y/2) + i sinh(y/2))^2</c>, so <c>sqrt(a + i a sinh(y))</c> is
+        /// <c>sqrt(a) (cosh(y/2) + i sinh(y/2))</c> times a constant on every interval where both
+        /// are continuous. The rest of the integrand is written in the half angle, and the question
+        /// asked again in <c>x</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>x^3 sqrt(a + i a sinh(e + f x))</c> and the rest of the 47 of 6.1.1 and 6.1.5
+        /// were declined or searches past the budget: the half angle of
+        /// <see cref="SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare"/> reads
+        /// <c>a ± a cosh(y)</c>, and <c>1 + i sinh(y)</c> is the square of a complex function rather
+        /// than of a real one.
+        /// </para>
+        /// <para>
+        /// The constant is not written: the answer is the antiderivative of the rewritten integrand
+        /// times each power as written over the form it was rewritten to, a quotient whose
+        /// logarithmic derivative is zero, so it is constant wherever it is continuous and the
+        /// answer holds on every such interval, whatever <c>a</c> is.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAHalfOddPowerOfOnePlusAnImaginaryHyperbolicSine(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var s = Variable.CreateUnique(expr, "s_hyp");
+            var c = Variable.CreateUnique(expr, "c_hyp");
+            if (ReadTheHyperbolicFunctions(expr, x, s, c) is not var (read, argument))
+                return null;
+            var half = (argument / 2).InnerSimplified;
+            var sinhHalf = MathS.Hyperbolic.Sinh(half);
+            var coshHalf = MathS.Hyperbolic.Cosh(half);
+            Entity constant = Number.Integer.One;
+            var found = false;
+            var rewritten = read.Replace(node =>
+            {
+                if (node is not Powf(var radicand, Number.Rational exponent) || exponent is Number.Integer
+                    || !exponent.ERational.Denominator.Equals(EInteger.FromInt32(2))
+                    || !radicand.ContainsNode(s) || radicand.ContainsNode(c)
+                    || ReadAsOnePlusMinusAnImaginarySine(radicand, s) is not var (a, plus))
+                    return node;
+                found = true;
+                var root = plus ? coshHalf + MathS.i * sinhHalf : coshHalf - MathS.i * sinhHalf;
+                var written = MathS.Pow(a, exponent) * MathS.Pow(root, Number.Integer.Create(exponent.ERational.Numerator));
+                var asItIs = MathS.Pow(radicand.Substitute(s, MathS.Hyperbolic.Sinh(argument)), exponent);
+                constant = constant * asItIs / written;
+                return written;
+            });
+            if (!found)
+                return null;
+            var inX = rewritten.Substitute(c, 2 * MathS.Sqr(coshHalf) - 1).Substitute(s, 2 * sinhHalf * coshHalf);
+            if (inX.ContainsNode(s) || inX.ContainsNode(c))
+                return null;
+            if (Integration.ComputeAsTheSameQuestion(inX, x, integrateByParts) is not { } result
+                || result.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return constant * result;
+        }
+
+        /// <summary>
+        /// <paramref name="radicand"/> read as <c>a (1 ± i s)</c> for the hyperbolic sine
+        /// <paramref name="sine"/>: the constant <c>a</c>, and whether the imaginary unit comes
+        /// with a plus. Null for anything else.
+        /// </summary>
+        private static (Entity Constant, bool Plus)? ReadAsOnePlusMinusAnImaginarySine(Entity radicand, Entity sine)
+        {
+            Entity a = Number.Integer.Zero;
+            Entity? b = null;
+            foreach (var term in Sumf.LinearChildren(radicand))
+            {
+                if (!term.ContainsNode(sine))
+                {
+                    a += term;
+                    continue;
+                }
+                if (b is not null)
+                    return null;
+                Entity coefficient = Number.Integer.One;
+                var seen = false;
+                foreach (var factor in Mulf.LinearChildren(term))
+                {
+                    if (factor == sine && !seen)
+                        seen = true;
+                    else if (!factor.ContainsNode(sine))
+                        coefficient *= factor;
+                    else
+                        return null;
+                }
+                if (!seen)
+                    return null;
+                b = coefficient;
+            }
+            if (b is null)
+                return null;
+            a = a.InnerSimplified;
+            if (a.Evaled is Number.Complex { IsZero: true })
+                return null;
+            static bool IsZero(Entity value) => value.InnerSimplified.Evaled is Number.Complex { IsZero: true }
+                || value.Simplify().Evaled is Number.Complex { IsZero: true };
+            if (IsZero(b - MathS.i * a))
+                return (a, true);
+            if (IsZero(b + MathS.i * a))
+                return (a, false);
+            return null;
         }
 
         /// <summary>
@@ -23817,6 +25663,145 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A rational function of <c>tan(z)</c> beside a power of <c>S = a + c tan(z)</c> with
+        /// <c>c = ±i a</c>, below the bar or not whole, integrated in <c>S</c>: <c>tan(z)</c> is
+        /// <c>(S - a)/c</c>, and since <c>c^2 = -a^2</c>, <c>dS/dz = c sec(z)^2 = S (S - 2a)/c</c>, so
+        /// <c>dz = c dS/(S (S - 2a))</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Rubi's <c>cot(c + d x)^3 (A + B tan(c + d x))/(a + i a tan(c + d x))^2</c> and the rest of
+        /// its 4.3.3.1 with a power of the tangent beside <c>(A + B tan)</c> over a power of
+        /// <c>a + i a tan</c> ran past the budget, whole powers and half-odd ones alike: under
+        /// <c>u = tan(z)</c> each is a rational function over <c>1 + i u</c> and <c>1 - i u</c> with
+        /// symbols in every coefficient. In <c>S</c> the factors are <c>S</c>, <c>S - 2a</c> and,
+        /// from a cotangent, <c>S - a</c>, with no imaginary root among them, and the same
+        /// integrands are a second or two; a half-odd power of <c>S</c> is a root of a linear.
+        /// </para>
+        /// <para>
+        /// Exact wherever the integrand is defined: the substitution is the identity
+        /// <c>sec(z)^2 = 1 + tan(z)^2</c> read in <c>S</c>, and the power of <c>S</c> is the
+        /// integrand's own. Only whole powers of the tangent and cotangent of <c>z</c> beside it,
+        /// and nothing else in x; a base standing only to positive whole powers is a polynomial in
+        /// the tangent, which the rules for those answer.
+        /// </para>
+        /// <para>
+        /// Beside a second such sum of the same argument, <c>q - i q tan(z)</c>, which is linear in
+        /// the first, the one under a power that is not whole is the variable and the other a whole
+        /// power of a linear in it: <c>(a + i a tan(z))/(q - i q tan(z))^(3/2)</c>, Rubi's 4.3.2.1,
+        /// ran past the budget too.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveInTheImaginarySumOfAConstantAndATangent(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var sums = new List<(Entity Base, Entity Constant, Entity Coefficient, Entity Argument)>();
+            foreach (var node in expr.Nodes)
+            {
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(x) || sums.Any(found => found.Base == node))
+                    continue;
+                Entity sum = Number.Integer.Zero;
+                Entity? factor = null, inner = null;
+                var read = true;
+                foreach (var term in Sumf.LinearChildren(node))
+                {
+                    if (!term.ContainsNode(x))
+                    {
+                        sum = sum == Number.Integer.Zero ? term : sum + term;
+                        continue;
+                    }
+                    if (factor is not null)
+                    {
+                        read = false;
+                        break;
+                    }
+                    Entity product = Number.Integer.One;
+                    foreach (var piece in Mulf.LinearChildren(term))
+                    {
+                        if (piece is Tanf(var y) && inner is null)
+                            inner = y;
+                        else if (!piece.ContainsNode(x))
+                            product = product == Number.Integer.One ? piece : product * piece;
+                        else
+                        {
+                            read = false;
+                            break;
+                        }
+                    }
+                    if (!read || inner is null)
+                    {
+                        read = false;
+                        break;
+                    }
+                    factor = product;
+                }
+                if (!read || factor is null || inner is null || sum == Number.Integer.Zero)
+                    continue;
+                var ratio = Functions.PartialFractions.Bare((factor / sum).InnerSimplified);
+                if (ratio.Evaled is not Number.Complex)
+                    ratio = Functions.PartialFractions.Bare(ratio.Simplify());
+                if (ratio.Evaled != MathS.i.Evaled && ratio.Evaled != (-MathS.i).Evaled)
+                    continue;
+                sums.Add((node, sum, factor, inner));
+            }
+            // Two such sums, `a + i a tan(z)` and `c - i c tan(z)`, are each linear in the other: in
+            // the one under a power that is not whole the other is a whole power of a linear, where
+            // in the other it would be the root of one. Where both or neither are, declined.
+            bool NotWhole(Entity sum) => expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == sum && p is not Number.Integer);
+            var chosen = sums.Count switch
+            {
+                1 => sums[0],
+                2 when NotWhole(sums[0].Base) != NotWhole(sums[1].Base) => NotWhole(sums[0].Base) ? sums[0] : sums[1],
+                _ => default,
+            };
+            var (@base, constant, coefficient, argument) = chosen;
+            if (@base is null || constant is null || coefficient is null || argument is null
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x)
+                || rate.Evaled is Number.Complex { IsZero: true })
+                return null;
+            // Below the bar, or to a power that is not whole: a positive whole power alone is a
+            // polynomial in the tangent.
+            var below = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr)).Denominator;
+            if (!below.Nodes.Contains(@base)
+                && !expr.Nodes.Any(node => node is Powf(var b, Number.Rational p) && b == @base && p is not Number.Integer))
+                return null;
+            var s = Variable.CreateUnique(expr, "s_imaginary_tangent");
+            var tangent = (s - constant) / coefficient;
+            // The other sum, `q + c' tan(z)`, written as the linear in `S` it is, `(c'/c) (S - r)`
+            // for `r = a - q c/c'`, its root spelled `2 a` where it is that: there it cancels the
+            // `S - 2a` of `dz` as written, where `q + c' (S - a)/c` cancelled nothing, and the pole
+            // it left made `(a + i a tan(z))^2/sqrt(q - i q tan(z))` fourteen thousand characters.
+            Entity? other = null, otherInS = null;
+            if (sums.Count == 2)
+            {
+                var (otherBase, otherConstant, otherCoefficient, _) = sums[0].Base == @base ? sums[1] : sums[0];
+                var ratio = Functions.PartialFractions.InLowestTermsOverTheSymbols(otherCoefficient / coefficient);
+                var root = Functions.PartialFractions.InLowestTermsOverTheSymbols(constant - otherConstant * coefficient / otherCoefficient);
+                if (Functions.PartialFractions.IsZeroAsAValue(root - 2 * constant))
+                    root = 2 * constant;
+                (other, otherInS) = (otherBase, ratio * (s - root));
+            }
+            var rewritten = expr.Replace(node => node == @base ? s : other is not null && node == other ? otherInS! : node).Replace(node => node switch
+            {
+                Tanf(var y) when y == argument => tangent,
+                Cotanf(var y) when y == argument => 1 / tangent,
+                _ => node,
+            });
+            if (rewritten.ContainsNode(x))
+                return null;
+            // No power that is not whole but of S itself: a root of the tangent is a root of
+            // `(S - a)/c` with `c` imaginary, and taken apart over the constant it changed its
+            // branch -- `cot(z)^(3/2) (A + B tan(z))/(a + i a tan(z))^2` and `tan(z)^(8/3)/(a + i a tan(z))`
+            // came back wrong at every point.
+            if (rewritten.Nodes.Any(node => node is Powf(var radicand, var power) && power is not Number.Integer && radicand != s))
+                return null;
+            var inS = (rewritten * coefficient / (s * (s - 2 * constant)) / rate).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inS, s, integrateByParts) is not { } inTermsOfS)
+                return null;
+            return inTermsOfS.Substitute(s, @base);
+        }
+
+        /// <summary>
         /// <c>A + i A tan(z)</c> is <c>A e^(i z)/cos(z)</c>, and <c>A + i A cot(z)</c> is
         /// <c>i A e^(-i z)/sin(z)</c> -- exactly, wherever the tangent is defined, since
         /// <c>cos(z) + i sin(z)</c> is <c>e^(i z)</c>. A power of one of them below the bar is
@@ -23841,7 +25826,7 @@ namespace AngouriMath.Functions.Algebra
             if (!below.ContainsNode(x))
                 return null;
             var arguments = new List<Entity>();
-            var rewritten = below.Replace(node =>
+            Entity AsAnExponential(Entity node)
             {
                 if (node is not Sumf and not Minusf || !node.ContainsNode(x))
                     return node;
@@ -23895,14 +25880,32 @@ namespace AngouriMath.Functions.Algebra
                 return isTangent
                     ? constant * exponential / MathS.Cos(argument)
                     : (plus ? MathS.i : -MathS.i) * constant * exponential / MathS.Sin(argument);
-            });
+            }
+            var rewritten = below.Replace(AsAnExponential);
             if (rewritten == below)
                 return null;
-            // A tangent or a cotangent of the same argument above the bar in sines and cosines, so that
-            // the cosine or sine the identity puts below cancels it: `tan(z)/(A + i A tan(z))` is
-            // `sin(z) e^(-i z)/A`, an exponential times a sine, where `tan(z) cos(z) e^(-i z)/A` was
-            // a search past the budget with `z = c + d x`.
-            var inSinesAndCosines = above.Replace(node => node switch
+            // A root of the tangent or the cotangent of that argument, or of a constant times one, is
+            // read as written by the substitution `t = tan(z)`, where it is a root of `t`, and by
+            // nothing in the exponential's spelling: `sqrt(tan(c + d x))/(a + i a tan(c + d x))`
+            // rewritten was seven seconds of search to be declined, and is a third of one in `t`.
+            bool ARootOfTheTangent(Entity node)
+            {
+                if (node is not Powf(var radicand, Number.Rational power) || power is Number.Integer)
+                    return false;
+                var varying = Mulf.LinearChildren(radicand).Where(factor => factor.ContainsNode(x)).ToList();
+                return varying is [Tanf(var tangentOf)] && arguments.Contains(tangentOf)
+                    || varying is [Cotanf(var cotangentOf)] && arguments.Contains(cotangentOf);
+            }
+            if (expr.Nodes.Any(ARootOfTheTangent))
+                return null;
+            // The sums above the bar as exponentials too, now that one below has called for them:
+            // `(a + i a tan(z))^2/(c - i c tan(z))^4` is `a^2 e^(6 i z) cos(z)^2/c^4`, where the square
+            // above in sines and cosines was a sum of exponentials that nothing gathered, and a search
+            // past the budget. And a tangent or a cotangent of the same argument above the bar in sines
+            // and cosines, so that the cosine or sine the identity puts below cancels it:
+            // `tan(z)/(A + i A tan(z))` is `sin(z) e^(-i z)/A`, an exponential times a sine, where
+            // `tan(z) cos(z) e^(-i z)/A` was a search past the budget with `z = c + d x`.
+            var inSinesAndCosines = above.Replace(AsAnExponential).Replace(node => node switch
             {
                 Tanf(var inner) when arguments.Contains(inner) => MathS.Sin(inner) / MathS.Cos(inner),
                 Cotanf(var inner) when arguments.Contains(inner) => MathS.Cos(inner) / MathS.Sin(inner),
@@ -23928,7 +25931,7 @@ namespace AngouriMath.Functions.Algebra
                 return Integration.ComputeAsTheSameQuestion((above / rewritten).InnerSimplified, x, integrateByParts);
             // And what sines and cosines of it are left, as the exponentials they are, so that the whole is
             // a rational function of `e^(i z)`: `tan(z)^2/(A + i A tan(z))` leaves `sin(z)^2/(A cos(z) e^(i z))`.
-            var inExponentials = (top / bottom).Replace(node => node switch
+            Entity InExponentials(Entity written) => written.Replace(node => node switch
             {
                 Sinf(var inner) when arguments.Contains(inner)
                     => (MathS.Pow(MathS.e, MathS.i * inner) - MathS.Pow(MathS.e, -MathS.i * inner)) / (2 * MathS.i),
@@ -23936,7 +25939,41 @@ namespace AngouriMath.Functions.Algebra
                     => (MathS.Pow(MathS.e, MathS.i * inner) + MathS.Pow(MathS.e, -MathS.i * inner)) / 2,
                 _ => node,
             });
-            return Integration.ComputeAsTheSameQuestion(inExponentials.InnerSimplified, x, integrateByParts);
+            // Multiplied out where it is a polynomial in `e^(i z)` and its reciprocal with nothing else of x
+            // in it, the exponentials below the bar taken above as their reciprocals: a sum of exponentials,
+            // each term one the closed rule answers. `(a + i a tan(z))^2 (A + B tan(z))/(c - i c tan(z))^6`
+            // is `a^2 e^(8 i z) cos(z)^4 (A + B tan(z))/c^6`, fourteen seconds through the hyperbolic
+            // tangent's substitution as written and forty milliseconds multiplied out. Not beside a
+            // polynomial in x, which would be multiplied out too, and its answer with it.
+            Entity? Reciprocal(Entity below) => below switch
+            {
+                _ when !below.ContainsNode(x) => 1 / below,
+                Mulf(var left, var right) => Reciprocal(left) is { } ofLeft && Reciprocal(right) is { } ofRight ? ofLeft * ofRight : null,
+                Powf(var @base, var exponent) when @base == MathS.e => MathS.Pow(MathS.e, -exponent),
+                Powf(var inner, Number.Integer power) => Reciprocal(inner) is { } ofInner ? MathS.Pow(ofInner, power) : null,
+                _ => null,
+            };
+            if (Reciprocal(bottom) is not { } belowTakenAbove
+                || top.Replace(node => node is Sinf or Cosf || TheExponentOf(node) is not null ? Number.Integer.One : node).ContainsNode(x))
+                return Integration.ComputeAsTheSameQuestion(InExponentials(top / bottom).InnerSimplified, x, integrateByParts);
+            var overTheBar = top * belowTakenAbove;
+            // The exponentials of each term multiplied out gathered into one, whose exponent, a sum of
+            // theirs, `i x (-1) + i x`, is gathered to its slope and offset, so that a term whose
+            // exponents cancel is a constant.
+            var multipliedOut = Patterns.GatherPowersOfOneBase(InExponentials(overTheBar).Expand().InnerSimplified).Replace(node =>
+                TheExponentOf(node) is { } exponent && exponent.ContainsNode(x)
+                && TreeAnalyzer.TryGetPolyLinear(exponent, x, out var slope, out var offset)
+                    ? MathS.Pow(MathS.e, slope.InnerSimplified * x + offset.InnerSimplified)
+                    : node);
+            return Integration.ComputeAsTheSameQuestion(multipliedOut.InnerSimplified, x, integrateByParts);
+
+            // The exponent of an exponential, or of a whole power of one, as one exponential.
+            static Entity? TheExponentOf(Entity node) => node switch
+            {
+                Powf(var @base, var exponent) when @base == MathS.e => exponent,
+                Powf(Powf(var @base, var exponent), Number.Integer times) when @base == MathS.e => exponent * times,
+                _ => null,
+            };
         }
 
         /// <summary>
@@ -24078,19 +26115,40 @@ namespace AngouriMath.Functions.Algebra
         /// <c>cos(x)^2/(a cos(x) + i a sin(x))^3</c> was declined after twelve seconds.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// The sibling of <see cref="SolveByWritingAnImaginaryTangentAsAnExponential"/>, which reads
         /// <c>A + i A tan(y)</c>; below the bar only, for the same reason.
+        /// </para>
+        /// <para>
+        /// With a constant beside the pair, <c>a + b cos(y) + i b sin(y)</c> is <c>a + b e^(i y)</c>,
+        /// and there the cosine and sine of <c>y</c> elsewhere are written as exponentials too, so
+        /// that the whole is rational in <c>e^(i y)</c>: Rubi's
+        /// <c>(A + B cos(x))/(a + b cos(x) + i b sin(x))</c> and its kin were declined, a cosine
+        /// beside the exponential being nothing the rules for either read. Without the constant the
+        /// cosine above the bar stays, beside the exponential the closed rules answer.
         /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
         /// </remarks>
         internal static Entity? SolveByWritingAnImaginarySumOfACosineAndASineAsAnExponential(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             var (above, below) = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(expr));
             if (!below.ContainsNode(x))
                 return null;
+            Entity? argumentBesideAConstant = null;
             var rewritten = below.Replace(node =>
             {
-                if (node is not (Sumf or Minusf) || !node.ContainsNode(x)
-                    || !TryReadACosineAndASine(node, x, out var cosineCoefficient, out var sineCoefficient, out var argument))
+                if (node is not (Sumf or Minusf) || !node.ContainsNode(x))
+                    return node;
+                // A constant beside the pair: the pair alone is read, and the constant added back.
+                Entity? constant = null;
+                var pair = node;
+                var terms = Sumf.LinearChildren(node);
+                if (terms.Count == 3 && terms.Count(term => !term.ContainsNode(x)) == 1)
+                {
+                    constant = terms.First(term => !term.ContainsNode(x));
+                    pair = terms.Where(term => term.ContainsNode(x)).Aggregate((left, right) => left + right);
+                }
+                if (!TryReadACosineAndASine(pair, x, out var cosineCoefficient, out var sineCoefficient, out var argument))
                     return node;
                 // The ratio is the imaginary unit one way or the other, and nothing else. Bare:
                 // `i a/a` simplifies to `i provided not a = 0`, and a condition is not a number
@@ -24101,10 +26159,30 @@ namespace AngouriMath.Functions.Algebra
                 var plus = ratio.Evaled == MathS.i.Evaled;
                 if (!plus && ratio.Evaled != (-MathS.i).Evaled)
                     return node;
-                return cosineCoefficient * MathS.Pow(MathS.e, ((plus ? MathS.i : -MathS.i) * argument).InnerSimplified);
+                var exponential = cosineCoefficient * MathS.Pow(MathS.e, ((plus ? MathS.i : -MathS.i) * argument).InnerSimplified);
+                if (constant is null)
+                    return exponential;
+                if (argumentBesideAConstant is not null && argumentBesideAConstant != argument)
+                    return node;
+                argumentBesideAConstant = argument;
+                return constant + exponential;
             });
             if (rewritten == below)
                 return null;
+            // Beside a constant, the cosine and sine of that argument everywhere as exponentials.
+            if (argumentBesideAConstant is { } inExponentials)
+            {
+                var rising = MathS.Pow(MathS.e, (MathS.i * inExponentials).InnerSimplified);
+                var falling = MathS.Pow(MathS.e, (-MathS.i * inExponentials).InnerSimplified);
+                Entity InExponentials(Entity side) => side.Replace(node => node switch
+                {
+                    Cosf(var y) when y == inExponentials => (rising + falling) / 2,
+                    Sinf(var y) when y == inExponentials => (rising - falling) / (2 * MathS.i),
+                    _ => node,
+                });
+                above = InExponentials(above);
+                rewritten = InExponentials(rewritten);
+            }
             // And a whole power of what was written split, `(A e^(i y))^n` as `A^n e^(i n y)`, so
             // that the exponential stands on its own for the rules that read one: the rule that
             // distributes such powers takes a constant with a symbol in it and leaves a number,
@@ -25039,7 +27117,7 @@ namespace AngouriMath.Functions.Algebra
                 // and not a subexpression anyone wrote: `1 + 2x^2` and `1 + 2x^2 + 4x^3` are
                 // the left-nested partial sums of Hearn's radicand `1 + 2x^2 + 4x^3 + x^4`,
                 // and each was half a second of rewriting and simplifying to be refused.
-                if (u is Sumf && IsOnlyAPartialSum(expr, u))
+                if (u is Sumf or Minusf && IsOnlyAPartialSum(expr, u))
                     continue;
 
                 // A candidate that does not vary with x is no substitution at all, and its
@@ -25920,8 +27998,14 @@ namespace AngouriMath.Functions.Algebra
                     case var special when IsASpecialFunction(special) && TheDifferentialCanBeThere(special, expr, x):
                         candidates.Add(node);
                         break;
-                    case Sumf(var aug, var add) when !rational && !large && node.Complexity <= LargestSumOffered:
-                        if (aug.ContainsNode(x) || add.ContainsNode(x)) candidates.Add(node); // Linear expressions ax + b
+                    // A difference as a sum: `1 - x` below the bar of `sin(1 + 2/(1 - x))` is the
+                    // substitution that `1 + x` is for `sin(1 + 2/(1 + x))`, and was never offered.
+                    // In the question asked only: below it every substitution writes differences,
+                    // `x = (u^2 - c)/d`, and offering them was two fifths more search on Rubi's
+                    // `(c + d x)^(5/2)/(x (a + b x)^2)`, past the harness's patience.
+                    case Sumf or Minusf when !rational && !large && node.Complexity <= LargestSumOffered
+                        && (node is Sumf || Integration.AnsweringTheQuestionAsked):
+                        if (node.DirectChildren.Any(child => child.ContainsNode(x))) candidates.Add(node); // Linear expressions ax + b
                         break;
                 }
             // Sort by complexity - try simpler substitutions first

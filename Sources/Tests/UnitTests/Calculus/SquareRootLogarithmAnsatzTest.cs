@@ -65,21 +65,34 @@ namespace AngouriMath.Tests.Calculus
         private static readonly double[] AboveMinusOne = { -0.7, -0.3, 0.2, 0.5, 0.8, 1.6, 2.4, 3.5 };
 
         /// <summary>
-        /// Welz's, a logarithm at the pole <c>2</c> where <c>1 + x^3</c> is <c>9</c>:
-        /// <c>(2/3) ln((1 + x)^2/3 - sqrt(1 + x^3)) - ln(x - 2) - ln(1 + x)/3</c>; the same with
-        /// a rational part, <c>(2/3) sqrt(1 + x^3)</c>, brought over the denominator, and as a
-        /// sum.
+        /// Welz's with a rational part, <c>(2/3) sqrt(1 + x^3)</c>, brought over the denominator:
+        /// a logarithm at the pole <c>2</c> where <c>1 + x^3</c> is <c>9</c>,
+        /// <c>(2/3) ln((1 + x)^2/3 - sqrt(1 + x^3)) - ln(x - 2) - ln(1 + x)/3</c>.
         /// </summary>
         [Theory]
-        [InlineData("(1+x)/((x-2)*sqrt(1+x^3))")]
         [InlineData("(x^3-2*x^2+x+1)/((x-2)*sqrt(1+x^3))")]
-        [InlineData("(1+x)/((x-2)*sqrt(1+x^3)) + x^2/sqrt(1+x^3)")]
         public void ALogarithmAtAPole(string integrand)
         {
             DifferentiatesBack(integrand, AboveMinusOne);
             var integral = integrand.ToEntity().Integrate("x").Stringize();
             Assert.Contains("ln(", integral);
             Assert.Contains("ln(x - 2)", integral);
+        }
+
+        /// <summary>
+        /// Welz's own, a linear over a linear, and as a sum: one of the pseudo-elliptic quotients
+        /// a closed rule answers before the ansatz is asked, as
+        /// <c>-(2/3) artanh((1 + x)^2/(3 sqrt(1 + x^3)))</c>, one logarithm where the ansatz
+        /// writes three.
+        /// </summary>
+        [Theory]
+        [InlineData("(1+x)/((x-2)*sqrt(1+x^3))")]
+        [InlineData("(1+x)/((x-2)*sqrt(1+x^3)) + x^2/sqrt(1+x^3)")]
+        public void WelzsIsOneLogarithm(string integrand)
+        {
+            DifferentiatesBack(integrand, AboveMinusOne);
+            var integral = integrand.ToEntity().Integrate("x").Stringize();
+            Assert.Equal(1, integral.Split("ln(").Length - 1);
         }
 
         /// <summary>
