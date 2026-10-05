@@ -496,6 +496,19 @@ polynomial exponent in `u` now, and the question asked in `u`. Rubi's 2.3
 | `"F^(a + b/(c + d*x))/(c + d*x)".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral |
 | `"F^(a + b/(c + d*x)^3)*(c + d*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an exponential integral of the cube, and the exponential |
 
+### A power of a monomial in a symbolic power of `x` is integrated as the power of `x` it is
+
+**Answers where there were none.** `(c x^n)^b` is written `c^b x^(n b)`, and the exponent `n b` was
+left as the inner simplification leaves it: `(c x^n)^(2/n)` came out as `c^(2/n) x^(n (2/n))`, which
+no rule reads as `x^2`, and `1/(a + b (c x^n)^(2/n))` was declined where `1/(a + b c^(2/n) x^2)` is
+answered. The exponent is simplified now. Rubi's 1.1.3.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a + b*(c*x^n)^(2/n))".ToEntity().Integrate("x")` | `integral(...)` | an arctangent or a logarithm in `b c^(2/n) x`, by the sign of `a b c^(2/n)` |
+| `"1/(1 + 4*(x^(2*n))^(1/n))".ToEntity().Integrate("x")` | `integral(...)` | `arctan(2 x)/2` |
+
 ### A function of a quotient of two linears is integrated over the quotient's denominator
 
 **Answers where there were none.** `sin((a + b x)/(c + d x))` and its powers were declined, and so
@@ -750,6 +763,21 @@ or of its square over the root. Rubi's 1.3.3 names those coefficients, and its r
 | `"(2^(2/3) - 2*x)/((2^(2/3) + x)*sqrt(1 + x^3))".ToEntity().Integrate("x")` | `integral(...)` | `2 2^(2/3) arctan(sqrt(3) (1 + 2^(1/3) x)/sqrt(1 + x^3))/sqrt(3)` |
 | `"(c - 2*d*x)/((c + d*x)*sqrt(c^3 + 4*d^3*x^3))".ToEntity().Integrate("x")` | `integral(...)` | `2 c/d` times an arctangent of `sqrt(3 c^3) (1 + 2 d x/c)/sqrt(c^3 + 4 d^3 x^3)` over `sqrt(3 c^3)`, or an inverse hyperbolic tangent, by the sign of `c^3` |
 | `"(1+x)/((x-2)*sqrt(1+x^3))".ToEntity().Integrate("x")` | `integral(...)` | `-(2/3) artanh((1 + x)^2/(3 sqrt(1 + x^3)))`, written as a logarithm |
+
+### `x` over a cubic binomial beside the root of another is integrated where that is elementary
+
+**Answers where there were none.** `x/((a + b x^3) sqrt(c + d x^3))` is elementary at `4 b c = a d`
+and at `8 b c + a d = 0`, Rubi's 1.1.3.4, as arctangents and inverse hyperbolic tangents of
+`sqrt(c + d x^3)` and of `(1 + q x)/sqrt(c + d x^3)` for `q = (d/c)^(1/3)`, and Welz's
+`x/((4 - x^3) sqrt(1 - x^3))` and the rest at those ratios were declined. They are answered in
+closed form now, by the sign of `c`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x/((4 - x^3)*sqrt(1 - x^3))".ToEntity().Integrate("x")` | `integral(...)` | two arctangents and two inverse hyperbolic tangents, of `sqrt(1 - x^3)` and of `(1 - 2^(1/3) x)/sqrt(1 - x^3)` and its kind |
+| `"x/((4*c + d*x^3)*sqrt(c + d*x^3))".ToEntity().Integrate("x")` | `integral(...)` | the same in `sqrt(c + d x^3)` and `q = (d/c)^(1/3)`, by the sign of `c` |
+| `"x/((8 - d*x^3)*sqrt(1 + d*x^3))".ToEntity().Integrate("x")` | `integral(...)` | `(artanh((1 + d^(1/3) x)^2/(3 sqrt(1 + d x^3))) - artanh(sqrt(1 + d x^3)/3))/(18 d^(2/3)) - atan(sqrt(3) (1 + d^(1/3) x)/sqrt(1 + d x^3))/(6 sqrt(3) d^(2/3))`, written with logarithms |
 
 ### `x^2` over a three-quarter power of a quadratic binomial beside another is integrated where that is elementary
 
