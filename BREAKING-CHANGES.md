@@ -336,6 +336,23 @@ quotient of two such linears the sum is `(b - d t^2)^2 + (c t^2 - a)^2`. Rubi's 
 | `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"1/((a + b*tan(x))^(3/2)*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | in the root of the quotient of the two, in a second |
 
+### A quotient in `x^2` over a power of a linear in `x^2` and a biquadratic is split in `x^2`
+
+**Shorter answers, sooner.** `sqrt(c + d tan(x)) (A + B tan(x) + C tan(x)^2)/(a + b tan(x))^3` was
+declined in 2.5.0 and answered in 3.3 million characters since; it is answered in seven thousand.
+Under `u = tan(x)` and `t = sqrt(c + d u)` it is a polynomial in `t^2` over
+`(a d + b (t^2 - c))^3 ((t^2 - c)^2 + d^2)`, which was split in `t`, the sum of two squares over its
+conjugates. Such a quotient, one linear in `x^2` to a power beside one biquadratic, is split in
+`s = x^2 - r` now, `r` the linear's root: in powers of `s` it is the split over a power of `x^2` and a
+biquadratic that the rule above makes, and the terms in `1/(x^2 - r)^j` go by their reduction to
+`atan(x/sqrt(-r))/sqrt(-r)` ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(c + d*tan(x))*(A + B*tan(x) + C*tan(x)^2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)`; 3,299,915 characters after 24 seconds on the unreleased master | 6,912 characters |
+| `"sqrt(c + d*tan(x))/(a + b*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 40,540 characters on the unreleased master | 1,465 characters |
+| `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)`; 71,293 characters on the unreleased master | 2,786 characters |
+
 ### A quotient in `x^2` over a power of `x` and a biquadratic is split in `x^2`
 
 **Shorter answers, sooner.** `cot(x)^(13/2) (a + b tan(x))^(5/2) (A + B tan(x))` was declined in 2.5.0
