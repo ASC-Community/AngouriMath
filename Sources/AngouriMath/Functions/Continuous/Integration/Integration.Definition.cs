@@ -1017,6 +1017,8 @@ namespace AngouriMath.Functions.Algebra
             // in x^2 written with the root of the discriminant: partial fractions read a
             // written factor, and `a + b x^2 + c x^4` is written as one.
             if ((answer = IndefiniteIntegralSolver.SolveAnEvenPolynomialOverASymbolicBiquadratic(expr, x, integrateByParts)) is { }) return answer;
+            // And over a power of a linear in x^2 beside the biquadratic, split in x^2 minus its root.
+            if ((answer = IndefiniteIntegralSolver.SolveAnEvenQuotientOverAPowerOfALinearInTheSquareAndABiquadratic(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByPartialFractions(expr, x, integrateByParts)) is { }) return answer;
             // A whole negative power of a polynomial of several terms among the factors,
             // written below the bar and asked again: the gathering on the way in writes

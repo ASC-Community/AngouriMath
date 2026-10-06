@@ -2485,44 +2485,17 @@ namespace AngouriMath.Functions.Algebra
             if (Functions.PartialFractions.IsZeroAsAValue(discriminant))
                 return null;
 
-            // The numerator in w = x^2, divided down by w^k (c w^2 + b w + a) to a remainder of a
-            // degree below k + 2.
+            // The numerator in w = x^2 over w^k (c w^2 + b w + a).
             var degree = above.Keys.Max() / 2;
-            var inW = new Entity[System.Math.Max(degree, k + 1) + 1];
-            for (var j = 0; j < inW.Length; j++)
+            var inW = new Entity[degree + 1];
+            for (var j = 0; j <= degree; j++)
                 inW[j] = above.TryGetValue(2 * j, out var at) ? at : Number.Integer.Zero;
+            var (polynomial, pole, d, e) = SplitOverAPowerAndAQuadratic(inW, k, a, b, c);
             Entity polynomialPart = Number.Integer.Zero;
-            for (var j = degree; j >= k + 2; j--)
-            {
-                var lead = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[j] / c);
-                if (lead == Number.Integer.Zero)
-                    continue;
-                polynomialPart += lead * MathS.Pow(x, 2 * (j - k - 2));
-                inW[j - 1] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[j - 1] - lead * b);
-                inW[j - 2] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[j - 2] - lead * a);
-            }
-            // The remainder R over w^k Q is sum r_m w^(m - k) over m < k, the expansion of R/Q at
-            // w = 0, plus (d + e w)/Q: r_m = (R_m - b r_(m-1) - c r_(m-2))/a, and d + e w is what
-            // (R - Q sum r_m w^m)/w^k leaves, every lower coefficient cancelling by the recurrence.
-            var pole = new Entity[k];
-            for (var m = 0; m < k; m++)
-            {
-                var term = inW[m];
-                if (m >= 1) term -= b * pole[m - 1];
-                if (m >= 2) term -= c * pole[m - 2];
-                pole[m] = Functions.PartialFractions.InLowestTermsOverTheSymbols(term / a);
-            }
-            var dTerm = inW[k];
-            if (k >= 1) dTerm -= b * pole[k - 1];
-            if (k >= 2) dTerm -= c * pole[k - 2];
-            var eTerm = inW[k + 1];
-            if (k >= 1) eTerm -= c * pole[k - 1];
-            var d = k == 0 ? inW[0] : Functions.PartialFractions.InLowestTermsOverTheSymbols(dTerm);
-            var e = k == 0 ? (degree >= 1 ? inW[1] : Number.Integer.Zero) : Functions.PartialFractions.InLowestTermsOverTheSymbols(eTerm);
+            for (var j = polynomial.Length - 1; j >= 0; j--)
+                if (polynomial[j] != Number.Integer.Zero)
+                    polynomialPart += polynomial[j] * MathS.Pow(x, 2 * j);
 
-            var q = MathS.Sqrt(discriminant);
-            var firstRoot = (-b + q) / (2 * c);
-            var secondRoot = (-b - q) / (2 * c);
             Entity total = Number.Integer.Zero;
             if (polynomialPart != Number.Integer.Zero)
             {
@@ -2538,6 +2511,188 @@ namespace AngouriMath.Functions.Algebra
                 var exponent = 2 * (m - k) + 1;
                 total += pole[m] * MathS.Pow(x, exponent) / exponent;
             }
+            return ArctangentsOverABiquadratic(total, d, e, a, b, c, discriminant, x);
+        }
+
+        /// <summary>
+        /// A polynomial in <c>x^2</c> over a power of a linear in <c>x^2</c> and a biquadratic, with a
+        /// symbol in it: <c>N(x^2)/(L(x^2)^k Q(x^2))</c>, <c>L(w) = l (w - r)</c>, split in
+        /// <c>s = x^2 - r</c>. Written in powers of <c>s</c>, the quotient is the one
+        /// <see cref="SolveAnEvenPolynomialOverASymbolicBiquadratic"/> splits over <c>w^k Q</c>, and the
+        /// terms in <c>s^(-j)</c> go by the reduction
+        /// <c>int dx/(x^2 + p)^j = x/(2 p (j - 1) (x^2 + p)^(j - 1)) + (2 j - 3)/(2 p (j - 1)) int dx/(x^2 + p)^(j - 1)</c>,
+        /// <c>p = -r</c>, down to <c>atan(x/sqrt(p))/sqrt(p)</c>, which holds for every complex
+        /// <c>p</c> but zero, as the biquadratic's own terms do.
+        /// </summary>
+        /// <remarks>
+        /// Under <c>t = sqrt(c + d u)</c> Rubi's <c>sqrt(c + d u)/((a + b u)^n (1 + u^2))</c>, which the
+        /// tangent substitution makes of <c>sqrt(c + d tan(x))/(a + b tan(x))^n</c>, is
+        /// <c>t^2/((a d + b (t^2 - c))^n ((t^2 - c)^2 + d^2))</c> up to a constant. Split in <c>t</c>, the
+        /// sum of two squares went over its conjugates, and the answer to
+        /// <c>sqrt(c + d tan(x)) (A + B tan(x) + C tan(x)^2)/(a + b tan(x))^3</c> ran to 3.5 million
+        /// characters. Only one linear in <c>x^2</c>, to a power, beside one biquadratic: with
+        /// <c>r</c> zero it is <see cref="SolveAnEvenPolynomialOverASymbolicBiquadratic"/>'s, and a root
+        /// <c>r</c> shared with the biquadratic declines.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveAnEvenQuotientOverAPowerOfALinearInTheSquareAndABiquadratic(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!TryReadAsQuotient(expr, out var numerator, out var denominator) || !denominator.Vars.Any(v => v != x))
+                return null;
+            Entity constant = Number.Integer.One;
+            (Entity Zeroth, Entity First, int Power)? linear = null;
+            (Entity A, Entity B, Entity C)? quadratic = null;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+            {
+                var (@base, power) = factor is Powf(var raised, Number.Integer { EInteger: var n }) && n.Sign > 0 && n.CanFitInInt32()
+                    ? (raised, n.ToInt32Unchecked()) : (factor, 1);
+                if (!@base.ContainsNode(x))
+                {
+                    constant *= factor;
+                    continue;
+                }
+                if (!TreeAnalyzer.TryGetPolynomial(@base, x, out var read) || read.Count == 0
+                    || read.Values.Any(coefficient => coefficient.ContainsNode(x))
+                    || read.Keys.Any(p => p.Sign < 0 || !p.IsEven || !p.CanFitInInt32()))
+                    return null;
+                Entity At(int p) => read.TryGetValue(EInteger.FromInt32(p), out var value) ? value : Number.Integer.Zero;
+                var top = read.Keys.Max()!.ToInt32Unchecked();
+                if (top == 2 && linear is null)
+                    linear = (At(0), At(2), power);
+                else if (top == 4 && quadratic is null && power == 1)
+                    quadratic = (At(0), At(2), At(4));
+                else
+                    return null;
+            }
+            if (linear is not { } l || quadratic is not { } quartic)
+                return null;
+            if (!TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) || above.Count == 0
+                || above.Values.Any(coefficient => coefficient.ContainsNode(x))
+                || above.Keys.Any(p => p.Sign < 0 || !p.IsEven || !p.CanFitInInt32()))
+                return null;
+            var (a, b, c) = quartic;
+            if (Functions.PartialFractions.IsZeroAsAValue(a) || Functions.PartialFractions.IsZeroAsAValue(c)
+                || Functions.PartialFractions.IsZeroAsAValue(l.First))
+                return null;
+            var r = Functions.PartialFractions.InLowestTermsOverTheSymbols(-l.Zeroth / l.First);
+            if (Functions.PartialFractions.IsZeroAsAValue(r))
+                return null;
+            var discriminant = Functions.PartialFractions.Bare((b * b - 4 * a * c).Simplify());
+            if (Functions.PartialFractions.IsZeroAsAValue(discriminant))
+                return null;
+            // The biquadratic in s: Q(r + s) = Q(r) + Q'(r) s + c s^2, and Q(r) is not zero, or the
+            // linear's root is one of the biquadratic's.
+            var atRoot = Functions.PartialFractions.InLowestTermsOverTheSymbols(a + b * r + c * r * r);
+            if (Functions.PartialFractions.IsZeroAsAValue(atRoot))
+                return null;
+            var slopeAtRoot = Functions.PartialFractions.InLowestTermsOverTheSymbols(b + 2 * c * r);
+
+            // N(r + s) in powers of s.
+            var degree = above.Keys.Max()!.ToInt32Unchecked() / 2;
+            var inW = new Entity[degree + 1];
+            for (var j = 0; j <= degree; j++)
+                inW[j] = above.TryGetValue(EInteger.FromInt32(2 * j), out var at) ? at : Number.Integer.Zero;
+            var inS = new Entity[degree + 1];
+            for (var m = 0; m <= degree; m++)
+            {
+                Entity sum = Number.Integer.Zero;
+                EInteger binomial = EInteger.One;
+                for (var j = m; j <= degree; j++)
+                {
+                    if (j > m)
+                        binomial = binomial * j / (j - m);
+                    if (inW[j] != Number.Integer.Zero)
+                        sum += inW[j] * Number.Integer.Create(binomial) * MathS.Pow(r, Number.Integer.Create(j - m));
+                }
+                inS[m] = Functions.PartialFractions.InLowestTermsOverTheSymbols(sum);
+            }
+            var k = l.Power;
+            var (polynomial, pole, dInS, eInS) = SplitOverAPowerAndAQuadratic(inS, k, atRoot, slopeAtRoot, c);
+            var square = MathS.Pow(x, 2) - r;
+
+            Entity total = Number.Integer.Zero;
+            Entity polynomialPart = Number.Integer.Zero;
+            for (var j = 0; j < polynomial.Length; j++)
+                if (polynomial[j] != Number.Integer.Zero)
+                    polynomialPart += polynomial[j] * MathS.Pow(square, j);
+            if (polynomialPart != Number.Integer.Zero)
+            {
+                if (Integration.ComputeIndefiniteIntegral(polynomialPart.Expand(), x, integrateByParts) is not { } whole)
+                    return null;
+                total += whole;
+            }
+            // pole[m] s^(m - k) is a term in 1/(x^2 - r)^j with j = k - m, by the reduction.
+            var p = -r;
+            var root = MathS.Sqrt(p);
+            Entity reduced = MathS.Arctan(x / root) / root;
+            var byPower = new Entity[k + 1];
+            byPower[1] = reduced;
+            for (var j = 2; j <= k; j++)
+                byPower[j] = x / (2 * p * (j - 1) * MathS.Pow(square, j - 1)) + Number.Integer.Create(2 * j - 3) / (2 * p * (j - 1)) * byPower[j - 1];
+            for (var m = 0; m < k; m++)
+                if (pole[m] != Number.Integer.Zero)
+                    total += pole[m] * byPower[k - m];
+            // (d + e s)/Q in w = x^2 is (d - e r + e w)/Q(w).
+            var d = Functions.PartialFractions.InLowestTermsOverTheSymbols(dInS - eInS * r);
+            total = ArctangentsOverABiquadratic(total, d, eInS, a, b, c, discriminant, x);
+            return total / (constant * MathS.Pow(l.First, k));
+        }
+
+        /// <summary>
+        /// <c>N(s)/(s^k (a + b s + c s^2))</c>, the coefficients of <c>N</c> in <paramref name="above"/>,
+        /// as a polynomial in <c>s</c>, the terms in <c>s^(m - k)</c> for <c>m</c> below <c>k</c>, and
+        /// <c>(d + e s)/(a + b s + c s^2)</c>: <c>N</c> divided down by <c>s^k</c> times the quadratic first,
+        /// then the remainder <c>R</c> over it expanded at <c>s = 0</c> by
+        /// <c>r_m = (R_m - b r_(m-1) - c r_(m-2))/a</c>, and <c>d + e s</c> what
+        /// <c>(R - Q sum r_m s^m)/s^k</c> leaves, every lower coefficient cancelling by the recurrence.
+        /// </summary>
+        private static (Entity[] Polynomial, Entity[] Pole, Entity D, Entity E) SplitOverAPowerAndAQuadratic(
+            Entity[] above, int k, Entity a, Entity b, Entity c)
+        {
+            var degree = above.Length - 1;
+            var inS = new Entity[System.Math.Max(degree, k + 1) + 1];
+            for (var j = 0; j < inS.Length; j++)
+                inS[j] = j <= degree ? above[j] : Number.Integer.Zero;
+            var polynomial = new Entity[System.Math.Max(degree - k - 1, 0)];
+            for (var j = 0; j < polynomial.Length; j++)
+                polynomial[j] = Number.Integer.Zero;
+            for (var j = degree; j >= k + 2; j--)
+            {
+                var lead = Functions.PartialFractions.InLowestTermsOverTheSymbols(inS[j] / c);
+                if (lead == Number.Integer.Zero)
+                    continue;
+                polynomial[j - k - 2] = lead;
+                inS[j - 1] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inS[j - 1] - lead * b);
+                inS[j - 2] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inS[j - 2] - lead * a);
+            }
+            var pole = new Entity[k];
+            for (var m = 0; m < k; m++)
+            {
+                var term = inS[m];
+                if (m >= 1) term -= b * pole[m - 1];
+                if (m >= 2) term -= c * pole[m - 2];
+                pole[m] = Functions.PartialFractions.InLowestTermsOverTheSymbols(term / a);
+            }
+            if (k == 0)
+                return (polynomial, pole, inS[0], inS[1]);
+            var dTerm = inS[k];
+            if (k >= 1) dTerm -= b * pole[k - 1];
+            if (k >= 2) dTerm -= c * pole[k - 2];
+            var eTerm = inS[k + 1];
+            if (k >= 1) eTerm -= c * pole[k - 1];
+            return (polynomial, pole, Functions.PartialFractions.InLowestTermsOverTheSymbols(dTerm),
+                Functions.PartialFractions.InLowestTermsOverTheSymbols(eTerm));
+        }
+
+        /// <summary>
+        /// <paramref name="total"/> plus the antiderivative of <c>(d + e x^2)/(a + b x^2 + c x^4)</c> by
+        /// the two roots in <c>x^2</c>, <paramref name="discriminant"/> being <c>b^2 - 4 a c</c> and not zero.
+        /// </summary>
+        private static Entity ArctangentsOverABiquadratic(Entity total, Entity d, Entity e, Entity a, Entity b, Entity c, Entity discriminant, Entity.Variable x)
+        {
+            var q = MathS.Sqrt(discriminant);
+            var firstRoot = (-b + q) / (2 * c);
+            var secondRoot = (-b - q) / (2 * c);
             // `1/(x^2 - r)` is `atan(x/s)/s` with `s = sqrt(-r)` for every complex `r` but zero:
             // `d/dx atan(x/s)/s` is `1/(s^2 + x^2)` whatever `s` is, and for a positive `r` the
             // arctangent of an imaginary argument is the hyperbolic one, `-atanh(x/sqrt(r))/sqrt(r)`,
