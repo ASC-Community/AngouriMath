@@ -27008,6 +27008,124 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power of the secant, or of the cosine, of <c>z</c> beside a power of <c>A + i A tan(z)</c>,
+        /// whatever the powers, integrated in that sum: under <c>u = A + i A tan(z)</c>,
+        /// <c>du = i A sec(z)^2 dz</c> and <c>sec(z)^2 = (u/A) ((2 A - u)/A)</c>, so
+        /// <c>sec(z)^s u^n dz</c> is <c>u^n ((u/A) ((2 A - u)/A))^r du/(i A)</c> with
+        /// <c>r = (s - 2)/2</c>, up to a factor constant wherever it is continuous; and
+        /// <c>(u/A)^r ((2 A - u)/A)^r</c> is <c>(sec(z)^2)^r</c> exactly, the two being
+        /// <c>1 + i tan(z)</c> and <c>1 - i tan(z)</c>, whose arguments are opposite and less than a
+        /// right angle.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>sec(x)^3 sqrt(a + i a tan(x))</c> was declined, with the rest of Rubi's 4.3.1.2 whose
+        /// powers do not add up to a whole number, which
+        /// <see cref="SolveAPowerOfAnImaginaryTangentBesideAPowerOfTheSecant"/> integrates as an
+        /// exponential and this does not: <c>sec^5/(a + i a tan)^(3/2)</c>,
+        /// <c>(e cos)^(3/2) sqrt(a + i a tan)</c>. In <c>u</c> each is a power of <c>u</c> beside a
+        /// power of <c>2 A - u</c>.
+        /// </para>
+        /// <para>
+        /// The constant is not written, as there: the answer is the integrand times the
+        /// antiderivative in <c>u</c> over what that antiderivative differentiates back to, a
+        /// quotient constant wherever it is continuous.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </para>
+        /// </remarks>
+        internal static Entity? SolveAPowerOfTheSecantBesideAPowerOfAnImaginaryTangentSumInTheSum(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!expr.Nodes.Any(node => node is Tanf) || !expr.Nodes.Any(node => node is Secantf or Cosf))
+                return null;
+            Entity? argument = null, sum = null;
+            var plus = false;
+            Entity? sumPower = null;
+            Entity secantPower = Number.Integer.Zero;
+            var sawSecant = false;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                    continue;
+                var (@base, power) = factor is Powf(var b, var p) && !p.ContainsNode(x)
+                    ? (b, p.Evaled is Number.Rational r ? r : p)
+                    : (factor, (Entity)Number.Integer.One);
+                if (underneath)
+                    power = power is Number.Rational numeric ? -numeric : (-power).InnerSimplified;
+                if (TryReadAnImaginaryTangent(@base, x, out var tangentOf, out var isPlus))
+                {
+                    if (sumPower is not null || argument is not null && argument != tangentOf)
+                        return null;
+                    (sumPower, argument, plus, sum) = (power, tangentOf, isPlus, @base);
+                    continue;
+                }
+                var (trigonometric, sign) = @base switch
+                {
+                    Secantf => (@base, 1),
+                    Cosf => (@base, -1),
+                    Mulf(var left, var right) when !left.ContainsNode(x) && right is Secantf => (right, 1),
+                    Mulf(var left, var right) when !left.ContainsNode(x) && right is Cosf => (right, -1),
+                    Mulf(var left, var right) when !right.ContainsNode(x) && left is Secantf => (left, 1),
+                    Mulf(var left, var right) when !right.ContainsNode(x) && left is Cosf => (left, -1),
+                    _ => ((Entity?)null, 0)
+                };
+                var of = trigonometric switch { Secantf(var inner) => inner, Cosf(var inner) => inner, _ => null };
+                if (of is null || argument is not null && argument != of)
+                    return null;
+                argument = of;
+                secantPower = sign == 1 ? secantPower + power : secantPower - power;
+                sawSecant = true;
+            }
+            if (sumPower is null || sum is null || argument is null || !sawSecant
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
+                return null;
+            secantPower = secantPower is Number ? secantPower : secantPower.InnerSimplified;
+            // Whole powers on both are a rational function of the sine and the cosine, which the
+            // rules for those answer in a fraction of a second, where in u they ran past five:
+            // `cos(x)^5/(a + i a tan(x))^3`.
+            if (sumPower is Number.Integer && secantPower is Number.Integer)
+                return null;
+            Entity constantTerm = Number.Integer.Zero;
+            foreach (var term in Sumf.LinearChildren(sum))
+                if (!term.ContainsNode(x))
+                    constantTerm += term;
+            var a = constantTerm.InnerSimplified;
+            var u = Variable.CreateUnique(expr, "u_tan");
+            var half = ((secantPower - 2) / 2).InnerSimplified;
+            Entity squared = MathS.Pow(u / a, half) * MathS.Pow((2 * a - u) / a, half);
+            var inU = MathS.Pow(u, sumPower) * squared;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inU, u, integrateByParts) is not { } inUAnswer
+                || inUAnswer.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            // du/dx is +-i A z' sec(z)^2.
+            var derivativeOfU = (plus ? MathS.i : -MathS.i) * a * slope * MathS.Pow(MathS.Sec(argument), 2);
+            var differentiatesBackTo = inU.Substitute(u, sum) * derivativeOfU;
+            // The antiderivative in u was found for a real u, and its conditions say so -- a radicand
+            // at least zero -- where u = A + i A tan(z) is not real: kept, they hold nowhere on the
+            // path and the answer has no value at all. The formula is an antiderivative wherever it is
+            // analytic, so the conditions go, each piecewise taken arm by arm, and an answer is kept
+            // only where its derivative is the integrand at the sampled points.
+            foreach (var arm in new[] { 0, -1 })
+            {
+                var formula = WithoutConditions(inUAnswer, arm);
+                var answer = expr * formula.Substitute(u, sum) / differentiatesBackTo;
+                if (Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x))
+                    return answer;
+                if (!inUAnswer.Nodes.Any(node => node is Piecewise))
+                    break;
+            }
+            return null;
+
+            // Every condition dropped, and of every piecewise the first arm, or with -1 the last.
+            static Entity WithoutConditions(Entity e, int arm)
+                => e.Replace(node => node switch
+                {
+                    Providedf(var inner, _) => inner,
+                    Piecewise piecewise when piecewise.Cases.Any() => arm == 0 ? piecewise.Cases.First().Expression : piecewise.Cases.Last().Expression,
+                    _ => node
+                });
+        }
+
+        /// <summary>
         /// <c>A + i A tan(z)</c> or <c>A - i A tan(z)</c>, with a constant <c>A</c>: the argument,
         /// and whether the imaginary unit comes with a plus.
         /// </summary>
