@@ -384,6 +384,20 @@ is written so, after the substitutions, and the factor goes in front of the answ
 | `"(1/(1 - x^2))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `sgn(1 - x^2) x/sqrt(1 - x^2)` |
 | `"(c/(a + b*x^2))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | `(c/(a + b x^2))^(3/2) (a + b x^2)^(3/2) x/(a sqrt(a + b x^2))` |
 
+### A sum that is the derivative of a product of powers is read as one
+
+**Answers where there were none.** `m x^(m - 1) (a + b x^n)^p + b n p x^(m + n - 1) (a + b x^n)^(p - 1)` is
+the derivative of `x^m (a + b x^n)^p`, written out as a sum, and was declined: the rule that reads a
+derivative of a product of powers reads the product beside one bracket, and split into its terms neither is
+elementary. A sum of products of powers of the same bases is written as their common product, each base
+to the least of its exponents, times the bracket of what is left, and asked so. Rubi's 1.1.3.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"m*x^(m-1)*(a+b*x^n)^p + b*n*p*x^(m+n-1)*(a+b*x^n)^(p-1)".ToEntity().Integrate("x")` | `integral(...)` | `x^m (a + b x^n)^p` |
+| `"-1/2*b*n*x^(-1+m+n)/(a+b*x^n)^(3/2)+m*x^(-1+m)/sqrt(a+b*x^n)".ToEntity().Integrate("x")` | `integral(...)` | `x^m/sqrt(a + b x^n)` |
+
 ### A whole power of a quotient with a symbol in it is integrated as the quotient of the powers
 
 **Answers where there were none, and a slowdown since 2.5.0 undone.** `(c/(a + c x^2))^2` was

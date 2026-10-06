@@ -12832,6 +12832,83 @@ namespace AngouriMath.Functions.Algebra
         private const int MaximumTowerDegree = 4;
 
         /// <summary>
+        /// <paramref name="sum"/>, every term of which is a constant times powers of the same
+        /// bases with <paramref name="x"/> in them, as the product of those bases to the least of
+        /// each one's exponents times the sum of what is left. Null where a base is not in every
+        /// term, where no exponent of one is the least, or where the least are all whole, which
+        /// the rational rules read.
+        /// </summary>
+        private static Entity? WithTheCommonPowersOut(Entity sum, Entity.Variable x)
+        {
+            var terms = new List<(Entity Constant, Dictionary<Entity, Entity> Powers)>();
+            foreach (var term in Sumf.LinearChildren(sum))
+            {
+                Entity constant = Number.Integer.One;
+                var powers = new Dictionary<Entity, Entity>();
+                foreach (var (factor, underneath) in FactorsOfTheIntegrand(term))
+                {
+                    if (!factor.ContainsNode(x))
+                    {
+                        constant = underneath ? constant / factor : constant * factor;
+                        continue;
+                    }
+                    var (@base, exponent) = factor is Powf(var b, var e) && !e.ContainsNode(x) ? (b, e) : (factor, (Entity)Number.Integer.One);
+                    if (@base is Number || !@base.ContainsNode(x))
+                        return null;
+                    if (underneath)
+                        exponent = -exponent;
+                    powers[@base] = powers.TryGetValue(@base, out var before) ? (before + exponent).InnerSimplified : exponent.InnerSimplified;
+                }
+                terms.Add((constant, powers));
+            }
+            if (terms.Count < 2)
+                return null;
+            var bases = terms[0].Powers.Keys.ToList();
+            if (bases.Count == 0 || terms.Any(term => term.Powers.Count != bases.Count || bases.Any(@base => !term.Powers.ContainsKey(@base))))
+                return null;
+            // For each base the least of its exponents, against which every other is more by a
+            // whole number or by a sum of symbols with no sign in front: `x^(m - 1)` beside
+            // `x^(m + n - 1)` leaves `x^n` in the bracket, as the derivative of `a + b x^n` does.
+            // Simplified, not inner-simplified: `-1 + m + n - (-1 + m)` is left as written by the
+            // latter, and is `n`.
+            static Entity Difference(Entity exponent, Entity from)
+                => Functions.PartialFractions.Bare((exponent - from).Simplify());
+            static bool More(Entity difference)
+                => difference is Number.Integer { EInteger.Sign: >= 0 }
+                || difference is not Number && difference is not Mulf(Number.Real { IsNegative: true }, _) && difference.Vars.Any();
+            var least = new Dictionary<Entity, Entity>();
+            foreach (var @base in bases)
+            {
+                var exponents = terms.Select(term => term.Powers[@base]).ToList();
+                Entity? lowest = null;
+                foreach (var candidate in exponents)
+                    if (exponents.All(other => Difference(other, candidate) is var difference && (difference == Number.Integer.Zero || More(difference))))
+                    {
+                        lowest = candidate;
+                        break;
+                    }
+                if (lowest is null)
+                    return null;
+                least[@base] = lowest;
+            }
+            if (least.Values.All(exponent => exponent is Number.Integer))
+                return null;
+            Entity bracket = Number.Integer.Zero;
+            foreach (var (constant, powers) in terms)
+            {
+                Entity rest = constant;
+                foreach (var @base in bases)
+                    if (Difference(powers[@base], least[@base]) is var raised && raised != Number.Integer.Zero)
+                        rest = rest * (raised == Number.Integer.One ? @base : MathS.Pow(@base, raised));
+                bracket = bracket == Number.Integer.Zero ? rest : bracket + rest;
+            }
+            Entity common = Number.Integer.One;
+            foreach (var @base in bases)
+                common = common * MathS.Pow(@base, least[@base]);
+            return common * bracket;
+        }
+
+        /// <summary>
         /// A product of powers times a sum that is the derivative of the product with some of
         /// the powers raised by one: <c>e^x x^2 ln(x)^2 (3 + (3 + x) ln(x))</c> is
         /// <c>(e^x x^3 ln(x)^3)'</c>, and Rubi's
@@ -12863,6 +12940,13 @@ namespace AngouriMath.Functions.Algebra
         {
             if (!Integration.AnsweringTheQuestionAskedOrOneBelow)
                 return null;
+            // A sum of products of powers of the same bases is their common product times a
+            // bracket, which is the shape read below: `m x^(m - 1) (a + b x^n)^p + b n p x^(m + n - 1)
+            // (a + b x^n)^(p - 1)` is `x^(m - 1) (a + b x^n)^(p - 1) (m (a + b x^n) + b n p x^n)`,
+            // the derivative of `x^m (a + b x^n)^p`. As a sum it was split, and neither term is
+            // elementary.
+            if (expr is Sumf or Minusf)
+                return WithTheCommonPowersOut(expr, x) is { } factored ? SolveAsTheDerivativeOfAProductOfPowers(factored, x) : null;
             Entity constant = Number.Integer.One;
             Entity? bracket = null;
             var raisable = new List<(Entity Base, Entity Exponent)>();
