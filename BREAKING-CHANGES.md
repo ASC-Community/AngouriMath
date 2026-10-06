@@ -365,6 +365,24 @@ quotient of two such linears the sum is `(b - d t^2)^2 + (c t^2 - a)^2`. Rubi's 
 | `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"1/((a + b*tan(x))^(3/2)*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | in the root of the quotient of the two, in a second |
 
+### A power of the secant beside a power of `a + i a tan` is integrated in the sum, whatever the powers
+
+**Answers where there were none.** `sec(x)^3 sqrt(a + i a tan(x))` was declined, with the rest of
+Rubi's 4.3.1.2 whose powers add up to no whole number. Under `u = a + i a tan(z)`,
+`du = i a sec(z)^2 dz` and `sec(z)^2 = (u/a) ((2 a - u)/a)`, so a power of the secant, or of the
+cosine, beside a power of the sum is a power of `u` beside a power of `2 a - u`. The antiderivative in
+`u` is found for a real `u`, and its conditions -- a radicand at least zero -- hold nowhere on the
+path, where `u` is not real; they are dropped, and the answer is kept only where its derivative is the
+integrand at sampled points. `cos(x)^9 (a + i a tan(x))^(7/2)` was answered on the unreleased master
+with the condition `1 + i tan(x) >= 0`, which no real `x` but the zeros of the tangent meets; it is
+answered without one now ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^3*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `sqrt(a - i a tan(x))` times a factor constant wherever it is continuous, 495 characters |
+| `"sec(x)^5/(a + i*a*tan(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same, 399 characters |
+| `"cos(x)^9*(a + i*a*tan(x))^(7/2)".ToEntity().Integrate("x")` | `integral(...)`; on the unreleased master, an answer provided `1 + i tan(x) >= 0` | 1,067 characters, unconditional |
+
 ### A quotient in `x^2` over a power of a linear in `x^2` and a biquadratic is split in `x^2`
 
 **Shorter answers, sooner.** `sqrt(c + d tan(x)) (A + B tan(x) + C tan(x)^2)/(a + b tan(x))^3` was

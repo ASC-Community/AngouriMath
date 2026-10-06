@@ -683,6 +683,8 @@ namespace AngouriMath.Functions.Algebra
             // product and takes it apart, and so answers (c sec)^(5/2)/(a + i a tan)^(5/2) with the
             // wrong constant wherever the cosine is negative.
             if ((answer = IndefiniteIntegralSolver.SolveAPowerOfAnImaginaryTangentBesideAPowerOfTheSecant(expr, x, integrateByParts)) is { }) return answer;
+            // And whatever the powers, in the sum, where they do not add up to a whole number.
+            if ((answer = IndefiniteIntegralSolver.SolveAPowerOfTheSecantBesideAPowerOfAnImaginaryTangentSumInTheSum(expr, x, integrateByParts)) is { }) return answer;
             // And powers of the two conjugate sums, both not whole, as the exponential they make.
             if ((answer = IndefiniteIntegralSolver.SolveAConjugatePairOfImaginaryTangentSums(expr, x, integrateByParts)) is { }) return answer;
             // A rational function of the tangent beside a power of a + i a tan(z), in that sum.
