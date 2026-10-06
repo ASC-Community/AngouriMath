@@ -176,6 +176,22 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A value substituted under a binder is not captured by the name it binds
+
+**Wrong answers fixed.** An integral, a sum, a product, a derivative, a limit, a set builder and the
+other binders renamed their bound name to a temporary, substituted, and renamed it back, so a value
+holding the bound name was captured by it: `integral(t + a, t, 0, 1)` with `a := t` became
+`integral(t + t, t, 0, 1)`, which is 1 where the integral is `t + 1/2`. Where the value holds the
+bound name, the binder now takes a fresh one, `t_1`, and keeps it, as a lambda already did. A
+substitution whose target is absent from the body no longer passes over it, which made a chain of
+nested integrals cost twice as much per level
+([#1808](https://github.com/asc-community/AngouriMath/issues/1808)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `new Integralf("t + a".ToEntity(), "t", (0, 1)).Substitute("a", "t")` | `integral(t + t, t, 0, 1)` | `integral(t_1 + t, t_1, 0, 1)` |
+| `new Summationf("k * a".ToEntity(), "k", 1, 3).Substitute("a", "k")` | `sum(k * k, k, 1, 3)`, 14 | `sum(k_1 * k, k_1, 1, 3)`, `6 k` |
+
 ### A power of a constant below `1e-50` is no longer simplified to zero
 
 **Answers that were wrong.** Evaluation rounds a value within `1e-50` of an integer onto it, and

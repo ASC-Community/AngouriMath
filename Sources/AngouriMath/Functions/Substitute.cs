@@ -570,50 +570,63 @@ namespace AngouriMath
         {
             partial record ConditionalSet
             {
-                // TODO: it might be optimized
                 /// <inheritdoc/>
                 public override Entity Substitute(Entity x, Entity value)
                 {
                     if (this == x)
                         return value;
-                    var replacement = Variable.CreateTemp((x + value + Predicate + Var).Vars);
+                    var (postSubs, boundName) = SubstituteUnderABinder(Predicate, Var, x, value);
 
-                    // { x | x > a } -> { temp_1 | temp_1 > a }
-                    var tempSubstituted = Predicate.Substitute(Var, replacement);
-
-                    // a = 0 -> { temp_1 | temp_1 > a } -> { temp_1 | temp_1 > 0 }
-                    // x = 0 -> { temp_1 | temp_1 > a } -> { temp_1 | temp_1 > a }
-                    var subs = tempSubstituted.Substitute(x, value);
-
-                    // { temp_1 | temp_1 > a } -> { x | x > a }
-                    var postSubs = subs.Substitute(replacement, Var);
-
-                    return New(Var, postSubs);
+                    return New(boundName, postSubs);
                 }
             }
         }
 
+        /// <summary>
+        /// <paramref name="body"/>, bound over <paramref name="bound"/>, with <paramref name="x"/> replaced
+        /// by <paramref name="value"/> where it occurs free, and the name the binder binds afterwards.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Where <paramref name="value"/> holds the bound name, the binder takes a fresh one and keeps
+        /// it, as <see cref="Lambda"/> does: renamed back after the substitution, the value's
+        /// occurrence of the name was captured, and <c>integral(t + a, t, 0, 1)</c> with <c>a := t</c>
+        /// became <c>integral(t + t, t, 0, 1)</c>, which is 1 where the integral is <c>t + 1/2</c>.
+        /// </para>
+        /// <para>
+        /// The body is passed over only where it can change. A body without <paramref name="x"/>, or
+        /// under a binder over <paramref name="x"/> itself, is returned as it is; where neither
+        /// <paramref name="x"/> nor <paramref name="value"/> holds the bound name, one pass gives what a
+        /// renaming would. Renaming it three times at every level, as every binder did, made a chain of
+        /// nested integrals cost a multiple of itself per level
+        /// (https://github.com/asc-community/AngouriMath/issues/1808).
+        /// </para>
+        /// </remarks>
+        private static (Entity Body, Entity Bound) SubstituteUnderABinder(Entity body, Entity bound, Entity x, Entity value)
+        {
+            if (x == bound || !body.ContainsNode(x))
+                return (body, bound);
+            if (value.ContainsNode(bound))
+            {
+                var fresh = Variable.CreateUnique(body + bound + x + value, bound is Variable named ? named.Name : "t");
+                return (body.Substitute(bound, fresh).Substitute(x, value), fresh);
+            }
+            if (!x.ContainsNode(bound))
+                return (body.Substitute(x, value), bound);
+            var replacement = Variable.CreateTemp((x + value + body + bound).Vars);
+            return (body.Substitute(bound, replacement).Substitute(x, value).Substitute(replacement, bound), bound);
+        }
+
         partial record Integralf
         {
-            // TODO: it might be optimized
             /// <inheritdoc/>
             public override Entity Substitute(Entity x, Entity value)
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
+                var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
 
-                // integrate(x ^ 2 + a, x) -> integrate(temp_1 ^ 2 + a, temp_1)
-                var tempSubstituted = Expression.Substitute(Var, replacement);
-
-                // a = 0 -> integrate(temp_1 ^ 2 + a, temp_1) -> integrate(temp_1 ^ 2 + 0, temp_1)
-                // x = 0 -> integrate(temp_1 ^ 2 + a, temp_1) -> integrate(temp_1 ^ 2 + a, temp_1)
-                var subs = tempSubstituted.Substitute(x, value);
-
-                // integrate(temp_1 ^ 2 + a, temp_1) -> integrate(x ^ 2 + a, temp_1)
-                var postSubs = subs.Substitute(replacement, Var);
-
-                return New(postSubs, Var, Range is var (from, to) ? (from.Substitute(x, value), to.Substitute(x, value)) : null);
+                return New(postSubs, boundName, Range is var (from, to) ? (from.Substitute(x, value), to.Substitute(x, value)) : null);
             }
         }
 
@@ -629,11 +642,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-                var tempSubstituted = Expression.Substitute(Var, replacement);
-                var subs = tempSubstituted.Substitute(x, value);
-                var postSubs = subs.Substitute(replacement, Var);
-                return New(postSubs, Var, From.Substitute(x, value), To.Substitute(x, value));
+                var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(postSubs, boundName, From.Substitute(x, value), To.Substitute(x, value));
             }
         }
 
@@ -645,9 +655,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-                var renamed = Expression.Substitute(Var, replacement).Substitute(x, value).Substitute(replacement, Var);
-                return New(renamed, Var, Over.Substitute(x, value));
+                var (renamed, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(renamed, boundName, Over.Substitute(x, value));
             }
         }
 
@@ -659,9 +668,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-                var renamed = Expression.Substitute(Var, replacement).Substitute(x, value).Substitute(replacement, Var);
-                return New(renamed, Var, Over.Substitute(x, value));
+                var (renamed, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(renamed, boundName, Over.Substitute(x, value));
             }
         }
 
@@ -672,9 +680,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-                var renamed = Expression.Substitute(Var, replacement).Substitute(x, value).Substitute(replacement, Var);
-                return New(renamed, Var, Over.Substitute(x, value));
+                var (renamed, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(renamed, boundName, Over.Substitute(x, value));
             }
         }
 
@@ -685,9 +692,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-                var renamed = Expression.Substitute(Var, replacement).Substitute(x, value).Substitute(replacement, Var);
-                return New(renamed, Var, Over.Substitute(x, value));
+                var (renamed, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(renamed, boundName, Over.Substitute(x, value));
             }
         }
 
@@ -698,9 +704,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-                var renamed = Expression.Substitute(Var, replacement).Substitute(x, value).Substitute(replacement, Var);
-                return New(renamed, Var, Over.Substitute(x, value));
+                var (renamed, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(renamed, boundName, Over.Substitute(x, value));
             }
         }
 
@@ -711,61 +716,36 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-                var tempSubstituted = Expression.Substitute(Var, replacement);
-                var subs = tempSubstituted.Substitute(x, value);
-                var postSubs = subs.Substitute(replacement, Var);
-                return New(postSubs, Var, From.Substitute(x, value), To.Substitute(x, value));
+                var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(postSubs, boundName, From.Substitute(x, value), To.Substitute(x, value));
             }
         }
 
         partial record Derivativef
         {
-            // TODO: it might be optimized
             /// <inheritdoc/>
             public override Entity Substitute(Entity x, Entity value)
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
+                var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
 
-                // derive(x ^ 2 + a, x) -> derive(temp_1 ^ 2 + a, temp_1)
-                var tempSubstituted = Expression.Substitute(Var, replacement);
-
-                // a = 0 -> derive(temp_1 ^ 2 + a, temp_1) -> derive(temp_1 ^ 2 + 0, temp_1)
-                // x = 0 -> derive(temp_1 ^ 2 + a, temp_1) -> derive(temp_1 ^ 2 + a, temp_1)
-                var subs = tempSubstituted.Substitute(x, value);
-
-                // derive(temp_1 ^ 2 + a, temp_1) -> derive(x ^ 2 + a, temp_1)
-                var postSubs = subs.Substitute(replacement, Var);
-
-                return New(postSubs, Var);
+                return New(postSubs, boundName);
             }
         }
 
         partial record Limitf
         {
-            // TODO: it might be optimized
             /// <inheritdoc/>
             public override Entity Substitute(Entity x, Entity value)
             {
                 if (this == x)
                     return value;
-                var replacement = Variable.CreateTemp((x + value + Expression + Var).Vars);
-
-                // derive(x ^ 2 + a, x) -> derive(temp_1 ^ 2 + a, temp_1)
-                var tempSubstituted = Expression.Substitute(Var, replacement);
-
-                // a = 0 -> derive(temp_1 ^ 2 + a, temp_1) -> derive(temp_1 ^ 2 + 0, temp_1)
-                // x = 0 -> derive(temp_1 ^ 2 + a, temp_1) -> derive(temp_1 ^ 2 + a, temp_1)
-                var subs = tempSubstituted.Substitute(x, value);
-
-                // derive(temp_1 ^ 2 + a, temp_1) -> derive(x ^ 2 + a, temp_1)
-                var postSubs = subs.Substitute(replacement, Var);
+                var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
 
                 var dst = Destination.Substitute(x, value);
 
-                return New(postSubs, Var, dst, ApproachFrom);
+                return New(postSubs, boundName, dst, ApproachFrom);
             }
         }
 
