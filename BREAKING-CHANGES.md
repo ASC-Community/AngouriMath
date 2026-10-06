@@ -192,6 +192,19 @@ integrals with `0` ([#1769](https://github.com/asc-community/AngouriMath/issues/
 | `"e^(-160)".ToEntity().InnerSimplified` | `0` | `e ^ (-160)` |
 | `"x^n*((1 - d^2)/x - x)^3*(1 + x^2 - d*x)/(x - d)/pi^2".ToEntity().Simplify()` | `0 provided not x - d = 0 and ...` | `x ^ n * ((1 - d ^ 2) / x - x) ^ 3 * (1 - d * x + x ^ 2) / (pi ^ 2 * (x - d))` |
 
+### The floor and the ceiling of a rational are exact whatever its size
+
+**Wrong answers fixed.** The floor and the ceiling of an exact rational went through a decimal at the
+working precision, and a rational with more digits than that was rounded onto the integer beside it
+before it was rounded down or up: `floor(10^120 - 1/3)` came out `10^120`. They are taken from the
+numerator and the denominator now, exactly
+([#1807](https://github.com/asc-community/AngouriMath/issues/1807)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"floor((3 * 10^120 - 1)/3)".ToEntity().InnerSimplified` | `10^120`, written out | `10^120 - 1` |
+| `"ceil((3 * 10^120 + 1)/3)".ToEntity().InnerSimplified` | `10^120`, written out | `10^120 + 1` |
+
 ### A rational function with symbols in it beside a root of a linear is split into partial fractions first
 
 **Answers where there were none.** `1/(x (1 + x^2) sqrt(a + b x))` was declined, while

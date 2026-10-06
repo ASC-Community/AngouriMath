@@ -706,7 +706,11 @@ namespace AngouriMath
                         // both, and the exception was reaching the caller:
                         // https://github.com/asc-community/AngouriMath/issues/830
                         Real { IsFinite: false } n => n,
-                        Rational n => Integer.Create(n.EDecimal.Floor().ToEInteger()),
+                        // From the numerator and the denominator: through EDecimal a rational of more
+                        // digits than the precision was rounded onto the integer beside it, and
+                        // floor(10^120 - 1/3) came out 10^120.
+                        // https://github.com/asc-community/AngouriMath/issues/1807
+                        Rational n => Integer.Create(RoundedQuotient(n.ERational, up: false)),
                         Real n when !isExact => Integer.Create(n.EDecimal.Floor().ToEInteger()),
                         Complex n when !isExact => Complex.Create(
                             n.RealPart.EDecimal.Floor(), n.ImaginaryPart.EDecimal.Floor()),
@@ -718,6 +722,21 @@ namespace AngouriMath
                         _ => Functions.Boolean.QuantifierFacts.Rounded(a, up: false, isExact)
                     },
                     (@this, a) => ((Floorf)@this).New(a), isExact);
+        }
+
+        /// <summary>
+        /// The floor, or with <paramref name="up"/> the ceiling, of a rational, exactly: the quotient of
+        /// its numerator by its denominator, which is positive, rounded toward zero by the division and
+        /// moved one step where that went the wrong way.
+        /// </summary>
+        private static PeterO.Numbers.EInteger RoundedQuotient(PeterO.Numbers.ERational value, bool up)
+        {
+            var division = value.Numerator.DivRem(value.Denominator);
+            var (quotient, remainder) = (division[0], division[1]);
+            if (remainder.IsZero)
+                return quotient;
+            return up ? (value.Numerator.Sign > 0 ? quotient + PeterO.Numbers.EInteger.One : quotient)
+                      : (value.Numerator.Sign < 0 ? quotient - PeterO.Numbers.EInteger.One : quotient);
         }
 
         public partial record Ceilf
@@ -733,7 +752,7 @@ namespace AngouriMath
                         Integer n => n,
                         // As in Floorf: https://github.com/asc-community/AngouriMath/issues/830
                         Real { IsFinite: false } n => n,
-                        Rational n => Integer.Create(n.EDecimal.Ceiling().ToEInteger()),
+                        Rational n => Integer.Create(RoundedQuotient(n.ERational, up: true)),
                         Real n when !isExact => Integer.Create(n.EDecimal.Ceiling().ToEInteger()),
                         Complex n when !isExact => Complex.Create(
                             n.RealPart.EDecimal.Ceiling(), n.ImaginaryPart.EDecimal.Ceiling()),

@@ -228,5 +228,26 @@ namespace AngouriMath.Tests.Convenience
         public void TheLimitOnAJumpIsDeclined(string input, string destination)
             => Assert.IsType<Entity.Limitf>(
                 input.ToEntity().Limit("x", destination.ToEntity()));
+
+        /// <summary>
+        /// A rational with more digits than the precision, a third away from an integer on either
+        /// side, rounded exactly: through <c>EDecimal</c> it was rounded onto the integer first, and
+        /// <c>floor(10^120 - 1/3)</c> came out <c>10^120</c>.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1807">#1807</a>
+        /// </summary>
+        [Theory]
+        [InlineData("floor((3 * 10^120 - 1)/3)", "10^120 - 1")]
+        [InlineData("floor((3 * 10^120 + 1)/3)", "10^120")]
+        [InlineData("ceil((3 * 10^120 - 1)/3)", "10^120")]
+        [InlineData("ceil((3 * 10^120 + 1)/3)", "10^120 + 1")]
+        [InlineData("floor(-(3 * 10^400 - 1)/3)", "-10^400")]
+        [InlineData("floor(-(3 * 10^400 + 1)/3)", "-10^400 - 1")]
+        [InlineData("ceil(-(3 * 10^400 - 1)/3)", "-10^400 + 1")]
+        [InlineData("ceil(-(3 * 10^400 + 1)/3)", "-10^400")]
+        public void ARationalOfManyDigitsIsRoundedExactly(string input, string expected)
+        {
+            Assert.Equal(expected.ToEntity().InnerSimplified, input.ToEntity().InnerSimplified);
+            Assert.Equal(expected.ToEntity().InnerSimplified, input.ToEntity().Evaled);
+        }
     }
 }
