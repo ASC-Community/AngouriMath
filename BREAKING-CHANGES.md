@@ -403,6 +403,24 @@ also how the substitution `u = x^2` writes `x/(a + c x^4)^2` since 2.5.0, having
 | `"(x/(a + c*x^2))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"x/(a + c*x^4)^2".ToEntity().Integrate("x")` | the answer, in 0.1 s; 22 s on the unreleased master | the answer, in 0.06 s |
 
+### A power of `x` shared by the numerator and every term of a sum below the bar is cancelled
+
+**Answers where there were none.** `x/(a x + b x^3 + c x^5)` was declined, and so was
+`x/(x (a + b x^2 + c x^4))`, where `1/(a + b x^2 + c x^4)` is answered: the integrand arrives as
+`x^0/(a + b x^2 + c x^4)`, and no rule reads `x^0` as a polynomial. A zeroth power of anything with the
+variable in it is one to the integrator now, but where its base is zero, a point the antiderivative
+passes through as it passes every removable one. And `1/(x (a x + b x^3 + c x^5)^2)` ran past a
+minute: the power of `x` taken out of the sum was written beside the other one,
+`x x^2 (a + b x^2 + c x^4)^2`, which the splits read as two factors; the two are one power now. Rubi's
+1.2.4.2
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x/(a*x + b*x^3 + c*x^5)".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative of `1/(a + b x^2 + c x^4)` |
+| `"x/(x*(a + b*x^2 + c*x^4))".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"1/(x*(a*x + b*x^3 + c*x^5)^2)".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | the antiderivative of `1/(x^3 (a + b x^2 + c x^4)^2)`, in a second |
+
 ### Arms no real coefficients reach are left out of a symbolic quadratic's antiderivative
 
 **Shorter answers.** An integrand over a quadratic with symbols in it is answered by arms on its

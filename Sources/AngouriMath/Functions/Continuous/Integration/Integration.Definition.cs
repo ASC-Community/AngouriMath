@@ -201,6 +201,14 @@ namespace AngouriMath.Functions.Algebra
                 // `x^3 arctan(x)^2/(1 + x^2)^3` from 0.1 s to 8.
                 .Replace(node => node is Entity.Powf(Entity.Powf(var @base, var inner), Entity.Number.Integer whole) && inner is Entity.Number.Rational && inner is not Entity.Number.Integer && @base.ContainsNode(x)
                     ? MathS.Pow(@base, (inner * whole).InnerSimplified)
+                    : node)
+                // A zeroth power of anything with the variable in it is one but where its base is
+                // zero, a point the antiderivative passes through as the generic case does every
+                // removable one: `x/(x (a + b x^2 + c x^4))` arrives as `x^0/(a + b x^2 + c x^4)`,
+                // and no rule reads `x^0` as a polynomial, so it was declined where
+                // `1/(a + b x^2 + c x^4)` is answered.
+                .Replace(node => node is Entity.Powf(var zeroth, Entity.Number.Integer { IsZero: true }) && zeroth.ContainsNode(x)
+                    ? Entity.Number.Integer.One
                     : node);
 
         /// <summary>

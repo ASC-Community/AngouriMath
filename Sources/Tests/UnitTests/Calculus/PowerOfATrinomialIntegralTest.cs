@@ -63,5 +63,31 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("(d + k*x^2)/(a + b*x^2 + c*x^4)^3", 3.1)]
         public void PastTheSquare(string integrand, double b)
             => DifferentiatesBack(integrand, ("a", 1.3), ("b", b), ("c", 0.9), ("d", 0.4), ("k", 1.1));
+
+        /// <summary>
+        /// A power of x above the bar and the same power below it: the integrand arrives as
+        /// <c>x^0/(a + b x^2 + c x^4)</c>, and no rule read <c>x^0</c> as a polynomial, so it was
+        /// declined where <c>1/(a + b x^2 + c x^4)</c> is answered. Rubi's 1.2.4.2
+        /// <c>x/(a x + b x^3 + c x^5)</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("x/(a*x + b*x^3 + c*x^5)", 0.7)]
+        [InlineData("x/(a*x + b*x^3 + c*x^5)", 3.1)]
+        [InlineData("x/(x*(a + b*x^2 + c*x^4))", 0.7)]
+        [InlineData("x^3/(x^3*(a + b*x^2 + c*x^4))", 3.1)]
+        public void AZerothPowerOfXIsOne(string integrand, double b)
+            => DifferentiatesBack(integrand, ("a", 1.3), ("b", b), ("c", 0.9));
+
+        /// <summary>
+        /// A square of a sum with a power of x in every term, beside a power of x: the power comes
+        /// out of the sum and was written beside the other, <c>x x^2 (a + b x^2 + c x^4)^2</c>, which
+        /// the splits read as two factors, and the search ran past a minute. Rubi's 1.2.4.2.
+        /// </summary>
+        [Theory]
+        [InlineData("1/(x*(a*x + b*x^3 + c*x^5)^2)", 0.7)]
+        [InlineData("1/(x*(a*x + b*x^3 + c*x^5)^2)", 3.1)]
+        [InlineData("1/(x^3*(a*x + b*x^3 + c*x^5)^2)", 0.7)]
+        public void ASquareWithAPowerOfXInEachTerm(string integrand, double b)
+            => DifferentiatesBack(integrand, ("a", 1.3), ("b", b), ("c", 0.9));
     }
 }
