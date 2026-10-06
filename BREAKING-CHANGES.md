@@ -302,6 +302,24 @@ rules' already
 | `"asin(sqrt(1 + x) - sqrt(x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in `arcsin(sqrt(1 + x) - sqrt(x))` |
 | `"x^3*atan(-sqrt(x)+sqrt(1+x))".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative in the arctangent |
 
+### A sum of two squares below the bar, beside a repeated factor, is split over its conjugates
+
+**Answers where there were none.** `(c + d tan(x))^(3/2)/(a + b tan(x))^2` was declined in 2.5.0 and ran
+past two minutes since. Under `u = tan(x)` and `t = sqrt(c + d u)` the `1 + u^2` the tangent leaves is
+`(t^2 - c)^2 + d^2`, a quartic beside the square of `a d + b (t^2 - c)`, and the Hermite reduction
+solved for the numerators over it with the symbols in every entry. A written sum of two squares
+`P^2 + Q^2`, the greater of their degrees two, beside a repeated factor, is `(P - i Q)(P + i Q)` below
+the bar now, and over those every factor is one the split by residues reads -- under a root of the
+quotient of two such linears the sum is `(b - d t^2)^2 + (c t^2 - a)^2`. Rubi's 4.3.2.1
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; past two minutes on the unreleased master | arctangents and logarithms of `sqrt(c + d tan(x))`, in two seconds |
+| `"(c + d*tan(x))^(5/2)/(a + b*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
+| `"1/((a + b*tan(x))^(3/2)*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | in the root of the quotient of the two, in a second |
+
 ### A function of `x^n` for a symbolic `n` beside a power of `x` is integrated in a power of `x`
 
 **Answers where there were none.** `x^(-1 + 4n)/(a + b x^n + c x^(2n))` and the rest of Rubi's
