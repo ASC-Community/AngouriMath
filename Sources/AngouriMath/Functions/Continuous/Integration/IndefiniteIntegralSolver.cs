@@ -2422,7 +2422,15 @@ namespace AngouriMath.Functions.Algebra
         /// <c>(d + e r_1)/(q (x^2 - r_1)) - (d + e r_2)/(q (x^2 - r_2))</c>, and
         /// <c>1/(x^2 - r)</c> is <c>atan(x/sqrt(-r))/sqrt(-r)</c> for any complex <c>r</c>. A
         /// higher even degree is divided down first, and an odd numerator is left to the
-        /// substitution <c>u = x^2</c>.
+        /// substitution <c>u = x^2</c>. And over <c>x^(2k)</c> times the biquadratic, a power of
+        /// <c>x</c> on both sides cancelled first: in <c>w = x^2</c> the remainder <c>R</c> over
+        /// <c>w^k Q</c> is the expansion of <c>R/Q</c> at <c>w = 0</c> up to <c>w^(k-1)</c>, over
+        /// <c>w^k</c>, plus <c>(d + e w)/Q</c>, so the terms in <c>x^(-2j)</c> go by the power
+        /// rule and the rest as above. Split in <c>x</c>, the repeated factor <c>x^(2k)</c> beside
+        /// the quartic went to the Hermite reduction or to the conjugates of a sum of two squares,
+        /// and <c>2 a (1 - b t^2)^4/(t^4 (1 - 2 b t^2 + (a^2 + b^2) t^4))</c>, which the root of the
+        /// quotient makes of Rubi's <c>cot(c + d x)^(5/2)/(a + b tan(c + d x))^(3/2)</c>, was
+        /// declined after seconds in one spelling and answered at length in the other.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -2441,14 +2449,30 @@ namespace AngouriMath.Functions.Algebra
         {
             if (!TryReadAsQuotient(expr, out var numerator, out var denominator))
                 return null;
-            if (!TreeAnalyzer.TryGetPolynomial(denominator, x, out var below) || below.Count == 0
-                || !below.ContainsKey(EInteger.FromInt32(4)) || below.Keys.Any(power => !(power.IsZero || power.Equals(EInteger.FromInt32(2)) || power.Equals(EInteger.FromInt32(4))))
-                || below.Values.Any(coefficient => coefficient.ContainsNode(x))
+            if (!TreeAnalyzer.TryGetPolynomial(denominator, x, out var belowAsWritten) || belowAsWritten.Count == 0
+                || belowAsWritten.Keys.Any(power => power.Sign < 0 || !power.CanFitInInt32())
+                || belowAsWritten.Values.Any(coefficient => coefficient.ContainsNode(x))
                 || !denominator.Vars.Any(v => v != x))
                 return null;
-            var a = below.TryGetValue(EInteger.Zero, out var a0) ? a0 : Number.Integer.Zero;
-            var b = below.TryGetValue(EInteger.FromInt32(2), out var b0) ? b0 : Number.Integer.Zero;
-            var c = below[EInteger.FromInt32(4)];
+            if (!TreeAnalyzer.TryGetPolynomial(numerator, x, out var aboveAsWritten) || aboveAsWritten.Count == 0
+                || aboveAsWritten.Keys.Any(power => power.Sign < 0 || !power.CanFitInInt32())
+                || aboveAsWritten.Values.Any(coefficient => coefficient.ContainsNode(x)))
+                return null;
+            // A power of x on both sides is cancelled first, and what is left below is x^(2k) times the
+            // biquadratic: `2 a (1 - b t^2)^4 t/(t^5 ((1 - b t^2)^2 + a^2 t^4))` is how the root of
+            // a quotient writes Rubi's `cot(c + d x)^(5/2)/(a + b tan(c + d x))^(3/2)`.
+            var common = EInteger.Min(aboveAsWritten.Keys.Min()!, belowAsWritten.Keys.Min()!).ToInt32Unchecked();
+            var below = belowAsWritten.ToDictionary(pair => pair.Key.ToInt32Unchecked() - common, pair => pair.Value);
+            var above = aboveAsWritten.ToDictionary(pair => pair.Key.ToInt32Unchecked() - common, pair => pair.Value);
+            var lowest = below.Keys.Min();
+            if (lowest % 2 != 0 || !below.ContainsKey(lowest + 4)
+                || below.Keys.Any(power => power != lowest && power != lowest + 2 && power != lowest + 4)
+                || above.Keys.Any(power => power % 2 != 0))
+                return null;
+            var k = lowest / 2;
+            var a = below[lowest];
+            var b = below.TryGetValue(lowest + 2, out var b0) ? b0 : Number.Integer.Zero;
+            var c = below[lowest + 4];
             // Zero as a value, and not only as written: the coefficients are read off the
             // denominator as it is written, and `((c - u^2)/c - 1)(u^2 - c)` is `-u^2 (u^2 - c)/c`,
             // with `-(c/c - 1) c` for its constant term. Read as a biquadratic, one of its roots
@@ -2456,31 +2480,45 @@ namespace AngouriMath.Functions.Algebra
             // https://github.com/asc-community/AngouriMath/issues/1665
             if (Functions.PartialFractions.IsZeroAsAValue(a) || Functions.PartialFractions.IsZeroAsAValue(c))
                 return null;
-            if (!TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) || above.Count == 0
-                || above.Keys.Any(power => power.Sign < 0 || !power.IsEven) || above.Values.Any(coefficient => coefficient.ContainsNode(x)))
-                return null;
 
             var discriminant = Functions.PartialFractions.Bare((b * b - 4 * a * c).Simplify());
             if (Functions.PartialFractions.IsZeroAsAValue(discriminant))
                 return null;
 
-            // The numerator in w = x^2, divided down by c w^2 + b w + a to a remainder d + e w.
-            var degree = above.Keys.Max()!.ToInt32Checked() / 2;
-            var inW = new Entity[degree + 1];
-            for (var k = 0; k <= degree; k++)
-                inW[k] = above.TryGetValue(EInteger.FromInt32(2 * k), out var at) ? at : Number.Integer.Zero;
+            // The numerator in w = x^2, divided down by w^k (c w^2 + b w + a) to a remainder of a
+            // degree below k + 2.
+            var degree = above.Keys.Max() / 2;
+            var inW = new Entity[System.Math.Max(degree, k + 1) + 1];
+            for (var j = 0; j < inW.Length; j++)
+                inW[j] = above.TryGetValue(2 * j, out var at) ? at : Number.Integer.Zero;
             Entity polynomialPart = Number.Integer.Zero;
-            for (var k = degree; k >= 2; k--)
+            for (var j = degree; j >= k + 2; j--)
             {
-                var lead = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[k] / c);
+                var lead = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[j] / c);
                 if (lead == Number.Integer.Zero)
                     continue;
-                polynomialPart += lead * MathS.Pow(x, 2 * (k - 2));
-                inW[k - 1] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[k - 1] - lead * b);
-                inW[k - 2] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[k - 2] - lead * a);
+                polynomialPart += lead * MathS.Pow(x, 2 * (j - k - 2));
+                inW[j - 1] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[j - 1] - lead * b);
+                inW[j - 2] = Functions.PartialFractions.InLowestTermsOverTheSymbols(inW[j - 2] - lead * a);
             }
-            var d = inW[0];
-            var e = degree >= 1 ? inW[1] : Number.Integer.Zero;
+            // The remainder R over w^k Q is sum r_m w^(m - k) over m < k, the expansion of R/Q at
+            // w = 0, plus (d + e w)/Q: r_m = (R_m - b r_(m-1) - c r_(m-2))/a, and d + e w is what
+            // (R - Q sum r_m w^m)/w^k leaves, every lower coefficient cancelling by the recurrence.
+            var pole = new Entity[k];
+            for (var m = 0; m < k; m++)
+            {
+                var term = inW[m];
+                if (m >= 1) term -= b * pole[m - 1];
+                if (m >= 2) term -= c * pole[m - 2];
+                pole[m] = Functions.PartialFractions.InLowestTermsOverTheSymbols(term / a);
+            }
+            var dTerm = inW[k];
+            if (k >= 1) dTerm -= b * pole[k - 1];
+            if (k >= 2) dTerm -= c * pole[k - 2];
+            var eTerm = inW[k + 1];
+            if (k >= 1) eTerm -= c * pole[k - 1];
+            var d = k == 0 ? inW[0] : Functions.PartialFractions.InLowestTermsOverTheSymbols(dTerm);
+            var e = k == 0 ? (degree >= 1 ? inW[1] : Number.Integer.Zero) : Functions.PartialFractions.InLowestTermsOverTheSymbols(eTerm);
 
             var q = MathS.Sqrt(discriminant);
             var firstRoot = (-b + q) / (2 * c);
@@ -2491,6 +2529,14 @@ namespace AngouriMath.Functions.Algebra
                 if (Integration.ComputeIndefiniteIntegral(polynomialPart, x, integrateByParts) is not { } whole)
                     return null;
                 total += whole;
+            }
+            // r_m x^(2m - 2k), whose exponent is odd and so never minus one.
+            for (var m = 0; m < k; m++)
+            {
+                if (pole[m] == Number.Integer.Zero)
+                    continue;
+                var exponent = 2 * (m - k) + 1;
+                total += pole[m] * MathS.Pow(x, exponent) / exponent;
             }
             // `1/(x^2 - r)` is `atan(x/s)/s` with `s = sqrt(-r)` for every complex `r` but zero:
             // `d/dx atan(x/s)/s` is `1/(s^2 + x^2)` whatever `s` is, and for a positive `r` the

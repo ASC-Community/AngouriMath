@@ -336,6 +336,24 @@ quotient of two such linears the sum is `(b - d t^2)^2 + (c t^2 - a)^2`. Rubi's 
 | `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"1/((a + b*tan(x))^(3/2)*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | in the root of the quotient of the two, in a second |
 
+### A quotient in `x^2` over a power of `x` and a biquadratic is split in `x^2`
+
+**Shorter answers, sooner.** `cot(x)^(13/2) (a + b tan(x))^(5/2) (A + B tan(x))` was declined in 2.5.0
+and answered in a million characters after eighteen seconds since; it is answered in two thousand,
+in under a second. Under `u = tan(x)` and the root of the quotient `t = sqrt(u/(a + b u))`, Rubi's
+half-odd powers of the cotangent beside one of `a + b tan(x)` leave a polynomial in `t^2` over
+`t^(2k) Q(t^2)`, `Q` a biquadratic, which was split in `t`: the repeated `t^(2k)` beside the quartic
+went to the conjugates of a sum of two squares, at length, or, with the power of a product
+distributed, to the Hermite reduction, which declined it after seconds. With a power of `x` on both
+sides cancelled, such a quotient is split in `w = x^2` now: the terms in `w^(-j)` are the expansion
+of the remainder over `Q` at `w = 0`, and what is left is `(d + e w)/Q`, which the biquadratic's rule
+answers by arctangents ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"cot(x)^(13/2)*(a + b*tan(x))^(5/2)*(A + B*tan(x))".ToEntity().Integrate("x")` | `integral(...)`; 1,018,377 characters after 18 seconds on the unreleased master | 2,305 characters, in under a second |
+| `"cot(x)^(5/2)/(a + b*tan(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)`; 4,779 characters after 6 seconds on the unreleased master | 955 characters |
+
 ### A function of `x^n` for a symbolic `n` beside a power of `x` is integrated in a power of `x`
 
 **Answers where there were none.** `x^(-1 + 4n)/(a + b x^n + c x^(2n))` and the rest of Rubi's
