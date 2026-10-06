@@ -27,6 +27,7 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("(k*cos(x))^(3/2)*sqrt(a + i*a*tan(x))")]
         [InlineData("cos(x)^9*(a + i*a*tan(x))^(7/2)")]
         [InlineData("(m*sec(x))^(2/3)*(a + i*a*tan(x))^(5/3)")]
+        [InlineData("sec(x)^5/(a + i*a*tan(x))^2")]
         public void InTheSum(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
