@@ -402,6 +402,22 @@ Rubi's 1.3.2 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 | `"(k - 2*f*(n - 1)*x^n)/(k^2 + 4*d*f*x^2 + 4*k*f*x^n + 4*f^2*x^(2*n))".ToEntity().Integrate("x")` | `integral(...)` | the same in `x/(x^n + k/(2 f))` |
 | `"x^m*(k*(1 + m) + 2*f*(1 + m - n)*x^n)/(k^2 + 4*d*f*x^(2 + 2*m) + 4*k*f*x^n + 4*f^2*x^(2*n))".ToEntity().Integrate("x")` | `integral(...)` | the same in `x^(m + 1)/(x^n + k/(2 f))` |
 
+### The tangent substitution, and a linear one, ask the same question
+
+**Answers where there were none.** `cot(x)^(3/2) (a + b tan(x))^(3/2)` is, in the tangent's `u`, a sign
+times a power of a quotient of linears over `1 + u^2`, which is answered when it is asked directly; asked
+one level down, where the tangent substitution put it, the split its root's quotient leaves was past the
+reach of the rules scoped to the question asked or one below it, and the integral was declined. With
+`c + d x` for `x` the renaming of the argument was a level more. Both rename the variable and add no step
+of their own, and ask the same question now -- a linear renaming once, so that two arguments renaming
+each other in turn spend their levels as before. Rubi's 4.3.2.1
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"cot(x)^(3/2)*(a + b*tan(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | a sign of the tangent times its antiderivative in `sqrt((a + b tan(x))/tan(x))` |
+| `"cot(c + d*x)^(5/2)*sqrt(a + b*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)`; past half a minute on the unreleased master | the same |
+
 ### A half-odd power of a constant over a polynomial of either sign is integrated with its sign
 
 **Answers where there were none.** `sqrt(1/(1 - x^2))`, the arcsine's derivative where it is real,

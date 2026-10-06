@@ -331,5 +331,35 @@ namespace AngouriMath.Tests.Calculus
                     $"d/dx of the antiderivative is {got} at x = {at}, where the integrand is {want}");
             }
         }
+
+        /// <summary>
+        /// The tangent substitution, and a linear one, rename the variable and ask the same
+        /// question, so a rule scoped to the question asked or one below it reads what they make
+        /// as it would read it asked directly. <c>cot(x)^(3/2) (a + b tan(x))^(3/2)</c> is, in the
+        /// tangent's <c>u</c>, a sign times a power of a quotient of linears over <c>1 + u^2</c>,
+        /// answered when that is asked at the top; one level down the split of its quotient in the
+        /// root declined, and with <c>c + d x</c> for <c>x</c> it was two. Rubi's 4.3.2.1, with
+        /// <c>c + d x</c> positive under the points, where the tangent is.
+        /// </summary>
+        [Theory]
+        [InlineData("cot(x)^(3/2)*(a + b*tan(x))^(3/2)")]
+        [InlineData("cot(c + d*x)^(3/2)*(a + b*tan(c + d*x))^(3/2)")]
+        [InlineData("cot(c + d*x)^(5/2)*sqrt(a + b*tan(c + d*x))")]
+        [InlineData("cot(c + d*x)^(3/2)/(a + b*tan(c + d*x))^(3/2)")]
+        public void ASubstitutionThatRenamesAsksTheSameQuestion(string integrand)
+        {
+            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.7).Substitute("c", 0.1).Substitute("d", 0.9);
+            var integral = integrand.ToEntity().Integrate("x");
+            Assert.DoesNotContain("integral(", integral.Stringize());
+            var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
+            var original = Pinned(integrand.ToEntity());
+            foreach (var at in Points)
+            {
+                var got = derivative.Substitute("x", at).EvalNumerical();
+                var want = original.Substitute("x", at).EvalNumerical();
+                Assert.True(Math.Abs((double)(got - want).RealPart) + Math.Abs((double)(got - want).ImaginaryPart) < 1e-9 * Math.Max(1.0, Math.Abs((double)want.RealPart)),
+                    $"d/dx of the antiderivative of {integrand} is {got} at x = {at}, where the integrand is {want}");
+            }
+        }
     }
 }
