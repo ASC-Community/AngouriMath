@@ -651,6 +651,21 @@ and the two together are a polynomial in `e^(i z)` and its reciprocal, multiplie
 | `"sqrt(tan(c + d*x))*(A + B*tan(c + d*x))/(a + i*a*tan(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | arctangents and logarithms of `sqrt(tan(c + d x))` |
 | `"(a + i*a*tan(c + d*x))^2*(A + B*tan(c + d*x))/(q - i*q*tan(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | a sum of multiples of `e^(k i (c + d x))` |
 
+### A root over a number times `1 + i tan(z)` is integrated as it is over `a + i a tan(z)`
+
+**Answers where there were none.** `sqrt(c + d tan(x))/(1 + i tan(x))` was declined, where
+`sqrt(c + d tan(x))/(a + i a tan(x))` is answered. Under the tangent `1 + i u` beside `1 + u^2` shares
+the root `u = i` with it, and the root was taken out first, as `i (u - i)^2 (u + i)`, only where a symbol
+stood below the bar: with numbers alone the split over the rationals and `i` was left to answer it,
+which it does for a polynomial above the bar and not for a root. The root is taken out beside anything
+above the bar that is not a polynomial now
+([#1788](https://github.com/asc-community/AngouriMath/issues/1788)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(c + d*tan(x))/(1 + i*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | arctangents and logarithms of `sqrt(c + d tan(x))` |
+| `"(c + d*tan(x))^(3/2)/(1 + i*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | the same, with a multiple of the root |
+
 ### A polynomial over a power of one linear with a symbol in it is written in powers of the linear
 
 **Answers where there were none.** `t^9/(a + b t)^8` is a polynomial and eight powers of `1/(a + b t)`,

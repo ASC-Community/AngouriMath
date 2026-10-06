@@ -786,7 +786,7 @@ namespace AngouriMath.Functions.Algebra
             // `1/((a + i a tan(x)) (c + d tan(x)))`. The quadratic is written over the linears of
             // its roots and the shared one taken as one power, coprime and squarefree for the
             // splits below.
-            if (OverAComplexRootSharedWithAQuadratic(denominator, x) is { } overTheSharedRoot
+            if (OverAComplexRootSharedWithAQuadratic(numerator, denominator, x) is { } overTheSharedRoot
                 && (SolveByPartialFractions(numerator / overTheSharedRoot, x, integrateByParts)
                     ?? Integration.ComputeIndefiniteIntegral(numerator / overTheSharedRoot, x, integrateByParts)) is { } overTheComplexRoot)
                 return overTheComplexRoot;
@@ -14375,11 +14375,16 @@ namespace AngouriMath.Functions.Algebra
         /// where no quadratic shares such a root. <c>(1 + i x)(1 + x^2)</c> is
         /// <c>i (x - i)^2 (x + i)</c>.
         /// </summary>
-        private static Entity? OverAComplexRootSharedWithAQuadratic(Entity denominator, Entity.Variable x)
+        private static Entity? OverAComplexRootSharedWithAQuadratic(Entity numerator, Entity denominator, Entity.Variable x)
         {
-            // With numbers only, the split over the rationals and the imaginary unit answers it as
-            // it is written.
-            if (!denominator.Vars.Any(symbol => symbol != x))
+            // With numbers only below the bar and a polynomial above it, the split over the
+            // rationals and the imaginary unit answers it as it is written. Not with a root above
+            // it: `sqrt(c + d u)/((1 + i u)(1 + u^2))`, which the tangent substitution makes of
+            // `sqrt(c + d tan(x))/(1 + i tan(x))`, is a question for the substitution in the root,
+            // and in its variable the shared root is a quadratic beside a quartic, which nothing
+            // reads; with `a + i a u` for `1 + i u` it was answered, and with the number declined.
+            // https://github.com/asc-community/AngouriMath/issues/1788
+            if (!denominator.Vars.Any(symbol => symbol != x) && TreeAnalyzer.TryGetPolynomial(numerator, x, out _))
                 return null;
             var written = new List<(Entity Base, EInteger Power)>();
             Entity constant = Number.Integer.One;
