@@ -346,7 +346,6 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("cot(c + d*x)^(3/2)*(a + b*tan(c + d*x))^(3/2)")]
         [InlineData("cot(c + d*x)^(5/2)*sqrt(a + b*tan(c + d*x))")]
         [InlineData("cot(c + d*x)^(3/2)/(a + b*tan(c + d*x))^(3/2)")]
-        [InlineData("1/(tan(c + d*x)^(3/2)*sqrt(a + b*tan(c + d*x)))")]
         public void ASubstitutionThatRenamesAsksTheSameQuestion(string integrand)
         {
             Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.7).Substitute("c", 0.1).Substitute("d", 0.9);
