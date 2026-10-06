@@ -269,6 +269,22 @@ brings the root of the product of the radicands with it, and those were answered
 | `"1/(sqrt(a + b*x) + sqrt(a + c*x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same, with logarithms and arctangents |
 | `"x^3/(sqrt(a + b*x) + sqrt(a + c*x))^2".ToEntity().Integrate("x")` | `integral(...)` | the same; 10 s on the unreleased master, a tenth of one now |
 
+### An odd half power of a quadratic with `i` in it is reduced as one without
+
+**Answers where there were none.** `sqrt(3 i x + 4 x^2)` was answered and `(3 i x + 4 x^2)^(5/2)`
+declined: the reduction of a polynomial times an odd half power of a quadratic to
+`R Q^(k + 1/2) + K/sqrt(Q)`, one linear solve, declined any coefficient off the real line, though the solve
+is exact whatever the coefficients are, the table answers `K/sqrt(Q)` off the real line as on it, and the
+answer is differentiated back at sampled points before it is returned. It reduces those too now. Rubi's
+1.2.1.1
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(3*i*x + 4*x^2)^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | a polynomial times the root, and a logarithm |
+| `"1/(3*i*x + 4*x^2)^(7/2)".ToEntity().Integrate("x")` | `integral(...)` | a polynomial over a power of the root |
+| `"(1 + i*x + x^2)^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | a polynomial times the root, and a logarithm |
+
 ### A power of a linear plus a root whose square matches it is integrated in their sum
 
 **Answers where there were none.** `(d + e x + f sqrt(Q))^n` with `e^2` the leading coefficient of
