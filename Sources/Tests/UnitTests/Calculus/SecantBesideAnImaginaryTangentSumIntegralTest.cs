@@ -28,6 +28,9 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("cos(x)^9*(a + i*a*tan(x))^(7/2)")]
         [InlineData("(m*sec(x))^(2/3)*(a + i*a*tan(x))^(5/3)")]
         [InlineData("sec(x)^5/(a + i*a*tan(x))^2")]
+        [InlineData("sec(x)^7/(a + i*a*tan(x))^4")]
+        [InlineData("sec(x)^9/(a + i*a*tan(x))^8")]
+        [InlineData("(k*sec(x))^3/(a - i*a*tan(x))^2")]
         public void InTheSum(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
