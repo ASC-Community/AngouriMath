@@ -27047,10 +27047,15 @@ namespace AngouriMath.Functions.Algebra
             Entity? sumPower = null;
             Entity secantPower = Number.Integer.Zero;
             var sawSecant = false;
+            // Everything but the sum, for the rewrite of a whole power of it below.
+            Entity others = Number.Integer.One;
             foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
             {
                 if (!factor.ContainsNode(x))
+                {
+                    others = underneath ? others / factor : others * factor;
                     continue;
+                }
                 var (@base, power) = factor is Powf(var b, var p) && !p.ContainsNode(x)
                     ? (b, p.Evaled is Number.Rational r ? r : p)
                     : (factor, (Entity)Number.Integer.One);
@@ -27077,6 +27082,7 @@ namespace AngouriMath.Functions.Algebra
                 if (of is null || argument is not null && argument != of)
                     return null;
                 argument = of;
+                others = underneath ? others / factor : others * factor;
                 secantPower = sign == 1 ? secantPower + power : secantPower - power;
                 sawSecant = true;
             }
@@ -27084,20 +27090,33 @@ namespace AngouriMath.Functions.Algebra
                 || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
                 return null;
             secantPower = secantPower is Number ? secantPower : secantPower.InnerSimplified;
-            // Whole powers on both are left to the rules for the sine and the cosine, which answer
-            // `cos(x)^5/(a + i a tan(x))^3` and `sec(x)^3/(a + i a tan(x))^4` in a fraction of a second
-            // where in u they ran past five -- but for an odd power s of the secant over the sum's n-th
-            // with s + 2 n = 1. Then u^n (sec(z)^2)^((s - 2)/2) is a whole power of 2 A - u over the root
-            // of u, which is answered in a second, and `sec(x)^5/(a + i a tan(x))^2` was declined by
-            // every route but this.
-            if (sumPower is Number.Integer { EInteger: var whole } && secantPower is Number.Integer { EInteger: var secant }
-                && !(secant + whole * 2).Equals(EInteger.One))
-                return null;
             Entity constantTerm = Number.Integer.Zero;
             foreach (var term in Sumf.LinearChildren(sum))
                 if (!term.ContainsNode(x))
                     constantTerm += term;
             var a = constantTerm.InnerSimplified;
+            // Whole powers on both. An odd power s of the secant over the sum's n-th: the sum times its
+            // conjugate is A^2 sec(z)^2, so `sec(x)^7/(a + i a tan(x))^4` is
+            // `sec(x)^(-1) (a - i a tan(x))^4/a^8`, a whole power of the conjugate beside one of the
+            // secant, which the rules for the sine and the cosine answer in a fraction of a second. In u
+            // it ran past five, or with s + 2 n = 1 took two seconds for an answer ten times as long.
+            // An even power is left to those rules as written, which answer `sec(x)^4/(a + i a tan(x))^3`
+            // shorter than its rewrite, and so is an odd power of the cosine, `cos(x)/(a + i a tan(x))^4`,
+            // which they answer several times sooner; and a whole power above the bar to them too, but for
+            // s + 2 n = 1, where u^n (sec(z)^2)^((s - 2)/2) is a whole power of 2 A - u over the root of u.
+            if (sumPower is Number.Integer { EInteger: var whole } && secantPower is Number.Integer { EInteger: var secant })
+            {
+                if (whole.Sign < 0 && secant.Sign > 0 && !secant.IsEven && whole.CanFitInInt32())
+                {
+                    var n = -whole.ToInt32Checked();
+                    var conjugate = a + (plus ? -MathS.i : MathS.i) * a * MathS.Tan(argument);
+                    return Integration.ComputeAsTheSameQuestion(
+                        (others * MathS.Pow(conjugate, n) * MathS.Pow(MathS.Sec(argument), -2 * n) / MathS.Pow(a, 2 * n)).InnerSimplified,
+                        x, integrateByParts);
+                }
+                if (!(secant + whole * 2).Equals(EInteger.One))
+                    return null;
+            }
             var u = Variable.CreateUnique(expr, "u_tan");
             var half = ((secantPower - 2) / 2).InnerSimplified;
             Entity squared = MathS.Pow(u / a, half) * MathS.Pow((2 * a - u) / a, half);

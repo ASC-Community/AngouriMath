@@ -365,6 +365,21 @@ quotient of two such linears the sum is `(b - d t^2)^2 + (c t^2 - a)^2`. Rubi's 
 | `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"1/((a + b*tan(x))^(3/2)*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | in the root of the quotient of the two, in a second |
 
+### `a + i a tan` below an odd power of the secant is written over its conjugate
+
+**Answers where there were none, and shorter ones.** `sec(x)^7/(a + i a tan(x))^4` was declined, with
+the rest of Rubi's 4.3.1.2 that is an odd power of the secant over a whole power of `a + i a tan`. The sum
+times `a - i a tan(z)` is `a^2 sec(z)^2`, so `sec(z)^s/(a + i a tan(z))^n` is
+`sec(z)^(s - 2 n) (a - i a tan(z))^n/a^(2 n)`, a whole power of the conjugate beside one of the secant,
+and it is integrated as that. Those integrated in `u = a + i a tan(z)` before come out a tenth as long
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^7/(a + i*a*tan(x))^4".ToEntity().Integrate("x")` | `integral(...)` | 371 characters |
+| `"sec(x)^9/(a + i*a*tan(x))^8".ToEntity().Integrate("x")` | `integral(...)` | 745 characters |
+| `"sec(x)^5/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)`; 2,431 characters on the unreleased master | 225 characters |
+
 ### An odd power of the secant over a whole power of `a + i a tan` is integrated in the sum
 
 **Answers where there were none.** `sec(x)^5/(a + i a tan(x))^2` was declined: the rule that integrates
@@ -379,8 +394,8 @@ right answers were declined after seconds
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
-| `"sec(x)^5/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | 2,431 characters |
-| `"sec(x)^7/(a + i*a*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | 3,774 characters |
+| `"sec(x)^5/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | 225 characters |
+| `"sec(x)^7/(a + i*a*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | 289 characters |
 
 ### A power of the cosine beside a power of `a + i a tan` is read as one of the secant
 
