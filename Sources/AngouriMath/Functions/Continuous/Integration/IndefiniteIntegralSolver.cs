@@ -27124,8 +27124,13 @@ namespace AngouriMath.Functions.Algebra
             }
             var u = Variable.CreateUnique(expr, "u_tan");
             var half = ((secantPower - 2) / 2).InnerSimplified;
-            Entity squared = MathS.Pow(u / a, half) * MathS.Pow((2 * a - u) / a, half);
-            var inU = MathS.Pow(u, sumPower) * squared;
+            // u^n is A^n (u/A)^n up to a factor constant along the path, which the quotient below
+            // takes care of, and gathered with the secant's (u/A)^r one power: with a symbol for the
+            // powers, `u^(2 - n) (u/A)^(n - 1)` is (u/A)^1, and written apart it was read by no rule.
+            var gathered = (sumPower + half).InnerSimplified;
+            if (gathered is not Number && gathered.Complexity <= 40)
+                gathered = gathered.Simplify();
+            var inU = MathS.Pow(u / a, gathered) * MathS.Pow((2 * a - u) / a, half);
             if (Integration.ComputeAsAQuestionOfItsOwn(inU, u, integrateByParts) is not { } inUAnswer
                 || inUAnswer.Nodes.Any(node => node == MathS.NaN))
                 return null;

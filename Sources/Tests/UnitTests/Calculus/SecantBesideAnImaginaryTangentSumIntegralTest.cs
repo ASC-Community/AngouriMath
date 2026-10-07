@@ -31,13 +31,15 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("sec(x)^7/(a + i*a*tan(x))^4")]
         [InlineData("sec(x)^9/(a + i*a*tan(x))^8")]
         [InlineData("(k*sec(x))^3/(a - i*a*tan(x))^2")]
+        [InlineData("(m*sec(x))^(4 - 2*n)*(a + i*a*tan(x))^n")]
+        [InlineData("(m*sec(x))^(2*n)*(a + i*a*tan(x))^(3 - n)")]
         public void InTheSum(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
             var text = integral.Stringize();
             Assert.DoesNotContain("integral(", text);
             Assert.True(text.Length < 5000, $"{text.Length} characters of answer for {integrand}");
-            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("k", 0.7).Substitute("m", 1.1);
+            Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("k", 0.7).Substitute("m", 1.1).Substitute("n", 2.3);
             var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
             var original = Pinned(integrand.ToEntity());
             var compared = 0;
