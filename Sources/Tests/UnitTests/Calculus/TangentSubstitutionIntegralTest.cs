@@ -113,7 +113,20 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("sqrt(a + b*csc(c + d*x)^2)")]
         [InlineData("sqrt(1 + csc(x)^2)")]
         [InlineData("1/sqrt(-1 + csc(x)^2)")]
-        public void AnEvenPowerOfTheSecantOrTheCosecantUnderARoot(string integrand)
+        public void AnEvenPowerOfTheSecantOrTheCosecantUnderARoot(string integrand) => DifferentiatesBackWithTheSymbolsPinned(integrand);
+
+        /// <summary>
+        /// An odd power of the secant is the cosine's the other way up: <c>sec(x)^5/(a + b tan(x))^2</c>
+        /// is <c>sgn(cos(x)) (1 + u^2)^(3/2)/(a + b u)^2</c> under <c>u = tan(x)</c>. Rubi's 4.3.1.2,
+        /// checked on both signs of the cosine.
+        /// </summary>
+        [Theory]
+        [InlineData("sec(x)^5/(a + b*tan(x))^2")]
+        [InlineData("sec(x)^7/(a + b*tan(x))^3")]
+        [InlineData("sec(c + d*x)^5/(a + b*tan(c + d*x))^3")]
+        public void AnOddPowerOfTheSecantIsItsSignTimesAFunctionOfTheTangent(string integrand) => DifferentiatesBackWithTheSymbolsPinned(integrand);
+
+        private static void DifferentiatesBackWithTheSymbolsPinned(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
             Assert.DoesNotContain("integral(", integral.Stringize());

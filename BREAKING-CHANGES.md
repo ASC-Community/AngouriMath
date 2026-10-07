@@ -270,6 +270,20 @@ answer on the far side of a root gets a real expression where it used to get a c
 | `1/(x*(-4+x^2)^4)` | 8,472 ms | 1,878 ms |
 | `1/((1+x)^3*(2+x)^3)` | 1,343 ms | 492 ms |
 
+### An odd power of the secant is read in the tangent, with the cosine's sign
+
+**Answers where there were none.** `sec(x)^5/(a + b tan(x))^2` was declined: the substitution
+`u = tan(x)` read an odd power of the sine or the cosine as its sign times a function of the tangent,
+`cos(x) = sgn(cos(x))/sqrt(1 + u^2)`, and not the secant, which is the same the other way up. It reads the
+secant too now, and the integrand is `sgn(cos(x)) (1 + u^2)^(3/2)/(a + b u)^2` in `u`
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^5/(a + b*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | in `sgn(cos(x))` and `tan(x)`, 901 characters |
+| `"sec(x)^7/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | 1,253 characters |
+| `"sec(x)/(a + b*cot(x))".ToEntity().Integrate("x")` | `integral(...)` | 571 characters |
+
 ### A whole power of the radicand under Euler's substitution is read as one
 
 **Answers where there were none, and none where they were wrong.** Euler's substitution writes the
