@@ -26935,7 +26935,7 @@ namespace AngouriMath.Functions.Algebra
         /// </remarks>
         internal static Entity? SolveAPowerOfAnImaginaryTangentBesideAPowerOfTheSecant(Entity expr, Entity.Variable x, bool integrateByParts)
         {
-            if (!expr.Nodes.Any(node => node is Secantf) || !expr.Nodes.Any(node => node is Tanf))
+            if (!expr.Nodes.Any(node => node is Secantf or Cosf) || !expr.Nodes.Any(node => node is Tanf))
                 return null;
             Entity? argument = null;
             var plus = false;
@@ -26964,16 +26964,21 @@ namespace AngouriMath.Functions.Algebra
                     (tangentPower, argument, plus) = (power, tangentOf, isPlus);
                     continue;
                 }
-                var secant = @base switch
+                // A power of the cosine is one of the secant with the sign of the power turned:
+                // `sqrt(a + i a tan(z))/(e cos(z))^(3/2)` adds up to 2 as `sqrt(a + i a tan(z)) (e sec(z))^(3/2)`
+                // does, the factors themselves kept as they are written.
+                var (trigonometric, turned) = @base switch
                 {
-                    Secantf => @base,
-                    Mulf(var left, Secantf right) when !left.ContainsNode(x) => right,
-                    Mulf(Secantf left, var right) when !right.ContainsNode(x) => left,
-                    _ => null
+                    Secantf => (@base, false),
+                    Cosf => (@base, true),
+                    Mulf(var left, var right) when !left.ContainsNode(x) && right is Secantf or Cosf => (right, right is Cosf),
+                    Mulf(var left, var right) when !right.ContainsNode(x) && left is Secantf or Cosf => (left, left is Cosf),
+                    _ => ((Entity?)null, false)
                 };
-                if (secant is not Secantf(var secantOf) || secantPower is not null || argument is not null && argument != secantOf)
+                var secantOf = trigonometric switch { Secantf(var inner) => inner, Cosf(var inner) => inner, _ => null };
+                if (secantOf is null || secantPower is not null || argument is not null && argument != secantOf)
                     return null;
-                (secantPower, argument) = (power, secantOf);
+                (secantPower, argument) = (turned ? (power is Number.Rational turnedPower ? -turnedPower : (-power).InnerSimplified) : power, secantOf);
             }
             if (tangentPower is null || secantPower is null || argument is null
                 || tangentPower is Number.Integer && secantPower is Number.Integer

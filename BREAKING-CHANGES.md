@@ -382,6 +382,20 @@ right answers were declined after seconds
 | `"sec(x)^5/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | 2,431 characters |
 | `"sec(x)^7/(a + i*a*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | 3,774 characters |
 
+### A power of the cosine beside a power of `a + i a tan` is read as one of the secant
+
+**Answers where there were none, and shorter ones.** `sqrt(a + i a tan(x))/(k cos(x))^(3/2)` was declined:
+the rule that integrates a power of `a + i a tan(z)` beside a power of the secant as the exponential it is,
+where the powers add up to a whole number, read the secant only, and the cosine below the bar is the same
+power of it with its sign turned. It reads the cosine too now, the factors kept as they are written; the
+rows the rule for any powers answered in `u` before are answered by it instead, and shorter
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + i*a*tan(x))/(k*cos(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | in `e^(i x)`, 533 characters |
+| `"(k*cos(x))^(3/2)*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)`; 763 characters on the unreleased master | 172 characters |
+
 ### A power of the secant beside a power of `a + i a tan` is integrated in the sum, whatever the powers
 
 **Answers where there were none.** `sec(x)^3 sqrt(a + i a tan(x))` was declined, with the rest of
