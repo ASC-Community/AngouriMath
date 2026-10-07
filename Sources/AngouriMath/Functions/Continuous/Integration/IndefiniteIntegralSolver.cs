@@ -10283,6 +10283,11 @@ namespace AngouriMath.Functions.Algebra
                         => MathS.Pow(sign / rootOfSecantSquared, k),
                     Powf(Sinf(var a), Number.Integer k) when a == x && k.EInteger.CanFitInInt32() && !k.EInteger.IsEven
                         => MathS.Pow(sign * tangent / rootOfSecantSquared, k),
+                    // And the secant is the cosine the other way up, the sign its own inverse:
+                    // `sec(x)^5/(a + b tan(x))^2` is `sgn(cos(x)) (1 + u^2)^(5/2)/(a + b u)^2`.
+                    Secantf(var a) when a == x => sign * rootOfSecantSquared,
+                    Powf(Secantf(var a), Number.Integer k) when a == x && k.EInteger.CanFitInInt32() && !k.EInteger.IsEven
+                        => MathS.Pow(sign * rootOfSecantSquared, k),
                     _ => node,
                 }).Substitute(tangent, uSub);
                 if (odd.ContainsNode(x) || !IsAlgebraicIn(odd, uSub))
