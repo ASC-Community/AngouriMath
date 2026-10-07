@@ -240,6 +240,21 @@ integrals with `0` ([#1769](https://github.com/asc-community/AngouriMath/issues/
 | `"e^(-160)".ToEntity().InnerSimplified` | `0` | `e ^ (-160)` |
 | `"x^n*((1 - d^2)/x - x)^3*(1 + x^2 - d*x)/(x - d)/pi^2".ToEntity().Simplify()` | `0 provided not x - d = 0 and ...` | `x ^ n * ((1 - d ^ 2) / x - x) ^ 3 * (1 - d * x + x ^ 2) / (pi ^ 2 * (x - d))` |
 
+### `e^(i arctan(L))` beside a function of `x` is written as two powers of linears
+
+**Answers where there were none, and shorter ones.** `1/(e^(i arctan(a + b x)) x^2)` ran past thirty
+seconds: `e^(i arctan(L))` was written `(1 + i L)/sqrt(1 + L^2)`, a root of a quadratic beside the pole.
+It is `(1 + i L)^(1/2) (1 - i L)^(-1/2)` as well, for a real `L` -- the two principal powers' arguments are
+`arctan(L)/2` each and their moduli cancel -- powers of two linears, and beside a function of `x` it is
+written so. Of Rubi's 5.3.6, four integrals are answered that were not, and the 28 answers that change are
+a ninth of the length together ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(e^(i*atan(a + b*x))*x^2)".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 340 characters |
+| `"x^3/e^(i*atan(a + b*x))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 373 characters |
+| `"x^3/e^(i*atan(a*x))".ToEntity().Integrate("x")` | `integral(...)`; 25,944 characters on the unreleased master | 218 characters |
+
 ### The floor and the ceiling of a rational are exact whatever its size
 
 **Wrong answers fixed.** The floor and the ceiling of an exact rational went through a decimal at the
