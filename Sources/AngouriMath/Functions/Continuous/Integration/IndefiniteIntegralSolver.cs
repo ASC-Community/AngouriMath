@@ -10360,8 +10360,14 @@ namespace AngouriMath.Functions.Algebra
             // none: `1/(u^2*(1 + u^2))` is integrated and `(1/u)^2/(1 + u^2)`, which is the same
             // expression, is not. The half-angle and exponential substitutions comb their
             // integrands for the same reason.
-            var integrand = Functions.SingleQuotient
-                .Combine(inU / (1 + MathS.Sqr(uSub))).Simplify();
+            // A power of A + i A u beside the differential: (A + i A u)(A - i A u) is A^2 (1 + u^2),
+            // so 1/(1 + u^2) is A^2/((A + i A u)(A - i A u)) and the sum's power is lowered by one,
+            // a root of a linear over a linear. `sqrt(a + i a tan(x))/(c + d tan(x))^(3/2)` was a
+            // search past thirty seconds as a quotient by 1 + u^2, and in the sum's conjugate it is
+            // answered in a second.
+            var integrand = ByTheSumsConjugate(inU, uSub) is { } overTheConjugate
+                ? overTheConjugate
+                : Functions.SingleQuotient.Combine(inU / (1 + MathS.Sqr(uSub))).Simplify();
             if (integrand is Providedf(var withoutCondition, _))
                 integrand = withoutCondition;
             // Asked as the same question: the rewrite renames the variable and adds no step of
@@ -10372,6 +10378,34 @@ namespace AngouriMath.Functions.Algebra
             return Integration.ComputeAsTheSameQuestion(integrand, uSub, integrateByParts) is { } result
                 ? result.Substitute(uSub, tangent)
                 : null;
+        }
+
+        /// <summary>
+        /// <c>inU/(1 + u^2)</c> written with the conjugate of a factor <c>A +- i A u</c> of
+        /// <paramref name="inU"/>: <c>inU/(A +- i A u) A^2/(A -+ i A u)</c>. Null where no factor is
+        /// such a sum.
+        /// </summary>
+        private static Entity? ByTheSumsConjugate(Entity inU, Entity.Variable u)
+        {
+            // A reciprocal of a product read as the quotient it is: a constant taken out of the
+            // sum's root leaves `(sqrt(1 + i u) (c + d u)^(3/2))^(-1)`, whose factors are below the bar.
+            if (inU is Powf(var reciprocal, Number.Integer { EInteger: var minusOne }) && minusOne.Equals(EInteger.FromInt32(-1)))
+                inU = 1 / reciprocal;
+            foreach (var (factor, _) in FactorsOfTheIntegrand(inU))
+            {
+                // A root of the sum, not a whole power: a polynomial in it beside the cosine is the
+                // rules' for the sine and the cosine, which answer `cos(x)^6 (a + i a tan(x))` sooner.
+                if (factor is not Powf(var sum, Number.Rational { ERational.Denominator: var denominator }) || denominator.Equals(EInteger.One))
+                    continue;
+                if (sum is not Sumf and not Minusf || !TreeAnalyzer.TryGetPolyLinear(sum, u, out var slope, out var intercept)
+                    || TreeAnalyzer.IsZero(intercept) || TreeAnalyzer.IsZero(slope))
+                    continue;
+                if (!TreeAnalyzer.IsZero((slope - MathS.i * intercept).Simplify()) && !TreeAnalyzer.IsZero((slope + MathS.i * intercept).Simplify()))
+                    continue;
+                var conjugate = intercept - slope * u;
+                return (inU / sum * MathS.Sqr(intercept) / conjugate).InnerSimplified;
+            }
+            return null;
         }
         /// <summary>
         /// <c>(prod f_i^(k_i))^(p/q)</c>, <c>q</c> odd, as <c>prod f_i^(k_i p/q)</c> where every
