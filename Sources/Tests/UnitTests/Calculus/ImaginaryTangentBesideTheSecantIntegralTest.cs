@@ -34,6 +34,8 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("(k*sec(c + d*x))^(-4 - n)*(a + i*a*tan(c + d*x))^n")]
         [InlineData("(k*sec(c + d*x))^(-1 - n)*(a + i*a*tan(c + d*x))^n")]
         [InlineData("(a + i*a*tan(c + d*x))^n/(k*sec(c + d*x))^n")]
+        [InlineData("sqrt(a + i*a*tan(x))/(k*cos(x))^(3/2)")]
+        [InlineData("(k*cos(c + d*x))^(5/2)/sqrt(a + i*a*tan(c + d*x))")]
         public void AsTheExponentialItIs(string integrand)
         {
             var integral = integrand.ToEntity().Integrate("x");
