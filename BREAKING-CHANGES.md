@@ -177,6 +177,22 @@ the division's; with it on, the rounding is the setting's own and stays
 | `"(-60.5)!"` at 30 digits, downcasting off | `5.86118478907722232671451280188E-81` | `2.93059239453861116335725639905E-81` |
 | `"abs(75 + 316.22776601683796i)"`, downcasting off | `325` | `325.000000000000026076735749…` |
 
+### `a + i a tan` beside the tangent's differential is lowered over its conjugate
+
+**Answers where there were none.** `sqrt(a + i a tan(x))/(c + d tan(x))^(3/2)` ran past thirty seconds:
+under `u = tan(x)` it is `sqrt(a + i a u)/((c + d u)^(3/2) (1 + u^2))`, a search, where
+`(a + i a u)(a - i a u)` is `a^2 (1 + u^2)` and the sum's power is lowered by one over its conjugate, a root
+of a linear over a linear, which is answered in a second
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + i*a*tan(x))/(c + d*tan(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 1,893 characters |
+| `"(a + i*a*tan(x))^(3/2)*(c + d*tan(x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 670 characters |
+| `"sqrt(a + i*a*tan(x))/sqrt(c + d*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | 169 characters |
+| `"1/(sqrt(a + i*a*tan(x))*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 2,217 characters |
+| `"1/((a + i*a*tan(x))^(3/2)*(c + d*tan(x))^(5/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 3,333 characters |
+
 ### One linear twice is not two linear powers
 
 **Answers that had no value.** `(a c + b c x)^(-3 - 2 p) (f + g x) (a^2 + 2 a b x + b^2 x^2)^p` was answered
