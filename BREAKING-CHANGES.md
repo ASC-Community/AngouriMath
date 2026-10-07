@@ -120,6 +120,22 @@ the working digits, or `MathS.Settings.PrecisionErrorZeroRange` where a caller h
 still that integer, so `e^(-123.456)` is 0 as it was.
 [#1338](https://github.com/asc-community/AngouriMath/issues/1338).
 
+### A piecewise is defined where the case it takes is
+
+**Domain conditions that were false.** The domain condition of a piecewise asked every case's predicate
+to be defined, and an ordering is defined only between reals: `piecewise(1 provided not i in RR, 2 provided i < 0)`
+is `1`, and its domain condition was `false`. It is where some case's predicate holds, no earlier one does
+-- a predicate with no value passed over, as the simplification passes over it -- and that case's expression
+is defined. An antiderivative with an arm for each sign of a discriminant and one for its not being real
+carried the discriminant's being real in its condition, and held nowhere when it was not
+([#1817](https://github.com/asc-community/AngouriMath/issues/1817)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"piecewise(1 provided not i in RR, 2 provided i < 0)".ToEntity().DomainCondition` | `false` | `true` |
+| `"piecewise(2 * x provided not x = 0, 3 * x ^ 2 provided i - 1 < 0)".ToEntity().DomainCondition` | `false` | `not x = 0` |
+| `"1/(sqrt(a + i*a*x)*(c + d*x)^(3/2)*(a - i*a*x))".ToEntity().Integrate("x")` | `integral(...)`; on the unreleased master, an answer with no value at any point | 3,267 characters, defined |
+
 ### A piecewise case whose condition is undefined is passed over
 
 **A different answer.** A case whose predicate evaluates to NaN -- an order comparison of a number

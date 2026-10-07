@@ -49,5 +49,37 @@ namespace AngouriMath.Tests.Core
             var derivative = "piecewise(x ^ 2 provided not x = 0, x ^ 3 provided -13/10 * i - 3/5 < 0)".ToEntity().Differentiate("x");
             Near(0.6, derivative.Substitute("x", 0.3));
         }
+
+        // Where the piecewise is defined: where the case it takes is, an undefined predicate before
+        // it passed over. https://github.com/asc-community/AngouriMath/issues/1817
+        [Theory]
+        [InlineData("piecewise(1 provided not i in RR, 2 provided i < 0)", "true")]
+        [InlineData("piecewise(1 provided i < 0, 2 provided 1 > 0)", "true")]
+        [InlineData("piecewise(2 * x provided not x = 0, 3 * x ^ 2 provided i - 1 < 0)", "not x = 0")]
+        [InlineData("piecewise(1 provided i < 0, 2 provided i > 0)", "false")]
+        public void TheDomainIsWhereTheCaseItTakesIsDefined(string piecewise, string domain)
+            => Assert.Equal(domain.ToEntity().InnerSimplified, piecewise.ToEntity().DomainCondition);
+
+        // Off the real line: the arm for the quantity not being real is taken, and the domain does
+        // not ask the comparisons in the other arms to be defined.
+        [Theory]
+        [InlineData(0.7, 1.07)]
+        [InlineData(-0.7, 2.0)]
+        public void AnArmForANonRealQuantityKeepsTheDomain(double c, double d)
+        {
+            var domain = "piecewise(1 provided not (c + i*d) in RR, 2 provided c + i*d < 0, 3 provided c + i*d > 0)".ToEntity().DomainCondition;
+            Assert.Equal(Entity.Boolean.True, domain.Substitute("c", c).Substitute("d", d).Evaled);
+        }
+
+        // A case taken where its expression has no value leaves the piecewise undefined there,
+        // whatever the cases after it say.
+        [Fact]
+        public void TheFirstCaseThatHoldsDecides()
+        {
+            var domain = "piecewise(1/x provided x > -1, 0 provided true)".ToEntity().DomainCondition;
+            Assert.Equal(Entity.Boolean.False, domain.Substitute("x", 0).Evaled);
+            Assert.Equal(Entity.Boolean.True, domain.Substitute("x", -2).Evaled);
+            Assert.Equal(Entity.Boolean.True, domain.Substitute("x", 1).Evaled);
+        }
     }
 }
