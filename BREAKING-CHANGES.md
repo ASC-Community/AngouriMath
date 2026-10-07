@@ -365,6 +365,23 @@ quotient of two such linears the sum is `(b - d t^2)^2 + (c t^2 - a)^2`. Rubi's 
 | `"(c + d*tan(x))^(3/2)/(a + b*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | the same |
 | `"1/((a + b*tan(x))^(3/2)*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | in the root of the quotient of the two, in a second |
 
+### An odd power of the secant over a whole power of `a + i a tan` is integrated in the sum
+
+**Answers where there were none.** `sec(x)^5/(a + i a tan(x))^2` was declined: the rule that integrates
+a power of the secant beside a power of `a + i a tan` in `u = a + i a tan(z)` left whole powers on both
+to the rules for the sine and the cosine, which answer `cos(x)^5/(a + i a tan(x))^3` and
+`sec(x)^3/(a + i a tan(x))^4` and not `sec(x)^5/(a + i a tan(x))^2`. It takes an odd power `s` of the
+secant over the sum's `n`-th where `s + 2 n = 1`, which in `u` is a whole power of `2 a - u` over the root of `u`. And it checks the antiderivative it finds in `u` on the
+path, `u = a + i a t` for a real `t`, where it checked the answer in `x`: the expression in `x` carries a
+factor constant on intervals and was large enough that the sampled evaluations could not decide, so
+right answers were declined after seconds
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^5/(a + i*a*tan(x))^2".ToEntity().Integrate("x")` | `integral(...)` | 2,431 characters |
+| `"sec(x)^7/(a + i*a*tan(x))^3".ToEntity().Integrate("x")` | `integral(...)` | 3,774 characters |
+
 ### A power of the secant beside a power of `a + i a tan` is integrated in the sum, whatever the powers
 
 **Answers where there were none.** `sec(x)^3 sqrt(a + i a tan(x))` was declined, with the rest of

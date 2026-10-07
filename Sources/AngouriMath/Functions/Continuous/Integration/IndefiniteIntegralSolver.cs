@@ -27079,10 +27079,14 @@ namespace AngouriMath.Functions.Algebra
                 || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
                 return null;
             secantPower = secantPower is Number ? secantPower : secantPower.InnerSimplified;
-            // Whole powers on both are a rational function of the sine and the cosine, which the
-            // rules for those answer in a fraction of a second, where in u they ran past five:
-            // `cos(x)^5/(a + i a tan(x))^3`.
-            if (sumPower is Number.Integer && secantPower is Number.Integer)
+            // Whole powers on both are left to the rules for the sine and the cosine, which answer
+            // `cos(x)^5/(a + i a tan(x))^3` and `sec(x)^3/(a + i a tan(x))^4` in a fraction of a second
+            // where in u they ran past five -- but for an odd power s of the secant over the sum's n-th
+            // with s + 2 n = 1. Then u^n (sec(z)^2)^((s - 2)/2) is a whole power of 2 A - u over the root
+            // of u, which is answered in a second, and `sec(x)^5/(a + i a tan(x))^2` was declined by
+            // every route but this.
+            if (sumPower is Number.Integer { EInteger: var whole } && secantPower is Number.Integer { EInteger: var secant }
+                && !(secant + whole * 2).Equals(EInteger.One))
                 return null;
             Entity constantTerm = Number.Integer.Zero;
             foreach (var term in Sumf.LinearChildren(sum))
@@ -27102,14 +27106,19 @@ namespace AngouriMath.Functions.Algebra
             // The antiderivative in u was found for a real u, and its conditions say so -- a radicand
             // at least zero -- where u = A + i A tan(z) is not real: kept, they hold nowhere on the
             // path and the answer has no value at all. The formula is an antiderivative wherever it is
-            // analytic, so the conditions go, each piecewise taken arm by arm, and an answer is kept
-            // only where its derivative is the integrand at the sampled points.
+            // analytic, so the conditions go, each piecewise taken arm by arm, and a formula is kept
+            // only where its derivative in u is the integrand in u on the path, u = A + i A t for a
+            // real t, at the sampled points: checked in x, through the factor constant on intervals,
+            // the expression was large enough that the evaluations could not decide, and right
+            // answers were declined after seconds.
+            var onThePath = Variable.CreateUnique(inU + a, "t_path");
+            var path = a + MathS.i * a * onThePath;
+            var integrandOnThePath = inU.Substitute(u, path);
             foreach (var arm in new[] { 0, -1 })
             {
                 var formula = WithoutConditions(inUAnswer, arm);
-                var answer = expr * formula.Substitute(u, sum) / differentiatesBackTo;
-                if (Functions.PartialFractions.DerivativeHoldsAtSampledPoints(answer, expr, x))
-                    return answer;
+                if (Functions.PartialFractions.HoldsAtSampledPoints(formula.Differentiate(u).Substitute(u, path), integrandOnThePath, onThePath))
+                    return expr * formula.Substitute(u, sum) / differentiatesBackTo;
                 if (!inUAnswer.Nodes.Any(node => node is Piecewise))
                     break;
             }
