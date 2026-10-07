@@ -42,14 +42,44 @@ namespace AngouriMath
         /// - Singularities and poles (points where a function is undefined)
         /// - Piecewise continuity (tracking where discontinuities occur)
         /// </remarks>
-        public Entity DomainCondition => domainCondition.GetValue(static @this => ScopedToItsBinder(@this, @this.DirectChildren.Aggregate(@this.IntrinsicCondition, (accum, curr) =>
+        public Entity DomainCondition => domainCondition.GetValue(static @this => (@this is Piecewise piecewise ? WhereTheCaseItTakesIsDefined(piecewise)
+            : ScopedToItsBinder(@this, @this.DirectChildren.Aggregate(@this.IntrinsicCondition, (accum, curr) =>
             (accum, curr.DomainCondition) switch {
                 (Boolean(true), Boolean(true)) => Boolean.True,
                 (var l, Boolean(true)) => l,
                 (Boolean(true), var r) => r,
                 (var l, var r) => l & r,
-            })), this).InnerSimplified;
+            }))), this).InnerSimplified;
         private LazyPropertyA<Entity> domainCondition;
+
+        /// <summary>
+        /// Where a piecewise is defined: where some case's predicate holds, no earlier one does,
+        /// and that case's expression is defined. An earlier predicate that has no value -- <c>i &lt; 0</c>,
+        /// the complex numbers not being ordered -- is passed over, as
+        /// <see cref="Piecewise"/>'s simplification passes over it.
+        /// </summary>
+        /// <remarks>
+        /// The domain condition of every child, conjoined, asked each predicate to be defined, and
+        /// <c>c &lt; 0</c> is defined only where <c>c</c> is real: <c>piecewise(1 provided not i in RR, 2 provided i &lt; 0)</c>
+        /// is 1 and its domain condition was false, and an antiderivative with an arm for each sign of
+        /// a discriminant and one for its not being real held nowhere when the discriminant was not.
+        /// https://github.com/asc-community/AngouriMath/issues/1817
+        /// </remarks>
+        private static Entity WhereTheCaseItTakesIsDefined(Piecewise piecewise)
+        {
+            Entity defined = Boolean.False;
+            Entity noEarlierCase = Boolean.True;
+            foreach (var @case in piecewise.Cases)
+            {
+                // Never taken, and passed over by the cases after it.
+                if (@case.Predicate.Evaled is var decided && (decided.IsNaN || decided == Boolean.False))
+                    continue;
+                var predicateDomain = @case.Predicate.DomainCondition;
+                defined |= @case.Predicate & @case.Expression.DomainCondition & noEarlierCase;
+                noEarlierCase &= predicateDomain == Boolean.True ? !@case.Predicate : !@case.Predicate | !predicateDomain;
+            }
+            return defined;
+        }
 
         /// <summary>
         /// <paramref name="condition"/> with each conjunct that mentions a name
