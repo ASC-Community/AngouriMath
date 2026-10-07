@@ -439,9 +439,22 @@ answered without one now ([#718](https://github.com/asc-community/AngouriMath/is
 
 | Input | Was (2.5.0) | Now |
 |---|---|---|
-| `"sec(x)^3*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `sqrt(a - i a tan(x))` times a factor constant wherever it is continuous, 495 characters |
-| `"sec(x)^5/(a + i*a*tan(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same, 399 characters |
-| `"cos(x)^9*(a + i*a*tan(x))^(7/2)".ToEntity().Integrate("x")` | `integral(...)`; on the unreleased master, an answer provided `1 + i tan(x) >= 0` | 1,067 characters, unconditional |
+| `"sec(x)^3*sqrt(a + i*a*tan(x))".ToEntity().Integrate("x")` | `integral(...)` | powers of `sqrt(a - i a tan(x))` times a factor constant wherever it is continuous, 285 characters |
+| `"sec(x)^5/(a + i*a*tan(x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | the same, 225 characters |
+| `"cos(x)^9*(a + i*a*tan(x))^(7/2)".ToEntity().Integrate("x")` | `integral(...)`; on the unreleased master, an answer provided `1 + i tan(x) >= 0` | 768 characters, unconditional |
+
+### A symbolic power of `a + i a tan` is gathered with the secant's in the sum
+
+**Answers where there were none.** `(k sec(x))^(4 - 2 n) (a + i a tan(x))^n` was declined. In
+`u = a + i a tan(z)` it is `u^n (u/a)^(1 - n) ((2 a - u)/a)^(1 - n)`, whose first two factors are one
+power of `u/a`, and written apart no rule read them. They are gathered now, `u^n` being `a^n (u/a)^n` up
+to a factor constant on the path; the answers to the rest of Rubi's 4.3.1.2 integrated in `u` come out
+shorter by a third or more ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(k*sec(x))^(4 - 2*n)*(a + i*a*tan(x))^n".ToEntity().Integrate("x")` | `integral(...)` | 466 characters |
+| `"(k*sec(x))^(2*n)*(a + i*a*tan(x))^(3 - n)".ToEntity().Integrate("x")` | `integral(...)` | 675 characters |
 
 ### A quotient in `x^2` over a power of a linear in `x^2` and a biquadratic is split in `x^2`
 
