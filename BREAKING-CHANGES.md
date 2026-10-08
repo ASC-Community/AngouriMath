@@ -208,6 +208,18 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A sine of a double argument beside the argument is written as a product
+
+**Answers where there were none.** `csc(a + b x)^3 sin(2a + 2b x)^7` was declined: the rule that writes multiples
+of one argument in it reads a numeric slope and bounds the degree it writes. A sine of the double is one product,
+`sin(2A) = 2 sin(A) cos(A)`, whatever its power, and is written so beside functions of `A` for any slope
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"csc(a + b*x)^3*sin(2*a + 2*b*x)^7".ToEntity().Integrate("x")` | `integral(...)` | 127 characters |
+| `"csc(a + b*x)*sin(2*a + 2*b*x)^8".ToEntity().Integrate("x")` | `integral(...)` | 134 characters |
+
 ### A sine or a cosine of a shifted argument is written in the other
 
 **Answers where there were none.** `sin(a + b x) sec(c + b x)^3` was declined, with the rest of Rubi's 4.7.1

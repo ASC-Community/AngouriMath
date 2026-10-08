@@ -12198,6 +12198,40 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A sine of twice an argument beside functions of the argument, written as the product it is:
+        /// <c>sin(2A) = 2 sin(A) cos(A)</c>, so that every trigonometric function is of <c>A</c>.
+        /// <c>csc(a + b x)^3 sin(2a + 2b x)^7</c> is <c>2^7 sin(a + b x)^4 cos(a + b x)^7</c>.
+        /// </summary>
+        /// <remarks>
+        /// The rule that writes multiples of one argument in it reads a numeric slope, and bounds the
+        /// degree it writes; a sine of the double is one product whatever its power, so it is written
+        /// here for any slope. Rubi's 4.7.1.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingASineOfADoubleArgumentAsAProduct(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var arguments = new List<Entity>();
+            foreach (var node in expr.Nodes)
+                if (node is Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf && node.ContainsNode(x)
+                    && node.DirectChildren.First() is var argument && !arguments.Contains(argument))
+                    arguments.Add(argument);
+            if (arguments.Count != 2)
+                return null;
+            foreach (var (single, twice) in new[] { (arguments[0], arguments[1]), (arguments[1], arguments[0]) })
+            {
+                if (!TreeAnalyzer.TryGetPolyLinear(single, x, out var slope, out _) || slope.ContainsNode(x)
+                    || (twice - 2 * single).Expand().InnerSimplified.Evaled is not Number.Complex { IsZero: true })
+                    continue;
+                // Only sines of the double, so that each is one product.
+                if (expr.Nodes.Any(node => node is Cosf or Tanf or Cotanf or Secantf or Cosecantf && node.DirectChildren.First() == twice))
+                    return null;
+                var rewritten = expr.Replace(node => node is Sinf(var a) && a == twice ? 2 * MathS.Sin(single) * MathS.Cos(single) : node);
+                return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
+            }
+            return null;
+        }
+
+        /// <summary>
         /// An integrand whose trigonometric functions have <b>different multiples</b> of one
         /// argument — <c>sin(x)/cos(2x)</c>, <c>cos(x)/(sin(x) tan(x/2))</c> — rewritten so that
         /// every one of them is of the same argument, and handed on.
