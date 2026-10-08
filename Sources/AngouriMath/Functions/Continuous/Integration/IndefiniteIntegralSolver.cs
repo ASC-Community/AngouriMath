@@ -8549,6 +8549,11 @@ namespace AngouriMath.Functions.Algebra
         internal static Entity? SolveByWritingAnExponentialOfAnInverseAlgebraically(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             var rewrote = false;
+            // A power of a quadratic in x outside the exponentials, which `(1 + L^2)^(-n/2)` meets.
+            var quadraticElsewhere = expr.Nodes.Any(node => node is Powf(var q, _) && q.ContainsNode(x) && !q.Nodes.Any(inner => inner is Arctanf or Arcsinf or Arccosf)
+                && TreeAnalyzer.TryGetPolyQuadratic(q, x, out var leading, out _, out _) && !TreeAnalyzer.IsZero(leading));
+            // The variable outside the exponentials.
+            var xElsewhere = expr.Replace(node => node is Powf(var e, var power) && e == MathS.e && power.ContainsNode(x) ? Number.Integer.One : node).ContainsNode(x);
             var rewritten = expr.Replace(node =>
             {
                 if (node is not Powf(var @base, var exponent) || @base != MathS.e || !exponent.ContainsNode(x))
@@ -8583,6 +8588,20 @@ namespace AngouriMath.Functions.Algebra
                 // of different orders that nothing reads.
                 if (inverse is Arctanf)
                 {
+                    // `(1 + i L)^(n/2) (1 - i L)^(-n/2)`: the two principal powers' arguments are
+                    // `(n/2) arctan(L)` each and their moduli cancel, for a real L, so it is
+                    // `e^(n i arctan(L))` exactly, powers of two linears, which the rules for a
+                    // product of linear powers read. For n = 1 or -1 beside a function of x and no
+                    // power of a quadratic in x for the other form to meet: `e^(i arctan(a + b x))/x^2`
+                    // was `(1 + i L)/sqrt(1 + L^2)` over `x^2`, a root of a quadratic beside a pole, and
+                    // ran past thirty seconds, and `x^3 e^(-i arctan(a x))` came out in 26 thousand
+                    // characters where so it is 218. Alone the exponential is answered shorter as the
+                    // root, and for a power not whole the quotient's power is.
+                    if ((n == Number.Integer.One || n == Number.Integer.MinusOne) && !quadraticElsewhere && xElsewhere)
+                    {
+                        var half = Number.Rational.Create(n.ERational.Divide(2));
+                        return MathS.Pow(1 + MathS.i * argument, half) * MathS.Pow(1 - MathS.i * argument, Number.Rational.Create(half.ERational.Negate()));
+                    }
                     var halfPower = Number.Rational.Create(n.ERational.Negate().Divide(2));
                     if (n is not Number.Integer)
                         return MathS.Pow((1 + MathS.i * argument) / (1 - MathS.i * argument), Number.Rational.Create(n.ERational.Divide(2)));
