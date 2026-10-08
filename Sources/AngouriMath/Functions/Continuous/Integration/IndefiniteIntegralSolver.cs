@@ -24710,6 +24710,70 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power of <c>a ± i a csch(y)</c>, not whole, integrated in <c>w = e^y</c>: there
+        /// <c>csch(y)</c> is <c>2 w/(w^2 - 1)</c> and the sum is <c>a (w ± i)^2/(w^2 - 1)</c>, so its power is
+        /// <c>a^p (w ± i)^(2p) (w^2 - 1)^(-p)</c> times a constant on every interval where both are
+        /// continuous, and <c>dy = dw/w</c>.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's <c>sqrt(a + i a csch(c + d x))</c> and the rest of 6.6.3's were declined: the sum is
+        /// the square of a complex function over a real one, which nothing read. The constant is not
+        /// written: the answer is the integrand times the antiderivative in <c>w</c> over what that
+        /// antiderivative differentiates back to, a quotient constant wherever it is continuous; and it
+        /// is kept only where its derivative is the integrand at the sampled points.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveAPowerOfAnImaginaryHyperbolicCosecantSumInTheExponential(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var s = Variable.CreateUnique(expr, "s_hyp");
+            var c = Variable.CreateUnique(expr, "c_hyp");
+            if (ReadTheHyperbolicFunctions(expr, x, s, c) is not var (read, argument)
+                || read.ContainsNode(c) || read.ContainsNode(x)
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out _) || TreeAnalyzer.IsZero(slope))
+                return null;
+            Entity? radicand = null;
+            Number.Rational? power = null;
+            Entity constant = Number.Integer.One;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(read))
+            {
+                if (!factor.ContainsNode(s))
+                {
+                    constant = underneath ? constant / factor : constant * factor;
+                    continue;
+                }
+                if (radicand is not null || factor is not Powf(var @base, Number.Rational exponent) || exponent is Number.Integer)
+                    return null;
+                (radicand, power) = (@base, underneath ? Number.Rational.Create(exponent.ERational.Negate()) : exponent);
+            }
+            if (radicand is null || power is null || !radicand.Nodes.Any(node => node is Divf(_, var below) && below == s || node is Powf(var b, Number.Integer { EInteger.Sign: < 0 }) && b == s))
+                return null;
+            // In w: s = (w - 1/w)/2, and the sum as one quotient.
+            var w = Variable.CreateUnique(expr, "w_exp");
+            var (top, bottom) = Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(radicand.Substitute(s, (w - 1 / w) / 2)));
+            foreach (var sign in new[] { MathS.i, -MathS.i })
+            {
+                var square = MathS.Sqr(w + sign);
+                // Bare: the quotient simplifies to `a provided not w + i = 0`, a condition on w beside a constant.
+                var q = Functions.PartialFractions.Bare((top / square).Simplify());
+                if (q.ContainsNode(w))
+                    continue;
+                var twice = Number.Rational.Create(power.ERational.Multiply(ERational.FromInt32(2)));
+                var inW = (constant * MathS.Pow(q, power) * MathS.Pow(w + sign, twice) * MathS.Pow(bottom, Number.Rational.Create(power.ERational.Negate())) / (slope * w)).InnerSimplified;
+                if (Integration.ComputeAsAQuestionOfItsOwn(inW, w, integrateByParts) is not { } inTermsOfW
+                    || inTermsOfW.Nodes.Any(node => node == MathS.NaN))
+                    return null;
+                // Checked in w, where the antiderivative is of the integrand as written: in x, with the
+                // slope a symbol pinned at a sample, e^(c + d x) at the sampled points was past what the
+                // evaluation decides.
+                if (!Functions.PartialFractions.HoldsAtSampledPoints(inTermsOfW.Differentiate(w), inW, w))
+                    return null;
+                var exponential = MathS.Pow(MathS.e, argument);
+                return expr * inTermsOfW.Substitute(w, exponential) / (inW.Substitute(w, exponential) * slope * exponential);
+            }
+            return null;
+        }
+
+        /// <summary>
         /// <paramref name="radicand"/> read as <c>a (1 ± i s)</c> for the hyperbolic sine
         /// <paramref name="sine"/>: the constant <c>a</c>, and whether the imaginary unit comes
         /// with a plus. Null for anything else.

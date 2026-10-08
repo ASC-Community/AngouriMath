@@ -909,6 +909,8 @@ namespace AngouriMath.Functions.Algebra
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare(expr, x, integrateByParts)) is { }) return answer;
             // The hyperbolic sine's, off the real line: 1 + i sinh(y) is (cosh(y/2) + i sinh(y/2))^2.
             if ((answer = IndefiniteIntegralSolver.SolveAHalfOddPowerOfOnePlusAnImaginaryHyperbolicSine(expr, x, integrateByParts)) is { }) return answer;
+            // And the cosecant's: a ± i a csch(y) is a (w ± i)^2/(w^2 - 1) in w = e^y.
+            if ((answer = IndefiniteIntegralSolver.SolveAPowerOfAnImaginaryHyperbolicCosecantSumInTheExponential(expr, x, integrateByParts)) is { }) return answer;
             // A quotient of linears as a function's argument, written over its denominator: a
             // constant plus a multiple of the reciprocal of a linear, which the rules read.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingAQuotientOfLinearsOverItsDenominator(expr, x, integrateByParts)) is { }) return answer;

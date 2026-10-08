@@ -237,6 +237,21 @@ nested integrals cost twice as much per level
 | `new Integralf("t + a".ToEntity(), "t", (0, 1)).Substitute("a", "t")` | `integral(t + t, t, 0, 1)` | `integral(t_1 + t, t_1, 0, 1)` |
 | `new Summationf("k * a".ToEntity(), "k", 1, 3).Substitute("a", "k")` | `sum(k * k, k, 1, 3)`, 14 | `sum(k_1 * k, k_1, 1, 3)`, `6 k` |
 
+### A power of `a + i a csch` is integrated in the exponential
+
+**Answers where there were none.** `sqrt(a + i a csch(c + d x))` was declined, with the rest of Rubi's
+6.6.3 that is a power of the sum not whole. In `w = e^(c + d x)` the sum is `a (w + i)^2/(w^2 - 1)`, the
+square of a complex function over a real one, so its power is `a^p (w + i)^(2p) (w^2 - 1)^(-p)` times a
+constant on every interval where both are continuous, and the integrand in `w` is answered at once. The
+constant is not written: the answer is the integrand times the antiderivative in `w` over what that
+differentiates back to ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + i*a*csch(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | 454 characters |
+| `"(a + i*a*csch(c + d*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)` | 834 characters |
+| `"1/sqrt(a - i*a*csch(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | 575 characters |
+
 ### A power of a constant below `1e-50` is no longer simplified to zero
 
 **Answers that were wrong.** Evaluation rounds a value within `1e-50` of an integer onto it, and
