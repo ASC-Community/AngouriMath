@@ -208,6 +208,19 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A rational function of the secant with two sums below the bar is written in the cosine
+
+**Answers where there were none.** `sec(x)/((a + b sec(x)) (c + d sec(x))^2)` ran past thirty seconds: the
+half-angle substitution read the secant's spelling into a rational function of the half-angle tangent that a
+substitution search expanded without end. As one quotient in the cosine it is
+`cos(x)^2/((a cos(x) + b) (c cos(x) + d)^2)`, answered in a second, and it is written so where two sums in the
+secant stand below the bar and none above ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)/((a + b*sec(x))*(c + d*sec(x))^2)".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 9,439 characters, a case for each sign of two discriminants |
+| `"sec(x)/((a + b*sec(x))^2*(c + d*sec(x)))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 9,430 characters |
+
 ### `a + i a tan` of a shifted linear below the bar is integrated in the linear
 
 **Answers where there were none.** `sqrt(a + i a tan(g + f x)) (A + B tan(g + f x))/sqrt(c - i c tan(g + f x))`

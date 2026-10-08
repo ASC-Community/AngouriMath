@@ -1101,6 +1101,9 @@ namespace AngouriMath.Functions.Algebra
             // Bioche's first two rules before the third: a rational function of the two that
             // is odd in one of them is a rational function of the other, smaller than the
             // half-angle tangent's and answered more shortly.
+            // A rational function of the secant alone in the cosine first, as one quotient: the
+            // half-angle tangent of the secant's spelling was a search past thirty seconds.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingARationalFunctionOfTheSecantInTheCosine(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByBiochesOddSubstitution(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByHalfAngleSubstitution(expr, x, integrateByParts)) is { }) return answer;
             // The substitution by a sine or a cosine where an odd power of the complement is

@@ -27742,6 +27742,58 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A rational function of the secant of one argument, or of the cosecant, written in the
+        /// cosine, or the sine, as one quotient: <c>sec(z)/((a + b sec(z)) (c + d sec(z))^2)</c> is
+        /// <c>cos(z)^2/((a cos(z) + b) (c cos(z) + d)^2)</c> wherever the secant is defined, exactly.
+        /// </summary>
+        /// <remarks>
+        /// The half-angle substitution read the secant's spelling into a rational function of the
+        /// half-angle tangent that a substitution search expanded past thirty seconds, where the
+        /// cosine's is answered in half of one. Only for two sums or more, all below the bar. Rubi's 4.5.2.3.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingARationalFunctionOfTheSecantInTheCosine(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            Entity? reciprocal = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (!node.ContainsNode(x) || node is Entity.Variable)
+                    continue;
+                switch (node)
+                {
+                    case Secantf or Cosecantf:
+                        if (reciprocal is null)
+                            reciprocal = node;
+                        else if (reciprocal != node)
+                            return null;
+                        break;
+                    case Sumf or Minusf or Mulf or Divf or Powf(_, Number.Integer):
+                        break;
+                    default:
+                        // Inside the reciprocal's own argument, a linear in x.
+                        if (reciprocal is not null && reciprocal.DirectChildren.First().Nodes.Contains(node))
+                            break;
+                        if (expr.Nodes.Any(other => other is Secantf or Cosecantf && other.DirectChildren.First().Nodes.Contains(node)))
+                            break;
+                        return null;
+                }
+            }
+            if (reciprocal is null || !TreeAnalyzer.TryGetPolyLinear(reciprocal.DirectChildren.First(), x, out _, out _))
+                return null;
+            // Only two sums in the secant or more, all below the bar: one, or one above, the rules for
+            // the secant answer as written, and in the cosine `sec(x)^5/(a + b sec(x))^3` ran past five
+            // seconds where it is half of one.
+            var (above, below) = Functions.SingleQuotient.Of(expr);
+            bool ASum(Entity node) => node is Sumf or Minusf && node.ContainsNode(reciprocal);
+            if (above.Nodes.Any(ASum) || below.Nodes.Where(ASum).Distinct().Count() < 2)
+                return null;
+            var argument = reciprocal.DirectChildren.First();
+            var function = reciprocal is Secantf ? MathS.Cos(argument) : MathS.Sin(argument);
+            var rewritten = Functions.SingleQuotient.Combine(expr.Replace(node => node == reciprocal ? 1 / function : node));
+            return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
+        }
+
+        /// <summary>
         /// A half-odd power of the secant or the cosecant, in an integrand with the cosine or the
         /// sine of the same argument in it, written as a power of the cosine or the sine:
         /// <c>sec(z)^p = K/cos(z)^p</c> with <c>K = sec(z)^p cos(z)^p</c>, which is 1 wherever the
