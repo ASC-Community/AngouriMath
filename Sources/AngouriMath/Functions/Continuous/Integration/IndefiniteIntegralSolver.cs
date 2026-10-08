@@ -26805,6 +26805,49 @@ namespace AngouriMath.Functions.Algebra
         /// handed on is the integrand in another spelling.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </remarks>
+        /// <summary>
+        /// <paramref name="expr"/> integrated in <c>u = g + f x</c> where x stands only in trigonometric
+        /// functions of that one linear, other than x itself, and a root of something in x stands: <c>dx = du/f</c>. Null
+        /// otherwise.
+        /// </summary>
+        private static Entity? InItsOneShiftedLinear(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            // Beside a root only: whole powers, `(a + i a tan(z))^3 (A + B tan(z))/(c - i c tan(z))^3`, the
+            // exponential's spelling answers sooner of the linear than of x.
+            if (!expr.Nodes.Any(node => node is Powf(var @base, Number.Rational power) && power is not Number.Integer && @base.ContainsNode(x)))
+                return null;
+            Entity? linear = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (node is not (Tanf or Cotanf or Sinf or Cosf or Secantf or Cosecantf) || !node.ContainsNode(x))
+                    continue;
+                var argument = node.DirectChildren.First();
+                if (linear is null)
+                    linear = argument;
+                else if (linear != argument)
+                    return null;
+            }
+            if (linear is null || !TreeAnalyzer.TryGetPolyLinear(linear, x, out var slope, out var offset)
+                || slope.ContainsNode(x) || offset.ContainsNode(x) || TreeAnalyzer.IsZero(slope) || linear == x)
+                return null;
+            var u = Variable.CreateUnique(expr, "u_shifted");
+            var inU = expr.Replace(node => node switch
+            {
+                Tanf(var a) when a == linear => MathS.Tan(u),
+                Cotanf(var a) when a == linear => MathS.Cotan(u),
+                Sinf(var a) when a == linear => MathS.Sin(u),
+                Cosf(var a) when a == linear => MathS.Cos(u),
+                Secantf(var a) when a == linear => MathS.Sec(u),
+                Cosecantf(var a) when a == linear => new Cosecantf(u),
+                _ => node,
+            });
+            if (inU.ContainsNode(x)
+                || Integration.ComputeAsAQuestionOfItsOwn((inU / slope).InnerSimplified, u, integrateByParts) is not { } answer
+                || answer.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return answer.Substitute(u, linear);
+        }
+
         internal static Entity? SolveByWritingAnImaginaryTangentAsAnExponential(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             // Below the bar only: `(A + i A tan(z))^3` above it is a polynomial in the tangent,
@@ -26872,6 +26915,12 @@ namespace AngouriMath.Functions.Algebra
             var rewritten = below.Replace(AsAnExponential);
             if (rewritten == below)
                 return null;
+            // One linear other than x for every argument, `g + f x`, is integrated in it: the rewriting
+            // below expands an exponential of `i (g + f x)` and its phase into a search that ran past
+            // thirty seconds for `sqrt(a + i a tan(g + f x)) (A + B tan(g + f x))/sqrt(c - i c tan(g + f x))`,
+            // which in `u = g + f x` is answered in a second.
+            if (InItsOneShiftedLinear(expr, x, integrateByParts) is { } inTheLinear)
+                return inTheLinear;
             // A root of the tangent or the cotangent of that argument, or of a constant times one, is
             // read as written by the substitution `t = tan(z)`, where it is a root of `t`, and by
             // nothing in the exponential's spelling: `sqrt(tan(c + d x))/(a + i a tan(c + d x))`

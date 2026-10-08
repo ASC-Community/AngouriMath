@@ -208,6 +208,19 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### `a + i a tan` of a shifted linear below the bar is integrated in the linear
+
+**Answers where there were none.** `sqrt(a + i a tan(g + f x)) (A + B tan(g + f x))/sqrt(c - i c tan(g + f x))`
+ran past thirty seconds, where with `x` for the argument it is answered in one: the rule that writes
+`a + i a tan(z)` as an exponential expanded the exponential of `i (g + f x)` and its phase into a search.
+Where every trigonometric function in the integrand is of one linear other than `x`, it integrates in
+`u = g + f x` first ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + i*a*tan(g + f*x))*(A + B*tan(g + f*x))/sqrt(c - i*c*tan(g + f*x))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 448 characters |
+| `"(A + B*tan(g + f*x))/(sqrt(a + i*a*tan(g + f*x))*(c - i*c*tan(g + f*x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 597 characters |
+
 ### A value substituted under a binder is not captured by the name it binds
 
 **Wrong answers fixed.** An integral, a sum, a product, a derivative, a limit, a set builder and the
