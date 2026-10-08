@@ -208,6 +208,20 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A sine or a cosine of a shifted argument is written in the other
+
+**Answers where there were none.** `sin(a + b x) sec(c + b x)^3` was declined, with the rest of Rubi's 4.7.1
+that puts a sine or a cosine of one linear argument beside functions of another of the same slope: nothing read
+two arguments. The addition formula writes the first in the second,
+`sin(a + b x) = sin(a - c) cos(c + b x) + cos(a - c) sin(c + b x)`, and the integrand is then of one argument
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sin(a + b*x)*sec(c + b*x)^3".ToEntity().Integrate("x")` | `integral(...)` | 82 characters |
+| `"cos(a + b*x)*sec(c + b*x)^2".ToEntity().Integrate("x")` | `integral(...)` | 111 characters |
+| `"sin(a + b*x)*csc(c + b*x)^4".ToEntity().Integrate("x")` | `integral(...)` | 215 characters |
+
 ### A rational function of the secant with two sums below the bar is written in the cosine
 
 **Answers where there were none.** `sec(x)/((a + b sec(x)) (c + d sec(x))^2)` ran past thirty seconds: the

@@ -9260,6 +9260,63 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// The sines and cosines of one linear argument written in another of the same slope, where the
+        /// two differ by a constant <c>d = A - B</c>: <c>sin(A) = sin(d) cos(B) + cos(d) sin(B)</c> and
+        /// <c>cos(A) = cos(d) cos(B) - sin(d) sin(B)</c>, so that every trigonometric function is of
+        /// <c>B</c>. <c>sin(a + b x) sec(c + b x)^3</c> is <c>(sin(a - c) + cos(a - c) tan(c + b x)) sec(c + b x)^2</c>.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's 4.7.1 has seventeen of these, each declined in a few milliseconds: nothing read two
+        /// arguments of which only one is a sine or a cosine. The same question in another spelling.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveByWritingASineOfAShiftedArgumentInTheOther(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            var arguments = new List<Entity>();
+            var onlySineOrCosine = new Dictionary<Entity, bool>();
+            foreach (var node in expr.Nodes)
+            {
+                if (node is not (Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf) || !node.ContainsNode(x))
+                    continue;
+                var argument = node.DirectChildren.First();
+                if (!arguments.Contains(argument))
+                {
+                    arguments.Add(argument);
+                    onlySineOrCosine[argument] = true;
+                }
+                if (node is not (Sinf or Cosf))
+                    onlySineOrCosine[argument] = false;
+            }
+            if (arguments.Count != 2)
+                return null;
+            var (first, second) = (arguments[0], arguments[1]);
+            // Each with an offset: `cos(c) cos(d x) - sin(c) sin(d x)`, the addition formula's own
+            // expansion of `cos(c + d x)` by another rule, is not to be written back.
+            if (!TreeAnalyzer.TryGetPolyLinear(first, x, out var slopeOfFirst, out var offsetOfFirst) || slopeOfFirst.ContainsNode(x)
+                || !TreeAnalyzer.TryGetPolyLinear(second, x, out var slopeOfSecond, out var offsetOfSecond) || slopeOfSecond.ContainsNode(x)
+                || TreeAnalyzer.IsZero(offsetOfFirst) || TreeAnalyzer.IsZero(offsetOfSecond)
+                || slopeOfFirst.Expand().InnerSimplified != slopeOfSecond.Expand().InnerSimplified
+                && (slopeOfFirst - slopeOfSecond).Expand().InnerSimplified.Evaled is not Number.Complex { IsZero: true })
+                return null;
+            // The one of sines and cosines only is written in the other.
+            var (shifted, kept) = onlySineOrCosine[first] ? (first, second) : onlySineOrCosine[second] ? (second, first) : (null!, null!);
+            if (shifted is null)
+                return null;
+            var d = (shifted - kept).Expand().InnerSimplified;
+            if (d.ContainsNode(x) || d.Evaled is Number.Complex { IsZero: true })
+                return null;
+            var rewritten = expr.Replace(node => node switch
+            {
+                Sinf(var a) when a == shifted => MathS.Sin(d) * MathS.Cos(kept) + MathS.Cos(d) * MathS.Sin(kept),
+                Cosf(var a) when a == shifted => MathS.Cos(d) * MathS.Cos(kept) - MathS.Sin(d) * MathS.Sin(kept),
+                _ => node,
+            });
+            if (rewritten.Nodes.Any(node => node is Sinf or Cosf && node.DirectChildren.First() == shifted))
+                return null;
+            return Integration.ComputeAsTheSameQuestion(rewritten, x, integrateByParts);
+        }
+
+        /// <summary>
         /// A product of two tangents, cotangents, secants or cosecants of linear arguments whose
         /// difference or sum is a constant, written as the functions of each apart: with
         /// <c>d = A - B</c>, <c>tan(A) tan(B) = cot(d) (tan(A) - tan(B)) - 1</c>.
