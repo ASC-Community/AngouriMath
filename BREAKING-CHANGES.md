@@ -208,6 +208,19 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A quadratic with rational roots counts as two linears before the substitution search
+
+**Answers where there were none.** `sec(x)^2 sin(x)/(a + b sin(x))^3` ran past thirty seconds: under the
+half-angle tangent it is a rational function over `(1 - u^2)^2 (a u^2 + 2 b u + a)^3`, and the substitution
+search spent eighty seconds on it before the partial fractions, which split it at once, were asked. The search
+already declines a rational function over symbolic linear factors and a quadratic; `1 - u^2` is two linear
+factors written together, and is counted so ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(x)^2*sin(x)/(a + b*sin(x))^3".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 5,017 characters |
+| `"tan(x)^2/(a + b*sin(x))^3".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 4,816 characters |
+
 ### A sine of a double argument beside the argument is written as a product
 
 **Answers where there were none.** `csc(a + b x)^3 sin(2a + 2b x)^7` was declined: the rule that writes multiples
