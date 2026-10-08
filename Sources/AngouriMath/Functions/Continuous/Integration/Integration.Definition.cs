@@ -1196,6 +1196,8 @@ namespace AngouriMath.Functions.Algebra
             // And the other way round: not a product of two arguments but anything else built
             // from different multiples of one -- `sin(x)/cos(2x)`, `cos(x)/(sin(x) tan(x/2))` --
             // rewritten to the one argument every trigonometric rule above reads.
+            // A sine of the double argument beside the argument: one product, for any slope.
+            if ((answer = IndefiniteIntegralSolver.SolveByWritingASineOfADoubleArgumentAsAProduct(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByUnifyingTrigonometricArguments(expr, x, integrateByParts)) is { }) return answer;
             // The exponential substitution beside the other rewrites. It is also what integrates
             // the hyperbolic functions, which are not nodes here but quotients of exponentials.
