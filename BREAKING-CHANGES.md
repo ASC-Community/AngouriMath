@@ -208,6 +208,190 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### Half-odd powers of `a + a sec` and `c + d sec` together are integrated in the half angle's sine
+
+**Answers where there were none.** `sec(e + f x) sqrt(a + a sec(e + f x))/sqrt(c + d sec(e + f x))` was declined,
+with eight more of Rubi's 4.5.2.1 and 4.5.2.3: the half-angle tangent reads a root of the first sum and leaves the
+second as another. Written in the cosine the two powers of `cos(y)` make a whole one, and in `w = sin(y/2)` what is
+left is rational beside one root ([#718](https://github.com/asc-community/AngouriMath/issues/718), PR
+[#1828](https://github.com/asc-community/AngouriMath/pull/1828)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(e + f*x)*sqrt(a + a*sec(e + f*x))/sqrt(c + d*sec(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | 1,294 characters |
+| `"sec(e + f*x)^2/(sqrt(a + a*sec(e + f*x))*sqrt(c + d*sec(e + f*x)))".ToEntity().Integrate("x")` | `integral(...)` | 13,563 characters, a case for each sign of the root's leading coefficient |
+
+### The secant beside powers of `a + a sec` and `c - c sec` is integrated in the first sum
+
+**Answers where there were none.** `sec(e + f x) (a + a sec(e + f x))^m sqrt(c - c sec(e + f x))` was declined, with
+two more of Rubi's 4.5.2.3. The two sums multiply to `-a c tan^2`, so in `u = a + a sec` what is left is
+`u^(m - 1/2) (2 - u/a)^(n - 1/2)`, for a symbolic `m` too
+([#718](https://github.com/asc-community/AngouriMath/issues/718), PR
+[#1829](https://github.com/asc-community/AngouriMath/pull/1829)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(e + f*x)*(a + a*sec(e + f*x))^m*(c - c*sec(e + f*x))^(5/2)".ToEntity().Integrate("x")` | `integral(...)` | 469 characters |
+| `"sec(e + f*x)*(a + a*sec(e + f*x))^m*sqrt(c - c*sec(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | 268 characters |
+
+### An even rational function with symbols in it is not searched for a substitution
+
+**Answers where there were none.** `(d + e x^2 + f x^4)/(x^4 (a + b x^2 + c x^4)^2)` ran past a minute: the
+substitution search spent the time declining an even rational function, for which no polynomial candidate can
+be the substitution, before the partial fractions answered it in a second. An even rational function with a
+symbol in it and a denominator past a sextic is now left to the partial fractions
+([#718](https://github.com/asc-community/AngouriMath/issues/718), PR
+[#1830](https://github.com/asc-community/AngouriMath/pull/1830)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(d + e*x^2 + f*x^4)/(x^4*(a + b*x^2 + c*x^4)^2)".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 3,715 characters |
+| `"cos(e + f*x)^5/(a + b*sec(e + f*x)^2)^3".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 27,944 characters |
+
+### A symbolic quartic in `x^2` with a square discriminant is split into its two quadratics
+
+**Answers where there were none.** `cot(c + d x)^3 sqrt(a + b sec(c + d x))` ran past a minute: the root of the
+linear makes it a rational function over `x^4 - 2a x^2 + a^2 - b^2`, which nothing below the partial fractions
+reads, and which is `(x^2 - a - b)(x^2 - a + b)`. A factor `A x^4 + B x^2 + C` whose discriminant is the square of a
+polynomial in the symbols is written as the two quadratics first
+([#718](https://github.com/asc-community/AngouriMath/issues/718), PR
+[#1831](https://github.com/asc-community/AngouriMath/pull/1831)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"cot(e + f*x)^3*sqrt(a + b*sec(e + f*x))".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 36,760 characters, a case for each sign of the roots |
+| `"sec(e + f*x)^2/(a*sin(e + f*x) + b*tan(e + f*x))^2".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 68,854 characters |
+
+### An odd power of the tangent beside a function of the secant is integrated in the secant
+
+**Answers where there were none.** `cot(c + d x)^3/(a + b sec(c + d x))^(3/2)` ran past a minute. In `u = sec(y)`,
+`tan(y)^n f(sec(y)) dy` is exactly `(u^2 - 1)^((n - 1)/2) f(u)/u du` for an odd `n`, and the cotangent beside a
+function of the cosecant is the same in `u = csc(y)`
+([#718](https://github.com/asc-community/AngouriMath/issues/718), PR
+[#1832](https://github.com/asc-community/AngouriMath/pull/1832)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"cot(e + f*x)^3/(a + b*sec(e + f*x))^(3/2)".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 39,235 characters |
+| `"cot(e + f*x)^3/(a + b*sec(e + f*x)^2)^3".ToEntity().Integrate("x")` | `integral(...)` | 680 characters; 1,218 characters in 18 seconds on the unreleased master |
+
+### A complex division by a number far from unit magnitude
+
+**Answers that were wrong.** With the downcasting off, `Complex.Create(1.98e119, 0) / Complex.Create(3.39e125, 0)`
+was zero: the division started from `1/|b|^2`, about `9e-252`, below the default precision's exponent floor, and
+the flush to zero took the quotient with it. Farther than `10^40` from unit magnitude the division is Smith's now,
+which never forms the squared modulus ([#1372](https://github.com/asc-community/AngouriMath/issues/1372), PR
+[#1374](https://github.com/asc-community/AngouriMath/pull/1374)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `Complex.Create(1.98e119, 0) / Complex.Create(3.39e125, 0)`, downcasting off | `0E-100 - -0E-100i` | `5.840707964601768976981721427785376490780345647542924132180928001509698858126373024373283501603E-7 - -0E-100i` |
+
+### A constant and a cached evaluation follow the precision in force
+
+**Answers that were wrong.** `pi` and `e` were worth the digits of whichever precision was set when the constants
+were first built, and an entity's cached evaluation survived a change of `MathS.Settings.DecimalPrecisionContext`:
+`pi` evaluated at 300 digits after an evaluation at 100 came back with 100. A constant is worth the current
+precision's digits now, and a cached evaluation is recomputed when the precision has changed
+([#1367](https://github.com/asc-community/AngouriMath/issues/1367), PR
+[#1368](https://github.com/asc-community/AngouriMath/pull/1368)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `MathS.pi.EvalNumerical()` at 300 digits, after an evaluation at 100 | 100 digits | 300 digits |
+
+### A complex number prints the number it holds whatever the downcasting at printing
+
+**Printed forms that were wrong.** Printing a complex number with a negative imaginary part negated that part, and
+the negation was downcast under the setting in force when printing: a number made with the downcasting off printed
+as a different number once it was back on, and read back as that number with its sign changed. `Latexize` had the
+same fault ([#1611](https://github.com/asc-community/AngouriMath/pull/1611)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `1 - 0.3333333333333333333333333333333333333333i`, made with the downcasting off, printed with it on | `1 - 1/3i`, which reads back as `1 + i/3` | `1 - 0.3333333333333333333333333333333333333333i` |
+
+### The parse cache keeps a parse for each downcasting setting
+
+**Answers that depended on what was parsed before.** `MathS.FromString` cached one parse per string whatever
+`MathS.Settings.DowncastingEnabled` was, and that setting changes the parse: with it off, the numbers in a string
+are decimals. A string parsed once with the downcasting on came back with integers and rationals when parsed again
+with it off ([#1513](https://github.com/asc-community/AngouriMath/issues/1513), PR
+[#1517](https://github.com/asc-community/AngouriMath/pull/1517)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `MathS.FromString("x^2 + 7/2")` with the downcasting off, after the same string with it on | `Integer` and `Rational` nodes, the first parse's | `Real` nodes |
+
+### Euler's substitution answers a rational function of `x` and one square root of a quadratic
+
+**Answers where there were none.** `sqrt(2 - x - x^2)/x^2` was declined: the trigonometric substitution answers
+`x^m sqrt(a + b x^2)^k` and nothing wider. Euler's substitution rationalises a rational function of `x` and one
+square root of a quadratic, and the rational integrator finishes it (PR
+[#1289](https://github.com/asc-community/AngouriMath/pull/1289)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(2 - x - x^2)/x^2".ToEntity().Integrate("x")` | `integral(...)` | 197 characters |
+| `"1/((4 + x^2)*sqrt(1 + 4*x^2))".ToEntity().Integrate("x")` | `integral(...)` | 140 characters |
+
+### The other trigonometric functions are written as sine and cosine before a complement is substituted
+
+**Answers where there were none.** `arctan(sqrt(sec(x) - 1)) sin(x)` was declined: by parts it leaves
+`sin(x)/sqrt(sec(x) - 1)`, and under `u = cos(x)` the secant left standing kept its `x`. The secant, cosecant,
+tangent and cotangent are written as sine and cosine first, except where that leaves an odd power of the complement
+under a root (PR [#1312](https://github.com/asc-community/AngouriMath/pull/1312)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"arctan(sqrt(sec(x) - 1))*sin(x)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative with the condition where it holds |
+
+### A constant over a linear beside the root of a quadratic is answered through the linear's reciprocal
+
+**Answers where there were none.** `1/(r sqrt(-p^2 - q^2 + 2h r^2 - 2k r^4))`, Hearn's, was declined: under
+`u = r^2` it is a constant over a linear beside the root of a quadratic whose leading coefficient and constant are
+symbols the Euler substitution could not take a real root of. The reciprocal of the linear answers it, and the Euler
+substitution reaches a radical real only between its roots (PR
+[#1315](https://github.com/asc-community/AngouriMath/pull/1315)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(r*sqrt(-p^2 - q^2 + 2*h*r^2 - 2*k*r^4))".ToEntity().Integrate("r")` | `integral(...)` | 1,051 characters |
+
+### A rational function of the hyperbolic tangent with a symbol in it is integrated in the tangent
+
+**Answers where there were none.** `sqrt(a + b sech(x)) tanh(x)^5` ran past a minute, with more of Rubi's hyperbolic
+family that put a symbol among the coefficients. It is integrated by `u = tanh(y)` with the written factors kept, and
+an answer assembled from a decomposition with symbols is checked before it is given
+([#1369](https://github.com/asc-community/AngouriMath/issues/1369), PR
+[#1377](https://github.com/asc-community/AngouriMath/pull/1377)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + b*sech(x))*tanh(x)^5".ToEntity().Integrate("x")` | `integral(...)` after a minute | an answer, in 2.4 seconds |
+
+### The inverse trigonometric substitution takes `a + b arcsin(c x)` and its powers
+
+**Answers where there were none.** `x (d - c^2 d x^2)^3 (a + b arcsin(c x))` was declined: `x = sin(u)` took
+`arcsin(x)` alone. It takes a linear argument, a multiple of its quadratic and a power of `a + b arcsin(c x)` now
+(PR [#1380](https://github.com/asc-community/AngouriMath/pull/1380)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x*(d - c^2*d*x^2)^3*(a + b*arcsin(c*x))".ToEntity().Integrate("x")` | `integral(...)` | an answer |
+| `"x*arcsin(a*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an answer |
+
+### `e` and `pi` evaluate to a real number whatever the downcasting says
+
+**A different type.** With the downcasting off, `MathS.e.EvalNumerical()` and `MathS.pi.EvalNumerical()` were
+`Complex` with a zero imaginary part, the documented contract of the setting, and the constant is one object whose
+cached value kept that. They are `Real` in either mode now, and a complex number with a zero imaginary part is
+real-valued ([#1371](https://github.com/asc-community/AngouriMath/pull/1371)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `MathS.e.EvalNumerical()` with the downcasting off | `Complex` | `Real` |
+
 ### A quadratic with rational roots counts as two linears before the substitution search
 
 **Answers where there were none.** `sec(x)^2 sin(x)/(a + b sin(x))^3` ran past thirty seconds: under the
