@@ -673,6 +673,11 @@ namespace AngouriMath.Functions
         /// </remarks>
         private static Entity ExpandedOverTheSymbols(Entity expr)
         {
+            // Only where there is a product to multiply out: a sum or a quotient of sums already
+            // written term by term keeps the spelling every other step reads it in.
+            if (!expr.Nodes.Any(node => node is Powf(Sumf or Minusf, Integer { EInteger: var power }) && power.CompareTo(EInteger.One) > 0
+                    || node is Mulf(var left, var right) && left.Nodes.Any(n => n is Sumf or Minusf) && right.Nodes.Any(n => n is Sumf or Minusf)))
+                return expr.Expand();
             var variables = expr.Vars.OrderBy(v => v.Name, System.StringComparer.Ordinal).ToList();
             if (variables.Count == 0 || variables.Count > MultivariatePolynomial.MaxVariables)
                 return expr.Expand();
@@ -1905,6 +1910,7 @@ namespace AngouriMath.Functions
                 indices[symbols[i]] = i;
             var rows = rhs.Length;
             var width = matrix[0].Length;
+            if (System.Environment.GetEnvironmentVariable("TSOP_DBG") is not null) System.Console.Error.WriteLine($"tsop rows={rows} width={width} symbols={symbols.Count} maxterms={matrix.SelectMany(r => r).Concat(rhs).Max(e => e.Complexity)}");
             // The augmented matrix, the right-hand side its last column.
             var augmented = new MultivariatePolynomial[rows][];
             for (var row = 0; row < rows; row++)
