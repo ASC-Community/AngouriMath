@@ -221,6 +221,21 @@ factors written together, and is counted so ([#718](https://github.com/asc-commu
 | `"sec(x)^2*sin(x)/(a + b*sin(x))^3".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 5,017 characters |
 | `"tan(x)^2/(a + b*sin(x))^3".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 4,816 characters |
 
+### A product of sums in the symbols is multiplied out as a polynomial in the partial fractions
+
+**Answers where there were none.** `1/((a + b x^2)^3 (c + d x^2)^3)` ran past a minute, with twelve more of Rubi's
+that put a symbolic quadratic to a power beside other factors: the series at its roots multiplies coefficients
+that are products of powers of sums in the symbols, and multiplying those out term by term as expressions was the
+whole of the time. They are multiplied out as polynomials now
+([#718](https://github.com/asc-community/AngouriMath/issues/718), PR
+[#1833](https://github.com/asc-community/AngouriMath/pull/1833)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/((a + b*x^2)^3*(c + d*x^2)^3)".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 15,289 characters |
+| `"1/((d + e*x)^2*(a + b*x + c*x^2)^2)".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 11,274 characters |
+| `"1/((a + a*sec(e + f*x))^(5/2)*(c + d*sec(e + f*x))^3)".ToEntity().Integrate("x")` | `integral(...)`; past a minute on the unreleased master | 9,155 characters |
+
 ### A sine of a double argument beside the argument is written as a product
 
 **Answers where there were none.** `csc(a + b x)^3 sin(2a + 2b x)^7` was declined: the rule that writes multiples
