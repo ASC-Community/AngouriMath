@@ -287,6 +287,42 @@ which never forms the squared modulus ([#1372](https://github.com/asc-community/
 |---|---|---|
 | `Complex.Create(1.98e119, 0) / Complex.Create(3.39e125, 0)`, downcasting off | `0E-100 - -0E-100i` | `5.840707964601768976981721427785376490780345647542924132180928001509698858126373024373283501603E-7 - -0E-100i` |
 
+### A constant and a cached evaluation follow the precision in force
+
+**Answers that were wrong.** `pi` and `e` were worth the digits of whichever precision was set when the constants
+were first built, and an entity's cached evaluation survived a change of `MathS.Settings.DecimalPrecisionContext`:
+`pi` evaluated at 300 digits after an evaluation at 100 came back with 100. A constant is worth the current
+precision's digits now, and a cached evaluation is recomputed when the precision has changed
+([#1367](https://github.com/asc-community/AngouriMath/issues/1367), PR
+[#1368](https://github.com/asc-community/AngouriMath/pull/1368)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `MathS.pi.EvalNumerical()` at 300 digits, after an evaluation at 100 | 100 digits | 300 digits |
+
+### A complex number prints the number it holds whatever the downcasting at printing
+
+**Printed forms that were wrong.** Printing a complex number with a negative imaginary part negated that part, and
+the negation was downcast under the setting in force when printing: a number made with the downcasting off printed
+as a different number once it was back on, and read back as that number with its sign changed. `Latexize` had the
+same fault ([#1611](https://github.com/asc-community/AngouriMath/pull/1611)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `1 - 0.3333333333333333333333333333333333333333i`, made with the downcasting off, printed with it on | `1 - 1/3i`, which reads back as `1 + i/3` | `1 - 0.3333333333333333333333333333333333333333i` |
+
+### The parse cache keeps a parse for each downcasting setting
+
+**Answers that depended on what was parsed before.** `MathS.FromString` cached one parse per string whatever
+`MathS.Settings.DowncastingEnabled` was, and that setting changes the parse: with it off, the numbers in a string
+are decimals. A string parsed once with the downcasting on came back with integers and rationals when parsed again
+with it off ([#1513](https://github.com/asc-community/AngouriMath/issues/1513), PR
+[#1517](https://github.com/asc-community/AngouriMath/pull/1517)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `MathS.FromString("x^2 + 7/2")` with the downcasting off, after the same string with it on | `Integer` and `Rational` nodes, the first parse's | `Real` nodes |
+
 ### A quadratic with rational roots counts as two linears before the substitution search
 
 **Answers where there were none.** `sec(x)^2 sin(x)/(a + b sin(x))^3` ran past thirty seconds: under the
