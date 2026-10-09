@@ -21462,6 +21462,26 @@ namespace AngouriMath.Functions.Algebra
                && TreeAnalyzer.TryGetPolynomial(denominator, x, out var below) && below.Count > 0
                && above.Keys.Max()!.CompareTo(below.Keys.Max()!) < 0;
 
+        /// <summary>Whether <paramref name="x"/> stands in <paramref name="expr"/> only under even whole powers.</summary>
+        private static bool IsEvenAsWritten(Entity expr, Entity.Variable x)
+            => expr.Nodes.Count(node => node == x)
+               == expr.Nodes.Count(node => node is Powf(var @base, Number.Integer power) && @base == x && power.EInteger.IsEven);
+
+        /// <summary>
+        /// The degree in <paramref name="x"/> of a polynomial as it is written, without expanding
+        /// it: of a power its base's times the exponent, of a product the sum, of a sum the most.
+        /// </summary>
+        private static int DegreeAsWritten(Entity expr, Entity.Variable x) => expr switch
+        {
+            _ when !expr.ContainsNode(x) => 0,
+            Variable => 1,
+            Powf(var @base, Number.Integer power) when power.EInteger.CanFitInInt32() => DegreeAsWritten(@base, x) * power.EInteger.ToInt32Checked(),
+            Mulf(var left, var right) => DegreeAsWritten(left, x) + DegreeAsWritten(right, x),
+            Sumf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            Minusf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            _ => 0,
+        };
+
         /// <summary>Whether every node of <paramref name="expr"/> holding <paramref name="x"/> is a sum, a product, a quotient or a whole power.</summary>
         private static bool IsARationalFunction(Entity expr, Entity.Variable x)
             => expr.Nodes.All(node => !node.ContainsNode(x) || node is Variable or Sumf or Minusf or Mulf or Divf || node is Powf(_, Number.Integer));
@@ -28843,6 +28863,15 @@ namespace AngouriMath.Functions.Algebra
             // roots: `x^2/((a + b x)(c + d x)(f + g x)^2)` under `u = f/g + x` here was a
             // page of piecewise on the discriminant of the quadratic the other two make.
             if (IsARationalFunction(expr, x) && TryReadAsQuotient(expr, out _, out var writtenBelow) && IsAProductOfSymbolicLinearFactors(writtenBelow, x))
+                return null;
+            // And an even one with symbols in it, past a sextic below the bar: the derivative of
+            // anything even is odd, so no polynomial candidate is the substitution for it, and
+            // the search spent thirty seconds simplifying the quotient by each to decline them all
+            // on `(1 + x^2)^2/((c + d + (c + 3d) x^2 + 2d x^4)^3 (1 + 2x^2))`, which the half-angle
+            // tangent makes of `1/((c + d sec(y))^3 sqrt(a + a sec(y)))`, where the partial
+            // fractions answer it in under one.
+            if (IsARationalFunction(expr, x) && IsEvenAsWritten(expr, x) && expr.Nodes.Any(node => node is Variable symbol && symbol != x)
+                && TryReadAsQuotient(expr, out _, out var evenBelow) && DegreeAsWritten(evenBelow, x) >= 6)
                 return null;
             // A rational function of exponentials of linears in x with a whole power of a
             // sum of them in it is the exponential substitution's, exactly and at once, and
