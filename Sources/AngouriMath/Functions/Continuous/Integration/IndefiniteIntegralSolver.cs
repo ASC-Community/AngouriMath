@@ -729,8 +729,14 @@ namespace AngouriMath.Functions.Algebra
             // quadratic as written the division of `(d + e x)^8` ran past a minute.
             // The numerator's sums are written as the split writes its linears, so that a power the
             // two sides share is gathered and cancelled before anything else reads the quotient.
+            // Only where the numerator shares one of the linears, which is what the split is for:
+            // splitting `1 - c^2 x^2` that parts left beside an inverse hyperbolic cotangent, with
+            // nothing to cancel, sent 7.4.1's `(a + b arccoth(c x)) (d + e ln(1 - c^2 x^2))` from
+            // thirteen seconds past two minutes.
             if (WithSymbolicQuadraticsInAPowerSplit(denominator, x, 1) is { } overLinears
-                && Patterns.GatherPowersOfOneBase(WithSumsAsPolynomialsInTheSymbols(numerator, x) / overLinears) is var overTheSplit
+                && WithSumsAsPolynomialsInTheSymbols(numerator, x) is var writtenAlike
+                && SharesAFactor(writtenAlike, overLinears, x)
+                && Patterns.GatherPowersOfOneBase(writtenAlike / overLinears) is var overTheSplit
                 && (SolveByPartialFractions(overTheSplit, x, integrateByParts)
                     ?? Integration.ComputeIndefiniteIntegral(overTheSplit, x, integrateByParts)) is { } overTheLinearsOfAQuadratic)
                 return overTheLinearsOfAQuadratic;
@@ -15050,6 +15056,28 @@ namespace AngouriMath.Functions.Algebra
                     return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="above"/> vanishes at the root of a linear in <paramref name="x"/>
+        /// among the factors of <paramref name="below"/>, or the bases of their powers: whether the
+        /// two share that linear, up to a constant.
+        /// </summary>
+        private static bool SharesAFactor(Entity above, Entity below, Entity.Variable x)
+        {
+            // A polynomial numerator only: a logarithm in it is no value at a root, not zero there.
+            if (!TreeAnalyzer.TryGetPolynomial(above, x, out _))
+                return false;
+            foreach (var factor in Mulf.LinearChildren(below))
+            {
+                var @base = factor is Powf(var b, Number.Integer) ? b : factor;
+                if (@base is not (Sumf or Minusf) || !TreeAnalyzer.TryGetPolyLinear(@base, x, out var slope, out var intercept)
+                    || slope.ContainsNode(x) || intercept.ContainsNode(x) || TreeAnalyzer.IsZero(slope))
+                    continue;
+                if (Functions.PartialFractions.IsZeroAsAValue(above.Substitute(x, -intercept / slope)))
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>
