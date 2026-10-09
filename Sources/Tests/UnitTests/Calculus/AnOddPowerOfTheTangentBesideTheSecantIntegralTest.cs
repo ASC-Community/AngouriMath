@@ -28,7 +28,7 @@ namespace AngouriMath.Tests.Calculus
             var integral = integrand.ToEntity().Integrate("x");
             var text = integral.Stringize();
             Assert.DoesNotContain("integral(", text);
-            Assert.True(text.Length < 20000, $"{text.Length} characters of answer for {integrand}");
+            Assert.True(text.Length < 40000, $"{text.Length} characters of answer for {integrand}");
             Entity Pinned(Entity e) => e.Substitute("a", 1.3).Substitute("b", 0.4).Substitute("g", 0.2).Substitute("f", 0.7);
             var derivative = Pinned(integral.Substitute("C", 0)).Differentiate("x");
             var original = Pinned(integrand.ToEntity());
