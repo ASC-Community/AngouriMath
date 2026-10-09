@@ -329,6 +329,58 @@ namespace AngouriMath.Functions
             return new(VariableCount, result);
         }
 
+        /// <summary>
+        /// The polynomial whose square this is, or <see langword="null"/> where it is not the
+        /// square of one over <c>Q</c>. Of the two roots, the one whose leading coefficient in
+        /// each variable, read in turn, is positive.
+        /// </summary>
+        /// <remarks>
+        /// In the first variable that occurs, as for one variable: the root's leading coefficient
+        /// is the root of this one's, found the same way in the variables left, and each lower
+        /// coefficient is what the square of the root so far leaves at the next power down,
+        /// divided exactly by twice that leading coefficient. Whatever is not a square fails
+        /// one of those divisions or the check at the end.
+        /// </remarks>
+        internal MultivariatePolynomial? TrySquareRoot()
+        {
+            if (IsZero)
+                return this;
+            if (IsConstant)
+            {
+                var value = ConstantValue.ToLowestTerms();
+                if (value.Sign < 0)
+                    return null;
+                var (above, below) = (value.Numerator.Sqrt(), value.Denominator.Sqrt());
+                return above.Multiply(above).Equals(value.Numerator) && below.Multiply(below).Equals(value.Denominator)
+                    ? Constant(VariableCount, ERational.Create(above, below))
+                    : null;
+            }
+            var variable = 0;
+            while (DegreeIn(variable) == 0)
+                variable++;
+            var degree = DegreeIn(variable);
+            if (degree % 2 != 0)
+                return null;
+            if (LeadingCoefficientIn(variable).TrySquareRoot() is not { } leading
+                || leading.ShiftedBy(variable, degree / 2) is not { } root)
+                return null;
+            var twice = leading.ScaleBy(ERational.FromInt32(2));
+            for (var step = 1; step <= degree / 2; step++)
+            {
+                if (root.Multiply(root) is not { } square)
+                    return null;
+                var left = Subtract(square);
+                if (left.IsZero)
+                    return root;
+                if (!left.CoefficientsIn(variable).TryGetValue(degree - step, out var next))
+                    continue;
+                if (next.DivideExact(twice) is not { } term || term.ShiftedBy(variable, degree / 2 - step) is not { } shifted)
+                    return null;
+                root = root.Add(shifted);
+            }
+            return root.Multiply(root) is { } last && Subtract(last).IsZero ? root : null;
+        }
+
         internal MultivariatePolynomial LeadingCoefficientIn(int variable)
         {
             var degree = DegreeIn(variable);

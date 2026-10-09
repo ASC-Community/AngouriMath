@@ -761,6 +761,12 @@ namespace AngouriMath.Functions.Algebra
             // And the powers of x it takes out joined to the ones beside them: `x (a x + b x^3 + c x^5)^2`
             // is `x^3 (a + b x^2 + c x^4)^2`, and written `x x^2 (a + b x^2 + c x^4)^2` the splits
             // below read `x` and `x^2` as two factors and the search ran past a minute.
+            // A symbolic quartic in x^2 that is two quadratics in it, written as them first.
+            if (WithSymbolicBiquadraticsSplit(denominator, x) is { } split
+                && (SolveByPartialFractions(numerator / split, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(numerator / split, x, integrateByParts)) is { } overTheQuadratics)
+                return overTheQuadratics;
+
             if (WithTheContentOutOfEachSumFactor(denominator, x) is { } primitive
                 && Patterns.GatherPowersOfOneBase(numerator / primitive) is var overThePrimitives
                 && (SolveByPartialFractions(overThePrimitives, x, integrateByParts)
@@ -15036,6 +15042,70 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <paramref name="denominator"/> with each written factor <c>A x^4 + B x^2 + C</c> with symbols
+        /// in it whose discriminant <c>B^2 - 4AC</c> is the square of a polynomial <c>S</c> in them
+        /// written as the two quadratics it is, <c>(2A x^2 + B - S)(2A x^2 + B + S)/(4A)</c>;
+        /// <see langword="null"/> where there is none.
+        /// </summary>
+        /// <remarks>
+        /// The rules below read a written quadratic in <c>x</c>, and a symbolic quartic is nothing
+        /// they factor: <c>x^2/((x^2 - a)(x^4 - 2a x^2 + a^2 - b^2)^2)</c>, which the root of a linear
+        /// makes of Rubi's <c>cot(x)^3 sqrt(a + b sec(x))</c> in the secant, ran past a minute, and
+        /// written over <c>(x^2 - a - b)(x^2 - a + b)</c> it is answered in a fifth of a second.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity? WithSymbolicBiquadraticsSplit(Entity denominator, Entity.Variable x)
+        {
+            var changed = false;
+            Entity product = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+            {
+                var (@base, power) = factor is Powf(var b, Number.Integer { EInteger.Sign: > 0 } p) ? (b, p) : (factor, Number.Integer.One);
+                if (@base is not (Sumf or Minusf) || !@base.ContainsNode(x) || !@base.Vars.Any(v => v != x)
+                    || !TreeAnalyzer.TryGetPolynomial(@base, x, out var read)
+                    || !read.Keys.All(degree => degree.Equals(EInteger.Zero) || degree.Equals(EInteger.FromInt32(2)) || degree.Equals(EInteger.FromInt32(4)))
+                    || !read.ContainsKey(EInteger.FromInt32(4)) || !read.ContainsKey(EInteger.Zero))
+                {
+                    product *= factor;
+                    continue;
+                }
+                var variables = @base.Vars.OrderBy(v => v.Name, System.StringComparer.Ordinal).ToList();
+                if (variables.Count > MultivariatePolynomial.MaxVariables)
+                {
+                    product *= factor;
+                    continue;
+                }
+                var indices = new Dictionary<Variable, int>();
+                for (var i = 0; i < variables.Count; i++)
+                    indices[variables[i]] = i;
+                var at = indices[x];
+                if (MultivariatePolynomial.TryParse(@base, indices) is not { } polynomial
+                    || !polynomial.CoefficientsIn(at).TryGetValue(4, out var a)
+                    || !polynomial.CoefficientsIn(at).TryGetValue(0, out var c))
+                {
+                    product *= factor;
+                    continue;
+                }
+                var b2 = polynomial.CoefficientsIn(at).TryGetValue(2, out var middle) ? middle : MultivariatePolynomial.Zero(variables.Count);
+                if (b2.Multiply(b2) is not { } bSquared || a.Multiply(c) is not { } ac
+                    || bSquared.Subtract(ac.ScaleBy(ERational.FromInt32(4))).TrySquareRoot() is not { IsZero: false } root
+                    || a.ScaleBy(ERational.FromInt32(2)).ShiftedBy(at, 2) is not { } twiceA)
+                {
+                    product *= factor;
+                    continue;
+                }
+                var first = twiceA.Add(b2).Subtract(root).ToEntity(variables);
+                var second = twiceA.Add(b2).Add(root).ToEntity(variables);
+                var scale = a.ScaleBy(ERational.FromInt32(4)).ToEntity(variables);
+                product *= power == Number.Integer.One
+                    ? first * second / scale
+                    : MathS.Pow(first, power) * MathS.Pow(second, power) / MathS.Pow(scale, power);
+                changed = true;
+            }
+            return changed ? product : null;
+        }
+
+        /// <summary>
         /// <paramref name="denominator"/> with the content of every written sum among its
         /// factors taken out in front of it: <c>(a u + a)(1 - u^2)</c> is <c>a (u + 1)(1 - u^2)</c>,
         /// and <c>-a t^6 - 2a t^5 - a t^4 + a t^2 + 2a t + a</c> is <c>a</c> times the
@@ -21615,6 +21685,26 @@ namespace AngouriMath.Functions.Algebra
             => TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) && above.Count > 0
                && TreeAnalyzer.TryGetPolynomial(denominator, x, out var below) && below.Count > 0
                && above.Keys.Max()!.CompareTo(below.Keys.Max()!) < 0;
+
+        /// <summary>Whether <paramref name="x"/> stands in <paramref name="expr"/> only under even whole powers.</summary>
+        private static bool IsEvenAsWritten(Entity expr, Entity.Variable x)
+            => expr.Nodes.Count(node => node == x)
+               == expr.Nodes.Count(node => node is Powf(var @base, Number.Integer power) && @base == x && power.EInteger.IsEven);
+
+        /// <summary>
+        /// The degree in <paramref name="x"/> of a polynomial as it is written, without expanding
+        /// it: of a power its base's times the exponent, of a product the sum, of a sum the most.
+        /// </summary>
+        private static int DegreeAsWritten(Entity expr, Entity.Variable x) => expr switch
+        {
+            _ when !expr.ContainsNode(x) => 0,
+            Variable => 1,
+            Powf(var @base, Number.Integer power) when power.EInteger.CanFitInInt32() => DegreeAsWritten(@base, x) * power.EInteger.ToInt32Checked(),
+            Mulf(var left, var right) => DegreeAsWritten(left, x) + DegreeAsWritten(right, x),
+            Sumf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            Minusf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            _ => 0,
+        };
 
         /// <summary>Whether every node of <paramref name="expr"/> holding <paramref name="x"/> is a sum, a product, a quotient or a whole power.</summary>
         private static bool IsARationalFunction(Entity expr, Entity.Variable x)
@@ -28997,6 +29087,15 @@ namespace AngouriMath.Functions.Algebra
             // roots: `x^2/((a + b x)(c + d x)(f + g x)^2)` under `u = f/g + x` here was a
             // page of piecewise on the discriminant of the quadratic the other two make.
             if (IsARationalFunction(expr, x) && TryReadAsQuotient(expr, out _, out var writtenBelow) && IsAProductOfSymbolicLinearFactors(writtenBelow, x))
+                return null;
+            // And an even one with symbols in it, past a sextic below the bar: the derivative of
+            // anything even is odd, so no polynomial candidate is the substitution for it, and
+            // the search spent thirty seconds simplifying the quotient by each to decline them all
+            // on `(1 + x^2)^2/((c + d + (c + 3d) x^2 + 2d x^4)^3 (1 + 2x^2))`, which the half-angle
+            // tangent makes of `1/((c + d sec(y))^3 sqrt(a + a sec(y)))`, where the partial
+            // fractions answer it in under one.
+            if (IsARationalFunction(expr, x) && IsEvenAsWritten(expr, x) && expr.Nodes.Any(node => node is Variable symbol && symbol != x)
+                && TryReadAsQuotient(expr, out _, out var evenBelow) && DegreeAsWritten(evenBelow, x) >= 6)
                 return null;
             // A rational function of exponentials of linears in x with a whole power of a
             // sum of them in it is the exponential substitution's, exactly and at once, and
