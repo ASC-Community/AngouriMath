@@ -905,6 +905,9 @@ namespace AngouriMath.Functions.Algebra
             // And `tan(y) tan(2y)` written `sec(2y) - 1` first, so that the rule reads one argument.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingATangentTimesThatOfItsDoubleThroughTheSecant(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant(expr, x, integrateByParts)) is { }) return answer;
+            // And the secant beside powers of a + a sec(y) and c - c sec(y), whose product is a
+            // square of the tangent: in u = a + a sec(y), a symbolic power of it too.
+            if ((answer = IndefiniteIntegralSolver.SolveASecantBesidePowersOfItsConjugateSums(expr, x, integrateByParts)) is { }) return answer;
             // And `a ± a cosh(y)` under a fractional power: `2a cosh(y/2)^2`, `-2a sinh(y/2)^2`.
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleWhereOnePlusAHyperbolicCosineIsASquare(expr, x, integrateByParts)) is { }) return answer;
             // The hyperbolic sine's, off the real line: 1 + i sinh(y) is (cosh(y/2) + i sinh(y/2))^2.

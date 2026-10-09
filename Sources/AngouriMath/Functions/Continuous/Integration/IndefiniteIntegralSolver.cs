@@ -4371,6 +4371,90 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>sec(y) (a ± a sec(y))^m (c ∓ c sec(y))^n</c>, with <c>n</c> half-odd and <c>m</c> anything,
+        /// integrated in <c>u = a ± a sec(y)</c>: the two sums multiply to <c>-a c tan(y)^2</c>, so the
+        /// root of the second is <c>tan(y)</c> over the root of <c>u</c> times a constant,
+        /// <c>sec(y) tan(y) dy</c> is <c>du</c> over one, and what is left is
+        /// <c>u^(m - 1/2) (2 - u/a)^(n - 1/2)</c>. The cosecant's are the same with the cotangent.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's <c>sec(e + f x) (a + a sec(e + f x))^m sqrt(c - c sec(e + f x))</c> and two more of
+        /// 4.5.2.3 were declined. The constants are not written: the answer is the integrand times
+        /// the antiderivative in <c>u</c> over what that differentiates back to, a quotient whose
+        /// square is one; and it is kept only where that square is one at the sampled points.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveASecantBesidePowersOfItsConjugateSums(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAskedOrOneBelow)
+                return null;
+            Entity? argument = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (TrigonometricArgument(node) is not { } thisArgument || !thisArgument.ContainsNode(x))
+                    continue;
+                if (argument is null)
+                    argument = thisArgument;
+                else if (argument != thisArgument)
+                    return null;
+            }
+            if (argument is null || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _)
+                || rate.ContainsNode(x) || TreeAnalyzer.IsZero(rate))
+                return null;
+            var secant = MathS.Sec(argument);
+            var cosecant = new Cosecantf(argument);
+            Entity? function = null;
+            var sums = new List<(Entity Radicand, Entity Exponent, Entity A, bool Plus)>();
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(expr))
+            {
+                if (!factor.ContainsNode(x))
+                    continue;
+                if ((factor == secant || factor == cosecant) && function is null && !underneath)
+                {
+                    function = factor;
+                    continue;
+                }
+                var (radicand, exponent) = factor is Powf(var @base, var power) ? (@base, power) : (factor, (Entity)Number.Integer.One);
+                if (exponent.ContainsNode(x) || ReadAsOnePlusMinusAFunction(radicand, secant, cosecant) is not var (sumConstant, plus, _))
+                    return null;
+                sums.Add((radicand, underneath ? (-exponent).InnerSimplified : exponent, sumConstant, plus));
+            }
+            if (function is null || sums.Count != 2 || sums[0].Plus == sums[1].Plus
+                || ReadAsOnePlusMinusAFunction(sums[0].Radicand, secant, cosecant) is not var (_, _, firstIsSecant)
+                || ReadAsOnePlusMinusAFunction(sums[1].Radicand, secant, cosecant) is not var (_, _, secondIsSecant)
+                || firstIsSecant != secondIsSecant || firstIsSecant != (function == secant))
+                return null;
+            // The half-odd one, which is written through the other; a power of it at least a half
+            // first, so that what is left of it is a whole power to expand.
+            static bool IsHalfOdd(Entity exponent) => exponent is Number.Rational rational and not Number.Integer
+                && rational.ERational.Denominator.Equals(EInteger.FromInt32(2)) && rational.ERational.Numerator.CanFitInInt32();
+            var order = sums[0].Exponent is Number.Rational { ERational.Sign: > 0 } && IsHalfOdd(sums[0].Exponent) ? new[] { 0, 1 } : new[] { 1, 0 };
+            var (half, other) = (sums[order[0]], sums[order[1]]);
+            if (!IsHalfOdd(half.Exponent))
+                return null;
+            var n = ((Number.Rational)half.Exponent).ERational;
+            // With u the other sum, the half-odd one is c (2 - u/a), whatever the signs.
+            var u = Variable.CreateUnique(expr, "u_conjugate");
+            var c = half.A;
+            var a = other.A;
+            var leftOver = n.Subtract(ERational.FromInt32(1).Divide(ERational.FromInt32(2)));
+            var inU = (MathS.Pow(u, other.Exponent - Number.Rational.Create(1, 2))
+                * MathS.Pow(2 - u / a, Number.Integer.Create(leftOver.ToEInteger()))).InnerSimplified;
+            inU = Functions.PartialFractions.Bare(inU);
+            if (inU.ContainsNode(x) || inU.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            var inX = inU.Substitute(u, other.Radicand) * other.Radicand.Differentiate(x);
+            // The square of the constant: -c^(2n)/(a rate^2).
+            var constantSquared = -MathS.Pow(c, Number.Integer.Create(n.Multiply(ERational.FromInt32(2)).ToEInteger())) / (a * MathS.Sqr(rate));
+            if (!Functions.PartialFractions.HoldsAtSampledPoints(constantSquared * MathS.Sqr(inX), MathS.Sqr(expr), x))
+                return null;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inU, u, integrateByParts) is not { } inTermsOfU
+                || inTermsOfU.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return expr * inTermsOfU.Substitute(u, other.Radicand) / inX;
+        }
+
+        /// <summary>
         /// <c>tan(y) tan(2y)</c> written <c>sec(2y) - 1</c>, and the integrand asked again in the
         /// one argument <c>2y</c>.
         /// </summary>
