@@ -4590,6 +4590,76 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// An odd whole power of <c>tan(y)</c> beside a function of <c>sec(y)</c>, integrated in
+        /// <c>u = sec(y)</c>: <c>du = sec(y) tan(y) dy</c> and the even power of the tangent left over
+        /// is a power of <c>u^2 - 1</c>, so <c>tan(y)^n</c> with the rest is
+        /// <c>(u^2 - 1)^((n - 1)/2)/u du</c> beside it, exactly. The cotangent beside a function of
+        /// the cosecant, in <c>u = csc(y)</c>, the same.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's <c>cot(c + d x)/(a + b sec(c + d x))^(3/2)</c> was declined and
+        /// <c>cot(c + d x)^3 sqrt(a + b sec(c + d x))</c> ran past thirty seconds, where in the
+        /// secant each is a rational function beside the root of a linear.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveAnOddPowerOfTheTangentBesideAFunctionOfTheSecant(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAskedOrOneBelow)
+                return null;
+            Entity? argument = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (TrigonometricArgument(node) is not { } thisArgument || !thisArgument.ContainsNode(x))
+                    continue;
+                if (argument is null)
+                    argument = thisArgument;
+                else if (argument != thisArgument)
+                    return null;
+            }
+            if (argument is null || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _)
+                || rate.ContainsNode(x) || TreeAnalyzer.IsZero(rate))
+                return null;
+            if (!expr.Nodes.All(node => !node.ContainsNode(x)
+                    || node is Variable or Sumf or Minusf or Mulf or Divf or Sinf or Cosf or Secantf or Cosecantf or Tanf or Cotanf
+                    || node is Powf(_, Number.Rational)))
+                return null;
+            var t = Variable.CreateUnique(expr, "t_odd_tangent");
+            var u = Variable.CreateUnique(expr, "u_secant");
+            foreach (var ofTheSecant in new[] { true, false })
+            {
+                // The tangent and its reciprocal as one base; for the cosecant, the cotangent.
+                var inT = expr.Replace(node => node switch
+                {
+                    Tanf(var a) when a == argument => ofTheSecant ? t : 1 / t,
+                    Cotanf(var a) when a == argument => ofTheSecant ? 1 / t : t,
+                    _ => node,
+                });
+                var (rest, exponents) = GatheredOverTheBases(inT, new Entity[] { t });
+                var n = exponents[0];
+                if (rest.ContainsNode(t) || !n.IsInteger() || n.ToEInteger().IsEven || !n.ToEInteger().CanFitInInt32())
+                    continue;
+                var inU = rest.Replace(node => node switch
+                {
+                    Secantf(var a) when ofTheSecant && a == argument => u,
+                    Cosf(var a) when ofTheSecant && a == argument => 1 / u,
+                    Cosecantf(var a) when !ofTheSecant && a == argument => u,
+                    Sinf(var a) when !ofTheSecant && a == argument => 1 / u,
+                    _ => node,
+                });
+                if (inU.ContainsNode(x))
+                    continue;
+                // dy = du/(u t) for the secant, -du/(u t) for the cosecant, and t^(n - 1) = (u^2 - 1)^((n - 1)/2).
+                var half = n.Subtract(ERational.One).Divide(ERational.FromInt32(2)).ToEInteger();
+                var integrand = (inU * MathS.Pow(MathS.Sqr(u) - 1, Number.Integer.Create(half)) / ((ofTheSecant ? rate : -rate) * u)).InnerSimplified;
+                if (Integration.ComputeAsAQuestionOfItsOwn(integrand, u, integrateByParts) is not { } inTermsOfU
+                    || inTermsOfU.Nodes.Any(node => node == MathS.NaN))
+                    return null;
+                return inTermsOfU.Substitute(u, ofTheSecant ? MathS.Sec(argument) : new Cosecantf(argument));
+            }
+            return null;
+        }
+
+        /// <summary>
         /// <c>tan(y) tan(2y)</c> written <c>sec(2y) - 1</c>, and the integrand asked again in the
         /// one argument <c>2y</c>.
         /// </summary>
