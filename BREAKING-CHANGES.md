@@ -323,6 +323,75 @@ with it off ([#1513](https://github.com/asc-community/AngouriMath/issues/1513), 
 |---|---|---|
 | `MathS.FromString("x^2 + 7/2")` with the downcasting off, after the same string with it on | `Integer` and `Rational` nodes, the first parse's | `Real` nodes |
 
+### Euler's substitution answers a rational function of `x` and one square root of a quadratic
+
+**Answers where there were none.** `sqrt(2 - x - x^2)/x^2` was declined: the trigonometric substitution answers
+`x^m sqrt(a + b x^2)^k` and nothing wider. Euler's substitution rationalises a rational function of `x` and one
+square root of a quadratic, and the rational integrator finishes it (PR
+[#1289](https://github.com/asc-community/AngouriMath/pull/1289)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(2 - x - x^2)/x^2".ToEntity().Integrate("x")` | `integral(...)` | 197 characters |
+| `"1/((4 + x^2)*sqrt(1 + 4*x^2))".ToEntity().Integrate("x")` | `integral(...)` | 140 characters |
+
+### The other trigonometric functions are written as sine and cosine before a complement is substituted
+
+**Answers where there were none.** `arctan(sqrt(sec(x) - 1)) sin(x)` was declined: by parts it leaves
+`sin(x)/sqrt(sec(x) - 1)`, and under `u = cos(x)` the secant left standing kept its `x`. The secant, cosecant,
+tangent and cotangent are written as sine and cosine first, except where that leaves an odd power of the complement
+under a root (PR [#1312](https://github.com/asc-community/AngouriMath/pull/1312)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"arctan(sqrt(sec(x) - 1))*sin(x)".ToEntity().Integrate("x")` | `integral(...)` | an antiderivative with the condition where it holds |
+
+### A constant over a linear beside the root of a quadratic is answered through the linear's reciprocal
+
+**Answers where there were none.** `1/(r sqrt(-p^2 - q^2 + 2h r^2 - 2k r^4))`, Hearn's, was declined: under
+`u = r^2` it is a constant over a linear beside the root of a quadratic whose leading coefficient and constant are
+symbols the Euler substitution could not take a real root of. The reciprocal of the linear answers it, and the Euler
+substitution reaches a radical real only between its roots (PR
+[#1315](https://github.com/asc-community/AngouriMath/pull/1315)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(r*sqrt(-p^2 - q^2 + 2*h*r^2 - 2*k*r^4))".ToEntity().Integrate("r")` | `integral(...)` | 1,051 characters |
+
+### A rational function of the hyperbolic tangent with a symbol in it is integrated in the tangent
+
+**Answers where there were none.** `sqrt(a + b sech(x)) tanh(x)^5` ran past a minute, with more of Rubi's hyperbolic
+family that put a symbol among the coefficients. It is integrated by `u = tanh(y)` with the written factors kept, and
+an answer assembled from a decomposition with symbols is checked before it is given
+([#1369](https://github.com/asc-community/AngouriMath/issues/1369), PR
+[#1377](https://github.com/asc-community/AngouriMath/pull/1377)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sqrt(a + b*sech(x))*tanh(x)^5".ToEntity().Integrate("x")` | `integral(...)` after a minute | an answer, in 2.4 seconds |
+
+### The inverse trigonometric substitution takes `a + b arcsin(c x)` and its powers
+
+**Answers where there were none.** `x (d - c^2 d x^2)^3 (a + b arcsin(c x))` was declined: `x = sin(u)` took
+`arcsin(x)` alone. It takes a linear argument, a multiple of its quadratic and a power of `a + b arcsin(c x)` now
+(PR [#1380](https://github.com/asc-community/AngouriMath/pull/1380)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"x*(d - c^2*d*x^2)^3*(a + b*arcsin(c*x))".ToEntity().Integrate("x")` | `integral(...)` | an answer |
+| `"x*arcsin(a*x)^2".ToEntity().Integrate("x")` | `integral(...)` | an answer |
+
+### `e` and `pi` evaluate to a real number whatever the downcasting says
+
+**A different type.** With the downcasting off, `MathS.e.EvalNumerical()` and `MathS.pi.EvalNumerical()` were
+`Complex` with a zero imaginary part, the documented contract of the setting, and the constant is one object whose
+cached value kept that. They are `Real` in either mode now, and a complex number with a zero imaginary part is
+real-valued ([#1371](https://github.com/asc-community/AngouriMath/pull/1371)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `MathS.e.EvalNumerical()` with the downcasting off | `Complex` | `Real` |
+
 ### A quadratic with rational roots counts as two linears before the substitution search
 
 **Answers where there were none.** `sec(x)^2 sin(x)/(a + b sin(x))^3` ran past thirty seconds: under the
