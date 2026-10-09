@@ -905,6 +905,9 @@ namespace AngouriMath.Functions.Algebra
             // And `tan(y) tan(2y)` written `sec(2y) - 1` first, so that the rule reads one argument.
             if ((answer = IndefiniteIntegralSolver.SolveByWritingATangentTimesThatOfItsDoubleThroughTheSecant(expr, x, integrateByParts)) is { }) return answer;
             if ((answer = IndefiniteIntegralSolver.SolveByTheHalfAngleTangentBesideAHalfOddPowerOfOnePlusASecant(expr, x, integrateByParts)) is { }) return answer;
+            // And beside a half-odd power of `c + d sec(y)`, which the half-angle tangent leaves as a
+            // second root: in sin(y/2), where the two powers of cos(y) they bring make a whole one.
+            if ((answer = IndefiniteIntegralSolver.SolveTwoHalfOddPowersOfSecantSumsByTheHalfAngleSine(expr, x, integrateByParts)) is { }) return answer;
             // And the secant beside powers of a + a sec(y) and c - c sec(y), whose product is a
             // square of the tangent: in u = a + a sec(y), a symbolic power of it too.
             if ((answer = IndefiniteIntegralSolver.SolveASecantBesidePowersOfItsConjugateSums(expr, x, integrateByParts)) is { }) return answer;
