@@ -633,12 +633,12 @@ namespace AngouriMath.Functions
         internal static Entity InLowestTermsOverTheSymbols(Entity constant)
         {
             var (above, below) = SingleQuotient.Of(SingleQuotient.Combine(constant).InnerSimplified);
-            var expandedAbove = Bare(above.Expand().InnerSimplified);
+            var expandedAbove = Bare(ExpandedOverTheSymbols(above).InnerSimplified);
             // Zero as a value, decided at two sets of pinned symbols: `b (a + b (-a/b))` is
             // zero and neither the expansion nor the evaluation of numbers says so.
             if (expandedAbove == Integer.Zero || expandedAbove.Evaled is Complex { IsZero: true } || IsZeroAtPinnedSymbols(expandedAbove))
                 return Integer.Zero;
-            var expandedBelow = Bare(below.Expand().InnerSimplified);
+            var expandedBelow = Bare(ExpandedOverTheSymbols(below).InnerSimplified);
             // A number is folded already, and stays a number.
             if ((expandedAbove.Vars.Any() || expandedBelow.Vars.Any())
                 && (HoldsTheImaginaryUnit(expandedAbove) || HoldsTheImaginaryUnit(expandedBelow))
@@ -657,6 +657,29 @@ namespace AngouriMath.Functions
             if (CancelledByTheWrittenFactors(expandedAbove, below) is { } byFactors)
                 return WithThePrimitiveDenominator(byFactors);
             return WithThePrimitiveDenominator(expandedBelow == Integer.One ? expandedAbove : expandedAbove / expandedBelow);
+        }
+
+        /// <summary>
+        /// <paramref name="expr"/> multiplied out: as a polynomial over the rationals in its
+        /// symbols where it is one, and by <see cref="Entity.Expand"/> where it is not.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Entity.Expand"/> multiplies a product of sums out by enumerating the
+        /// combinations of their terms as expressions. The coefficients the series at a repeated
+        /// quadratic makes are products of powers of sums in the symbols, and that enumeration was
+        /// where all of the eighteen seconds of <c>1/((1 + x^2)^2 (c + d + 2d x^2)^3 (1 + 2x^2))</c>
+        /// went. A polynomial collects its terms as it multiplies.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity ExpandedOverTheSymbols(Entity expr)
+        {
+            var variables = expr.Vars.OrderBy(v => v.Name, System.StringComparer.Ordinal).ToList();
+            if (variables.Count == 0 || variables.Count > MultivariatePolynomial.MaxVariables)
+                return expr.Expand();
+            var indices = new Dictionary<Variable, int>();
+            for (var i = 0; i < variables.Count; i++)
+                indices[variables[i]] = i;
+            return MultivariatePolynomial.TryParse(expr, indices) is { } polynomial ? polynomial.ToEntity(variables) : expr.Expand();
         }
 
         /// <summary>Whether a number off the real line is among the nodes of <paramref name="expr"/>.</summary>
