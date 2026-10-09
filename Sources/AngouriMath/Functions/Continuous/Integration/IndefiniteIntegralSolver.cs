@@ -21277,6 +21277,12 @@ namespace AngouriMath.Functions.Algebra
                     return false;
                 if (read.Keys.Max()!.Equals(EInteger.One))
                     linears++;
+                // A quadratic with rational coefficients and rational roots is two linear factors
+                // written together: the half-angle tangent's `1 - u^2` beside `a u^2 + 2 b u + a` is
+                // `(1 - u)(1 + u)` to the split, and the search spent eighty seconds declining Rubi's
+                // `sec(x)^2 sin(x)/(a + b sin(x))^3` before it was asked.
+                else if (read.Keys.Max()!.Equals(EInteger.FromInt32(2)) && HasRationalRoots(read))
+                    linears += 2;
                 else if (read.Keys.Max()!.Equals(EInteger.FromInt32(2)))
                     quadratics++;
                 else
@@ -21284,6 +21290,23 @@ namespace AngouriMath.Functions.Algebra
                 symbolic |= read.Values.Any(coefficient => coefficient.Vars.Any());
             }
             return (linears >= 1 || !aLinearAmongThem) && linears + quadratics >= 2 && symbolic;
+        }
+
+        /// <summary>
+        /// Whether a quadratic read as its coefficients has rational coefficients and a
+        /// discriminant that is the square of a rational.
+        /// </summary>
+        private static bool HasRationalRoots(Dictionary<EInteger, Entity> quadratic)
+        {
+            Number.Rational? Coefficient(int power)
+                => quadratic.TryGetValue(EInteger.FromInt32(power), out var c) ? c.Evaled as Number.Rational : Number.Integer.Zero;
+            if (Coefficient(2) is not { } a || Coefficient(1) is not { } b || Coefficient(0) is not { } c)
+                return false;
+            var discriminant = (b * b - 4 * a * c).Evaled;
+            if (discriminant is not Number.Rational d || d.ERational.IsNegative)
+                return false;
+            var root = MathS.Sqrt(d).Evaled;
+            return root is Number.Rational;
         }
 
         /// <summary>
