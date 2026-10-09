@@ -724,6 +724,17 @@ namespace AngouriMath.Functions.Algebra
             if (SolveByReducingThePolynomialOverALinearFactor(expr, x, integrateByParts, alone: true) is { } overThePowersOfTheLinear)
                 return overThePowersOfTheLinear;
 
+            // A symbolic quadratic whose discriminant is a square in the symbols, written as its two
+            // linears before the division: the numerator may share one of them, and over the
+            // quadratic as written the division of `(d + e x)^8` ran past a minute.
+            // The numerator's sums are written as the split writes its linears, so that a power the
+            // two sides share is gathered and cancelled before anything else reads the quotient.
+            if (WithSymbolicQuadraticsInAPowerSplit(denominator, x, 1) is { } overLinears
+                && Patterns.GatherPowersOfOneBase(WithSumsAsPolynomialsInTheSymbols(numerator, x) / overLinears) is var overTheSplit
+                && (SolveByPartialFractions(overTheSplit, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(overTheSplit, x, integrateByParts)) is { } overTheLinearsOfAQuadratic)
+                return overTheLinearsOfAQuadratic;
+
             // The helper answers null for a fraction that is already proper, so this cannot
             // fire on one and recurse into the problem it started from. The check on the
             // quotient is the second half of that guarantee: a division that came back with
@@ -750,6 +761,12 @@ namespace AngouriMath.Functions.Algebra
                 && (leftover is Divf(var leftoverTop, _) ? leftoverTop : leftover).InnerSimplified.Evaled is Number.Complex { IsZero: true })
                 return (multiple * MathS.Ln(denominator)).InnerSimplified;
 
+            // A symbolic quartic in x^2 that is two quadratics in it, written as them first.
+            if (WithSymbolicBiquadraticsSplit(denominator, x) is { } split
+                && (SolveByPartialFractions(numerator / split, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(numerator / split, x, integrateByParts)) is { } overTheQuadratics)
+                return overTheQuadratics;
+
             // A written sum with a symbol among its coefficients that they all share is that
             // symbol times a polynomial over the rationals, and is written so first: `(a u + a)`
             // beside `1 - u^2` shares a root with it, which the symbolic split declines, and a
@@ -761,12 +778,6 @@ namespace AngouriMath.Functions.Algebra
             // And the powers of x it takes out joined to the ones beside them: `x (a x + b x^3 + c x^5)^2`
             // is `x^3 (a + b x^2 + c x^4)^2`, and written `x x^2 (a + b x^2 + c x^4)^2` the splits
             // below read `x` and `x^2` as two factors and the search ran past a minute.
-            // A symbolic quartic in x^2 that is two quadratics in it, written as them first.
-            if (WithSymbolicBiquadraticsSplit(denominator, x) is { } split
-                && (SolveByPartialFractions(numerator / split, x, integrateByParts)
-                    ?? Integration.ComputeIndefiniteIntegral(numerator / split, x, integrateByParts)) is { } overTheQuadratics)
-                return overTheQuadratics;
-
             if (WithTheContentOutOfEachSumFactor(denominator, x) is { } primitive
                 && Patterns.GatherPowersOfOneBase(numerator / primitive) is var overThePrimitives
                 && (SolveByPartialFractions(overThePrimitives, x, integrateByParts)
@@ -15042,6 +15053,32 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <paramref name="expr"/> with each sum among its factors, or the base of a power of one,
+        /// written as <see cref="MultivariatePolynomial.ToEntity"/> writes it: the spelling
+        /// <see cref="WithSymbolicQuadraticsInAPowerSplit"/> gives its factors, so that equal
+        /// factors on the two sides of a bar are written alike.
+        /// </summary>
+        private static Entity WithSumsAsPolynomialsInTheSymbols(Entity expr, Entity.Variable x)
+        {
+            Entity product = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(expr))
+            {
+                var (@base, power) = factor is Powf(var b, Number.Integer p) ? (b, (Entity)p) : (factor, (Entity)Number.Integer.One);
+                if (@base is (Sumf or Minusf) && @base.ContainsNode(x))
+                {
+                    var variables = @base.Vars.OrderBy(v => v.Name, System.StringComparer.Ordinal).ToList();
+                    var indices = new Dictionary<Variable, int>();
+                    for (var i = 0; i < variables.Count; i++)
+                        indices[variables[i]] = i;
+                    if (variables.Count <= MultivariatePolynomial.MaxVariables && MultivariatePolynomial.TryParse(@base, indices) is { } polynomial)
+                        @base = polynomial.ToEntity(variables);
+                }
+                product *= power == Number.Integer.One ? @base : MathS.Pow(@base, power);
+            }
+            return product;
+        }
+
+        /// <summary>
         /// <paramref name="denominator"/> with each written factor <c>A x^4 + B x^2 + C</c> with symbols
         /// in it whose discriminant <c>B^2 - 4AC</c> is the square of a polynomial <c>S</c> in them
         /// written as the two quadratics it is, <c>(2A x^2 + B - S)(2A x^2 + B + S)/(4A)</c>;
@@ -15055,16 +15092,40 @@ namespace AngouriMath.Functions.Algebra
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </remarks>
         private static Entity? WithSymbolicBiquadraticsSplit(Entity denominator, Entity.Variable x)
+            => WithSymbolicQuadraticsInAPowerSplit(denominator, x, 2);
+
+        /// <summary>
+        /// <paramref name="denominator"/> with each written factor <c>A x^(2k) + B x^k + C</c> with
+        /// symbols in it whose discriminant is the square of a polynomial <c>S</c> in them written as
+        /// <c>(2A x^k + B - S)(2A x^k + B + S)/(4A)</c>; <see langword="null"/> where there is none.
+        /// For <c>k = 1</c>, a quadratic as its two linears.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's 1.2.1.2 has `(d + e x)^8/(a d e + (c d^2 + a e^2) x + c d e x^2)^2` and its kind, a
+        /// power of a linear over a power of a quadratic that is that linear times another. As written
+        /// the division of the improper fraction ran past a minute; over `(d + e x)(a e + c d x)` the
+        /// shared factor cancels and the rest is answered in a tenth of a second.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity? WithSymbolicQuadraticsInAPowerSplit(Entity denominator, Entity.Variable x, int step)
         {
+            var (low, middleDegree, high) = (EInteger.Zero, EInteger.FromInt32(step), EInteger.FromInt32(2 * step));
             var changed = false;
             Entity product = Number.Integer.One;
             foreach (var factor in Mulf.LinearChildren(denominator))
             {
                 var (@base, power) = factor is Powf(var b, Number.Integer { EInteger.Sign: > 0 } p) ? (b, p) : (factor, Number.Integer.One);
+                // A factor made monic has its coefficients over the leading one's symbols: split what is
+                // over the bar, and keep the bar.
+                Entity below = Number.Integer.One;
+                if (@base is (Sumf or Minusf) && @base.Nodes.Any(node => node is Divf(_, var under) && under.Vars.Any())
+                    && Functions.SingleQuotient.Of(Functions.SingleQuotient.Combine(@base)) is var (overTheBar, underTheBar)
+                    && !underTheBar.ContainsNode(x) && underTheBar != Number.Integer.One)
+                    (@base, below) = (overTheBar, underTheBar);
                 if (@base is not (Sumf or Minusf) || !@base.ContainsNode(x) || !@base.Vars.Any(v => v != x)
                     || !TreeAnalyzer.TryGetPolynomial(@base, x, out var read)
-                    || !read.Keys.All(degree => degree.Equals(EInteger.Zero) || degree.Equals(EInteger.FromInt32(2)) || degree.Equals(EInteger.FromInt32(4)))
-                    || !read.ContainsKey(EInteger.FromInt32(4)) || !read.ContainsKey(EInteger.Zero))
+                    || !read.Keys.All(degree => degree.Equals(low) || degree.Equals(middleDegree) || degree.Equals(high))
+                    || !read.ContainsKey(high) || !read.ContainsKey(low))
                 {
                     product *= factor;
                     continue;
@@ -15080,16 +15141,16 @@ namespace AngouriMath.Functions.Algebra
                     indices[variables[i]] = i;
                 var at = indices[x];
                 if (MultivariatePolynomial.TryParse(@base, indices) is not { } polynomial
-                    || !polynomial.CoefficientsIn(at).TryGetValue(4, out var a)
+                    || !polynomial.CoefficientsIn(at).TryGetValue(2 * step, out var a)
                     || !polynomial.CoefficientsIn(at).TryGetValue(0, out var c))
                 {
                     product *= factor;
                     continue;
                 }
-                var b2 = polynomial.CoefficientsIn(at).TryGetValue(2, out var middle) ? middle : MultivariatePolynomial.Zero(variables.Count);
+                var b2 = polynomial.CoefficientsIn(at).TryGetValue(step, out var middle) ? middle : MultivariatePolynomial.Zero(variables.Count);
                 if (b2.Multiply(b2) is not { } bSquared || a.Multiply(c) is not { } ac
                     || bSquared.Subtract(ac.ScaleBy(ERational.FromInt32(4))).TrySquareRoot() is not { IsZero: false } root
-                    || a.ScaleBy(ERational.FromInt32(2)).ShiftedBy(at, 2) is not { } twiceA)
+                    || a.ScaleBy(ERational.FromInt32(2)).ShiftedBy(at, step) is not { } twiceA)
                 {
                     product *= factor;
                     continue;
@@ -15098,8 +15159,8 @@ namespace AngouriMath.Functions.Algebra
                 var second = twiceA.Add(b2).Add(root).ToEntity(variables);
                 var scale = a.ScaleBy(ERational.FromInt32(4)).ToEntity(variables);
                 product *= power == Number.Integer.One
-                    ? first * second / scale
-                    : MathS.Pow(first, power) * MathS.Pow(second, power) / MathS.Pow(scale, power);
+                    ? first * second / (scale * below)
+                    : MathS.Pow(first, power) * MathS.Pow(second, power) / MathS.Pow(scale * below, power);
                 changed = true;
             }
             return changed ? product : null;
