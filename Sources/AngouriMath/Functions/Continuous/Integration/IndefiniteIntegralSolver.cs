@@ -4371,6 +4371,141 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A half-odd power of <c>a ± a sec(y)</c> beside one of <c>c + d sec(y)</c>, integrated in
+        /// the half angle's sine, or its cosine for the minus: <c>a + a sec(y)</c> is
+        /// <c>2a cos(y/2)^2/cos(y)</c> and <c>c + d sec(y)</c> is <c>(c cos(y) + d)/cos(y)</c>, the two
+        /// powers of <c>cos(y)</c> make a whole one, and in <c>w = sin(y/2)</c>, where
+        /// <c>cos(y) = 1 - 2w^2</c> and <c>dy = 2 dw/cos(y/2)</c>, what is left is rational beside
+        /// the one root of <c>c + d - 2c w^2</c>. Either sum may be in the cosine instead, and the
+        /// cosecant's, with the sine, are the same by the complement.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's <c>sec(e + f x) sqrt(a + a sec(e + f x))/sqrt(c + d sec(e + f x))</c> and eight more
+        /// of 4.5.2.1 and 4.5.2.3 were declined: the half-angle tangent reads a root of the one sum
+        /// and not of the other. The constants are not written: the answer is the integrand times the
+        /// antiderivative in <c>w</c> over what that differentiates back to, a quotient whose square
+        /// is one; and it is kept only where that square is one at the sampled points.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        internal static Entity? SolveTwoHalfOddPowersOfSecantSumsByTheHalfAngleSine(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
+            if (!Integration.AnsweringTheQuestionAskedOrOneBelow)
+                return null;
+            Entity? argument = null;
+            bool? ofTheSecant = null;
+            foreach (var node in expr.Nodes)
+            {
+                if (TrigonometricArgument(node) is not { } thisArgument || !thisArgument.ContainsNode(x))
+                    continue;
+                if (argument is null)
+                    argument = thisArgument;
+                else if (argument != thisArgument)
+                    return null;
+                var isSecant = node switch { Secantf or Cosf => true, Cosecantf or Sinf => false, _ => (bool?)null };
+                if (isSecant is not { } kind || ofTheSecant is { } seen && seen != kind)
+                    return null;
+                ofTheSecant = kind;
+            }
+            if (argument is null || ofTheSecant is not { } secantKind
+                || !TreeAnalyzer.TryGetPolyLinear(argument, x, out var rate, out _) || rate.ContainsNode(x) || TreeAnalyzer.IsZero(rate))
+                return null;
+            if (!expr.Nodes.All(node => !node.ContainsNode(x)
+                    || node is Variable or Sumf or Minusf or Mulf or Divf or Sinf or Cosf or Secantf or Cosecantf
+                    || node is Powf(_, Number.Rational)))
+                return null;
+            // In y, the argument for the secant and its complement for the cosecant.
+            var y = Variable.CreateUnique(expr, "y_half_sine");
+            var secant = MathS.Sec(y);
+            var cosine = MathS.Cos(y);
+            var inY = expr.Replace(node => node switch
+            {
+                Secantf(var a) when a == argument => secant,
+                Cosf(var a) when a == argument => cosine,
+                Cosecantf(var a) when a == argument => secant,
+                Sinf(var a) when a == argument => cosine,
+                _ => node,
+            });
+            if (inY.ContainsNode(x))
+                return null;
+            (Entity Radicand, Number.Rational Exponent)? square = null, other = null;
+            Entity rest = Number.Integer.One;
+            foreach (var (factor, underneath) in FactorsOfTheIntegrand(inY))
+            {
+                if (factor is Powf(var radicand, Number.Rational exponent) && exponent is not Number.Integer && radicand.ContainsNode(y))
+                {
+                    if (!exponent.ERational.Denominator.Equals(EInteger.FromInt32(2)) || !exponent.ERational.Numerator.CanFitInInt32())
+                        return null;
+                    var power = underneath ? Number.Rational.Create(exponent.ERational.Negate()) : exponent;
+                    if (square is null && ReadAsOnePlusMinusAFunction(radicand, secant, cosine) is not null)
+                        square = (radicand, power);
+                    else if (other is null)
+                        other = (radicand, power);
+                    else
+                        return null;
+                    continue;
+                }
+                rest = underneath ? rest / factor : rest * factor;
+            }
+            if (square is not var (squareRadicand, p) || other is not var (otherRadicand, q)
+                || ReadAsOnePlusMinusAFunction(squareRadicand, secant, cosine) is not var (a, plus, squareInTheSecant)
+                || rest.Nodes.Any(node => node is Powf(var @base, Number.Rational exponent) && exponent is not Number.Integer && @base.ContainsNode(y)))
+                return null;
+            // The other as c + d f, for f the secant or the cosine.
+            var f = Variable.CreateUnique(expr, "f_half_sine");
+            (Entity C, Entity D, bool InTheSecant)? linear = null;
+            foreach (var (function, inTheSecant) in new[] { (secant, true), (cosine, false) })
+            {
+                var read = otherRadicand.Replace(node => node == function ? f : node);
+                if (!read.ContainsNode(y) && TreeAnalyzer.TryGetPolyLinear(read, f, out var d, out var c) && !d.ContainsNode(f) && !c.ContainsNode(f))
+                {
+                    linear = (c, d, inTheSecant);
+                    break;
+                }
+            }
+            if (linear is not var (cOther, dOther, otherInTheSecant))
+                return null;
+            // The powers of cos(y) the two sums bring, which have to make a whole one.
+            var cosinePower = ERational.Zero;
+            if (squareInTheSecant)
+                cosinePower = cosinePower.Subtract(p.ERational);
+            if (otherInTheSecant)
+                cosinePower = cosinePower.Subtract(q.ERational);
+            if (!cosinePower.IsInteger())
+                return null;
+            // Plus: a (1 + sec(y)) is 2a cos(y/2)^2/cos(y), in w = sin(y/2), cos(y) = 1 - 2w^2 and
+            // dy = 2 dw/cos(y/2). Minus: -2a sin(y/2)^2/cos(y), in w = cos(y/2), cos(y) = 2w^2 - 1
+            // and dy = -2 dw/sin(y/2). Either way the half angle's power over it is a whole power of
+            // 1 - w^2.
+            var w = Variable.CreateUnique(expr, "w_half_sine");
+            var cosineInW = plus ? 1 - 2 * MathS.Sqr(w) : 2 * MathS.Sqr(w) - 1;
+            var halfPower = p.ERational.Multiply(ERational.FromInt32(2)).Subtract(ERational.One).Divide(ERational.FromInt32(2));
+            if (!halfPower.IsInteger())
+                return null;
+            var restInW = rest.Replace(node => node == secant ? 1 / cosineInW : node == cosine ? cosineInW : node);
+            var otherInW = otherInTheSecant ? cOther * cosineInW + dOther : cOther + dOther * cosineInW;
+            var inW = (restInW
+                * MathS.Pow(1 - MathS.Sqr(w), Number.Integer.Create(halfPower.ToEInteger()))
+                * MathS.Pow(otherInW, q)
+                * MathS.Pow(cosineInW, Number.Integer.Create(cosinePower.ToEInteger()))).InnerSimplified;
+            // Bare: a zeroth power of 1 - w^2 comes back as one provided it is not zero.
+            inW = Functions.PartialFractions.Bare(inW);
+            if (inW.ContainsNode(y) || inW.ContainsNode(x) || inW.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            var angle = secantKind ? argument : MathS.pi / 2 - argument;
+            var wOfX = plus ? MathS.Sin(angle / 2) : MathS.Cos(angle / 2);
+            var inX = inW.Substitute(w, wOfX) * wOfX.Differentiate(x);
+            // The integrand is that times a constant and a quotient of roots whose square is one; the
+            // square of the constant is 4 (±2a)^(2p) over the rate's.
+            var constantSquared = MathS.Pow(plus ? 2 * a : -2 * a, Number.Integer.Create(p.ERational.Numerator)) * 4 / MathS.Sqr(rate);
+            if (!Functions.PartialFractions.HoldsAtSampledPoints(constantSquared * MathS.Sqr(inX), MathS.Sqr(expr), x))
+                return null;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inW, w, integrateByParts) is not { } inTermsOfW
+                || inTermsOfW.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return expr * inTermsOfW.Substitute(w, wOfX) / inX;
+        }
+
+        /// <summary>
         /// <c>tan(y) tan(2y)</c> written <c>sec(2y) - 1</c>, and the integrand asked again in the
         /// one argument <c>2y</c>.
         /// </summary>
