@@ -761,6 +761,12 @@ namespace AngouriMath.Functions.Algebra
             // And the powers of x it takes out joined to the ones beside them: `x (a x + b x^3 + c x^5)^2`
             // is `x^3 (a + b x^2 + c x^4)^2`, and written `x x^2 (a + b x^2 + c x^4)^2` the splits
             // below read `x` and `x^2` as two factors and the search ran past a minute.
+            // A symbolic quartic in x^2 that is two quadratics in it, written as them first.
+            if (WithSymbolicBiquadraticsSplit(denominator, x) is { } split
+                && (SolveByPartialFractions(numerator / split, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(numerator / split, x, integrateByParts)) is { } overTheQuadratics)
+                return overTheQuadratics;
+
             if (WithTheContentOutOfEachSumFactor(denominator, x) is { } primitive
                 && Patterns.GatherPowersOfOneBase(numerator / primitive) is var overThePrimitives
                 && (SolveByPartialFractions(overThePrimitives, x, integrateByParts)
@@ -14963,6 +14969,70 @@ namespace AngouriMath.Functions.Algebra
                     return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// <paramref name="denominator"/> with each written factor <c>A x^4 + B x^2 + C</c> with symbols
+        /// in it whose discriminant <c>B^2 - 4AC</c> is the square of a polynomial <c>S</c> in them
+        /// written as the two quadratics it is, <c>(2A x^2 + B - S)(2A x^2 + B + S)/(4A)</c>;
+        /// <see langword="null"/> where there is none.
+        /// </summary>
+        /// <remarks>
+        /// The rules below read a written quadratic in <c>x</c>, and a symbolic quartic is nothing
+        /// they factor: <c>x^2/((x^2 - a)(x^4 - 2a x^2 + a^2 - b^2)^2)</c>, which the root of a linear
+        /// makes of Rubi's <c>cot(x)^3 sqrt(a + b sec(x))</c> in the secant, ran past a minute, and
+        /// written over <c>(x^2 - a - b)(x^2 - a + b)</c> it is answered in a fifth of a second.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity? WithSymbolicBiquadraticsSplit(Entity denominator, Entity.Variable x)
+        {
+            var changed = false;
+            Entity product = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+            {
+                var (@base, power) = factor is Powf(var b, Number.Integer { EInteger.Sign: > 0 } p) ? (b, p) : (factor, Number.Integer.One);
+                if (@base is not (Sumf or Minusf) || !@base.ContainsNode(x) || !@base.Vars.Any(v => v != x)
+                    || !TreeAnalyzer.TryGetPolynomial(@base, x, out var read)
+                    || !read.Keys.All(degree => degree.Equals(EInteger.Zero) || degree.Equals(EInteger.FromInt32(2)) || degree.Equals(EInteger.FromInt32(4)))
+                    || !read.ContainsKey(EInteger.FromInt32(4)) || !read.ContainsKey(EInteger.Zero))
+                {
+                    product *= factor;
+                    continue;
+                }
+                var variables = @base.Vars.OrderBy(v => v.Name, System.StringComparer.Ordinal).ToList();
+                if (variables.Count > MultivariatePolynomial.MaxVariables)
+                {
+                    product *= factor;
+                    continue;
+                }
+                var indices = new Dictionary<Variable, int>();
+                for (var i = 0; i < variables.Count; i++)
+                    indices[variables[i]] = i;
+                var at = indices[x];
+                if (MultivariatePolynomial.TryParse(@base, indices) is not { } polynomial
+                    || !polynomial.CoefficientsIn(at).TryGetValue(4, out var a)
+                    || !polynomial.CoefficientsIn(at).TryGetValue(0, out var c))
+                {
+                    product *= factor;
+                    continue;
+                }
+                var b2 = polynomial.CoefficientsIn(at).TryGetValue(2, out var middle) ? middle : MultivariatePolynomial.Zero(variables.Count);
+                if (b2.Multiply(b2) is not { } bSquared || a.Multiply(c) is not { } ac
+                    || bSquared.Subtract(ac.ScaleBy(ERational.FromInt32(4))).TrySquareRoot() is not { IsZero: false } root
+                    || a.ScaleBy(ERational.FromInt32(2)).ShiftedBy(at, 2) is not { } twiceA)
+                {
+                    product *= factor;
+                    continue;
+                }
+                var first = twiceA.Add(b2).Subtract(root).ToEntity(variables);
+                var second = twiceA.Add(b2).Add(root).ToEntity(variables);
+                var scale = a.ScaleBy(ERational.FromInt32(4)).ToEntity(variables);
+                product *= power == Number.Integer.One
+                    ? first * second / scale
+                    : MathS.Pow(first, power) * MathS.Pow(second, power) / MathS.Pow(scale, power);
+                changed = true;
+            }
+            return changed ? product : null;
         }
 
         /// <summary>
