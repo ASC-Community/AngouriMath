@@ -193,6 +193,18 @@ of a linear over a linear, which is answered in a second
 | `"1/(sqrt(a + i*a*tan(x))*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 2,217 characters |
 | `"1/((a + i*a*tan(x))^(3/2)*(c + d*tan(x))^(5/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 3,333 characters |
 
+### A symbol shared by a numerator sum's coefficients is taken out before the partial fractions
+
+**Answers where there were none.** `(b d + 2c d x)^9/(a + b x + c x^2)^3` ran past a minute, where
+`(b + 2c x)^9/(a + b x + c x^2)^3` was answered in two seconds: the shared `d` stood in every coefficient the
+partial fractions divide. It is taken out in front of the integral first
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(b*d + 2*c*d*x)^9/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 76,249 characters, the length the content-free one already had |
+| `"(b*d + 2*c*d*x)^8/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 65,236 characters |
+
 ### A symbolic quadratic with a square discriminant is split into its linears before the division
 
 **Answers where there were none.** `(d + e x)^8/(a d e + (c d^2 + a e^2) x + c d e x^2)^2` ran past a minute, with
