@@ -235,6 +235,20 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### An odd power of a quadratic's derivative over a power of the quadratic is integrated in the quadratic
+
+**Shorter answers, and answers where there were none.** `(b + 2c x)^9/(a + b x + c x^2)^3` was answered through the
+partial fractions in 76,153 characters, with a case for each sign of the discriminant. In `u = a + b x + c x^2` an
+odd power of a multiple of the derivative is a polynomial in `u` over a power of it, since
+`(b + 2c x)^2 = 4c u + b^2 - 4ac`, and the answer is a few powers of the quadratic. The same with a symbol shared
+by the linear's coefficients, `(b d + 2c d x)^9`, which ran past a minute
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(b + 2*c*x)^9/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute; 76,153 characters on the unreleased master | 607 characters |
+| `"(b*d + 2*c*d*x)^9/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 611 characters |
+
 ### Half-odd powers of `a + a sec` and `c + d sec` together are integrated in the half angle's sine
 
 **Answers where there were none.** `sec(e + f x) sqrt(a + a sec(e + f x))/sqrt(c + d sec(e + f x))` was declined,
