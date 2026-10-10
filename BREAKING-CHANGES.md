@@ -262,6 +262,23 @@ left is rational beside one root ([#718](https://github.com/asc-community/Angour
 | `"sec(e + f*x)*sqrt(a + a*sec(e + f*x))/sqrt(c + d*sec(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | 1,294 characters |
 | `"sec(e + f*x)^2/(sqrt(a + a*sec(e + f*x))*sqrt(c + d*sec(e + f*x)))".ToEntity().Integrate("x")` | `integral(...)` | 13,563 characters, a case for each sign of the root's leading coefficient |
 
+### An odd rational function with symbols in it is integrated in the square of the variable
+
+**Answers where there were none, shorter ones, and sooner.** `(A + B x^2)/(x (a + b x^2 + c x^4)^3)` was declined, and so were
+`x^3` in place of `x`, `1/(x^5 (d + e x^2)(a + b x^2 + c x^4))` and `1/(x (d + e x^2)(a + c x^4)^2)`, Rubi's 1.2.2.4, and
+`(e x + g x^3)/(a + b x^2 + c x^4)^3`, 1.2.2.5; on the unreleased master each took a minute or more. A rational function
+with symbols in it, past the third degree below the bar, whose one side holds only odd powers of x and the other only
+even ones, is integrated in `u = x^2` before the partial fractions: `x N(x^2)/D(x^2) dx` is `N(u)/(2 D(u)) du`, and
+`N(x^2)/(x D(x^2)) dx` is `N(u)/(2u D(u)) du`, where the written factors keep their shape. Each of these takes under a
+second, in 1,400 to 4,300 characters. Where the unreleased master answered already, the answers are a third to a half
+the size: `(A + B x^2)/(x^3 (a + b x^2))` was 656 characters and is 174
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(A + B*x^2)/(x*(a + b*x^2 + c*x^4)^3)".ToEntity().Integrate("x")` | `integral(...)`; no answer within 60 s on the unreleased master | the antiderivative, in 0.7 s |
+| `"(A + B*x^2)/(x^3*(a + b*x^2))".ToEntity().Integrate("x")` | `integral(...)` | `(-A/(a x^2) + (B a - A b)/a^2 ln(x^2) + (A b^2 - B a b)/(a^2 b) ln(b x^2 + a))/2` |
+
 ### The secant beside powers of `a + a sec` and `c - c sec` is integrated in the first sum
 
 **Answers where there were none.** `sec(e + f x) (a + a sec(e + f x))^m sqrt(c - c sec(e + f x))` was declined, with
