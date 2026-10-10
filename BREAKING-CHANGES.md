@@ -296,12 +296,12 @@ left is rational beside one root ([#718](https://github.com/asc-community/Angour
 ### An odd rational function with symbols in it is integrated in the square of the variable
 
 **Answers where there were none, shorter ones, and sooner.** `(A + B x^2)/(x (a + b x^2 + c x^4)^3)` was declined, and so were
-`x^3` in place of `x`, `1/(x^5 (d + e x^2)(a + b x^2 + c x^4))` and `1/(x (d + e x^2)(a + c x^4)^2)`, Rubi's 1.2.2.4, and
-`(e x + g x^3)/(a + b x^2 + c x^4)^3`, 1.2.2.5; on the unreleased master each took a minute or more. A rational function
+`x^3` in place of `x`, `1/(x^5 (d + g x^2)(a + b x^2 + c x^4))` and `1/(x (d + g x^2)(a + c x^4)^2)`, Rubi's 1.2.2.4, and
+`(g x + f x^3)/(a + b x^2 + c x^4)^3`, 1.2.2.5, and `1/(x^5 (a + b x^2)^10)`, 1.1.2.2; on the unreleased master each ran past its budget, and several past a minute. A rational function
 with symbols in it, past the third degree below the bar, whose one side holds only odd powers of x and the other only
 even ones, is integrated in `u = x^2` before the partial fractions: `x N(x^2)/D(x^2) dx` is `N(u)/(2 D(u)) du`, and
 `N(x^2)/(x D(x^2)) dx` is `N(u)/(2u D(u)) du`, where the written factors keep their shape. Each of these takes under a
-second, in 1,400 to 4,300 characters. Where the unreleased master answered already, the answers are a third to a half
+second, in 650 to 4,200 characters. Where the unreleased master answered already, the answers are a third to a half
 the size: `(A + B x^2)/(x^3 (a + b x^2))` was 656 characters and is 174
 ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
 
