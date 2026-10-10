@@ -193,6 +193,21 @@ of a linear over a linear, which is answered in a second
 | `"1/(sqrt(a + i*a*tan(x))*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 2,217 characters |
 | `"1/((a + i*a*tan(x))^(3/2)*(c + d*tan(x))^(5/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 3,333 characters |
 
+### A symbolic quadratic with a square discriminant is split into its linears before the division
+
+**Answers where there were none.** `(d + e x)^8/(a d e + (c d^2 + a e^2) x + c d e x^2)^2` ran past a minute, with
+eleven more of Rubi's 1.2.1.2: a power of a linear over a power of a quadratic that is that linear times another.
+The quadratic's discriminant is the square of a polynomial in the symbols, so it is written as its two linears,
+also where it has been made monic and its coefficients stand over the leading one; the power the numerator shares
+then cancels before the division of the improper fraction
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(d + e*x)^8/(a*d*e + (c*d^2 + a*e^2)*x + c*d*e*x^2)^2".ToEntity().Integrate("x")` | past a minute | 5,126 characters |
+| `"(a + b*x)^6/(a*c + (b*c + a*d)*x + b*d*x^2)^2".ToEntity().Integrate("x")` | past a minute | 3,592 characters |
+| `"csc(e + f*x)^3/(a + b*tan(e + f*x)^2)^2".ToEntity().Integrate("x")` | `integral(...)` | 7,992 characters |
+
 ### One linear twice is not two linear powers
 
 **Answers that had no value.** `(a c + b c x)^(-3 - 2 p) (f + g x) (a^2 + 2 a b x + b^2 x^2)^p` was answered
