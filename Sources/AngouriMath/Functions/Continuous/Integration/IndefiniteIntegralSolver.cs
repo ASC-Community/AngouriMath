@@ -721,6 +721,75 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// An odd rational function <c>N/D</c> with symbols in it, past the third degree below the
+        /// bar, in <c>u = x^2</c>: one side holds only odd powers of x and the other only even
+        /// ones, so <c>N/D dx</c> is <c>N1(u)/(2 D(u)) du</c> for an odd numerator <c>x N1(x^2)</c>,
+        /// and <c>N(u)/(2u D1(u)) du</c> for an odd denominator <c>x D1(x^2)</c>.
+        /// </summary>
+        /// <remarks>
+        /// In x the partial fractions split `(A + B x^2)/(x (a + b x^2 + c x^4)^3)` at x and carried
+        /// a polynomial of the eleventh degree over the cube of the quartic through the reduction,
+        /// past a minute; in u it is `(A + B u)/(2u (a + b u + c u^2)^3)`, answered in a tenth of a
+        /// second. Rubi's 1.2.2.4 and 1.2.2.5.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity? InTheSquareAnOddRationalFunction(Entity numerator, Entity denominator, Entity.Variable x, bool integrateByParts)
+        {
+            if (!(numerator + denominator).Vars.Any(symbol => symbol != x)
+                || !TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) || above.Count == 0
+                || !TreeAnalyzer.TryGetPolynomial(denominator, x, out var below) || below.Count == 0
+                || above.Values.Concat(below.Values).Any(coefficient => coefficient.ContainsNode(x))
+                || above.Keys.Concat(below.Keys).Any(power => power.Sign < 0 || !power.CanFitInInt32())
+                || below.Keys.Max()!.CompareTo(EInteger.FromInt32(4)) < 0)
+                return null;
+            static bool AllOfParity(Dictionary<EInteger, Entity> polynomial, bool odd)
+                => polynomial.Keys.All(power => power.IsEven != odd);
+            var oddAbove = AllOfParity(above, odd: true) && AllOfParity(below, odd: false);
+            var oddBelow = AllOfParity(above, odd: false) && AllOfParity(below, odd: true);
+            if (!oddAbove && !oddBelow)
+                return null;
+            var u = Variable.CreateUnique(numerator + denominator, "u_sq");
+            // An even side as it is written, its powers of x halved; one with x otherwise, and an
+            // odd side, from its coefficients, a power of x taken off first.
+            Entity? AsWritten(Entity side)
+            {
+                var halved = side.Replace(node => node is Powf(var b, Number.Integer e) && b == x && e.EInteger.IsEven
+                    ? MathS.Pow(u, Number.Integer.Create(e.EInteger.Divide(2))) : node);
+                return halved.ContainsNode(x) ? null : halved;
+            }
+            Entity FromCoefficients(Dictionary<EInteger, Entity> polynomial, int shift)
+            {
+                Entity sum = Number.Integer.Zero;
+                foreach (var pair in polynomial.OrderBy(pair => pair.Key))
+                {
+                    var k = (pair.Key.ToInt32Unchecked() - shift) / 2;
+                    sum += k == 0 ? pair.Value : pair.Value * (k == 1 ? u : MathS.Pow(u, k));
+                }
+                return sum;
+            }
+            // An odd side with an odd power of x written among its factors has one x taken off it
+            // there, and the rest is read as it is written: `x^5 (d + e x^2)(a + b x^2 + c x^4)` is
+            // `x` times `u^2 (d + e u)(a + b u + c u^2)`, where from its coefficients it is a sextic
+            // in u that nothing factors.
+            Entity? WithAnXTakenOff(Entity side)
+            {
+                var factors = Mulf.LinearChildren(side).ToList();
+                var at = factors.FindIndex(factor => factor == x || factor is Powf(var b, Number.Integer e) && b == x && !e.EInteger.IsEven);
+                if (at < 0)
+                    return null;
+                factors[at] = factors[at] == x ? Number.Integer.One
+                    : MathS.Pow(x, Number.Integer.Create(((Number.Integer)((Powf)factors[at]).Exponent).EInteger.Subtract(EInteger.One)));
+                return AsWritten(factors.Aggregate((Entity)Number.Integer.One, (product, factor) => factor == Number.Integer.One ? product : product == Number.Integer.One ? factor : product * factor));
+            }
+            var top = oddAbove ? WithAnXTakenOff(numerator) ?? FromCoefficients(above, 1) : AsWritten(numerator) ?? FromCoefficients(above, 0);
+            var bottom = oddBelow ? WithAnXTakenOff(denominator) ?? FromCoefficients(below, 1) : AsWritten(denominator) ?? FromCoefficients(below, 0);
+            var inU = oddAbove ? top / (2 * bottom) : top / (2 * u * bottom);
+            return Integration.ComputeAsAQuestionOfItsOwn(inU, u, integrateByParts) is { } answer
+                ? answer.Substitute(u, MathS.Pow(x, 2))
+                : null;
+        }
+
+        /// <summary>
         /// A quotient of polynomials, split into two smaller quotients and integrated in two
         /// parts — at a rational root of the denominator where it has one, and otherwise at a
         /// coprime pair of its irreducible factors.
@@ -770,6 +839,10 @@ namespace AngouriMath.Functions.Algebra
             // fractions wrote seventy thousand characters for `(b + 2c x)^9/(a + b x + c x^2)^3`.
             if (InTheQuadraticAnOddPowerOfItsDerivative(numerator, denominator, x, integrateByParts) is { } inTheQuadratic)
                 return inTheQuadratic;
+
+            // An odd rational function with symbols in it, in u = x^2: see InTheSquareAnOddRationalFunction.
+            if (InTheSquareAnOddRationalFunction(numerator, denominator, x, integrateByParts) is { } inTheSquare)
+                return inTheSquare;
 
             // A power of a sum in the numerator whose coefficients share a symbol, `(b d + 2c d x)^9`,
             // is that symbol's power times one of a sum without it: written so, it is a power of the
