@@ -1405,9 +1405,10 @@ namespace AngouriMath.Functions.Algebra
             foreach (var value in rest.Values)
                 everything += value;
             Entity inNames = Number.Integer.Zero;
-            foreach (var (power, value) in rest.OrderBy(pair => pair.Key))
+            foreach (var pair in rest.OrderBy(pair => pair.Key))
             {
-                var coefficient = value;
+                var power = pair.Key;
+                var coefficient = pair.Value;
                 if (coefficient is not (Variable or Number))
                 {
                     var name = Variable.CreateUnique(everything, "k_r");
