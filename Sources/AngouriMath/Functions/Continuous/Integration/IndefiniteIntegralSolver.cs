@@ -1071,7 +1071,11 @@ namespace AngouriMath.Functions.Algebra
                 return besideABlock;
             // And a power of another linear beside such a block, split at its root the same way:
             // `1/((u - c)(a + b u^3))`, which writing `1/(x (a + b (c + d x)^3))` in `c + d x` makes.
-            if (IntegrateOverAPowerOfALinearBesideABlock(numerator, denominator, x, integrateByParts) is { } besideABlockAtARoot)
+            // Checked before it is given, as the split over written factors is: over `(a + c x^4)^3`
+            // with `(d + e x)^2` beside it the answer was wrong at every point.
+            // https://github.com/asc-community/AngouriMath/issues/1838
+            if (IntegrateOverAPowerOfALinearBesideABlock(numerator, denominator, x, integrateByParts) is { } besideABlockAtARoot
+                && Functions.PartialFractions.DerivativeHoldsAtSampledPoints(besideABlockAtARoot, numerator / denominator, x))
                 return besideABlockAtARoot;
 
             // Blocks that are each a polynomial in one power of x past the second,
@@ -1253,7 +1257,7 @@ namespace AngouriMath.Functions.Algebra
                     pastTheSecondDegree |= TreeAnalyzer.TryGetPolynomial(written, x, out var terms) && terms.Keys.Any(power => power.CompareTo(EInteger.FromInt32(2)) > 0);
                 }
             }
-            if (k == 0 || k > MaximumPowerOfXBesideABlock || !pastTheSecondDegree || !block.ContainsNode(x) || !block.Vars.Any(symbol => symbol != x))
+            if (k == 0 || k > MaximumPowerOfXOverABlock || !pastTheSecondDegree || !block.ContainsNode(x) || !block.Vars.Any(symbol => symbol != x))
                 return null;
             if (!TreeAnalyzer.TryGetPolynomial(block, x, out var below) || !TreeAnalyzer.TryGetPolynomial(numerator, x, out var above))
                 return null;
@@ -1589,10 +1593,18 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// The largest power of x, and the largest degree of the block beside it, that
-        /// <see cref="IntegrateOverAPowerOfXBesideABlock"/> takes: Rubi's suite goes to twelve.
+        /// The largest degree of a block beside a power of x that
+        /// <see cref="IntegrateOverAPowerOfXBesideABlock"/> takes; also the largest power of a
+        /// linear beside a block, and of x in blocks of <see cref="IntegrateOverBlocksInAPowerOfX"/>.
         /// </summary>
         private const int MaximumPowerOfXBesideABlock = 12;
+
+        /// <summary>
+        /// The largest power of x that <see cref="IntegrateOverAPowerOfXBesideABlock"/> takes. The
+        /// series it writes has one term per power of x, so the cost grows linearly in it. Rubi's
+        /// suite asks for up to <c>x^17</c>, beside <c>(a + b x^3)^3</c>.
+        /// </summary>
+        private const int MaximumPowerOfXOverABlock = 24;
 
         /// <summary>
         /// A polynomial over a power of a binomial, <c>P(x)/(a + b x^n)^k</c> with <c>n &gt;= 3</c>
