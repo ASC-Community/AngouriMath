@@ -1059,7 +1059,11 @@ namespace AngouriMath.Functions.Algebra
                 return besideABlock;
             // And a power of another linear beside such a block, split at its root the same way:
             // `1/((u - c)(a + b u^3))`, which writing `1/(x (a + b (c + d x)^3))` in `c + d x` makes.
-            if (IntegrateOverAPowerOfALinearBesideABlock(numerator, denominator, x, integrateByParts) is { } besideABlockAtARoot)
+            // Checked before it is given, as the split over written factors is: over `(a + c x^4)^3`
+            // with `(d + e x)^2` beside it the answer was wrong at every point.
+            // https://github.com/asc-community/AngouriMath/issues/1838
+            if (IntegrateOverAPowerOfALinearBesideABlock(numerator, denominator, x, integrateByParts) is { } besideABlockAtARoot
+                && Functions.PartialFractions.DerivativeHoldsAtSampledPoints(besideABlockAtARoot, numerator / denominator, x))
                 return besideABlockAtARoot;
 
             // Blocks that are each a polynomial in one power of x past the second,
