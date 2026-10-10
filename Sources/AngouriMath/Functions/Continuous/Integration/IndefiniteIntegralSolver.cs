@@ -771,6 +771,21 @@ namespace AngouriMath.Functions.Algebra
             if (InTheQuadraticAnOddPowerOfItsDerivative(numerator, denominator, x, integrateByParts) is { } inTheQuadratic)
                 return inTheQuadratic;
 
+            // A power of a sum in the numerator whose coefficients share a symbol, `(b d + 2c d x)^9`,
+            // is that symbol's power times one of a sum without it: written so, it is a power of the
+            // denominator's derivative, and the division of the improper fraction as written ran past
+            // a minute where `(b + 2c x)^9/(a + b x + c x^2)^3` is answered in two seconds.
+            // The content comes out in front of the integral, not into the numerator, where its
+            // symbols would stand in every coefficient the rules below divide.
+            if (WithTheContentOutOfEachSumFactor(numerator, x) is { } numeratorWithoutContent
+                && Mulf.LinearChildren(numeratorWithoutContent).ToList() is var parts
+                && parts.Aggregate((Entity)Number.Integer.One, (product, part) => part.ContainsNode(x) ? product : product * part) is var content
+                && parts.Aggregate((Entity)Number.Integer.One, (product, part) => part.ContainsNode(x) ? product * part : product) is var contentFree
+                && Patterns.GatherPowersOfOneBase(contentFree / denominator) is var overTheContentFree
+                && (SolveByPartialFractions(overTheContentFree, x, integrateByParts)
+                    ?? Integration.ComputeIndefiniteIntegral(overTheContentFree, x, integrateByParts)) is { } withoutTheContent)
+                return content * withoutTheContent;
+
             // A quotient with x below a bar inside it, `1/(a + b/x)`, written over one bar: every
             // rule below reads the numerator and the denominator as polynomials, and `a + b/x` is
             // not one, where `x/(a x + b)` is read at once. Once: what one bar gives has none.
