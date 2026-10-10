@@ -760,10 +760,10 @@ namespace AngouriMath.Functions.Algebra
             Entity FromCoefficients(Dictionary<EInteger, Entity> polynomial, int shift)
             {
                 Entity sum = Number.Integer.Zero;
-                foreach (var (power, coefficient) in polynomial.OrderBy(pair => pair.Key))
+                foreach (var pair in polynomial.OrderBy(pair => pair.Key))
                 {
-                    var k = (power.ToInt32Unchecked() - shift) / 2;
-                    sum += k == 0 ? coefficient : coefficient * (k == 1 ? u : MathS.Pow(u, k));
+                    var k = (pair.Key.ToInt32Unchecked() - shift) / 2;
+                    sum += k == 0 ? pair.Value : pair.Value * (k == 1 ? u : MathS.Pow(u, k));
                 }
                 return sum;
             }
