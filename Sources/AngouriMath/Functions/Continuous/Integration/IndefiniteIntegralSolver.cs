@@ -657,6 +657,70 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <c>K L^m/Q^n</c> for a quadratic <c>Q = A x^2 + B x + C</c>, a linear <c>L</c> a multiple
+        /// <c>lambda</c> of its derivative and an odd <c>m &gt;= 3</c>, in <c>u = Q</c>: <c>L^m dx</c> is
+        /// <c>lambda^m (Q')^(m - 1) du</c>, and <c>(Q')^2 = 4A u + B^2 - 4AC</c>, so the integrand is
+        /// <c>K lambda^m (4A u + B^2 - 4AC)^((m - 1)/2)/u^n</c>, a polynomial over a power of <c>u</c>.
+        /// <see langword="null"/> for anything else.
+        /// </summary>
+        /// <remarks>
+        /// Rubi's 1.2.1.2 has <c>(b d + 2c d x)^9/(a + b x + c x^2)^3</c>; through the partial fractions
+        /// its answer was seventy-six thousand characters, with a case for each sign of the
+        /// discriminant, where in <c>u</c> it is a sum of a few powers.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity? InTheQuadraticAnOddPowerOfItsDerivative(Entity numerator, Entity denominator, Entity.Variable x, bool integrateByParts)
+        {
+            Entity? linear = null;
+            var m = 0;
+            Entity constant = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(numerator))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant *= factor;
+                    continue;
+                }
+                if (linear is not null || factor is not Powf(var b, Number.Integer { EInteger: var power }) || !power.CanFitInInt32())
+                    return null;
+                (linear, m) = (b, power.ToInt32Unchecked());
+            }
+            Entity? quadratic = null;
+            var n = 0;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+            {
+                if (!factor.ContainsNode(x))
+                {
+                    constant /= factor;
+                    continue;
+                }
+                var (@base, power) = factor is Powf(var b, Number.Integer { EInteger: var p }) && p.CanFitInInt32() ? (b, p.ToInt32Unchecked()) : (factor, 1);
+                if (quadratic is not null)
+                    return null;
+                (quadratic, n) = (@base, power);
+            }
+            if (linear is null || quadratic is null || m < 3 || m % 2 == 0 || n < 1
+                || !TreeAnalyzer.TryGetPolyLinear(linear, x, out var p1, out var q1) || p1.ContainsNode(x) || q1.ContainsNode(x)
+                || !TreeAnalyzer.TryGetPolynomial(quadratic, x, out var read) || read.Count == 0
+                || !read.Keys.All(k => k.Sign >= 0 && k.CompareTo(EInteger.FromInt32(2)) <= 0) || !read.ContainsKey(EInteger.FromInt32(2)))
+                return null;
+            Entity Coefficient(int k) => read.TryGetValue(EInteger.FromInt32(k), out var c) ? c : Number.Integer.Zero;
+            var (a2, a1, a0) = (Coefficient(2), Coefficient(1), Coefficient(0));
+            if (a2.ContainsNode(x) || a1.ContainsNode(x) || a0.ContainsNode(x)
+                || !Functions.PartialFractions.IsZeroAsAValue(p1 * a1 - 2 * a2 * q1))
+                return null;
+            var lambda = p1 / (2 * a2);
+            var u = Variable.CreateUnique(numerator / denominator, "u_quadratic");
+            var inU = (constant * MathS.Pow(lambda, Number.Integer.Create(m))
+                * MathS.Pow(4 * a2 * u + a1 * a1 - 4 * a2 * a0, Number.Integer.Create((m - 1) / 2))
+                / MathS.Pow(u, Number.Integer.Create(n))).InnerSimplified;
+            if (Integration.ComputeAsAQuestionOfItsOwn(inU, u, integrateByParts) is not { } inTermsOfU
+                || inTermsOfU.Nodes.Any(node => node == MathS.NaN))
+                return null;
+            return inTermsOfU.Substitute(u, quadratic);
+        }
+
+        /// <summary>
         /// A quotient of polynomials, split into two smaller quotients and integrated in two
         /// parts — at a rational root of the denominator where it has one, and otherwise at a
         /// coprime pair of its irreducible factors.
@@ -700,6 +764,12 @@ namespace AngouriMath.Functions.Algebra
         {
             if (!TryReadAsQuotient(expr, out var numerator, out var denominator))
                 return null;
+
+            // An odd power of a multiple of the denominator's derivative over a power of a quadratic,
+            // in the quadratic: a polynomial over a power of one variable, where the partial
+            // fractions wrote seventy thousand characters for `(b + 2c x)^9/(a + b x + c x^2)^3`.
+            if (InTheQuadraticAnOddPowerOfItsDerivative(numerator, denominator, x, integrateByParts) is { } inTheQuadratic)
+                return inTheQuadratic;
 
             // A quotient with x below a bar inside it, `1/(a + b/x)`, written over one bar: every
             // rule below reads the numerator and the denominator as polynomials, and `a + b/x` is

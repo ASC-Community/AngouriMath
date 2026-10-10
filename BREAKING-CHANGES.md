@@ -193,6 +193,20 @@ of a linear over a linear, which is answered in a second
 | `"1/(sqrt(a + i*a*tan(x))*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 2,217 characters |
 | `"1/((a + i*a*tan(x))^(3/2)*(c + d*tan(x))^(5/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 3,333 characters |
 
+### An odd power of a quadratic's derivative over a power of the quadratic is integrated in the quadratic
+
+**Shorter answers, and answers where there were none.** `(b + 2c x)^9/(a + b x + c x^2)^3` was answered through the
+partial fractions in 76,153 characters, with a case for each sign of the discriminant. In `u = a + b x + c x^2` an
+odd power of a multiple of the derivative is a polynomial in `u` over a power of it, since
+`(b + 2c x)^2 = 4c u + b^2 - 4ac`, and the answer is a few powers of the quadratic. The same with a symbol shared
+by the linear's coefficients, `(b d + 2c d x)^9`, which ran past a minute
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(b + 2*c*x)^9/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute; 76,153 characters on the unreleased master | 607 characters |
+| `"(b*d + 2*c*d*x)^9/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 611 characters |
+
 ### A symbolic quadratic with a square discriminant is split into its linears before the division
 
 **Answers where there were none.** `(d + e x)^8/(a d e + (c d^2 + a e^2) x + c d e x^2)^2` ran past a minute, with
