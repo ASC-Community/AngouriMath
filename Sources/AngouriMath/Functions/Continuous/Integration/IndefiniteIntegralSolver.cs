@@ -1272,7 +1272,7 @@ namespace AngouriMath.Functions.Algebra
             }
 
             // R = (N - P B)/x^k, whose coefficient of x^(m - k) is that of x^m in N - P B.
-            Entity remainder = Number.Integer.Zero;
+            var remainder = new Dictionary<int, Entity>();
             for (var m = k; m <= System.Math.Max(degreeAbove, degreeBelow + k - 1); m++)
             {
                 var coefficient = Coefficient(above, m);
@@ -1280,7 +1280,7 @@ namespace AngouriMath.Functions.Algebra
                     coefficient -= series[j] * Coefficient(below, m - j);
                 coefficient = Functions.PartialFractions.InLowestTermsOverTheSymbols(coefficient);
                 if (!VanishesIdentically(coefficient))
-                    remainder += m == k ? coefficient : coefficient * MathS.Pow(x, m - k);
+                    remainder[m - k] = coefficient;
             }
 
             // The part over x^k term by term, and the rest over the block as it is written.
@@ -1290,11 +1290,49 @@ namespace AngouriMath.Functions.Algebra
                     overX += j == k - 1
                         ? series[j] * IntegralPatterns.AntiderivativeLog(x)
                         : series[j] * MathS.Pow(x, j - k + 1) / (j - k + 1);
-            if (remainder == Number.Integer.Zero)
+            if (remainder.Count == 0)
                 return overX;
-            return Integration.ComputeIndefiniteIntegral(remainder / block, x, integrateByParts) is { } overTheBlock
+            return IntegratedInNamedCoefficients(remainder, block, x, integrateByParts) is { } overTheBlock
                 ? overX + overTheBlock
                 : null;
+        }
+
+        /// <summary>
+        /// The integral of <c>R/B</c>, for a polynomial <c>R</c> in x given by its coefficients, with each coefficient of
+        /// <c>R</c> that is more than a symbol or a number a fresh symbol while it is integrated,
+        /// and put back in the answer.
+        /// </summary>
+        /// <remarks>
+        /// What a reduction leaves over its block has coefficients the reduction computed, such as
+        /// <c>(a^2 g - 3 a b d + 6 b^2 c)/a^2</c>, and the substitution search simplifies each
+        /// quotient it tries in them. Over <c>(a/b + x^3)^3</c> that took 40 s to decline where three
+        /// symbols take it 45 ms, and over <c>(a + b x^2 + c x^4)</c> past a minute.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity? IntegratedInNamedCoefficients(Dictionary<int, Entity> rest, Entity block, Entity.Variable x, bool integrateByParts)
+        {
+            var named = new List<(Variable Name, Entity Value)>();
+            Entity everything = block;
+            foreach (var value in rest.Values)
+                everything += value;
+            Entity inNames = Number.Integer.Zero;
+            foreach (var (power, value) in rest.OrderBy(pair => pair.Key))
+            {
+                var coefficient = value;
+                if (coefficient is not (Variable or Number))
+                {
+                    var name = Variable.CreateUnique(everything, "k_r");
+                    everything += name;
+                    named.Add((name, coefficient));
+                    coefficient = name;
+                }
+                inNames += power == 0 ? coefficient : coefficient * (power == 1 ? x : MathS.Pow(x, power));
+            }
+            if (Integration.ComputeIndefiniteIntegral(inNames / block, x, integrateByParts) is not { } answer)
+                return null;
+            foreach (var (name, value) in named)
+                answer = answer.Substitute(name, value);
+            return answer;
         }
 
         /// <summary>
@@ -1777,13 +1815,13 @@ namespace AngouriMath.Functions.Algebra
             Entity answer = Number.Integer.Zero;
             foreach (var pair in overPowers.OrderByDescending(pair => pair.Key))
                 answer = answer + pair.Value / (pair.Key == 1 ? trinomial : MathS.Pow(trinomial, pair.Key));
-            Entity rest = Number.Integer.Zero;
-            foreach (var pair in atThisPower.OrderBy(pair => pair.Key))
+            var rest = new Dictionary<int, Entity>();
+            foreach (var pair in atThisPower)
                 if (!VanishesIdentically(pair.Value))
-                    rest = rest + pair.Value * (pair.Key == 0 ? Number.Integer.One : pair.Key == 1 ? x : MathS.Pow(x, pair.Key));
-            if (rest != Number.Integer.Zero)
+                    rest[pair.Key] = pair.Value;
+            if (rest.Count > 0)
             {
-                if (Integration.ComputeIndefiniteIntegral(rest / trinomial, x, integrateByParts) is not { } overTheTrinomial)
+                if (IntegratedInNamedCoefficients(rest, trinomial, x, integrateByParts) is not { } overTheTrinomial)
                     return null;
                 answer = answer + overTheTrinomial;
             }
