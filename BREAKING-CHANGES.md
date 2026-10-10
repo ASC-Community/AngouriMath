@@ -247,6 +247,25 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A symbolic cubic's linear factors are found before the partial fractions
+
+**Answers where there were none.** `1/(a c h + (b c h + a d h + a c f) x + (b d h + b c f + a d f) x^2 + b d f x^3)`,
+`(a + b x)(c + d x)(h + f x)` multiplied out, was declined, with its square and cube, Rubi's 1.3.1. A polynomial of
+the third degree or more with symbols in it, whose leading and constant coefficients are single terms, is tried
+for linear factors `u ± v x`, with `u` a divisor of the constant term and `v` one of the leading coefficient, as for
+the rational roots of a polynomial over the integers. The factors that divide it exactly are written apart, and
+those the numerator also holds are cancelled first. The same split answers three rows of Rubi's 4.7.2 and 4.7.7,
+whose denominator in the tangent is a product of linears
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a*c*h + (b*c*h + a*d*h + a*c*f)*x + (b*d*h + b*c*f + a*d*f)*x^2 + b*d*f*x^3)".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative, in logarithms of the three linears, 288 characters |
+| the same cubic squared, and cubed | `integral(...)` | answered, in 3,047 and 10,662 characters |
+| `"sec(c + d*x)^6/(a*cos(c + d*x) + b*sin(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | answered, in 5,573 characters |
+| `"sec(c + d*x)^3/(a*cos(c + d*x) + b*sin(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | answered, in 9,322 characters |
+| `"1/(a*sec(x) + b*tan(x))^4".ToEntity().Integrate("x")` | `integral(...)` | answered, in 6,548 characters |
+
 ### An odd power of a quadratic's derivative over a power of the quadratic is integrated in the quadratic
 
 **Shorter answers, and answers where there were none.** `(b + 2c x)^9/(a + b x + c x^2)^3` was answered through the
