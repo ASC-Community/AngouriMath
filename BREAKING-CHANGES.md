@@ -205,6 +205,18 @@ partial fractions divide. It is taken out in front of the integral first
 | `"(b*d + 2*c*d*x)^9/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 76,249 characters, the length the content-free one already had |
 | `"(b*d + 2*c*d*x)^8/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 65,236 characters |
 
+### A power of x past the twelfth beside a block is split off
+
+**Answers where there were none.** `(c + d x^3 + g x^6 + f x^9)/(x^14 (a + b x^3))` was declined, and so were
+`x^13` to `x^17` beside `(a + b x^3)`, its square and its cube, Rubi's 1.1.3.8. The split that writes `N/(x^k B)` as
+`P/x^k + R/B`, with `P` the first `k` terms of the series of `N/B` at 0, took `k` up to 12. It takes `k` up to 24
+now, where the series costs one term per power
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c + d*x^3 + g*x^6 + f*x^9)/(x^14*(a + b*x^3))".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative, in powers of x and the logarithms and arctangent of `a + b x^3`'s factors |
+
 ### A symbolic quadratic with a square discriminant is split into its linears before the division
 
 **Answers where there were none.** `(d + e x)^8/(a d e + (c d^2 + a e^2) x + c d e x^2)^2` ran past a minute, with
