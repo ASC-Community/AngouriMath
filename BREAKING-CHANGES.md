@@ -235,6 +235,19 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A symbolic cubic's linear factors are found before the partial fractions
+
+**Answers where there were none.** `1/(a c e + (b c e + a d e + a c f) x + (b d e + b c f + a d f) x^2 + b d f x^3)`,
+`(a + b x)(c + d x)(e + f x)` multiplied out, was declined, with its square and cube, Rubi's 1.3.1. A polynomial of
+the third degree or more with symbols in it, whose leading and constant coefficients are single terms, is tried
+for linear factors `u ± v x`, with `u` a divisor of the constant term and `v` one of the leading coefficient, as for
+the rational roots of a polynomial over the integers. The factors that divide it exactly are written apart
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a*c*e + (b*c*e + a*d*e + a*c*f)*x + (b*d*e + b*c*f + a*d*f)*x^2 + b*d*f*x^3)".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative, in logarithms of the three linears |
+
 ### An odd power of a quadratic's derivative over a power of the quadratic is integrated in the quadratic
 
 **Shorter answers, and answers where there were none.** `(b + 2c x)^9/(a + b x + c x^2)^3` was answered through the
