@@ -219,6 +219,18 @@ partial fractions divide. It is taken out in front of the integral first
 | `"(b*d + 2*c*d*x)^9/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 76,249 characters, the length the content-free one already had |
 | `"(b*d + 2*c*d*x)^8/(a + b*x + c*x^2)^3".ToEntity().Integrate("x")` | past a minute | 65,236 characters |
 
+### A power of x past the twelfth beside a block is split off
+
+**Answers where there were none.** `(c + d x^3 + g x^6 + f x^9)/(x^14 (a + b x^3))` was declined, and so were
+`x^13` to `x^17` beside `(a + b x^3)`, its square and its cube, Rubi's 1.1.3.8. The split that writes `N/(x^k B)` as
+`P/x^k + R/B`, with `P` the first `k` terms of the series of `N/B` at 0, took `k` up to 12. It takes `k` up to 24
+now, where the series costs one term per power
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c + d*x^3 + g*x^6 + f*x^9)/(x^14*(a + b*x^3))".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative, in powers of x and the logarithms and arctangent of `a + b x^3`'s factors |
+
 ### A symbolic quadratic with a square discriminant is split into its linears before the division
 
 **Answers where there were none.** `(d + e x)^8/(a d e + (c d^2 + a e^2) x + c d e x^2)^2` ran past a minute, with
@@ -249,6 +261,25 @@ after it
 |---|---|---|
 | `"(a*c + b*c*x)^(-3-2*p)*(f + g*x)*(a^2 + 2*a*b*x + b^2*x^2)^p".ToEntity().Integrate("x")` | `integral(...)`; an answer with no value on the unreleased master | the antiderivative |
 
+### A symbolic cubic's linear factors are found before the partial fractions
+
+**Answers where there were none.** `1/(a c h + (b c h + a d h + a c f) x + (b d h + b c f + a d f) x^2 + b d f x^3)`,
+`(a + b x)(c + d x)(h + f x)` multiplied out, was declined, with its square and cube, Rubi's 1.3.1. A polynomial of
+the third degree or more with symbols in it, whose leading and constant coefficients are single terms, is tried
+for linear factors `u ± v x`, with `u` a divisor of the constant term and `v` one of the leading coefficient, as for
+the rational roots of a polynomial over the integers. The factors that divide it exactly are written apart, and
+those the numerator also holds are cancelled first. The same split answers three rows of Rubi's 4.7.2 and 4.7.7,
+whose denominator in the tangent is a product of linears
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"1/(a*c*h + (b*c*h + a*d*h + a*c*f)*x + (b*d*h + b*c*f + a*d*f)*x^2 + b*d*f*x^3)".ToEntity().Integrate("x")` | `integral(...)` | the antiderivative, in logarithms of the three linears, 288 characters |
+| the same cubic squared, and cubed | `integral(...)` | answered, in 3,047 and 10,662 characters |
+| `"sec(c + d*x)^6/(a*cos(c + d*x) + b*sin(c + d*x))".ToEntity().Integrate("x")` | `integral(...)` | answered, in 5,573 characters |
+| `"sec(c + d*x)^3/(a*cos(c + d*x) + b*sin(c + d*x))^4".ToEntity().Integrate("x")` | `integral(...)` | answered, in 9,322 characters |
+| `"1/(a*sec(x) + b*tan(x))^4".ToEntity().Integrate("x")` | `integral(...)` | answered, in 6,548 characters |
+
 ### An odd power of a quadratic's derivative over a power of the quadratic is integrated in the quadratic
 
 **Shorter answers, and answers where there were none.** `(b + 2c x)^9/(a + b x + c x^2)^3` was answered through the
@@ -275,6 +306,23 @@ left is rational beside one root ([#718](https://github.com/asc-community/Angour
 |---|---|---|
 | `"sec(e + f*x)*sqrt(a + a*sec(e + f*x))/sqrt(c + d*sec(e + f*x))".ToEntity().Integrate("x")` | `integral(...)` | 1,294 characters |
 | `"sec(e + f*x)^2/(sqrt(a + a*sec(e + f*x))*sqrt(c + d*sec(e + f*x)))".ToEntity().Integrate("x")` | `integral(...)` | 13,563 characters, a case for each sign of the root's leading coefficient |
+
+### An odd rational function with symbols in it is integrated in the square of the variable
+
+**Answers where there were none, shorter ones, and sooner.** `(A + B x^2)/(x (a + b x^2 + c x^4)^3)` was declined, and so were
+`x^3` in place of `x`, `1/(x^5 (d + g x^2)(a + b x^2 + c x^4))` and `1/(x (d + g x^2)(a + c x^4)^2)`, Rubi's 1.2.2.4, and
+`(g x + f x^3)/(a + b x^2 + c x^4)^3`, 1.2.2.5, and `1/(x^5 (a + b x^2)^10)`, 1.1.2.2; on the unreleased master each ran past its budget, and several past a minute. A rational function
+with symbols in it, past the third degree below the bar, whose one side holds only odd powers of x and the other only
+even ones, is integrated in `u = x^2` before the partial fractions: `x N(x^2)/D(x^2) dx` is `N(u)/(2 D(u)) du`, and
+`N(x^2)/(x D(x^2)) dx` is `N(u)/(2u D(u)) du`, where the written factors keep their shape. Each of these takes under a
+second, in 650 to 4,200 characters. Where the unreleased master answered already, the answers are a third to a half
+the size: `(A + B x^2)/(x^3 (a + b x^2))` was 656 characters and is 174
+([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(A + B*x^2)/(x*(a + b*x^2 + c*x^4)^3)".ToEntity().Integrate("x")` | `integral(...)`; no answer within 60 s on the unreleased master | the antiderivative, in 0.7 s |
+| `"(A + B*x^2)/(x^3*(a + b*x^2))".ToEntity().Integrate("x")` | `integral(...)` | `(-A/(a x^2) + (B a - A b)/a^2 ln(x^2) + (A b^2 - B a b)/(a^2 b) ln(b x^2 + a))/2` |
 
 ### The secant beside powers of `a + a sec` and `c - c sec` is integrated in the first sum
 
