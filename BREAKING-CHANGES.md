@@ -253,6 +253,30 @@ then cancels before the division of the improper fraction
 | `"(a + b*x)^6/(a*c + (b*c + a*d)*x + b*d*x^2)^2".ToEntity().Integrate("x")` | past a minute | 3,592 characters |
 | `"csc(e + f*x)^3/(a + b*tan(e + f*x)^2)^2".ToEntity().Integrate("x")` | `integral(...)` | 7,992 characters |
 
+### What a reduction leaves over its block is integrated in named coefficients
+
+**Answers where there were none, and sooner.** `(c + d x^3 + g x^6 + f x^9)/(x^4 (a + b x^3)^3)` took 42 s on the
+unreleased master, and `x^5`, `x^7` and `x^8` in place of `x^4` took 35 to 50 s, Rubi's 1.1.3.8. Four polynomials
+over `(a + b x^2 + c x^4)^2` and `^3` in 1.2.2.5 ran past two minutes, and
+`(d + f x + g x^2 + h x^3 + k x^4)/(a + b x^2 + c x^4)^3` took 31 s. Two reductions -- the split at a power of x beside
+a block, and the one that takes a polynomial over a power of a trinomial in `x^n` down to its first power --
+integrated what was left over the block with the coefficients they had computed, such as
+`(a^2 g - 3 a b d + 6 b^2 c)/a^2`, and the substitution search spent up to a minute simplifying quotients in them
+before another rule answered. Each such coefficient is a fresh symbol while the rest is integrated now, and is put
+back in the answer. The answers over a power of the trinomial are large, 22,000 to 98,000 characters, and right.
+One answer grew: `1/(x^7 (a + b x^3)(c + d x^3))` took 52 s on the unreleased master for 14,565 characters, and
+takes 6 s for 265,499 now ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"(c + d*x^3 + g*x^6 + f*x^9)/(x^4*(a + b*x^3)^3)".ToEntity().Integrate("x")` | `integral(...)` | 547 characters |
+| `"(c + d*x^3 + g*x^6 + f*x^9)/(x^8*(a + b*x^3)^3)".ToEntity().Integrate("x")` | `integral(...)` | 1,859 characters |
+| `"1/(x^7*(a + b*x^3)*(c + d*x^3))".ToEntity().Integrate("x")` | `integral(...)` | 265,499 characters |
+| `"(d + f*x + g*x^2 + h*x^3 + k*x^4)/(a + b*x^2 + c*x^4)^3".ToEntity().Integrate("x")` | `integral(...)` | 31,531 characters |
+| `"(d + f*x + g*x^2 + h*x^3 + k*x^4 + m*x^5 + n*x^6 + p*x^7)/(a + b*x^2 + c*x^4)^2".ToEntity().Integrate("x")` | `integral(...)` | 21,719 characters |
+| `"(d + f*x + g*x^2 + h*x^3 + k*x^4 + m*x^5 + n*x^8 + p*x^11)/(a + b*x^2 + c*x^4)^3".ToEntity().Integrate("x")` | `integral(...)` | 77,389 characters |
+| `"csc(c + d*x)^2/(a - b*sin(c + d*x)^4)^3".ToEntity().Integrate("x")` | `integral(...)` | 157,787 characters |
+
 ### One linear twice is not two linear powers
 
 **Answers that had no value.** `(a c + b c x)^(-3 - 2 p) (f + g x) (a^2 + 2 a b x + b^2 x^2)^p` was answered
