@@ -193,6 +193,27 @@ of a linear over a linear, which is answered in a second
 | `"1/(sqrt(a + i*a*tan(x))*(c + d*tan(x))^(3/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 2,217 characters |
 | `"1/((a + i*a*tan(x))^(3/2)*(c + d*tan(x))^(5/2))".ToEntity().Integrate("x")` | `integral(...)`; past thirty seconds on the unreleased master | 3,333 characters |
 
+### Every linear beside a block is split off, a quadratic with rational roots among them
+
+**Answers where there were none.** `sec(c + d x)/(a + b sin(c + d x)^3)` was declined, and so were
+`sec(c + d x)^3` over the same block, both over its square (Rubi's 4.1.7), `cot(f x + g)` and `cot(f x + g)^3` over
+`a + b sec(f x + g)^3` (4.5.7), and `1/((1 - x^2)(a + b x^3))` and `1/(x (1 - x^2)(a + b x^3))`. The split that writes
+`N/(L^k B)` as `P/L^k + R/B` at the root of a linear `L` took one linear only, and the rest over the block was
+integrated a level down, where neither split answers. A second linear in the block is split off at the same level
+now, where its answer differentiates back, and with no linear written a quadratic over the rationals with rational
+roots, `1 - x^2`, is taken as its two ([#718](https://github.com/asc-community/AngouriMath/issues/718)).
+
+| Input | Was (2.5.0) | Now |
+|---|---|---|
+| `"sec(c + d*x)/(a + b*sin(c + d*x)^3)".ToEntity().Integrate("x")` | `integral(...)` | 1,788 characters |
+| `"sec(c + d*x)^3/(a + b*sin(c + d*x)^3)".ToEntity().Integrate("x")` | `integral(...)` | 2,743 characters |
+| `"sec(c + d*x)/(a + b*sin(c + d*x)^3)^2".ToEntity().Integrate("x")` | `integral(...)` | 2,851 characters |
+| `"sec(c + d*x)^3/(a + b*sin(c + d*x)^3)^2".ToEntity().Integrate("x")` | `integral(...)` | 4,571 characters |
+| `"cot(f*x + g)/(a + b*sec(f*x + g)^3)".ToEntity().Integrate("x")` | `integral(...)` | 1,838 characters |
+| `"cot(f*x + g)^3/(a + b*sec(f*x + g)^3)".ToEntity().Integrate("x")` | `integral(...)` | 2,829 characters |
+| `"1/((1 - x^2)*(a + b*x^3))".ToEntity().Integrate("x")` | `integral(...)` | 1,600 characters |
+| `"1/(x*(1 - x^2)*(a + b*x^3))".ToEntity().Integrate("x")` | `integral(...)` | 1,637 characters |
+
 ### A symbol shared by a numerator sum's coefficients is taken out before the partial fractions
 
 **Answers where there were none.** `(b d + 2c d x)^9/(a + b x + c x^2)^3` ran past a minute, where

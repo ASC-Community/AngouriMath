@@ -1381,10 +1381,27 @@ namespace AngouriMath.Functions.Algebra
                         : series[j] * MathS.Pow(x, j - k + 1) / (j - k + 1);
             if (remainder == Number.Integer.Zero)
                 return overX;
-            return Integration.ComputeIndefiniteIntegral(remainder / block, x, integrateByParts) is { } overTheBlock
+            return OverTheRestOfTheBlock(remainder, block, x, integrateByParts) is { } overTheBlock
                 ? overX + overTheBlock
                 : null;
         }
+
+        /// <summary>
+        /// The rest <c>R/B</c> of a split at a power of x or of a linear: split again at a linear
+        /// the block still holds, at the same level, where that answer differentiates back, and
+        /// otherwise integrated a level down.
+        /// </summary>
+        /// <remarks>
+        /// The splits answer only the question asked or one substitution below it, so through the
+        /// integrator a second linear was out of reach under the sine: `sec(x)/(a + b sin(x)^3)` is
+        /// `1/((1 - u^2)(a + b u^3))`, and the second linear of `1 - u^2` was two levels down.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
+        private static Entity? OverTheRestOfTheBlock(Entity remainder, Entity block, Entity.Variable x, bool integrateByParts)
+            => IntegrateOverAPowerOfALinearBesideABlock(remainder, block, x, integrateByParts) is { } atAnotherRoot
+               && Functions.PartialFractions.DerivativeHoldsAtSampledPoints(atAnotherRoot, remainder / block, x)
+                ? atAnotherRoot
+                : Integration.ComputeIndefiniteIntegral(remainder / block, x, integrateByParts);
 
         /// <summary>
         /// <c>N/(L^k B)</c> for a linear <c>L = g + h x</c> other than x, beside a block <c>B</c>
@@ -1417,11 +1434,11 @@ namespace AngouriMath.Functions.Algebra
                 var (@base, power) = factor is Powf(var raised, Number.Integer e) && e.EInteger.Sign > 0 && e.EInteger.CanFitInInt32()
                     ? (raised, e.EInteger.ToInt32Unchecked())
                     : (factor, 1);
+                // The first linear is split off, and any other is left in the block, where the rest
+                // over the block meets it again: `1/((1 - x)(1 + x)(a + b x^3))` was declined.
                 if (@base != x && @base.ContainsNode(x) && TreeAnalyzer.TryGetPolyLinear(@base, x, out var slope, out var offset)
-                    && !slope.ContainsNode(x) && !offset.ContainsNode(x))
+                    && !slope.ContainsNode(x) && !offset.ContainsNode(x) && (linear is null || linear == @base))
                 {
-                    if (linear is { } && linear != @base)
-                        return null;
                     linear = @base;
                     k += power;
                 }
@@ -1431,7 +1448,13 @@ namespace AngouriMath.Functions.Algebra
                     pastTheSecondDegree |= TreeAnalyzer.TryGetPolynomial(@base, x, out var terms) && terms.Keys.Any(degree => degree.CompareTo(EInteger.FromInt32(2)) > 0);
                 }
             }
-            if (linear is null || k > MaximumPowerOfXBesideABlock || !pastTheSecondDegree || !block.ContainsNode(x) || !block.Vars.Any(symbol => symbol != x)
+            // With no linear written, a quadratic over the rationals with rational roots is two:
+            // `1/((1 - x^2)(a + b x^3))` is what the sine makes of `sec(x)/(a + b sin(x)^3)`.
+            if (linear is null)
+                return WithQuadraticsOverTheRationalsSplit(denominator, x) is { } split
+                    ? IntegrateOverAPowerOfALinearBesideABlock(numerator, split, x, integrateByParts)
+                    : null;
+            if (k > MaximumPowerOfXBesideABlock || !pastTheSecondDegree || !block.ContainsNode(x) || !block.Vars.Any(symbol => symbol != x)
                 || !TreeAnalyzer.TryGetPolyLinear(linear, x, out var h, out var g) || VanishesIdentically(h)
                 || !TreeAnalyzer.TryGetPolynomial(block, x, out var below) || !TreeAnalyzer.TryGetPolynomial(numerator, x, out var above))
                 return null;
@@ -1522,7 +1545,7 @@ namespace AngouriMath.Functions.Algebra
             var scale = k == 1 ? h : MathS.Pow(h, k);
             if (remainder == Number.Integer.Zero)
                 return overTheLinear / scale;
-            return Integration.ComputeIndefiniteIntegral(remainder / block, x, integrateByParts) is { } overTheBlock
+            return OverTheRestOfTheBlock(remainder, block, x, integrateByParts) is { } overTheBlock
                 ? (overTheLinear + overTheBlock) / scale
                 : null;
 
@@ -22029,6 +22052,37 @@ namespace AngouriMath.Functions.Algebra
                 symbolic |= read.Values.Any(coefficient => coefficient.Vars.Any());
             }
             return (linears >= 1 || !aLinearAmongThem) && linears + quadratics >= 2 && symbolic;
+        }
+
+        /// <summary>
+        /// <paramref name="denominator"/> with each written factor that is a quadratic over the
+        /// rationals with rational roots, or a power of one, written as its leading coefficient
+        /// times its two linears; <see langword="null"/> where there is none.
+        /// </summary>
+        private static Entity? WithQuadraticsOverTheRationalsSplit(Entity denominator, Entity.Variable x)
+        {
+            var changed = false;
+            Entity product = Number.Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+            {
+                var (@base, power) = factor is Powf(var raised, Number.Integer { EInteger.Sign: > 0 } p) ? (raised, p) : (factor, Number.Integer.One);
+                if (!TreeAnalyzer.TryGetPolynomial(@base, x, out var read) || read.Count == 0
+                    || !read.Keys.Max()!.Equals(EInteger.FromInt32(2)) || !HasRationalRoots(read))
+                {
+                    product *= factor;
+                    continue;
+                }
+                Entity Coefficient(int degree) => read.TryGetValue(EInteger.FromInt32(degree), out var c) ? c : Number.Integer.Zero;
+                var (a, b, c) = (Coefficient(2), Coefficient(1), Coefficient(0));
+                var root = MathS.Sqrt(b * b - 4 * a * c).Evaled;
+                var first = (x - ((-b - root) / (2 * a)).Evaled).InnerSimplified;
+                var second = (x - ((-b + root) / (2 * a)).Evaled).InnerSimplified;
+                product *= power == Number.Integer.One
+                    ? a.Evaled * first * second
+                    : MathS.Pow(a.Evaled, power) * MathS.Pow(first, power) * MathS.Pow(second, power);
+                changed = true;
+            }
+            return changed ? product : null;
         }
 
         /// <summary>
