@@ -71,7 +71,6 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | amcli mcp
 | `am_expand`, `am_factor` | brackets out, or back into a product |
 | `am_series` | Taylor or Maclaurin, to a given degree |
 | `am_number_theory` | factorisation, totient, gcd, divisor count, primality |
-| `am_classify` | which field a formula comes from, read off its symbols |
 | `am_to_sympy` | a runnable SymPy program, for cross-checking |
 
 Five **prompts** surface as slash commands in a client: `verify-derivation`, `check-formula`,
@@ -83,6 +82,27 @@ Three **resources**: `angourimath://syntax`, the grammar and its two silent trap
 `angourimath://reliability`, when to trust a result and when to expect a decline; and
 `angourimath://curiosities`, famous results with the call that reproduces each. Point a model at
 the first two at the start of a session.
+
+### Preliminary tools
+
+A preliminary tool works as described, but its arguments and answers may change in a minor release,
+without an entry in [BREAKING-CHANGES.md](../../BREAKING-CHANGES.md). A server offers one only when
+it is started with `--preliminary`:
+
+```sh
+claude mcp add angourimath --scope user -- amcli mcp --preliminary
+```
+
+It is marked where a model reads it: its description begins `Preliminary:`, and each of its answers
+carries `"preliminary": true`. Called on a server started without the flag, it answers `failed` and
+names the flag.
+
+| Tool | |
+|---|---|
+| `am_classify` | which field a formula comes from, read off its symbols: a guess from naming conventions, not a computation |
+
+A tool is preliminary while its name is in `Tools.Preliminary`. Taking it out makes it stable, and
+from then on a change to what it answers is a breaking change.
 
 ## What the design rests on
 

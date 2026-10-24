@@ -55,11 +55,14 @@ public static class Server
         {
             output.WriteLine("amcli mcp -- exact symbolic algebra over MCP (stdio JSON-RPC).");
             output.WriteLine();
-            output.WriteLine("  amcli mcp              serve on stdin/stdout");
-            output.WriteLine("  amcli mcp --selftest   verify the install and check the docs for drift");
-            output.WriteLine("  amcli mcp --help       this message");
+            output.WriteLine("  amcli mcp                serve on stdin/stdout");
+            output.WriteLine("  amcli mcp --preliminary  serve the preliminary tools as well: " + string.Join(", ", Tools.Preliminary.Order(StringComparer.Ordinal)));
+            output.WriteLine("  amcli mcp --selftest     verify the install and check the docs for drift");
+            output.WriteLine("  amcli mcp --help         this message");
             return 0;
         }
+
+        var preliminary = arguments.Contains("--preliminary");
 
         var serializerOptions = new JsonSerializerOptions { WriteIndented = false };
 
@@ -105,7 +108,7 @@ public static class Server
 
             try
             {
-                var result = Dispatch(method, parameters, error);
+                var result = Dispatch(method, parameters, preliminary, error);
                 if (result is null)
                 {
                     if (!isNotification)
@@ -127,7 +130,7 @@ public static class Server
         return 0;
     }
 
-    private static JsonObject? Dispatch(string method, JsonObject? parameters, TextWriter error)
+    private static JsonObject? Dispatch(string method, JsonObject? parameters, bool preliminary, TextWriter error)
     {
         switch (method)
         {
@@ -167,7 +170,7 @@ public static class Server
                 return new JsonObject();
 
             case "tools/list":
-                return new JsonObject { ["tools"] = Tools.List() };
+                return new JsonObject { ["tools"] = Tools.List(preliminary) };
 
             case "tools/call":
             {
@@ -180,7 +183,7 @@ public static class Server
                 JsonObject payload;
                 try
                 {
-                    payload = Tools.Call(name, arguments);
+                    payload = Tools.Call(name, arguments, preliminary);
                 }
                 catch (Exception e)
                 {

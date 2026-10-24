@@ -17,12 +17,18 @@ internal static class Mcp
     /// The replies to <paramref name="lines"/>, one per line the server wrote, and everything it
     /// wrote to the error stream.
     /// </summary>
-    public static (List<JsonObject> Replies, string Errors) Session(params string[] lines)
+    public static (List<JsonObject> Replies, string Errors) Session(params string[] lines) => Session(false, lines);
+
+    /// <summary>
+    /// The same, from a server started as <c>amcli mcp --preliminary</c> when
+    /// <paramref name="preliminary"/> is set.
+    /// </summary>
+    public static (List<JsonObject> Replies, string Errors) Session(bool preliminary, params string[] lines)
     {
         using var input = new StringReader(string.Join("\n", lines));
         using var output = new StringWriter();
         using var error = new StringWriter();
-        Assert.Equal(0, Server.Run([], input, output, error));
+        Assert.Equal(0, Server.Run(preliminary ? ["--preliminary"] : [], input, output, error));
         var replies = output.ToString()
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(line => JsonNode.Parse(line) as JsonObject ?? throw new InvalidOperationException($"not an object: {line}"))
@@ -31,9 +37,9 @@ internal static class Mcp
     }
 
     /// <summary>The result of one request with id 1, after <c>initialize</c>.</summary>
-    public static JsonObject Request(string method, string parametersJson = "{}")
+    public static JsonObject Request(string method, string parametersJson = "{}", bool preliminary = false)
     {
-        var (replies, errors) = Session(
+        var (replies, errors) = Session(preliminary,
             """{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}""",
             $$"""{"jsonrpc":"2.0","id":1,"method":"{{method}}","params":{{parametersJson}}}""");
         Assert.Equal("", errors);
@@ -44,9 +50,9 @@ internal static class Mcp
     /// <summary>
     /// What one tool answered: the JSON in its text content, which is what a model reads.
     /// </summary>
-    public static JsonObject Call(string tool, string argumentsJson)
+    public static JsonObject Call(string tool, string argumentsJson, bool preliminary = false)
     {
-        var result = Request("tools/call", $$"""{"name":"{{tool}}","arguments":{{argumentsJson}}}""");
+        var result = Request("tools/call", $$"""{"name":"{{tool}}","arguments":{{argumentsJson}}}""", preliminary);
         var text = result["content"]?[0]?["text"]?.GetValue<string>()
             ?? throw new InvalidOperationException($"{tool} answered {result.ToJsonString()}");
         return JsonNode.Parse(text) as JsonObject ?? throw new InvalidOperationException($"{tool} answered {text}");

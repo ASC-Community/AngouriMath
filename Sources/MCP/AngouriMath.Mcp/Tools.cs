@@ -54,7 +54,40 @@ internal static class Tools
         "manipulation is unreliable for exactly this class of problem, and the result here is " +
         "machine-checked.";
 
-    public static JsonArray List() =>
+    /// <summary>
+    /// The preliminary tools: served and working as described, but with arguments and answers that
+    /// may change in a minor release, without an entry in BREAKING-CHANGES.md. A client is offered
+    /// them only when the server is started with <c>--preliminary</c>, and each is marked where a
+    /// model reads it: its description begins <see cref="PreliminaryMark"/>, and its every answer
+    /// carries <c>"preliminary": true</c>.
+    /// </summary>
+    /// <remarks>
+    /// <c>am_classify</c> reads a formula's field off the names of its symbols. That is a guess
+    /// rather than a computation, whose tables change whenever a field is added, and no test pins
+    /// what it answers.
+    /// </remarks>
+    public static readonly IReadOnlySet<string> Preliminary = new HashSet<string>(StringComparer.Ordinal) { "am_classify" };
+
+    private const string PreliminaryMark = "Preliminary: its arguments and answers may change in a minor release. ";
+
+    /// <summary>The tools offered to a client: every one, or all but the preliminary ones.</summary>
+    public static JsonArray List(bool preliminary)
+    {
+        var listed = new JsonArray();
+        foreach (var tool in All())
+        {
+            if (!Preliminary.Contains(tool["name"]!.GetValue<string>()))
+                listed.Add(tool);
+            else if (preliminary)
+            {
+                tool["description"] = PreliminaryMark + tool["description"]!.GetValue<string>();
+                listed.Add(tool);
+            }
+        }
+        return listed;
+    }
+
+    private static JsonObject[] All() =>
     [
         Tool("am_parse",
             "Parse an expression and show exactly how AngouriMath understood it. Use this " +
@@ -480,7 +513,22 @@ internal static class Tools
 
     // ---------------------------------------------------------------- dispatch
 
-    public static JsonObject Call(string name, JsonObject args) => name switch
+    /// <summary>
+    /// What a tool answers. A preliminary one answers only when <paramref name="preliminary"/> is
+    /// set, and its answer says that it is preliminary.
+    /// </summary>
+    public static JsonObject Call(string name, JsonObject args, bool preliminary)
+    {
+        if (!Preliminary.Contains(name))
+            return Answer(name, args);
+        if (!preliminary)
+            return Fail($"'{name}' is preliminary, and is served only when the server is started as 'amcli mcp --preliminary'");
+        var payload = Answer(name, args);
+        payload["preliminary"] = true;
+        return payload;
+    }
+
+    private static JsonObject Answer(string name, JsonObject args) => name switch
     {
         "am_parse" => Parse(args),
         "am_simplify" => Simplify(args),

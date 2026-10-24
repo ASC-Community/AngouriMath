@@ -69,7 +69,7 @@ public sealed class ServerTest
     {
         // An MCP client can approve these without asking, which is what gets a maths tool
         // used at all.
-        var tools = Mcp.Request("tools/list")["tools"]!.AsArray();
+        var tools = Mcp.Request("tools/list", preliminary: true)["tools"]!.AsArray();
         Assert.Equal(23, tools.Count);
         foreach (var tool in tools)
         {
