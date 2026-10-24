@@ -35,7 +35,6 @@
   <ItemGroup>
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <PackageReference Include="RadLine" Version="0.9.0" />
-    <PackageReference Include="Spectre.Console.ImageSharp" Version="0.54.0" />
   </ItemGroup>
 
 </Project>
