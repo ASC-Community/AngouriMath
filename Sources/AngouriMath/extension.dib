@@ -34,3 +34,16 @@ if (FindType("Numbers", "PeterO.Numbers.ERational") is { } rational)
     RegisterLatex(rational, o => $@"\frac{{{rational.GetProperty("Numerator").GetValue(o)}}}{{{rational.GetProperty("Denominator").GetValue(o)}}}");
 
 "Extensions for LaTeX loaded!"
+
+#!csharp
+
+// The namespaces a C# notebook writes without opening: `AngouriMath` and `AngouriMath.Extensions` are opened only
+// when the cell above was compiled against AngouriMath, which is when this kernel loaded the package rather than
+// another kernel of the same notebook, and the opening is deferred to this kernel's next submission.
+static object PropertyOf(object o, string name) => o?.GetType().GetProperty(name)?.GetValue(o);
+
+if (PropertyOf(PropertyOf(PropertyOf(Microsoft.DotNet.Interactive.Kernel.Current, "ScriptState"), "Script"), "Options") is { } options
+    && PropertyOf(options, "MetadataReferences") is System.Collections.IEnumerable references
+    && references.Cast<object>().Any(r => PropertyOf(r, "Display") is string path && System.IO.Path.GetFileName(path) == "AngouriMath.dll"))
+    Microsoft.DotNet.Interactive.Kernel.Current.DeferCommand(
+        new Microsoft.DotNet.Interactive.Commands.SubmitCode("using AngouriMath;\nusing AngouriMath.Extensions;"));
