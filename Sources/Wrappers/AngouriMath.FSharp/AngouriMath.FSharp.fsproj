@@ -28,6 +28,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- A notebook host runs its own FSharp.Core, so the wrappers ask for the lowest one they build
+         against rather than the SDK's: 8.0.403 is Plotly.NET's floor, and 10.1 hung a C# kernel under a
+         host carrying 10.0. https://github.com/asc-community/AngouriMath/issues/2108 -->
+    <PackageReference Update="FSharp.Core" Version="8.0.403" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\AngouriMath\AngouriMath.csproj" />
   </ItemGroup>
 

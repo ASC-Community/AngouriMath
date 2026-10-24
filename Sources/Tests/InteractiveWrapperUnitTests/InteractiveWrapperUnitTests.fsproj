@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="AggressiveOperators.fs" />
     <Compile Include="HtmlOutput.fs" />
+    <Compile Include="HostCompatibility.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
