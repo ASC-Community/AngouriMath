@@ -51,6 +51,14 @@
          against rather than the SDK's: 8.0.403 is Plotly.NET's floor, and 10.1 hung a C# kernel under a
          host carrying 10.0. https://github.com/asc-community/AngouriMath/issues/2108 -->
     <PackageReference Update="FSharp.Core" Version="8.0.403" />
+    <!-- Pinned to pull the patched build of a transitive dependency forward. Microsoft.DotNet.Interactive
+         1.0.0-beta.23611.1 brings System.Text.Json 8.0.0, which has two high severity advisories (NU1903),
+         GHSA-hh2w-p6rv-4g7w and GHSA-8g4q-xg66-9fp4; 8.0.6 is the patched build on the same major line.
+         Not an upgrade of that package: the host supplies it, and building against a newer one than the
+         host's is what hung a kernel through FSharp.Core, above. Remove this line once the
+         Microsoft.DotNet.Interactive reference moves to a build whose own dependency is patched.
+         https://github.com/asc-community/AngouriMath/issues/542 -->
+    <PackageReference Include="System.Text.Json" Version="8.0.6" />
   </ItemGroup>
 
   <ItemGroup>
