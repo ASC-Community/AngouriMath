@@ -42,6 +42,20 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### `am_classify` is a preliminary tool, served by `amcli mcp --preliminary`
+
+**Not silent: what answered is a failure naming the flag.** `am_classify` guesses which field a formula comes from by
+the names of its symbols, the one answer of the MCP server that the library does not compute. It is preliminary now:
+its arguments and answers may change in a minor release. `amcli mcp` no longer lists it, and answers a call to it with
+`failed`. `amcli mcp --preliminary` lists it with a description beginning `Preliminary:`, and each answer carries
+`"preliminary": true` ([#2113](https://github.com/asc-community/AngouriMath/pull/2113)).
+
+| Request | Was (2.6.0) | Now |
+|---|---|---|
+| `tools/list` to `amcli mcp` | 23 tools, `am_classify` among them | 22 tools |
+| `am_classify` on `G*M*m/r^2`, to `amcli mcp` | `solved`, `Newtonian gravitation` first | `failed`: `'am_classify' is preliminary, and is served only when the server is started as 'amcli mcp --preliminary'` |
+| the same, to `amcli mcp --preliminary` | `solved` (the flag is ignored) | `solved`, and `"preliminary": true` |
+
 ### A subscript may have a subscript
 
 **Not silent: what was a parse error is a name.** A name took at most one `_`, so `x_1_2` and `X_a_beta` were lexer
