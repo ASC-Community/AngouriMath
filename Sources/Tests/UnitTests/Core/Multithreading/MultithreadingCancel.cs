@@ -9,7 +9,6 @@ using System;
 using Xunit;
 using AngouriMath;
 using AngouriMath.Extensions;
-using HonkSharp.Laziness;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
@@ -19,29 +18,30 @@ namespace AngouriMath.Tests.Core.Multithreading
     [Trait("Area", "Core")]
     public sealed class MultithreadingCancel
     {
-        // Thirty solves rather than ten: warm, ten were a second and a tenth on a desktop
-        // against a cancellation at three quarters of a second.
-        private static void SomeLongLastingTask()
+        // Solves until it is cancelled, rather than a fixed number of times. A fixed workload put two
+        // clocks in this test, each wrong on some machine: it had to last three seconds, which thirty
+        // solves no longer do on a desktop, and a cancelled task had to stop within three quarters of
+        // a second, which on the Ubuntu runner it sometimes did not. A solve that starts with its token
+        // already cancelled has to throw. If it returns instead, the task ends as RanToCompletion and
+        // the assertion below says so, rather than the test running forever.
+        // https://github.com/asc-community/AngouriMath/issues/2118
+        private static void SolveUntilCancelled(CancellationToken token)
         {
-            Entity t;
-            for (int i = 0; i < 30; i++)
-                t = 
-            "b c d e f g a e cos(x ^ 4 + 3)1 + a f c d cos(x ^ 4 + 2)2 - k d cos(x ^ 4 + 3)2 + sin(x ^ 4 + 3) + e = 0"
-            .Solve("x");
+            while (true)
+            {
+                var cancelledBefore = token.IsCancellationRequested;
+                "b c d e f g a e cos(x ^ 4 + 3)1 + a f c d cos(x ^ 4 + 2)2 - k d cos(x ^ 4 + 3)2 + sin(x ^ 4 + 3) + e = 0"
+                    .Solve("x");
+                if (cancelledBefore)
+                    return;
+            }
         }
 
-        const int ShouldLastAtLeast = 3000;
+        const int CancelAt = 750;
 
-        /// <summary>
-        /// We are going to cancel a long-lasting task. If for some reason, it is not that long lasting,
-        /// this will become false
-        /// </summary>
-        public static bool MakesSenseToPerformTest => makesSenseToPerformTest.GetValue(
-            static @this => !new TimeOutChecker().BeingCompletedForLessThan(
-                SomeLongLastingTask
-                , ShouldLastAtLeast), someReference);
-        private static object someReference = new();
-        private static LazyPropertyA<bool> makesSenseToPerformTest;
+        // How long a cancelled task may take to stop. How soon it stops is the runner's business;
+        // that it stops is the library's, so this is a bound no runner should reach.
+        const int StopBudget = 30_000;
 
         [Theory]
         [InlineData(false, true)]
@@ -72,8 +72,6 @@ namespace AngouriMath.Tests.Core.Multithreading
         [InlineData(true, true, true, true, true)]
         public async void TestThoseOnlyCancel(bool generateChild, params bool[] threadToCancel)
         {
-            Assert.True(MakesSenseToPerformTest, $"The given task completed too soon, consider lowering the constant {ShouldLastAtLeast}");
-
             // Each task on a thread of its own rather than on the pool: the tasks are
             // processor-bound, and on a runner with two cores four of them hold every pool
             // thread, so the timer behind CancelAfter -- a pool work item queued behind
@@ -92,8 +90,8 @@ namespace AngouriMath.Tests.Core.Multithreading
                 var task = OnItsOwnThread(() =>
                     {
                         if (generateChild)
-                            OnItsOwnThread(SomeLongLastingTask, token).GetAwaiter().GetResult();
-                        SomeLongLastingTask();
+                            OnItsOwnThread(() => SolveUntilCancelled(token), token).GetAwaiter().GetResult();
+                        SolveUntilCancelled(token);
                     }, token);
                 var res = (cts, task);
                 return res;
@@ -106,17 +104,19 @@ namespace AngouriMath.Tests.Core.Multithreading
             {
                 for (int i = 0; i < threadToCancel.Length; i++)
                     if (threadToCancel[i])
-                        ctss[i].CancelAfter(ShouldLastAtLeast / 4);
+                        ctss[i].CancelAfter(CancelAt);
                 var waitAndSwallow = new WaiterAndSwallower(5);
-                await waitAndSwallow.Wait(ShouldLastAtLeast / 4);
+                await waitAndSwallow.Wait(CancelAt);
                 await waitAndSwallow.WaitWhile(() => tasks.Any(c => c.Status == TaskStatus.WaitingToRun)); // wait while at least one task is waiting for execution start
-                await waitAndSwallow.Wait(ShouldLastAtLeast / 4); // wait some more time
+                await Task.WhenAny(Task.WhenAll(tasks.Where((_, i) => threadToCancel[i])), Task.Delay(StopBudget));
+                await waitAndSwallow.Wait(CancelAt); // and as long again, for a task cancelled that was not meant to be
             }
             catch (OperationCanceledException) { } // we are going to check their states in finally
             finally
             {
                 for (int i = 0; i < threadToCancel.Length; i++)
-                    Assert.True(threadToCancel[i] == tasks[i].IsCanceled, $"Task number {i}: {threadToCancel[i]}, but instead {tasks[i].IsCanceled}. Status: {tasks[i].Status}");
+                    Assert.True(threadToCancel[i] ? tasks[i].IsCanceled : tasks[i].Status == TaskStatus.Running,
+                        $"Task number {i} was {(threadToCancel[i] ? "" : "not ")}cancelled, and its status is {tasks[i].Status}");
                 foreach (var cts in ctss)
                     cts.Cancel();
                 try
