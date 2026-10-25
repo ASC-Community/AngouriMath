@@ -18,10 +18,18 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Shipped inside the terminal's tool package, not as a package of its own. -->
     <IsPackable>false</IsPackable>
+    <!-- Signed with the library's key, so that the library's InternalsVisibleTo can name it and
+         the tools can answer from its internal catalogue of operations: a strong-named assembly
+         may only befriend another strong-named one. It ships with the library it was built
+         against, so it never meets another version's internals.
+         https://github.com/asc-community/AngouriMath/issues/1684 -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>../../AngouriMath/key.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="McpUnitTests" />
+    <!-- Its tests are signed with the same key, which a signed assembly's friends have to be. -->
+    <InternalsVisibleTo Include="McpUnitTests" Key="0024000004800000940000000602000000240000525341310004000001000100f54ef0f5905ba32ecae04751103c5565283a4c4fa2b07627ff7a7e556b287f198203a09935d998ce9d812a696aa2e71c552aeb08b7a67f49a5557ef4faab3d9f033182be1a646b24c932399732107462848dcb97acecc8449997b1b77e6bd337e1116878226dd4954e004f11193ccd8e29fc156615c798f733712923ffe8d6c5" />
   </ItemGroup>
 
   <ItemGroup>

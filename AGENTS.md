@@ -878,7 +878,9 @@ landed — and **the MCP server and two other repositories brought to the releas
   MCP still says what the library does. An operation the library offers by name is an entry of
   `Core/Operations/Catalogue.cs` ([#1684](https://github.com/asc-community/AngouriMath/issues/1684)),
   and a new factory of `Transformation` fails `CatalogueTest` until it is an entry or a building
-  block with its reason.
+  block with its reason. The MCP server's tools answer from those entries, and a new entry fails
+  the server's own `CatalogueTest` until a tool offers it or `Tools.NotOffered` says why none does,
+  and the terminal's `OneShotTest` until a command offers it or `OneShot.notOffered` lists it.
 - [CSharpMath](https://github.com/verybadcat/CSharpMath), for the round trip of `Latexize` — see
   *The standard command wins* above. If a PR there from an earlier release is still unmerged, add
   to it rather than opening a second.

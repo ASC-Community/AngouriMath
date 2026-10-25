@@ -37,6 +37,16 @@ using AngouriMath.Extensions;
     + "552aeb08b7a67f49a5557ef4faab3d9f033182be1a646b24c932399732107462848dcb97acecc844"
     + "9997b1b77e6bd337e1116878226dd4954e004f11193ccd8e29fc156615c798f733712923ffe8d6c5")]
 
+// And to the MCP server behind `amcli mcp`, whose tools answer from the catalogue of operations in
+// Core/Operations, which stays internal until v3. The server is no package of its own: it ships
+// inside the terminal's tool with the library it was built against, so it never meets another
+// version's internals. https://github.com/asc-community/AngouriMath/issues/1684
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("AngouriMath.Mcp, PublicKey="
+    + "0024000004800000940000000602000000240000525341310004000001000100f54ef0f5905ba32e"
+    + "cae04751103c5565283a4c4fa2b07627ff7a7e556b287f198203a09935d998ce9d812a696aa2e71c"
+    + "552aeb08b7a67f49a5557ef4faab3d9f033182be1a646b24c932399732107462848dcb97acecc844"
+    + "9997b1b77e6bd337e1116878226dd4954e004f11193ccd8e29fc156615c798f733712923ffe8d6c5")]
+
 namespace AngouriMath
 {
     // Visibility for the class is internal so we can use public for methods as we like

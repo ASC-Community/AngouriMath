@@ -37,6 +37,41 @@ An argument written as _ is read from stdin, and so is one that is left out:
 /// The names <c>run</c> answers. Anything else as a first argument is a usage error.
 let commands = set [ "eval"; "simp"; "fsimp"; "diff"; "solve"; "sub"; "latex"; "info"; "mcp"; "help"; "-h"; "--help" ]
 
+/// <summary>
+/// The operations of the library's catalogue, <c>Core/Operations/Catalogue.cs</c>, that each command
+/// offers, by the entries' names. A test checks this against <see cref="commands"/> and the
+/// catalogue: every command offers an entry or is in <see cref="ownCommands"/>, and every entry is
+/// offered or is in <see cref="notOffered"/>.
+/// https://github.com/asc-community/AngouriMath/issues/1684
+/// </summary>
+let offers =
+    Map [ "eval", [ "evaluate" ]
+          "simp", [ "simplify" ]
+          "fsimp", [ "normalize" ]
+          "diff", [ "differentiate" ]
+          "solve", [ "solve" ]
+          "sub", [ "substitute" ]
+          "latex", [ "latex" ] ]
+
+/// The commands that are not one of the catalogue's operations, each with what it does.
+let ownCommands =
+    Map [ "info", "prints the variables, derivatives, roots and stationary points, which several operations answer together"
+          "mcp", "serves the library to an agent"
+          "help", "prints the usage"
+          "-h", "prints the usage"
+          "--help", "prints the usage" ]
+
+/// <summary>
+/// The catalogue's entries that no command offers. The one-shot commands are the eight of
+/// asc-community/AngouriMathCLI, kept so that its scripts keep working, and which others to add is
+/// the question of #1019 item 16; an entry added to the catalogue joins this list or a command.
+/// </summary>
+let notOffered =
+    set [ "expand"; "factorize"; "integrate"; "limit"; "solve_system"; "evaluate_numerically"; "variables"
+          "alternatives"; "sympy"; "truth_table"; "satisfying_assignments"; "series"; "to_base"; "from_base"
+          "determinant"; "inverse"; "transpose"; "rank"; "reduced_row_echelon_form"; "trace"; "tensor_product"
+          "prime_factorization"; "totient"; "greatest_common_divisor"; "divisor_count"; "is_prime" ]
+
 /// The arguments still to read, falling back to a line of stdin where one is missing or is <c>_</c>.
 type private Arguments(given: string list, input: TextReader) =
     let mutable rest = given
