@@ -875,7 +875,10 @@ landed — and **the MCP server and two other repositories brought to the releas
   answer back out of the nodes. That documentation is as much a deliverable as the operation (the
   maintainer's words on [#1409](https://github.com/asc-community/AngouriMath/issues/1409)); write it
   there, or in this repository's `Docs/Usage` and the website, and check at every release that the
-  MCP still says what the library does.
+  MCP still says what the library does. An operation the library offers by name is an entry of
+  `Core/Operations/Catalogue.cs` ([#1684](https://github.com/asc-community/AngouriMath/issues/1684)),
+  and a new factory of `Transformation` fails `CatalogueTest` until it is an entry or a building
+  block with its reason.
 - [CSharpMath](https://github.com/verybadcat/CSharpMath), for the round trip of `Latexize` — see
   *The standard command wins* above. If a PR there from an earlier release is still unmerged, add
   to it rather than opening a second.
