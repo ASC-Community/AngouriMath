@@ -8,6 +8,7 @@
 using System.Text.Json.Nodes;
 using AngouriMath;
 using AngouriMath.Core;
+using AngouriMath.Core.Operations;
 using AngouriMath.Extensions;
 using static AngouriMath.Entity;
 
@@ -69,6 +70,69 @@ internal static class Tools
     public static readonly IReadOnlySet<string> Preliminary = new HashSet<string>(StringComparer.Ordinal) { "am_classify" };
 
     private const string PreliminaryMark = "Preliminary: its arguments and answers may change in a minor release. ";
+
+    /// <summary>
+    /// The operations of the library's catalogue that each tool offers, by the tool's name. A
+    /// tool's answers come from the catalogue's entries; its guards, its checks of an answer and
+    /// its formatting are its own.
+    /// </summary>
+    /// <remarks>
+    /// A test checks this against the tools and the catalogue: every tool offers an entry or is in
+    /// <see cref="OwnComputations"/>, and every entry is offered by a tool or is in
+    /// <see cref="NotOffered"/>. So an operation added to the catalogue fails that test until a
+    /// tool offers it or this file says why none does.
+    /// https://github.com/asc-community/AngouriMath/issues/1684
+    /// </remarks>
+    public static readonly IReadOnlyDictionary<string, Operation[]> Offers = new Dictionary<string, Operation[]>
+    {
+        ["am_parse"] = [Catalogue.Variables, Catalogue.Latex],
+        ["am_simplify"] = [Catalogue.Simplify, Catalogue.Alternatives],
+        ["am_solve"] = [Catalogue.Solve],
+        ["am_differentiate"] = [Catalogue.Differentiate],
+        ["am_integrate"] = [Catalogue.Integrate],
+        ["am_limit"] = [Catalogue.Limit],
+        ["am_evaluate"] = [Catalogue.EvaluateNumerically],
+        ["am_truth_table"] = [Catalogue.TruthTable, Catalogue.SatisfyingAssignments],
+        ["am_solve_system"] = [Catalogue.SolveSystem],
+        ["am_represent"] = [Catalogue.ToBase, Catalogue.FromBase],
+        ["am_matrix"] = [Catalogue.Determinant, Catalogue.Inverse, Catalogue.Transpose, Catalogue.Rank,
+            Catalogue.ReducedRowEchelonForm, Catalogue.Trace, Catalogue.TensorProduct],
+        ["am_substitute"] = [Catalogue.Substitute],
+        ["am_expand"] = [Catalogue.Expand],
+        ["am_factor"] = [Catalogue.Factorize],
+        ["am_series"] = [Catalogue.Series],
+        ["am_number_theory"] = [Catalogue.PrimeFactorization, Catalogue.Totient, Catalogue.GreatestCommonDivisor,
+            Catalogue.DivisorCount, Catalogue.IsPrime],
+        ["am_to_sympy"] = [Catalogue.Sympy],
+    };
+
+    /// <summary>
+    /// The tools whose answer is the server's own computation rather than an operation of the
+    /// catalogue, each with what it computes.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> OwnComputations = new Dictionary<string, string>
+    {
+        ["am_verify_equal"] = "whether two expressions are equal, by simplifying their difference and by sampling it",
+        ["am_check_steps"] = "whether each step of a derivation follows from the one before",
+        ["am_domain_check"] = "where an expression is undefined or leaves the real line, by sampling",
+        ["am_eigenvalues"] = "a matrix's eigenvalues, as the roots of its characteristic polynomial",
+        ["am_compare_numeric"] = "where an approximation parts from what it approximates",
+        ["am_classify"] = "a guess at a formula's field, from the names of its symbols",
+    };
+
+    /// <summary>The catalogue's entries that no tool offers, by name, each with the reason.</summary>
+    public static readonly IReadOnlyDictionary<string, string> NotOffered = new Dictionary<string, string>
+    {
+        [Catalogue.Normalize.Name] = "am_simplify offers the whole simplification, which starts with this pass",
+        [Catalogue.Evaluate.Name] = "am_evaluate keeps an exact value exact, simplifying rather than evaluating, and adds a numeric value beside it",
+    };
+
+    /// <summary>The names of the catalogue's entries, which a test checks the lists above against.</summary>
+    internal static IEnumerable<string> CatalogueNames => Catalogue.All.Select(operation => operation.Name);
+
+    /// <summary><see cref="Offers"/> by the entries' names.</summary>
+    internal static IReadOnlyDictionary<string, string[]> OfferedNames =>
+        Offers.ToDictionary(tool => tool.Key, tool => tool.Value.Select(operation => operation.Name).ToArray());
 
     /// <summary>The tools offered to a client: every one, or all but the preliminary ones.</summary>
     public static JsonArray List(bool preliminary)
@@ -625,7 +689,7 @@ internal static class Tools
             ["status"] = status,
             ["parsed"] = input.Stringize(),
             ["result"] = raw,
-            ["latex"] = result.Latexize(),
+            ["latex"] = Catalogue.Latex.Ask(result),
         };
 
         if (status == "declined")
@@ -682,14 +746,14 @@ internal static class Tools
             return error!;
 
         var vars = new JsonArray();
-        foreach (var v in e.Vars) vars.Add(v.Stringize());
+        foreach (var v in Catalogue.Variables.Ask(e)) vars.Add(v.Stringize());
 
         var response = new JsonObject
         {
             ["status"] = "solved",
             ["parsed"] = e.Stringize(),
             ["result"] = e.Stringize(),
-            ["latex"] = e.Latexize(),
+            ["latex"] = Catalogue.Latex.Ask(e),
             ["free_variables"] = vars,
             ["node_count"] = e.Nodes.Count(),
         };
@@ -707,10 +771,10 @@ internal static class Tools
 
         return FromOutcome(Guard.Run(() =>
         {
-            var simplified = e.Simplify();
+            var simplified = Catalogue.Simplify.Apply(e);
             var alternates = new List<string>();
             if (wantAlternatives)
-                foreach (var alt in e.Alternate(4).Take(5))
+                foreach (var alt in Catalogue.Alternatives.Ask(e, 4).Take(5))
                 {
                     var s = alt.Stringize();
                     if (s != simplified.Stringize() && !alternates.Contains(s))
@@ -748,7 +812,7 @@ internal static class Tools
         if (!TryParse(combined, "constraints", false, out var e, out var warnings, out var error))
             return error!;
 
-        return FromOutcome(Guard.Run(() => e.Solve(Var(variable!))), set =>
+        return FromOutcome(Guard.Run(() => Catalogue.Solve.Ask(e, Var(variable!))), set =>
         {
             var response = Respond(e, set, warnings);
             if (set is Set.FiniteSet finite)
@@ -761,7 +825,7 @@ internal static class Tools
                     // output-tidiness weakness the library is known for, so tidy each root.
                     // Guarded because Simplify can be slow and must not lose the answer.
                     Entity tidy;
-                    try { tidy = root.Simplify(); }
+                    try { tidy = Catalogue.Simplify.Apply(root); }
                     catch { tidy = root; }
                     roots.Add(tidy.Stringize());
                 }
@@ -790,7 +854,7 @@ internal static class Tools
         if (order < 1) return Fail("'order' must be at least 1");
 
         return FromOutcome(
-            Guard.Run(() => e.Differentiate(Var(variable!), order).Simplify()),
+            Guard.Run(() => Catalogue.Simplify.Apply(Catalogue.Differentiate.Apply(e, Var(variable!), order))),
             d => Respond(e, d, warnings));
     }
 
@@ -834,13 +898,13 @@ internal static class Tools
                 return Numeric.TryDefiniteIntegral(e, v, a, b);
             }
 
-            var antiderivative = e.Integrate(v);
+            var antiderivative = Catalogue.Integrate.Apply(e, v);
 
             // Decline check on the RAW result, before Simplify — see Guard.IsDeclined.
             if (Guard.IsDeclined(antiderivative.Stringize()))
                 return (antiderivative, (bool?)null, (Entity?)null, Quadrature());
 
-            var tidy = antiderivative.Simplify();
+            var tidy = Catalogue.Simplify.Apply(antiderivative);
 
             // Verify by differentiating back, which is the whole reason to trust the answer.
             bool? verified;
@@ -859,7 +923,7 @@ internal static class Tools
             if (lower is not null && upper is not null)
             {
                 var bare = Numeric.Strip(tidy);
-                definite = (bare.Substitute(v, upper) - bare.Substitute(v, lower)).Simplify();
+                definite = Catalogue.Simplify.Apply(Catalogue.Substitute.Apply(bare, v, upper) - Catalogue.Substitute.Apply(bare, v, lower));
             }
 
             // Only where the exact route came back with nothing to show. A NaN definite
@@ -894,7 +958,7 @@ internal static class Tools
             if (r.Item3 is { } definite)
             {
                 response["definite_value"] = definite.Stringize();
-                response["definite_latex"] = definite.Latexize();
+                response["definite_latex"] = Catalogue.Latex.Ask(definite);
                 response["definite_caveat"] =
                     "Computed as F(to) - F(from) from the verified antiderivative. That is " +
                     "only valid when the integrand is continuous across the whole interval — " +
@@ -954,10 +1018,10 @@ internal static class Tools
 
         return FromOutcome(Guard.Run(() =>
         {
-            var raw = e.Limit(Var(variable!), destination, side);
+            var raw = Catalogue.Limit.Apply(e, Var(variable!), destination, side);
             // Check for a decline BEFORE simplifying: an unevaluated limit(...) simplifies
             // to NaN, which would look like a wrong answer instead of a missing solver.
-            return Guard.IsDeclined(raw.Stringize()) ? raw : raw.Simplify();
+            return Guard.IsDeclined(raw.Stringize()) ? raw : Catalogue.Simplify.Apply(raw);
         }), r =>
         {
             var response = Respond(e, r, warnings);
@@ -1011,19 +1075,19 @@ internal static class Tools
             // Resolve calculus nodes BEFORE substituting. Substituting into
             // derivative(f(x), x) cannot work — x is bound there — so `d/dx sqrt(1+x) at
             // x=0` silently came back with x still free. Differentiate first, then plug in.
-            var resolved = input.InnerSimplified;
+            var resolved = Catalogue.Normalize.Apply(input);
             foreach (var (name, value) in substitutions)
-                resolved = resolved.Substitute(Var(name), value);
+                resolved = Catalogue.Substitute.Apply(resolved, Var(name), value);
 
             // Simplify, not Evaled: Evaled numericises aggressively, turning
             // sin(pi/3) + cos(pi/6) into a hundred decimal digits and throwing away the
             // exact sqrt(3) that is the whole reason to use a CAS.
-            var exact = resolved.Simplify();
+            var exact = Catalogue.Simplify.Apply(resolved);
 
             string? approx = null;
             if (exact.EvaluableNumerical)
             {
-                var complex = exact.EvalNumerical();
+                var complex = Catalogue.EvaluateNumerically.Ask(exact);
                 approx = !complex.ImaginaryPart.EDecimal.IsZero
                     ? complex.Stringize()
                     : digits > 0
@@ -1054,7 +1118,7 @@ internal static class Tools
             // Exact first: if the difference reduces to zero, that settles it. The zero test
             // has to look through any `provided` guard — the difference of two equal
             // expressions is routinely "0 provided x > 0", which is still zero.
-            var difference = (left - right).Simplify();
+            var difference = Catalogue.Simplify.Apply(left - right);
             var exactlyZero = Numeric.IsZero(difference);
 
             bool? numerically = null;
@@ -1167,15 +1231,15 @@ internal static class Tools
         var names = A(args, "variables");
         var vars = names.Count > 0
             ? names.Select(Var).ToArray()
-            : e.Vars.ToArray();
+            : Catalogue.Variables.Ask(e).ToArray();
 
         if (vars.Length == 0) return Fail("no variables found in the expression");
         if (vars.Length > 12) return Fail($"{vars.Length} variables would need {1L << vars.Length} rows; cap is 12");
 
         return FromOutcome(Guard.Run(() =>
         {
-            var table = MathS.Boolean.BuildTruthTable(e, vars);
-            var satisfying = MathS.SolveBooleanTable(e, vars);
+            var table = Catalogue.TruthTable.Ask(e, vars);
+            var satisfying = Catalogue.SatisfyingAssignments.Ask(e, vars);
             return (table, satisfying);
         }), r =>
         {
@@ -1218,7 +1282,7 @@ internal static class Tools
         }
 
         return FromOutcome(Guard.Run(() =>
-            MathS.Equations([.. parsed]).Solve([.. variables.Select(Var)])), matrix =>
+            Catalogue.SolveSystem.Ask(parsed, [.. variables.Select(Var)])), matrix =>
         {
             var order = new JsonArray();
             foreach (var v in variables) order.Add(v);
@@ -1301,7 +1365,7 @@ internal static class Tools
         return FromOutcome(Guard.Run(() =>
         {
             Entity simplified;
-            try { simplified = e.Simplify(); }
+            try { simplified = Catalogue.Simplify.Apply(e); }
             catch { simplified = e; }
 
             return (simplified,
@@ -1385,10 +1449,10 @@ internal static class Tools
         {
             var asDecimal = fromBase == 10
                 ? value!.ToEntity()
-                : MathS.FromBaseN(value!, fromBase);
+                : Catalogue.FromBase.Ask(value!, fromBase);
 
-            var real = (Number.Real)asDecimal.Evaled;
-            var converted = toBase == 10 ? real.Stringize() : MathS.ToBaseN(real, toBase);
+            var real = (Number.Real)Catalogue.Evaluate.Ask(asDecimal);
+            var converted = toBase == 10 ? real.Stringize() : Catalogue.ToBase.Ask(real, toBase);
             return (real, converted);
         }), r => new JsonObject
         {
@@ -1496,7 +1560,7 @@ internal static class Tools
                 ["fraction_bits"] = fractionBits,
                 ["result"] = v.Stringize(),
                 ["approximate"] = v.EvaluableNumerical
-                    ? v.EvalNumerical().RealPart.EDecimal.ToDouble().ToString("R")
+                    ? Catalogue.EvaluateNumerically.Ask(v).RealPart.EDecimal.ToDouble().ToString("R")
                     : null,
             });
     }
@@ -1536,7 +1600,7 @@ internal static class Tools
 
         return FromOutcome(Guard.Run(() =>
         {
-            var evaluated = e.Evaled;
+            var evaluated = Catalogue.Evaluate.Ask(e);
             if (evaluated is not Number.Complex complex)
                 throw new ArgumentException($"'{e.Stringize()}' is not a number");
 
@@ -1577,7 +1641,7 @@ internal static class Tools
                     ["status"] = "solved",
                     ["operation"] = "rectangular",
                     ["result"] = rectangular.Stringize(),
-                    ["latex"] = rectangular.Latexize(),
+                    ["latex"] = Catalogue.Latex.Ask(rectangular),
                 };
                 if (warnings.Count > 0) response["warnings"] = Warn(warnings);
                 return response;
@@ -1616,16 +1680,16 @@ internal static class Tools
 
         return FromOutcome(Guard.Run<object?>(() => operation switch
         {
-            "determinant" => a.Value.Determinant is { } det ? CleanScalar(det, guards) : null,
-            "inverse" => a.Value.Inverse is { } inv ? CleanGrid(Simplified(inv), guards) : null,
-            "transpose" => Simplified(a.Value.T),
-            "rank" => a.Value.Rank,
-            "rref" => Simplified(a.Value.ReducedRowEchelonForm),
-            "trace" => a.Value.Trace?.Simplify(),
+            "determinant" => Catalogue.Determinant.Ask(a.Value) is { } det ? CleanScalar(det, guards) : null,
+            "inverse" => Catalogue.Inverse.Ask(a.Value) is { } inv ? CleanGrid(Simplified(inv), guards) : null,
+            "transpose" => Simplified(Catalogue.Transpose.Ask(a.Value)),
+            "rank" => Catalogue.Rank.Ask(a.Value),
+            "rref" => Simplified(Catalogue.ReducedRowEchelonForm.Ask(a.Value)),
+            "trace" => Catalogue.Trace.Ask(a.Value) is { } trace ? Catalogue.Simplify.Apply(trace) : null,
             "multiply" => Simplified(a.Value * b!),
             "add" => Simplified(a.Value + b!),
             "subtract" => Simplified(a.Value - b!),
-            "tensor_product" => Simplified(Matrix.TensorProduct(a.Value, b!)),
+            "tensor_product" => Simplified(Catalogue.TensorProduct.Ask(a.Value, b!)),
             "power" => Simplified(a.Value.Pow(exponent)),
             _ => throw new ArgumentException($"unknown operation '{operation}'"),
         }), value =>
@@ -1643,11 +1707,11 @@ internal static class Tools
                     response["result"] = Matrices.Render(m);
                     response["shape_out"] = $"{m.RowCount}x{m.ColumnCount}";
                     response["pretty"] = m.ToString(multilineFormat: true);
-                    response["latex"] = m.Latexize();
+                    response["latex"] = Catalogue.Latex.Ask(m);
                     break;
                 case Entity scalar:
                     response["result"] = scalar.Stringize();
-                    response["latex"] = scalar.Latexize();
+                    response["latex"] = Catalogue.Latex.Ask(scalar);
                     break;
                 case int rank:
                     response["result"] = rank;
@@ -1701,7 +1765,7 @@ internal static class Tools
             for (var i = 0; i < m.RowCount; i++)
                 for (var j = 0; j < m.ColumnCount; j++)
                 {
-                    try { grid[i, j] = m[i, j].Simplify(); }
+                    try { grid[i, j] = Catalogue.Simplify.Apply(m[i, j]); }
                     catch { grid[i, j] = m[i, j]; }
                 }
             return MathS.Matrix(grid);
@@ -1731,7 +1795,7 @@ internal static class Tools
                 ["status"] = declined ? "declined" : "solved",
                 ["shape"] = $"{a.RowCount}x{a.ColumnCount}",
                 ["characteristic_polynomial"] = eigen.CharacteristicPolynomial.Stringize(),
-                ["characteristic_polynomial_latex"] = eigen.CharacteristicPolynomial.Latexize(),
+                ["characteristic_polynomial_latex"] = Catalogue.Latex.Ask(eigen.CharacteristicPolynomial),
                 ["eigenvalues"] = raw,
             };
 
@@ -1872,12 +1936,12 @@ internal static class Tools
         {
             var result = e;
             foreach (var (name, value) in replacements)
-                result = result.Substitute(Var(name), value);
+                result = Catalogue.Substitute.Apply(result, Var(name), value);
 
             // Substitution alone is deliberately structural — no InnerSimplified, no
             // Evaled. Seeing the unreduced shape is the entire reason to use this rather
             // than am_evaluate.
-            return alsoSimplify ? result.Simplify() : result;
+            return alsoSimplify ? Catalogue.Simplify.Apply(result) : result;
         }), r =>
         {
             var response = Respond(e, r, warnings);
@@ -1891,7 +1955,7 @@ internal static class Tools
                     "simplify: true, or send the result to am_simplify, if you want it reduced.";
 
             var remaining = new JsonArray();
-            foreach (var v in r.Vars) remaining.Add(v.Stringize());
+            foreach (var v in Catalogue.Variables.Ask(r)) remaining.Add(v.Stringize());
             response["free_variables"] = remaining;
 
             return response;
@@ -1905,7 +1969,7 @@ internal static class Tools
             return error!;
 
         return FromOutcome(
-            Guard.Run(() => expand ? e.Expand() : e.Factorize()),
+            Guard.Run(() => expand ? Catalogue.Expand.Apply(e) : Catalogue.Factorize.Apply(e)),
             r => Respond(e, r, warnings));
     }
 
@@ -1935,13 +1999,11 @@ internal static class Tools
         return FromOutcome(Guard.Run(() =>
         {
             var v = Var(variable!);
-            var raw = around is null
-                ? MathS.Series.Maclaurin(e, degree, v)
-                : MathS.Series.Taylor(e, degree, (v, around));
+            var raw = Catalogue.Series.Ask(e, v, degree, around);
 
             // The raw series keeps factorials unevaluated (`... / 3!`), so it is unreadable
             // until reduced.
-            return raw.InnerSimplified.Simplify();
+            return Catalogue.Simplify.Apply(Catalogue.Normalize.Apply(raw));
         }), r =>
         {
             var response = Respond(e, r, warnings);
@@ -1981,11 +2043,11 @@ internal static class Tools
 
         return FromOutcome(Guard.Run<object>(() => operation switch
         {
-            "factorize" => MathS.NumberTheory.Factorize(a).ToList(),
-            "totient" => MathS.NumberTheory.Phi(a).Evaled,
-            "gcd" => MathS.NumberTheory.GreatestCommonDivisor(a, b!),
-            "count_divisors" => MathS.NumberTheory.CountDivisors(a),
-            "is_prime" => a.IsPrime,
+            "factorize" => Catalogue.PrimeFactorization.Ask(a).ToList(),
+            "totient" => Catalogue.Totient.Ask(a),
+            "gcd" => Catalogue.GreatestCommonDivisor.Ask(a, b!),
+            "count_divisors" => Catalogue.DivisorCount.Ask(a),
+            "is_prime" => Catalogue.IsPrime.Ask(a),
             _ => throw new ArgumentException($"unknown operation '{operation}'"),
         }), value =>
         {
@@ -2045,7 +2107,7 @@ internal static class Tools
         foreach (var f in features) observed.Add(f);
 
         var symbols = new JsonArray();
-        foreach (var v in e.Vars) symbols.Add(v.Stringize());
+        foreach (var v in Catalogue.Variables.Ask(e)) symbols.Add(v.Stringize());
 
         var response = new JsonObject
         {
@@ -2078,7 +2140,7 @@ internal static class Tools
         {
             ["status"] = "solved",
             ["parsed"] = e.Stringize(),
-            ["sympy"] = MathS.ToSympyCode(e),
+            ["sympy"] = Catalogue.Sympy.Ask(e),
         };
         if (warnings.Count > 0) response["warnings"] = Warn(warnings);
         return response;

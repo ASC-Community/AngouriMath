@@ -12,6 +12,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Signed with the library's key, as the server it tests is, so that the server's
+         InternalsVisibleTo can name it. -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>../../AngouriMath/key.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

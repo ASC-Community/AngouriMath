@@ -127,3 +127,35 @@ let ``info names the variables and gives the derivative and the roots for each``
     Assert.Contains("variables: x", lines)
     Assert.Contains("derivative with respect to x: 2 * x", lines)
     Assert.Contains(lines, fun line -> line.StartsWith("roots for x: ") && line.Contains("-2") && line.Contains("2"))
+
+/// The names of the library's catalogue of operations, which is internal, so read here by reflection.
+/// https://github.com/asc-community/AngouriMath/issues/1684
+let private catalogue =
+    let read (name: string) (instance: obj | null) (owner: System.Type | null) =
+        match owner with
+        | null -> failwith "the library has no catalogue"
+        | owner ->
+            match owner.GetProperty name with
+            | null -> failwith $"{owner.Name} has no {name}"
+            | property -> property.GetValue instance
+    match read "All" null (typeof<AngouriMath.Entity>.Assembly.GetType "AngouriMath.Core.Operations.Catalogue") with
+    | :? System.Collections.IEnumerable as all ->
+        set [ for operation in all do
+                match operation with
+                | null -> ()
+                | operation -> yield string (read "Name" operation (operation.GetType())) ]
+    | _ -> failwith "Catalogue.All is not a list"
+
+[<Fact>]
+let ``every command offers an entry of the catalogue or says what it does`` () =
+    for command in OneShot.commands do
+        Assert.True(OneShot.offers.ContainsKey command <> OneShot.ownCommands.ContainsKey command, command)
+    for command in Seq.append (OneShot.offers |> Map.keys) (OneShot.ownCommands |> Map.keys) do
+        Assert.Contains(command, OneShot.commands)
+
+[<Fact>]
+let ``every entry of the catalogue is offered by a command or listed as not offered`` () =
+    let offered = OneShot.offers |> Map.values |> Seq.concat |> set
+    Assert.Empty(catalogue - offered - OneShot.notOffered)
+    Assert.Empty(Set.intersect offered OneShot.notOffered)
+    Assert.Empty(offered + OneShot.notOffered - catalogue)

@@ -159,6 +159,12 @@ Each of these looks arbitrary and is not:
   corrupts the stream, and the client reports the server as failed.
 - **Every library call goes through `Guard.Run`.** It is what keeps a stack overflow or a hang
   inside one request.
+- **A tool's answer comes from the library's catalogue of operations**, `Core/Operations/Catalogue.cs`,
+  and `Tools.Offers` says which entries each tool offers. An entry added there fails
+  `CatalogueTest` until a tool offers it or `Tools.NotOffered` says why none does, so the server
+  keeps up with the library by construction. The server's own checks of an answer, such as
+  differentiating an antiderivative back, call the library directly. The catalogue is internal,
+  which is why this assembly is signed with the library's key.
 - **Decline detection reads the raw result, before any `Simplify`.** An unevaluated `limit(...)`
   simplifies to `NaN`, which would turn an honest decline into what looks like a wrong answer.
 - **Simplify before stripping a `provided` guard, never after.** The guard is what licenses the
