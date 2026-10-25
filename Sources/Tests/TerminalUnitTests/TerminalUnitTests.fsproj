@@ -5,6 +5,12 @@
 
     <IsPackable>false</IsPackable>
     <GenerateProgramFile>false</GenerateProgramFile>
+
+    <!-- NU1608: FSharp.Compiler.Service 43.9.300 beside the SDK's FSharp.Core 10.1, reaching this
+         project through AngouriMath.Terminal.Lib, which suppresses it and says why.
+         CompilerServiceWorksTest, here, carries the check.
+         https://github.com/asc-community/AngouriMath/issues/542 -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

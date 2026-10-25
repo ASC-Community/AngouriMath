@@ -5,6 +5,12 @@
 
     <IsPackable>false</IsPackable>
     <GenerateProgramFile>false</GenerateProgramFile>
+
+    <!-- NU1608: Microsoft.DotNet.Interactive.FSharp brings FSharp.Compiler.Service 43.9.300 beside the
+         SDK's FSharp.Core 10.1, the pair AngouriMath.Terminal.Lib suppresses and says why.
+         CompilerServiceWorksTest, in TerminalUnitTests, carries the check.
+         https://github.com/asc-community/AngouriMath/issues/542 -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +23,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.Interactive.FSharp" Version="1.0.0-beta.25323.1" />
     <PackageReference Update="FSharp.Compiler.Service" Version="43.10.101" /> <!-- For Microsoft.DotNet.Interactive.FSharp to use FSharp.Core 10.0.101 -->
+    <!-- Pinned to pull the patched build forward: Microsoft.DotNet.Interactive.FSharp brings
+         System.Security.Cryptography.Xml and .Pkcs 9.0.6, with twelve high and one moderate advisory
+         between them (NU1903, NU1902). 9.0.21 is the build AngouriMath.Terminal.Lib pins, and its
+         comment says when to remove it. https://github.com/asc-community/AngouriMath/issues/542 -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.21" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
