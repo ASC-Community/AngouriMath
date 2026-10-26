@@ -189,21 +189,48 @@ namespace AngouriMath.Functions.Algebra.Groebner
             if (univariate.SolveEquation(variable).InnerSimplified is not Set.FiniteSet roots)
                 return budget.Allow(false, "unenumerable roots");
 
+            var remaining = new Dictionary<Variable, int>(at);
+            for (var i = 0; i < at; i++)
+                remaining[variables[i]] = i;
+            var still = variables.Take(at).ToList();
             foreach (var root in roots)
             {
                 assignment[at] = root;
                 var narrowed = new List<Entity>(equations.Count);
+                var consistent = true;
                 foreach (var equation in equations)
                 {
-                    var substituted = equation.Substitute(variable, root).InnerSimplified;
+                    var substituted = Canonical(equation.Substitute(variable, root).InnerSimplified, remaining, still);
                     if (substituted.Vars.Any())
                         narrowed.Add(substituted);
+                    else if (substituted is Number.Rational { IsZero: false })
+                        consistent = false;
                 }
+                // A root that leaves an equation a nonzero number extends to no solution.
+                if (!consistent)
+                    continue;
                 if (!BackSubstitute(narrowed, variables, at - 1, assignment, found, budget))
                     return false;
             }
             return true;
         }
+
+        /// <summary>
+        /// <paramref name="substituted"/> as a polynomial over <c>Q</c> in the variables still to
+        /// be assigned, where it is one, so that a term the root has made worth nothing is gone.
+        /// </summary>
+        /// <remarks>
+        /// A basis that is not in shape position has elements like <c>x y + 3 x - 5 y - 15</c>,
+        /// whose leading coefficient vanishes at a root: at <c>y = -3</c> it is <c>0</c>, and
+        /// says nothing about <c>x</c>. One structural pass leaves it <c>x * (-3) + 3 * x</c>,
+        /// which still mentions <c>x</c>, so it was taken as the equation to solve <c>x</c>
+        /// from, solved to every number, and the system was declined. Where a root is a
+        /// radical the coefficients are not rational, and it is left as it is.
+        /// </remarks>
+        static Entity Canonical(Entity substituted, IReadOnlyDictionary<Variable, int> remaining, IReadOnlyList<Variable> still)
+            => MultivariatePolynomial.TryParse(substituted, remaining) is { } polynomial
+                ? polynomial.ToEntity(still)
+                : substituted;
 
         /// <summary>
         /// Substitutes a candidate into the original equations and insists they come out

@@ -42,6 +42,23 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A polynomial system is not answered with some of its solutions missing
+
+**Silent: a polynomial system that lost solutions has all of them.** `EquationSystem.Solve` triangularises a
+polynomial system over the rationals with a Gröbner basis, and two defects made that path decline systems it should
+have answered. The conversion to lexicographic order recorded each new row of its echelon form without the rows that
+had reduced it, so `x * y, x + y^2 - 1` was triangularised with `x + y^2` in place of `x + y^2 - 1`. And an element
+whose leading coefficient a root makes zero was not read as zero: `x y + 3 x - 5 y - 15` at `y = -3` stayed
+`x * (-3) + 3 * x` and was solved for `x` as every number. A declined system went to the eliminator, which solves
+`x * y = 0` for `y` as `0` alone and lost solutions. Both are fixed. A system the triangularisation now takes lists
+its rows in the order it finds them, which can differ from the eliminator's
+([#2126](https://github.com/asc-community/AngouriMath/issues/2126)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Equations("x*y", "x + y^2 - 1").Solve("x", "y")` | `[[1, 0]]` | `[[1, 0], [0, 1], [0, -1]]` |
+| `MathS.Equations("x*y + 3*x - 5*y - 15", "x^2 - 3*x - 4*y - 10").Solve("x", "y")` | `[[1, -3], [2, -3]]` | `[[5, 0], [1, -3], [2, -3]]` |
+
 ### A square system is not answered with rows that are no solution
 
 **Silent: a row that is no solution is gone, and a system with a row that fails for some values is `null`.**

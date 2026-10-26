@@ -203,10 +203,16 @@ namespace AngouriMath.Functions.Algebra.Groebner
                     continue;
                 }
 
+                // The row stored is this monomial's normal form less the rows that reduced it,
+                // so the combination it stands for is the monomial less theirs. Recording the
+                // monomial alone gave every later element that leans on this row the wrong
+                // coefficients: x * y, x + y^2 - 1 came back as x + y^2, whose root (0, 0)
+                // is no solution, and the system fell back to an eliminator that lost two of
+                // its three solutions.
                 staircase.Add(monomial);
                 var unit = new ERational[staircase.Count];
                 for (var i = 0; i < unit.Length; i++)
-                    unit[i] = ERational.Zero;
+                    unit[i] = i < staircase.Count - 1 && i < combination.Length ? combination[i].Negate() : ERational.Zero;
                 unit[staircase.Count - 1] = ERational.One;
 
                 for (var row = 0; row < rowCombinations.Count; row++)
