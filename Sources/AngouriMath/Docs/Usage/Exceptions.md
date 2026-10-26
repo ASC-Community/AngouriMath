@@ -216,9 +216,9 @@ largest base there are digits for, and the base that was asked for.
 ### `WrongNumberOfArgumentsException`
 
 An API call whose arity does not match: a compiled function called with the wrong number of values,
-a truth table asked for over a different number of variables than the expression has, a system of
-equations with more or fewer equations than unknowns. Where the expression is in scope the message
-names it and its variables.
+or a truth table asked for over a different number of variables than the expression has. Where the
+expression is in scope the message names it and its variables. A system of equations with more or
+fewer equations than unknowns is not one: it is solved, or declined as `null`.
 
 Compare `FunctionArgumentCountException`, which is the same complaint about a function call written
 inside a string. **Use `FunctionArgumentCountException` from the parser and this one from

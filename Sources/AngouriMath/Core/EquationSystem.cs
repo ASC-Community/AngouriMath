@@ -67,7 +67,10 @@ namespace AngouriMath.Core
         /// Solves a system of equations, if possible.
         /// </summary>
         /// <param name="vars">
-        /// The umber of variables must match number of equations
+        /// The unknowns, as many as there are equations or not. Where there are more, or where a
+        /// system leaves one free, it becomes a parameter in the answer: <c>x^2 + y^2 = 1</c> for
+        /// <c>x</c> and <c>y</c> is two rows, <c>x = t_1</c> with <c>y</c> the positive and the
+        /// negative square root of <c>1 - t_1^2</c>.
         /// </param>
         /// <return>
         /// If there exists at least one solution, returns a solution matrix
