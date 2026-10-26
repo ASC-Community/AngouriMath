@@ -96,7 +96,8 @@ namespace AngouriMath.Functions.Algebra
 
         internal static Matrix? SolveSystem(IEnumerable<Entity> inputEquations, ReadOnlySpan<Variable> vars)
         {
-            var equations = new List<Entity>(inputEquations.Select(equation => equation.InnerSimplified));
+            var written = inputEquations.ToList();
+            var equations = new List<Entity>(written.Select(equation => equation.InnerSimplified));
 
             // Triangularising first, where the system is polynomial over Q and the answer can
             // be checked exactly. Eliminating in radicals -- which is what InSolveSystem below
@@ -155,13 +156,85 @@ namespace AngouriMath.Functions.Algebra
                         throw new AngouriBugException("InSolveSystem incorrect output");
                 if (res.Count == 0)
                     return null;
-                var tb = new MatrixBuilder(res, initVarCount);
+                // Each row is put back into the system as the caller wrote it, as a root of one
+                // equation is: `sqrt(y) = x` is solved for `y` as `x^2`, which is no solution
+                // where `x` is negative, and `sqrt(y) - x`, `x + 1` was answered [[-1, 1]].
+                // https://github.com/asc-community/AngouriMath/issues/2123
+                if (RowsThatHold(written, variables, res) is not { Count: > 0 } rows)
+                    return null;
+                var tb = new MatrixBuilder(rows, initVarCount);
                 return tb.ToMatrix();
             }
             finally
             {
                 ledger.Report();
             }
+        }
+
+        /// <summary>
+        /// The rows of <paramref name="rows"/> that satisfy each of <paramref name="equations"/>,
+        /// or <see langword="null"/> where a row is shown not to for some value of the symbols
+        /// left in it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A row is dropped on the evidence a root of one equation is dropped on,
+        /// <see cref="StatementSolver.IsEvidenceAgainst"/>: an equation that, with the row put
+        /// in, has no symbol left and is a number away from zero. Such a row is no solution for
+        /// any value of anything, so dropping it loses none.
+        /// </para>
+        /// <para>
+        /// A row with symbols left in it is tried at one value of them, and one that fails there
+        /// declines the system instead of being dropped. It may hold for other values, as
+        /// <c>sqrt(t^2) = t</c> does for every positive <c>t</c>, and the rows left would read as
+        /// all of the solutions. A symbol of the system's own is tried at a positive value that
+        /// is not whole, and a parameter that a row brings with it, a <c>t_1</c> or an
+        /// <c>n_1</c>, at a whole one, since an <c>n_1</c> stands for those only.
+        /// </para>
+        /// <para>
+        /// Anything else is kept, as a root of one equation is: a residual that cannot be
+        /// evaluated, or one too small next to its terms to be told from rounding.
+        /// </para>
+        /// </remarks>
+        private static List<List<Entity>>? RowsThatHold(List<Entity> equations, Variable[] variables, List<List<Entity>> rows)
+        {
+            var own = new HashSet<Variable>(equations.SelectMany(equation => equation.Vars));
+            var replacements = new Dictionary<Variable, Entity>();
+            var kept = new List<List<Entity>>(rows.Count);
+            foreach (var row in rows)
+            {
+                replacements.Clear();
+                for (var index = 0; index < variables.Length; index++)
+                    replacements[variables[index]] = row[index];
+                var residuals = equations.Select(equation => equation.Substitute(replacements)).ToList();
+                if (residuals.Any(residual => !residual.Vars.Any() && StatementSolver.IsEvidenceAgainst(residual)))
+                    continue;
+                if (residuals.Any(residual => residual.Vars.Any() && StatementSolver.IsEvidenceAgainst(AtASamplePoint(residual, own))))
+                    return null;
+                kept.Add(row);
+            }
+            return kept;
+        }
+
+        /// <summary>
+        /// <paramref name="residual"/> with each symbol of <paramref name="own"/> at a positive
+        /// value that is not whole, and every other symbol at 2.
+        /// </summary>
+        private static Entity AtASamplePoint(Entity residual, HashSet<Variable> own)
+        {
+            var values = new[] { (137, 100), (61, 100), (223, 100), (191, 100), (83, 100), (113, 100) };
+            var index = 0;
+            foreach (var symbol in residual.Vars.ToList())
+            {
+                Entity value = Integer.Create(2);
+                if (own.Contains(symbol))
+                {
+                    var (numerator, denominator) = values[index++ % values.Length];
+                    value = Rational.Create(numerator, denominator);
+                }
+                residual = residual.Substitute(symbol, value);
+            }
+            return residual;
         }
 
         /// <summary>Solves system of equations</summary>

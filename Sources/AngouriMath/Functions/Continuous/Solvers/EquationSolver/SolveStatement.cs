@@ -123,7 +123,17 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 return true;
             if (root.Vars.Any())
                 return false;
-            var substituted = equation.Substitute(x, root);
+            return IsEvidenceAgainst(equation.Substitute(x, root));
+        }
+
+        /// <summary>
+        /// Whether <paramref name="substituted"/>, an equation with what was found for its
+        /// unknowns put in and no symbol left, shows that what was put in is not a solution:
+        /// it evaluates to a number, and one that is large next to the terms it is the sum of.
+        /// See <see cref="RelativeResidualTolerance"/> for why the size alone is not enough.
+        /// </summary>
+        internal static bool IsEvidenceAgainst(Entity substituted)
+        {
             if (substituted.Evaled is not Number.Complex residual || !residual.IsFinite)
                 return false;
             var size = residual.Abs().EDecimal;
