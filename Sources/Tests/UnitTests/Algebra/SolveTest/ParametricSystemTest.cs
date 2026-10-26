@@ -6,7 +6,6 @@
 //
 
 using AngouriMath;
-using AngouriMath.Core.Exceptions;
 using AngouriMath.Extensions;
 using System.Linq;
 using Xunit;
@@ -123,22 +122,6 @@ namespace AngouriMath.Tests.Algebra
         public void AContradictoryShortSystemHasNoSolutions()
             => Assert.Null(MathS.Equations(new Entity[] { "x + y - 1", "2*x + 2*y - 3" })
                 .Solve("x", "y", "z"));
-
-        /// <summary>
-        /// What is not taken here, and still reaches the old refusal. Linearity is checked rather
-        /// than assumed, so a product or a power of the unknowns fails the check; and a
-        /// coefficient that is not rational is refused because a row reduction has to decide
-        /// whether a pivot is zero, which is not decidable for a symbol.
-        /// </summary>
-        [Theory]
-        [InlineData(new[] { "x^2 + y^2 - 1" }, new[] { "x", "y" })]
-        [InlineData(new[] { "x*y - 1" }, new[] { "x", "y" })]
-        [InlineData(new[] { "a*x + y - 1" }, new[] { "x", "y" })]
-        [InlineData(new[] { "sin(x) + y" }, new[] { "x", "y" })]
-        public void WhatIsNotLinearInTheUnknownsIsRefused(string[] equations, string[] variables)
-            => Assert.Throws<WrongNumberOfArgumentsException>(
-                () => MathS.Equations(equations.Select(e => e.ToEntity()).ToArray())
-                    .Solve(variables.Select(v => (Entity.Variable)v).ToArray()));
 
         /// <summary>
         /// The neighbours must answer exactly as they did: a determined system, an

@@ -42,6 +42,26 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A system with more or fewer equations than unknowns is solved or declined
+
+**Not silent: what was an exception is an answer or `null`.** `EquationSystem.Solve` threw
+`WrongNumberOfArgumentsException` for a system with more or fewer equations than unknowns, unless it was polynomial
+over the rationals with rational solutions or had fewer equations and was linear with rational coefficients. Such a
+system is now eliminated one unknown at a time, and an unknown that nothing is left to constrain becomes a parameter,
+`t_1`, as in the linear case. Every row is substituted back into every equation and kept only where each simplifies to
+zero. Where one does not, or where a branch cannot be decided, the system is declined as `null`, which `Solve`
+documents as no solution found ([#212](https://github.com/asc-community/AngouriMath/issues/212)). Code that caught the
+exception around `Solve` to detect a non-square system no longer sees it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Equations("x^2 + y^2 - 1").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `[[t_1, sqrt(-(t_1 ^ 2 + -1))], [t_1, -sqrt(-(t_1 ^ 2 + -1))]]` |
+| `MathS.Equations("a*x + y - 1").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `[[t_1, -(a * t_1 + -1)]]` |
+| `MathS.Equations("sin(x)", "x").Solve("x")` | `WrongNumberOfArgumentsException` | `[0]` |
+| `MathS.Equations("sin(x) - y", "cos(x) - y", "x - pi/4").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `[[pi / 4, 1/2 * sqrt(2)]]` |
+| `MathS.Equations("sqrt(y) - x").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `null`: `y = x^2` is no solution where `x` is negative |
+| `MathS.Equations("x + y - a", "x - y - b", "x - c").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `null`: there are solutions only where `a + b = 2c` |
+
 ### `am_classify` is a preliminary tool, served by `amcli mcp --preliminary`
 
 **Not silent: what answered is a failure naming the flag.** `am_classify` guesses which field a formula comes from by
