@@ -42,6 +42,24 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A system with a product equation is solved branch by branch
+
+**Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,
+which is the answer only where `x` is not zero, and lost the solutions where it is, in a system the triangularisation
+does not take. A system with a product in more than one of its unknowns is now solved once for each factor, and its
+solutions are theirs together, each put back into the system as written. A row is dropped where an equation, with the
+row put in, is not a finite number, as `x ln(y)` is at `(0, 0)`. A square system with an unknown that no equation
+mentions answers it as a parameter, as a short system does, where it was `null`
+([#2128](https://github.com/asc-community/AngouriMath/issues/2128)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Equations("x*y", "sin(x) + y - 1").Solve("x", "y")` | `[[pi / 2 + 2 * pi * n_1, 0], [pi - pi / 2 + 2 * pi * n_1, 0]]` | `[[0, 1], [pi / 2 + 2 * pi * n_1, 0], [pi - pi / 2 + 2 * pi * n_1, 0]]` |
+| `MathS.Equations("(x - 1)*(y - 2)", "e^x - y").Solve("x", "y")` | `[[ln(2), 2]]` | `[[1, e], [ln(2), 2]]` |
+| `MathS.Equations("x*e^y", "x^2*y").Solve("x", "y")` | `[[0, 0]]` | `[[0, t_1], [0, 0]]` |
+| `MathS.Equations("x - 1", "x^2 - 1").Solve("x", "y")` | `null` | `[[1, t_1]]` |
+| `MathS.Equations("a - 1", "b * 0").Solve("a", "b")` | `null` | `[[1, t_1]]` |
+
 ### A polynomial system is not answered with some of its solutions missing
 
 **Silent: a polynomial system that lost solutions has all of them.** `EquationSystem.Solve` triangularises a
@@ -76,24 +94,6 @@ is `null`. A row with symbols in it is tried at one value of them, and where it 
 | `MathS.Equations("sqrt(y) - x", "y - 4").Solve("x", "y")` | `[[2, 4], [-2, 4]]` | `[[2, 4]]` |
 | `MathS.Equations("ln(x) + ln(y)", "x - y").Solve("x", "y")` | `[[-1, -1], [1, 1]]` | `[[1, 1]]`: `ln(-1) + ln(-1)` is `2 pi i` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `null`: the second row is a solution only at `a = 0` |
-
-### A system with a product equation is solved branch by branch
-
-**Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,
-which is the answer only where `x` is not zero, and lost the solutions where it is, in a system the triangularisation
-does not take. A system with a product in more than one of its unknowns is now solved once for each factor, and its
-solutions are theirs together, each put back into the system as written. A row is dropped where an equation, with the
-row put in, is not a finite number, as `x ln(y)` is at `(0, 0)`. A square system with an unknown that no equation
-mentions answers it as a parameter, as a short system does, where it was `null`
-([#2128](https://github.com/asc-community/AngouriMath/issues/2128)).
-
-| Input | Was (2.6.0) | Now |
-|---|---|---|
-| `MathS.Equations("x*y", "sin(x) + y - 1").Solve("x", "y")` | `[[pi / 2 + 2 * pi * n_1, 0], [pi - pi / 2 + 2 * pi * n_1, 0]]` | `[[0, 1], [pi / 2 + 2 * pi * n_1, 0], [pi - pi / 2 + 2 * pi * n_1, 0]]` |
-| `MathS.Equations("(x - 1)*(y - 2)", "e^x - y").Solve("x", "y")` | `[[ln(2), 2]]` | `[[1, e], [ln(2), 2]]` |
-| `MathS.Equations("x*e^y", "x^2*y").Solve("x", "y")` | `[[0, 0]]` | `[[0, t_1], [0, 0]]` |
-| `MathS.Equations("x - 1", "x^2 - 1").Solve("x", "y")` | `null` | `[[1, t_1]]` |
-| `MathS.Equations("a - 1", "b * 0").Solve("a", "b")` | `null` | `[[1, t_1]]` |
 
 ### A system with more or fewer equations than unknowns is solved or declined
 
