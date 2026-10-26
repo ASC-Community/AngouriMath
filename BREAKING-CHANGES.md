@@ -42,6 +42,24 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A square system is not answered with rows that are no solution
+
+**Silent: a row that is no solution is gone, and a system with a row that fails for some values is `null`.**
+`EquationSystem.Solve` with as many equations as unknowns returned every row the elimination found, without putting it
+back into the system. Solving one equation can widen it: `sqrt(y) = x` is solved for `y` as `x^2`, which is no
+solution where `x` is negative. Each row is now put back into the system as written. A row that leaves an equation
+with no symbol in it a number away from zero is dropped, as a root of one equation is, and a system left with no row
+is `null`. A row with symbols in it is tried at one value of them, and where it fails there the system is declined as
+`null`, since the row may still hold for other values
+([#2123](https://github.com/asc-community/AngouriMath/issues/2123)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Equations("sqrt(y) - x", "x + 1").Solve("x", "y")` | `[[-1, 1]]` | `null`: `sqrt(1) - (-1)` is 2 |
+| `MathS.Equations("sqrt(y) - x", "y - 4").Solve("x", "y")` | `[[2, 4], [-2, 4]]` | `[[2, 4]]` |
+| `MathS.Equations("ln(x) + ln(y)", "x - y").Solve("x", "y")` | `[[-1, -1], [1, 1]]` | `[[1, 1]]`: `ln(-1) + ln(-1)` is `2 pi i` |
+| `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `null`: the second row is a solution only at `a = 0` |
+
 ### A system with more or fewer equations than unknowns is solved or declined
 
 **Not silent: what was an exception is an answer or `null`.** `EquationSystem.Solve` threw
