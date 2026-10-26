@@ -79,11 +79,15 @@ namespace AngouriMath.Tests.Algebra
             "3a+4b-4c"
         }, new Entity.Variable[] { "a", "b", "c" }, 1);
 
+        // b * 0 is zero for every b, so b is free and the solutions are (1, t) for every t. This
+        // was answered null, because no equation was left to eliminate b from; an unknown that
+        // no equation mentions is a parameter now, as it is in a short system.
+        // https://github.com/asc-community/AngouriMath/issues/2128
         [Fact]
         public void TestTrigSystem4() => AssertSystemSolvable(new Entity[] {
             "a - 1",
             "b * 0"
-        }, new Entity.Variable[] { "a", "b" }, 0);
+        }, new Entity.Variable[] { "a", "b" }, 1);
 
         // https://www.youtube.com/watch?v=dVs26SSUJSA
         [Fact]

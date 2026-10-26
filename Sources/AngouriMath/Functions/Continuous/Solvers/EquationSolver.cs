@@ -140,11 +140,21 @@ namespace AngouriMath.Functions.Algebra
                         equations, variables, out var family))
                     return family;
 
+                // A product is zero where any one of its factors is, and the elimination solves
+                // `x * y = 0` for `y` as `0`, which is the answer only where `x` is not zero. So a
+                // system with a product in more than one of its unknowns is solved once for each
+                // factor, and its solutions are theirs together.
+                // https://github.com/asc-community/AngouriMath/issues/2128
+                if (Branches(equations, variables) is { } branches)
+                    return Together(branches, written, vars, variables);
+
                 // Nor is any other count: `x^2 + y^2 = 1` has a family of solutions in a
                 // parameter, and `sin(x) = 0` with `x = 0` has one solution. Those are eliminated,
                 // and a system whose answer cannot be shown to hold is declined, as `Solve`
                 // documents. https://github.com/asc-community/AngouriMath/issues/212
-                if (equations.Count != vars.Length)
+                // An unknown that no equation mentions is free, as one is in a short system, and
+                // the eliminator has no equation to take it from.
+                if (equations.Count != vars.Length || variables.Any(variable => !equations.Any(equation => equation.ContainsNode(variable))))
                     return NonSquareSystemSolver.Solve(equations, variables, ledger) is { } families
                         ? new MatrixBuilder(families, vars.Length).ToMatrix()
                         : null;
@@ -171,6 +181,75 @@ namespace AngouriMath.Functions.Algebra
             }
         }
 
+        /// <summary>The most systems a system is split into by its products.</summary>
+        private const int MostBranches = 64;
+
+        /// <summary>
+        /// One system for each way of choosing a factor of each product in more than one of
+        /// <paramref name="variables"/>, with the product replaced by the factor, or
+        /// <see langword="null"/> where there is no such product or the choices are too many.
+        /// </summary>
+        /// <remarks>
+        /// A product whose factors all mention the same unknowns is left alone: solving it for
+        /// any of them reads every factor, as <c>x (x - 1)</c> is solved for <c>x</c> as
+        /// <c>0</c> and <c>1</c>.
+        /// </remarks>
+        private static List<List<Entity>>? Branches(List<Entity> equations, Variable[] variables)
+        {
+            var branches = new List<List<Entity>> { new(equations) };
+            var split = false;
+            for (var i = 0; i < equations.Count; i++)
+            {
+                if (equations[i] is not Mulf)
+                    continue;
+                var factors = Mulf.LinearChildren(equations[i]).Where(factor => variables.Any(factor.ContainsNode)).ToList();
+                if (factors.Count < 2)
+                    continue;
+                var first = variables.Where(factors[0].ContainsNode).ToList();
+                if (factors.All(factor => variables.Where(factor.ContainsNode).SequenceEqual(first)))
+                    continue;
+                if (branches.Count * factors.Count > MostBranches)
+                    return null;
+                split = true;
+                branches = branches.SelectMany(branch => factors.Select(factor =>
+                {
+                    var chosen = new List<Entity>(branch);
+                    chosen[i] = factor;
+                    return chosen;
+                })).ToList();
+            }
+            return split ? branches : null;
+        }
+
+        /// <summary>
+        /// The solutions of each of <paramref name="branches"/> together, each kept only where
+        /// it satisfies the system as written: a factor can be zero where another is not
+        /// defined, as <c>x ln(y)</c> is at <c>x = 0</c> and <c>y = 0</c>.
+        /// </summary>
+        /// <remarks>
+        /// A branch answered by <see langword="null"/> is taken to have no solutions, which is
+        /// what <see cref="EquationSystem.Solve"/> says of it: <c>x e^y = 0</c> has none where
+        /// <c>e^y</c> is zero.
+        /// </remarks>
+        private static Matrix? Together(List<List<Entity>> branches, List<Entity> written, ReadOnlySpan<Variable> vars, Variable[] variables)
+        {
+            var rows = new List<List<Entity>>();
+            foreach (var branch in branches)
+            {
+                if (SolveSystem(branch, vars) is not { } solved)
+                    continue;
+                for (var row = 0; row < solved.RowCount; row++)
+                {
+                    var values = Enumerable.Range(0, solved.ColumnCount).Select(column => solved[row, column]).ToList();
+                    if (!rows.Any(other => other.SequenceEqual(values)))
+                        rows.Add(values);
+                }
+            }
+            if (rows.Count == 0 || RowsThatHold(written, variables, rows) is not { Count: > 0 } kept)
+                return null;
+            return new MatrixBuilder(kept, vars.Length).ToMatrix();
+        }
+
         /// <summary>
         /// The rows of <paramref name="rows"/> that satisfy each of <paramref name="equations"/>,
         /// or <see langword="null"/> where a row is shown not to for some value of the symbols
@@ -180,8 +259,9 @@ namespace AngouriMath.Functions.Algebra
         /// <para>
         /// A row is dropped on the evidence a root of one equation is dropped on,
         /// <see cref="StatementSolver.IsEvidenceAgainst"/>: an equation that, with the row put
-        /// in, has no symbol left and is a number away from zero. Such a row is no solution for
-        /// any value of anything, so dropping it loses none.
+        /// in, has no symbol left and is a number away from zero, or is no finite number at all, as
+        /// <c>x ln(y)</c> is at <c>(0, 0)</c>. Such a row is no solution for any value of anything,
+        /// so dropping it loses none.
         /// </para>
         /// <para>
         /// A row with symbols left in it is tried at one value of them, and one that fails there
@@ -207,7 +287,8 @@ namespace AngouriMath.Functions.Algebra
                 for (var index = 0; index < variables.Length; index++)
                     replacements[variables[index]] = row[index];
                 var residuals = equations.Select(equation => equation.Substitute(replacements)).ToList();
-                if (residuals.Any(residual => !residual.Vars.Any() && StatementSolver.IsEvidenceAgainst(residual)))
+                if (residuals.Any(residual => !residual.Vars.Any()
+                        && (residual.Evaled is Complex { IsFinite: false } || StatementSolver.IsEvidenceAgainst(residual))))
                     continue;
                 if (residuals.Any(residual => residual.Vars.Any() && StatementSolver.IsEvidenceAgainst(AtASamplePoint(residual, own))))
                     return null;
