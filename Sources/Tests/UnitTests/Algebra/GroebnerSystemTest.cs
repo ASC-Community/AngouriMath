@@ -10,6 +10,9 @@ using System.Linq;
 using AngouriMath;
 using AngouriMath.Core;
 using AngouriMath.Core.Exceptions;
+using AngouriMath.Extensions;
+using AngouriMath.Functions;
+using AngouriMath.Functions.Algebra.Groebner;
 using Xunit;
 using static AngouriMath.Entity;
 
@@ -175,6 +178,77 @@ namespace AngouriMath.Tests.Algebra
             Assert.NotNull(solutions);
             Assert.Equal(expected, solutions.RowCount);
             AssertEverySolutionSatisfies(equations, variables, solutions);
+        }
+
+        /// <summary>
+        /// The basis of <c>x * y, x + y^2 - 1</c> in degree-reverse-lexicographic order has
+        /// <c>1</c>, <c>y</c> and <c>x</c> under its staircase, and converting it reaches
+        /// <c>y^2 = 1 - x</c> with the row for <c>1</c> already standing. The row kept for
+        /// <c>y^2</c> is then <c>-x</c>, and recording it as <c>y^2</c> alone made the element
+        /// for <c>x</c> come out as <c>x + y^2</c>, whose root <c>(0, 0)</c> is no solution.
+        /// </summary>
+        [Fact]
+        public void TheLexicographicBasisKeepsWhatARowWasReducedBy()
+        {
+            Variable[] variables = { "x", "y" };
+            var index = new Dictionary<Variable, int> { [variables[0]] = 0, [variables[1]] = 1 };
+            var generators = new[] { "x * y", "x + y^2 - 1" }
+                .Select(text => MultivariatePolynomial.TryParse(text.ToEntity(), index)!)
+                .ToList();
+            var budget = new GroebnerBudget();
+            var basis = Buchberger.Compute(generators, MonomialOrder.DegreeReverseLexicographic, budget);
+            Assert.NotNull(basis);
+            var lexicographic = Fglm.ToLexicographic(basis!, variables.Length, budget);
+            Assert.NotNull(lexicographic);
+
+            var elements = lexicographic!.Select(element => element.ToEntity(variables)).ToList();
+            Assert.Equal(2, elements.Count);
+            foreach (var expected in new[] { "y^3 - y", "x + y^2 - 1" })
+                Assert.Contains(elements, element => (element - expected.ToEntity()).Simplify() == 0);
+        }
+
+        /// <summary>
+        /// The system the basis above belongs to. With the wrong element the triangularisation
+        /// was declined, and the eliminator that answered instead solved <c>x * y = 0</c> for
+        /// <c>y</c> as <c>0</c> alone, which kept <c>(1, 0)</c> and lost <c>(0, 1)</c> and
+        /// <c>(0, -1)</c>.
+        /// </summary>
+        [Fact]
+        public void ASystemWhoseBasisLeansOnAReducedRowIsSolvedWhole()
+        {
+            Entity[] equations = { "x * y", "x + y^2 - 1" };
+            Variable[] variables = { "x", "y" };
+
+            var solutions = MathS.Equations(equations).Solve(variables);
+
+            Assert.NotNull(solutions);
+            Assert.Equal(3, solutions!.RowCount);
+            AssertEverySolutionSatisfies(equations, variables, solutions);
+            foreach (var (x, y) in new[] { (1, 0), (0, 1), (0, -1) })
+                Assert.Contains(Enumerable.Range(0, solutions.RowCount),
+                    row => solutions[row, 0] == Number.Integer.Create(x) && solutions[row, 1] == Number.Integer.Create(y));
+        }
+
+        /// <summary>
+        /// A basis that is not in shape position. Its element <c>x y + 3 x - 5 y - 15</c> is
+        /// <c>0</c> at <c>y = -3</c> but was left <c>x * (-3) + 3 * x</c>, which still mentions
+        /// <c>x</c>, so it was the equation <c>x</c> was solved from there. That solved to every
+        /// number, the triangularisation was declined, and the eliminator lost <c>(5, 0)</c>.
+        /// </summary>
+        [Fact]
+        public void ARootThatZeroesALeadingCoefficientUsesTheNextElement()
+        {
+            Entity[] equations = { "x * y + 3 * x - 5 * y - 15", "x^2 - 3 * x - 4 * y - 10" };
+            Variable[] variables = { "x", "y" };
+
+            var solutions = MathS.Equations(equations).Solve(variables);
+
+            Assert.NotNull(solutions);
+            Assert.Equal(3, solutions!.RowCount);
+            AssertEverySolutionSatisfies(equations, variables, solutions);
+            foreach (var (x, y) in new[] { (5, 0), (1, -3), (2, -3) })
+                Assert.Contains(Enumerable.Range(0, solutions.RowCount),
+                    row => solutions[row, 0] == Number.Integer.Create(x) && solutions[row, 1] == Number.Integer.Create(y));
         }
 
         /// <summary>
