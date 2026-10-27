@@ -154,6 +154,21 @@ is `null`. A row with symbols in it is tried at one value of them, and where it 
 | `MathS.Equations("ln(x) + ln(y)", "x - y").Solve("x", "y")` | `[[-1, -1], [1, 1]]` | `[[1, 1]]`: `ln(-1) + ln(-1)` is `2 pi i` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `null`: the second row is a solution only at `a = 0` |
 
+### `conj`, `arg` and `det` are refused by name
+
+**Not silent: these now throw `UnrecognizedFunctionParseException` where they parsed.** A name the parser does not
+know, followed by a bracket, is read as a product, so `arg(z)` was the variable `arg` times `z`, and `arg(z) = 1`
+solved to `{ 1 / arg }`. `conjugate` was already refused by name; `conj` and `arg` are the conjugate and the argument
+as other systems spell them, and `det` is the determinant, which a `Matrix` has as the property `Determinant` but an
+expression cannot call. `re` and `im` are still read as products, as before: two letters is short enough to be a
+variable's name ([#2136](https://github.com/asc-community/AngouriMath/issues/2136)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"arg(z)".ToEntity()` | `arg * z` | throws `UnrecognizedFunctionParseException` |
+| `"conj(z)".ToEntity()` | `conj * z` | throws `UnrecognizedFunctionParseException` |
+| `"det([[1, 2], [3, 4]])".ToEntity()` | `det * [[1, 2], [3, 4]]` | throws `UnrecognizedFunctionParseException` |
+
 ### A system with more or fewer equations than unknowns is solved or declined
 
 **Not silent: what was an exception is an answer or `null`.** `EquationSystem.Solve` threw

@@ -634,6 +634,13 @@ atom returns[Entity value]
 
     | 'trunc(' args = function_arguments ')' { $value = NotImplementedFunction("trunc", "rounding functions"); }
     | 'conjugate(' args = function_arguments ')' { $value = NotImplementedFunction("conjugate", "complex conjugate as a symbolic function"); }
+    /* conj and arg are the conjugate and the argument as other systems spell them, and det the
+       determinant, which exists on a matrix but not in an expression. Each was read as a product:
+       arg(z) was arg * z. re and im are left as products, as MissingFunctionNamesRefusedTest
+       records. https://github.com/asc-community/AngouriMath/issues/2136 */
+    | 'conj(' args = function_arguments ')' { $value = NotImplementedFunction("conj", "complex conjugate as a symbolic function"); }
+    | 'arg(' args = function_arguments ')' { $value = NotImplementedFunction("arg", "complex argument as a symbolic function"); }
+    | 'det(' args = function_arguments ')' { $value = NotImplementedFunction("det", "determinant in an expression; a Matrix has the property Determinant"); }
     | 'domain(' args = function_arguments ')' 
         { 
             Assert("domain", 2, $args.list.Count); 

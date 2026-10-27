@@ -29,11 +29,27 @@ namespace AngouriMath.Tests.Convenience
         // floor, ceil, ceiling, round, min, max, gcd and lcm were all on this list until they
         // were implemented: https://github.com/asc-community/AngouriMath/issues/809, and erf
         // until https://github.com/asc-community/AngouriMath/issues/1501.
+        // conj, arg and det since https://github.com/asc-community/AngouriMath/issues/2136:
+        // arg(z) was arg * z.
         [Theory]
         [InlineData("trunc(x)")]
         [InlineData("conjugate(x)")]
+        [InlineData("conj(z)")]
+        [InlineData("arg(z)")]
+        [InlineData("det([[1, 2], [3, 4]])")]
         public void ANameTheLibraryDoesNotHaveIsRefused(string written) =>
             Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity());
+
+        /// <summary>
+        /// Only the call is refused. The same name as a variable, or followed by an operator,
+        /// is read as it was: a name is refused with its bracket, never on its own.
+        /// </summary>
+        [Theory]
+        [InlineData("re * (x + 1)", "re * (x + 1)")]
+        [InlineData("im + arg", "im + arg")]
+        [InlineData("rect(x)", "rect * x")]
+        public void TheSameNameWithoutTheBracketIsStillAVariable(string written, string expected) =>
+            Assert.Equal(expected, written.ToEntity().Stringize());
 
         /// <summary>
         /// The message has to name the function, since the whole point is that the caller
@@ -42,6 +58,8 @@ namespace AngouriMath.Tests.Convenience
         [Theory]
         [InlineData("trunc(x)", "trunc")]
         [InlineData("conjugate(x)", "conjugate")]
+        [InlineData("arg(z)", "arg")]
+        [InlineData("det([[1, 2], [3, 4]])", "det")]
         public void TheRefusalNamesTheFunction(string written, string name) =>
             Assert.Contains(name,
                 Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity()).Message);
