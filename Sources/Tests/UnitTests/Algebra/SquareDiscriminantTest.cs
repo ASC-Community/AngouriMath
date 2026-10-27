@@ -70,5 +70,24 @@ namespace AngouriMath.Tests.Algebra
             Assert.Contains(roots, root => Equal(root, second.ToEntity()));
             Assert.DoesNotContain(roots, root => root.Nodes.Any(node => node is Powf(var radicand, Rational { Denominator: var d }) && d == 2 && radicand is not Number));
         }
+
+        /// <summary>
+        /// With no term in <c>x</c> the solver takes <c>x^2</c> as its unknown and the square
+        /// root after, and that root was left over the square too: <c>x^2 = (a + b)^2</c> was
+        /// <c>{ sqrt((a + b)^2), -sqrt((a + b)^2) }</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("x^2 = (a + b)^2", new[] { "a + b", "-a - b" })]
+        [InlineData("x^2 + (p - q)^2/4 = 0", new[] { "i*(p - q)/2", "-i*(p - q)/2" })]
+        [InlineData("x^2 = 2*a^2", new[] { "sqrt(2)*a", "-sqrt(2)*a" })]
+        [InlineData("x^4 - (a^2 + b^2)*x^2 + a^2*b^2 = 0", new[] { "a", "-a", "b", "-b" })]
+        public void APowerOfTwoAgainstASquareIsRootedExactly(string equation, string[] expected)
+        {
+            var roots = Roots(equation, "x");
+            Assert.Equal(expected.Length, roots.Length);
+            foreach (var root in expected)
+                Assert.Contains(roots, found => Equal(found, root.ToEntity()));
+            Assert.DoesNotContain(roots, root => root.Nodes.Any(node => node is Powf(var radicand, Rational { Denominator: var d }) && d == 2 && radicand is not Number));
+        }
     }
 }

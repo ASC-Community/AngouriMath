@@ -400,8 +400,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             } is { } resConcat
             ? !gcdPower.Equals(EInteger.One)
               // if we had x^6 + x^3 + 1, we replace it with x^2 + x + 1 and find all cubic roots of the final answer
-              ? res.Concat(resConcat).SelectMany(_ => gcdPowerRoots,
-                  (root, coef) => coef * MathS.Pow(root, Rational.Create(1, gcdPower)))
+              // x^2 = y is a quadratic in x, so a y that is a rational number times a square has
+              // its two roots written without the root, as the formula's are: x^2 = (a + b)^2 was
+              // { sqrt((a + b)^2), -sqrt((a + b)^2) } and is { -a - b, a + b }.
+              // https://github.com/asc-community/AngouriMath/issues/2140
+              ? res.Concat(resConcat).SelectMany(root =>
+                  gcdPower.Equals(EInteger.FromInt32(2)) && RootsOverASquareDiscriminant(1, 0, -root) is { } exact
+                  ? exact
+                  : gcdPowerRoots.Select(coef => coef * MathS.Pow(root, Rational.Create(1, gcdPower))))
               : res.Concat(resConcat)
             : null;
         }
