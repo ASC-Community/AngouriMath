@@ -189,6 +189,20 @@ exception around `Solve` to detect a non-square system no longer sees it.
 | `MathS.Equations("sqrt(y) - x").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `null`: `y = x^2` is no solution where `x` is negative |
 | `MathS.Equations("x + y - a", "x - y - b", "x - c").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `null`: there are solutions only where `a + b = 2c` |
 
+### A system is not answered with a copy of one of its rows
+
+**Silent: a repeated row goes.** Two branches of an elimination can reach one solution, and each was answered: two
+circles that meet at two points came back with three rows, one of them another again. Where the second branch went
+through Newton's method the copy was a decimal, `x = 1.4999999999999997` beside the exact `x = 3/2`. A row equal to an
+earlier one is dropped, and so is a row with a decimal in it whose entries are each within a part in a million of an
+exact row's. A decimal row that no exact row agrees with is kept, as the search's answer
+([#2138](https://github.com/asc-community/AngouriMath/issues/2138)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Equations("(x-1/2)^2+(y-sqrt(3)/2)^2-1", "(x-1)^2+y^2-1").Solve("x", "y")` | `[[0, 0], [1.4999999999999997779553950749686919152736663818359375, …], [3/2, -(-2) * sqrt(3) * 1/2 / 2]]` | `[[0, 0], [3/2, -(-2) * sqrt(3) * 1/2 / 2]]` |
+| `MathS.Equations("(x-3/2)^2+(y-sqrt(3)/2)^2-1", "(x-1)^2+y^2-1").Solve("x", "y")` | `[[1/2, -(-2) * sqrt(3) * 1/2 / 2], [2, 0], [1/2, -(-2) * sqrt(3) * 1/2 / 2]]` | `[[1/2, -(-2) * sqrt(3) * 1/2 / 2], [2, 0]]` |
+
 ### `am_classify` is a preliminary tool, served by `amcli mcp --preliminary`
 
 **Not silent: what answered is a failure naming the flag.** `am_classify` guesses which field a formula comes from by

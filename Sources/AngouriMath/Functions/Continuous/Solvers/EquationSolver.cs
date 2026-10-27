@@ -307,7 +307,57 @@ namespace AngouriMath.Functions.Algebra
                     return null;
                 kept.Add(row);
             }
-            return kept;
+            return WithoutDecimalCopies(kept);
+        }
+
+        /// <summary>
+        /// <paramref name="rows"/> without a row that is a copy of another: one equal to an
+        /// earlier row, and one with a number in it that is not exact, each of whose entries is
+        /// within a part in a million of an exact row's.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Two branches of an elimination can reach one solution, and both were answered: the
+        /// circles <c>(x - 3/2)^2 + (y - sqrt(3)/2)^2 = 1</c> and <c>(x - 1)^2 + y^2 = 1</c> met at
+        /// <c>(1/2, sqrt(3)/2)</c> twice. Where one branch went through Newton's method the copy
+        /// is a decimal: <c>(x - 1/2)^2 + (y - sqrt(3)/2)^2 = 1</c> with the same second circle
+        /// met at <c>(3/2, sqrt(3)/2)</c> and again where <c>x</c> is <c>1.4999999999999997</c>.
+        /// </para>
+        /// <para>
+        /// The tolerance is a part in a million, not the double's own precision: a root taken
+        /// of the decimal multiplies its error, and that copy's <c>y</c> is out by about
+        /// <c>2e-8</c>. A decimal row that no exact row agrees with is kept: it is the answer the
+        /// search found, as a root of one equation is.
+        /// https://github.com/asc-community/AngouriMath/issues/2138
+        /// </para>
+        /// </remarks>
+        private static List<List<Entity>> WithoutDecimalCopies(List<List<Entity>> rows)
+        {
+            static bool HasADecimal(List<Entity> row)
+                => row.Any(entry => entry.Nodes.Any(node => node is Number { IsExact: false }));
+            static Complex? ValueOf(Entity entry)
+                => entry.Vars.Any() ? null : entry.Evaled as Complex;
+            static bool Agree(List<Entity> row, List<Entity> exact)
+            {
+                for (var index = 0; index < row.Count; index++)
+                {
+                    if (ValueOf(row[index]) is not { } value || ValueOf(exact[index]) is not { } other)
+                        return false;
+                    var difference = ((Complex)(value - other)).Abs().EDecimal;
+                    var scale = PeterO.Numbers.EDecimal.Max(PeterO.Numbers.EDecimal.One, other.Abs().EDecimal);
+                    if (difference.CompareTo(scale.Multiply(PeterO.Numbers.EDecimal.FromString("1e-6"))) > 0)
+                        return false;
+                }
+                return true;
+            }
+            var distinct = new List<List<Entity>>(rows.Count);
+            foreach (var row in rows)
+                if (!distinct.Any(earlier => earlier.SequenceEqual(row)))
+                    distinct.Add(row);
+            var exactRows = distinct.Where(row => !HasADecimal(row)).ToList();
+            if (exactRows.Count == distinct.Count)
+                return distinct;
+            return distinct.Where(row => !HasADecimal(row) || !exactRows.Any(exact => Agree(row, exact))).ToList();
         }
 
         /// <summary>
