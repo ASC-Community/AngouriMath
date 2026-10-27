@@ -231,6 +231,18 @@ is `null`. A row with symbols in it is tried at one value of them, and where it 
 | `MathS.Equations("ln(x) + ln(y)", "x - y").Solve("x", "y")` | `[[-1, -1], [1, 1]]` | `[[1, 1]]`: `ln(-1) + ln(-1)` is `2 pi i` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `null`: the second row is a solution only at `a = 0` |
 
+### The power reduction of a squared cosine is proved, as the squared sine's is
+
+**Silent: an identity reaches its value.** `cos(x)^2 = (1 + cos(2x))/2` was not proved while
+`sin(x)^2 = (1 - cos(2x))/2` was: the difference reached `-1/2 + cos(x)^2 / 2 + sin(x)^2 / 2`, where the squares
+carry their coefficient as a divisor, and no rule found a squared sine and cosine over one divisor among other terms.
+`sin(x)^2 / d + cos(x)^2 / d = 1 / d` is now found wherever the two sit in a sum
+([#2142](https://github.com/asc-community/AngouriMath/issues/2142)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"cos(x)^2 - (1 + cos(2*x))/2".Simplify()` | `cos(x) ^ 2 - (1 + cos(2 * x)) / 2` | `0` |
+
 ### `conj`, `arg` and `det` are refused by name
 
 **Not silent: these now throw `UnrecognizedFunctionParseException` where they parsed.** A name the parser does not

@@ -370,6 +370,7 @@ namespace AngouriMath.Tests.Core.Transformations
                     "one-less-a-squared-sine-is-a-squared-cosine: ReplacementIsCode",
                     "sine-of-a-whole-multiple-of-an-angle: ReplacementIsCode",
                     "squared-sine-and-cosine-of-one-argument-sum-to-one: ReplacementDropsHoles",
+                    "squared-sine-and-cosine-over-one-divisor-sum-to-its-reciprocal: ReplacementDropsHoles",
                     "squared-sine-and-cosine-with-one-coefficient-sum-to-it: ReplacementDropsHoles",
                     "the-arctangent-of-one-over-root-three: ReplacementIsCode",
                     "the-arctangent-of-root-three: ReplacementIsCode",
@@ -437,13 +438,13 @@ namespace AngouriMath.Tests.Core.Transformations
         [Fact]
         public void ARuleThatForgetsAHoleHasNoBackwardsReading()
         {
-            // Both Pythagorean rules of the set, with a coefficient and without, drop the
-            // argument. The set's other two, 1 + tan^2 = sec^2 and its cotangent twin, keep it,
+            // The three Pythagorean rules of the set, with a coefficient, a divisor or neither,
+            // drop the argument. The set's other two, 1 + tan^2 = sec^2 and its cotangent twin, keep it,
             // and they are the only ones its reversal holds.
             var pythagoras = MatchedRules.PythagoreanIdentity.Rules
                 .Where(rule => rule.Name.StartsWith("squared-sine-and-cosine", StringComparison.Ordinal))
                 .ToList();
-            Assert.Equal(2, pythagoras.Count);
+            Assert.Equal(3, pythagoras.Count);
             foreach (var rule in pythagoras)
             {
                 Assert.Equal(RuleReversal.ReplacementDropsHoles, rule.Reversal);

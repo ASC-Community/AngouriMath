@@ -59,7 +59,7 @@ namespace AngouriMath.Tests.Core.Transformations
         {
             var names = MatchedRules.All.SelectMany(set => set.Rules).Select(rule => rule.Name)
                 .Distinct(StringComparer.Ordinal).ToList();
-            Assert.Equal(311, names.Count);
+            Assert.Equal(312, names.Count);
             Assert.All(names, name => Assert.True(Explanation.IsProse(name),
                 $"'{name}' is a rule name that does not read as a phrase in English"));
 
