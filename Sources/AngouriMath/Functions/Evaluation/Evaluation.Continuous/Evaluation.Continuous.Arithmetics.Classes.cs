@@ -169,6 +169,15 @@ namespace AngouriMath
                 ExpandOnTwoArguments(Dividend, Divisor,
                 (a, b) => (a, b) switch
                 {
+                    // Dividing by a matrix multiplies by its inverse, as the wiki's Matrices page
+                    // says division does. Left to the elementwise branch every operation shares,
+                    // [[1, 2], [3, 4]] / [[1, 2], [3, 4]] was [[1, 1], [1, 1]]. A number over a
+                    // matrix too: x / y is x * y^(-1), which Simplify rewrites freely, and y^(-1)
+                    // of a matrix is its inverse, so 1 / M read elementwise disagreed with M^(-1).
+                    // A divisor with no inverse, singular or not square, leaves the quotient
+                    // written. A matrix over a number is still spread over the entries.
+                    // https://github.com/asc-community/AngouriMath/issues/2141
+                    (_, Matrix divisor) => Powf.MayHaveAnInverse(divisor) ? (a * divisor.Pow(-1)).InnerSimplified(isExact) : a / b,
                     (Integer(0), var n0) =>
                         n0.Evaled is Complex c
                         ? c.IsZero ? MathS.NaN : 0
@@ -279,10 +288,29 @@ namespace AngouriMath
             
             private static bool TryPower(Matrix m, int exp, out Entity res)
             {
-                // Only a square matrix has powers; Pow throws for any other.
-                res = m.IsSquare ? m.Pow(exp) : 0;
-                return m.IsSquare;
+                // Only a square matrix has powers; Pow throws for any other. And only one with
+                // an inverse has negative powers: Pow threw for a singular one, out of eval and
+                // Simplify alike, and so did dividing by one once division used the inverse.
+                // https://github.com/asc-community/AngouriMath/issues/2141
+                var defined = m.IsSquare && (exp >= 0 || MayHaveAnInverse(m));
+                res = defined ? m.Pow(exp) : 0;
+                return defined;
             }
+
+            /// <summary>
+            /// Whether a square matrix may have an inverse: not where its determinant is zero.
+            /// </summary>
+            /// <remarks>
+            /// Asked of the exact elimination, not of <see cref="Matrix.Inverse"/> or
+            /// <see cref="Matrix.Determinant"/>, which can go through GenericTensor's compiled
+            /// operations: those are not safe in a native build, and every node reaches this.
+            /// Using them here broke the native build of every wrapper. A determinant the
+            /// elimination cannot write is not known to be zero.
+            /// </remarks>
+            internal static bool MayHaveAnInverse(Matrix m)
+                => m.IsSquare
+                   && (Functions.PolynomialDeterminant.Of(m.RowCount, (row, column) => m[row, column]) is not { } determinant
+                       || determinant.InnerSimplified != 0);
 
             // Re(x) = x/2 * (1 + 1/sgn(x)^2)
             internal static Entity Re(Entity x) => x / 2 * (1 + 1 / new Signumf(x).Pow(2));
@@ -293,6 +321,12 @@ namespace AngouriMath
                 (a, b) => (a, b) switch
                 {
                     (Matrix m, Integer(var exp)) when exp is { } expNotNull && TryPower(m, expNotNull, out var res) => res.InnerSimplified(isExact),
+                    // Only a square matrix has powers, and only whole ones. Anything else fell
+                    // through to the elementwise branch: [1, 2]^2 was [1, 4], which is no power
+                    // of a column, and Simplify, which writes x * x as x^2, made the undefined
+                    // product [1, 2] * [1, 2] into the same. It stays written.
+                    // https://github.com/asc-community/AngouriMath/issues/2141
+                    (Matrix, _) => MathS.Pow(a, b),
                     // An interval raised to a number, and a number raised to an interval, are
                     // the images of the interval under a monotone function where the function
                     // is one. https://github.com/asc-community/AngouriMath/issues/322
