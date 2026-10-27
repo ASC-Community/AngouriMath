@@ -62,7 +62,8 @@ one inside another was answered with the empty set, a claim that it has no solut
 **Silent: the same roots, written as what they are.** The quadratic formula wrote `sqrt(b^2 - 4ac)` whatever the
 discriminant was, so a symbolic quadratic with a square discriminant came back with the square under the root.
 Either square root gives the same pair of roots, so where the coefficients are polynomials and the discriminant is
-a rational number times the square of one, the roots are written with that polynomial and reduced over `2a`
+a rational number times the square of one, the roots are written with that polynomial and reduced over `2a`. So is
+the square root the solver takes after solving for `x^2`, where an equation has no term in `x`
 ([#2140](https://github.com/asc-community/AngouriMath/issues/2140)).
 
 | Input | Was (2.6.0) | Now |
@@ -71,6 +72,9 @@ a rational number times the square of one, the roots are written with that polyn
 | `"x^2 - (p + q)*x + p*q = 0".Solve("x")` | `{ (p + q - sqrt((-(p + q)) ^ 2 - 4 * p * q)) / 2, … }` | `{ q, p }` |
 | `"x^2 - 2*a*x + a^2 - 2 = 0".Solve("x")` | `{ (-(-2) * a - sqrt(((-2) * a) ^ 2 - 4 * (a ^ 2 + -2))) / 2, … }` | `{ a - sqrt(2), a + sqrt(2) }` |
 | `"2*x^2 - 2*(p + q)*x + p^2 + q^2 = 0".Solve("x")` | `{ (-(-2) * (p + q) - sqrt(((-2) * (p + q)) ^ 2 - 8 * (p ^ 2 + q ^ 2))) / 4, … }` | `{ 1/2 * p + 1/2 * q - i * (1/2 * p - 1/2 * q), … }` |
+| `"x^2 = (a + b)^2".Solve("x")` | `{ sqrt((a + b) ^ 2), -sqrt((a + b) ^ 2) }` | `{ -a - b, a + b }` |
+| `"x^4 - (a^2 + b^2)*x^2 + a^2*b^2 = 0".Solve("x")` | `{ sqrt((a ^ 2 + b ^ 2 - sqrt((-(a ^ 2 + b ^ 2)) ^ 2 - 4 * a ^ 2 * b ^ 2)) / 2), … }` | `{ -b, b, -a, a }` |
+| `"sin(x)^2 = (a + 1)^2".Solve("x")` | `{ arcsin(sqrt((a + 1) ^ 2)) + 2 * pi * n_1, … }` | `{ arcsin(-a - 1) + 2 * pi * n_1, … }` |
 
 ### A system with a product equation is solved branch by branch
 

@@ -33,7 +33,9 @@ namespace AngouriMath.Tests.Algebra
         public void OfASymbolicMatrixCarryNoPivotCondition()
         {
             var eigenvalues = MathS.Matrix(new Entity[,] { { 0, "J" }, { "J", 0 } }).Eigenvalues;
-            Assert.Equal(new FiniteSet("sqrt(J^2)", "-sqrt(J^2)"), eigenvalues);
+            // lambda^2 = J^2 is rooted exactly, so these are J and -J rather than the square under
+            // a root. https://github.com/asc-community/AngouriMath/issues/2140
+            Assert.Equal(new FiniteSet("-J", "J"), eigenvalues);
             Assert.DoesNotContain("provided", eigenvalues!.Stringize());
         }
 

@@ -383,8 +383,8 @@ namespace AngouriMath
             /// </summary>
             /// <remarks>
             /// The characteristic polynomial divides by nothing, so its roots carry no condition an
-            /// elimination's pivots would bring: <c>[[0, J], [J, 0]]</c> has <c>sqrt(J^2)</c> and
-            /// <c>-sqrt(J^2)</c>, which hold at <c>J = 0</c> too. Up to the fourth degree the roots are
+            /// elimination's pivots would bring: <c>[[0, J], [J, 0]]</c> has <c>J</c> and <c>-J</c>,
+            /// which hold at <c>J = 0</c> too. Up to the fourth degree the roots are
             /// in radicals, and past it where the polynomial factors; otherwise the set is the one the
             /// equation solver leaves.
             /// <a href="https://github.com/asc-community/AngouriMath/issues/1676">#1676</a>
