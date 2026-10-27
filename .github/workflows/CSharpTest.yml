@@ -56,17 +56,33 @@ jobs:
       run: dotnet run AreaTimes
       working-directory: Sources/Utils/Utils
 
+    # Release, as the other two legs test, and bash, which stops the step at the first command
+    # that fails. Under PowerShell the step took the result of its last command, so a test host
+    # that crashed still went green. From 2026-09-15 it crashed on most runs: in a Debug build,
+    # Simplify on the cubic row of RationalIntegralsTest recursed deeper than a 1 MB stack holds,
+    # and the leg ran 2,094 to 8,507 of the tests. A Release build passes that row on 512 KB.
+    # https://github.com/asc-community/AngouriMath/issues/397
     - name: Test if to send
       if: ${{ matrix.os == 'windows-latest' }}
+      shell: bash
       run: |
         cd Sources/Tests/UnitTests
-        dotnet test --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+        dotnet test -c Release --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
         cd ../../Utils/Utils
         dotnet run CopyCovReport
 
     - name: Info about the coverage report
       if: ${{ matrix.os == 'windows-latest' }}
       run: dir ./Sources/Tests/UnitTests/coverage.opencover.xml
+
+    # A report can be well formed and record nothing. From a crashed test host this one listed
+    # all 81,664 sequence points of the kernel with 0 visited, and Codecov took it as 0%. Fail
+    # here instead, as the C++ leg does for an empty report.
+    # https://github.com/asc-community/AngouriMath/issues/397
+    - name: 'The report records hits'
+      if: ${{ matrix.os == 'windows-latest' }}
+      shell: bash
+      run: grep -q 'visitedSequencePoints="[1-9]' ./Sources/Tests/UnitTests/coverage.opencover.xml
       
     - name: 'Upload report as artifact'
       if: ${{ matrix.os == 'windows-latest' }}
