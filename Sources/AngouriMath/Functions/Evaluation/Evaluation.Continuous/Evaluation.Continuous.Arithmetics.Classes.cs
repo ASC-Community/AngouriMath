@@ -13,6 +13,56 @@ namespace AngouriMath
     partial record Entity
     {
         /// <summary>
+        /// The operand a sum or a difference simplifies first, or <see langword="null"/> for any
+        /// other node.
+        /// </summary>
+        private static Entity? LeftOperandOfASum(Entity node)
+            => node switch { Sumf sum => sum.Augend, Minusf difference => difference.Minuend, _ => null };
+
+        /// <summary>How far apart the nodes simplified ahead along a long left spine are.</summary>
+        private const int SpineCheckpointSpacing = 32;
+
+        /// <summary>
+        /// Simplifies a long chain of sums from the bottom up before <paramref name="sum"/> is
+        /// simplified, so that no recursion through it goes deeper than
+        /// <see cref="SpineCheckpointSpacing"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A sum simplifies its left operand first, and that operand's left operand, and so on, so
+        /// a chain of n sums nested to the left is simplified by a recursion n deep. A sum built
+        /// one term at a time is that shape. <c>CollectLikeTerms</c> builds one, and so does
+        /// anything that adds terms up in a loop. The integrals of
+        /// <c>(q + p x)/(c + b x + a x^2)^3</c> simplified one about 900 deep, which overflowed a
+        /// 1 MB stack in a Debug build and 384 KB in Release.
+        /// https://github.com/asc-community/AngouriMath/issues/2166
+        /// </para>
+        /// <para>
+        /// Every node's simplification is cached, so simplifying every
+        /// <see cref="SpineCheckpointSpacing"/>th node of the spine first, deepest first, leaves
+        /// each of those recursions stopping at the one below it, and then the sum's own. The
+        /// same nodes are simplified as before, each once, in another order. Under twice the
+        /// spacing nothing is done, so an ordinary sum pays for a walk of a few nodes and nothing
+        /// else.
+        /// </para>
+        /// </remarks>
+        private static void SimplifyALongLeftSpineFirst(Entity sum, bool isExact)
+        {
+            var depth = 0;
+            for (var node = LeftOperandOfASum(sum); node is not null && depth < 2 * SpineCheckpointSpacing; node = LeftOperandOfASum(node))
+                depth++;
+            if (depth < 2 * SpineCheckpointSpacing)
+                return;
+            var checkpoints = new List<Entity>();
+            depth = 0;
+            for (var node = LeftOperandOfASum(sum); node is Sumf or Minusf; node = LeftOperandOfASum(node)!)
+                if (++depth % SpineCheckpointSpacing == 0)
+                    checkpoints.Add(node);
+            for (var i = checkpoints.Count - 1; i >= 0; i--)
+                _ = checkpoints[i].InnerSimplified(isExact);
+        }
+
+        /// <summary>
         /// <paramref name="interval"/> scaled by <paramref name="factor"/>, or
         /// <see langword="null"/> where the factor's sign is not known.
         /// </summary>
@@ -83,8 +133,10 @@ namespace AngouriMath
         {
             private protected override Entity IntrinsicCondition => Boolean.True;
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact) =>
-                ExpandOnTwoArguments(Augend, Addend,
+            protected override Entity InnerSimplify(bool isExact)
+            {
+                SimplifyALongLeftSpineFirst(this, isExact);
+                return ExpandOnTwoArguments(Augend, Addend,
                     (augend, addend) => (augend, addend) switch
                     { 
                         (Complex a, Complex b) when !isExact => a + b,
@@ -98,14 +150,17 @@ namespace AngouriMath
                         _ => null
                     },
                     (@this, a, b) => ((Sumf)@this).New(a, b), isExact);
+            }
         }
         public partial record Minusf
         {
             private protected override Entity IntrinsicCondition => Boolean.True;
 
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact) =>
-                ExpandOnTwoArguments(Minuend, Subtrahend,
+            protected override Entity InnerSimplify(bool isExact)
+            {
+                SimplifyALongLeftSpineFirst(this, isExact);
+                return ExpandOnTwoArguments(Minuend, Subtrahend,
                     (augend, addend) => (augend, addend) switch
                     {
                         (Complex a, Complex b) when !isExact => a - b,
@@ -127,6 +182,7 @@ namespace AngouriMath
                         _ => null
                     },
                     (@this, a, b) => ((Minusf)@this).New(a, b), isExact);
+            }
         }
         public partial record Mulf
         {
