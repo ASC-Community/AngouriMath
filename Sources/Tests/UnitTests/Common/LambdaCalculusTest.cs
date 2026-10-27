@@ -223,5 +223,19 @@ namespace AngouriMath.Tests.Common
                     )
                 )".Simplify()
             );
+
+        // A lambda is applied to its argument before its body is simplified: simplified first,
+        // the body treats its parameter as a number, so [[0, -1], [1, 0]] * u became
+        // [[0, -u], [u, 0]] and the vector put in for u made a matrix of vectors.
+        // https://github.com/asc-community/AngouriMath/issues/2132
+        [Theory]
+        [InlineData("apply(lambda(u, [[0, -1], [1, 0]] * u), [p, q])", "[-q, p]")]
+        [InlineData("apply(lambda(u, [1, 1]T * u), [p, q])", "p + q")]
+        [InlineData("apply(lambda(u, v, [u, v]T * [1, 2]), 3, 4)", "11")]
+        public void ALambdaIsAppliedToAVectorAsAVector(string application, string expected)
+        {
+            Assert.Equal(expected.ToEntity(), application.ToEntity().InnerSimplified);
+            Assert.Equal(expected.ToEntity(), application.ToEntity().Simplify());
+        }
     }
 }

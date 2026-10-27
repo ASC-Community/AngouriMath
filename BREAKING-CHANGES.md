@@ -92,6 +92,18 @@ its rows in the order it finds them, which can differ from the eliminator's
 | `MathS.Equations("x*y", "x + y^2 - 1").Solve("x", "y")` | `[[1, 0]]` | `[[1, 0], [0, 1], [0, -1]]` |
 | `MathS.Equations("x*y + 3*x - 5*y - 15", "x^2 - 3*x - 4*y - 10").Solve("x", "y")` | `[[1, -3], [2, -3]]` | `[[5, 0], [1, -3], [2, -3]]` |
 
+### A lambda applied to a vector multiplies by it as a vector
+
+**Silent: a matrix of vectors becomes the product.** Applying a lambda simplified its body first, and a simplified
+body treats its parameter as a number: `[[0, -1], [1, 0]] * u` became `[[0, -u], [u, 0]]`, and the vector then put in
+for `u` made a matrix of vectors. A lambda written in place is now applied before its body is simplified
+([#2132](https://github.com/asc-community/AngouriMath/issues/2132)). `Evaled` and `Simplify()` agree.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `apply(lambda(u, [[0, -1], [1, 0]] * u), [p, q])` | `[[0, [-p, -q]], [[p, q], 0]]` | `[-q, p]` |
+| `apply(lambda(u, [1, 1]T * u), [p, q])` | `[[[p, q], [p, q]]]` | `p + q` |
+
 ### A square system is not answered with rows that are no solution
 
 **Silent: a row that is no solution is gone, and a system with a row that fails for some values is `null`.**
