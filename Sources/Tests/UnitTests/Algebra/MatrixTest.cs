@@ -923,5 +923,50 @@ namespace AngouriMath.Tests.Algebra
             Assert.DoesNotContain(det.Nodes, node => node is Providedf);
             Assert.Equal(0, ((Entity)expected - det).Simplify().EvalNumerical());
         }
+
+        // Division by a matrix, a power of a matrix and the equality of two matrices each fell
+        // through to the elementwise branch every operation shares wherever the operation itself
+        // had no answer: A / A was all ones, [1, 2]^2 was [1, 4], and [1, 2] = [1, 3] was the
+        // vector [True, False]. Division multiplies by the inverse, as the wiki says it does; a
+        // power of anything but a square matrix stays written; and an equality of matrices is
+        // one statement. https://github.com/asc-community/AngouriMath/issues/2141
+        [Theory]
+        [InlineData("[[1, 2], [3, 4]] / [[1, 2], [3, 4]]", "[[1, 0], [0, 1]]")]
+        [InlineData("[[2, 1], [7, 4]] / [[1, 2], [3, 4]]", "[[-5/2, 3/2], [-8, 5]]")]
+        [InlineData("[1, 2] = [1, 3]", "false")]
+        [InlineData("[1, 2] = [1, 2]", "true")]
+        [InlineData("[1, 2] = [1, 2, 3]", "false")]
+        [InlineData("[a, b] = [c, d]", "a = c and b = d")]
+        public void AMatrixIsDividedAndComparedAsAMatrix(string expression, string expected)
+        {
+            Assert.Equal(expected.ToEntity(), expression.ToEntity().InnerSimplified);
+            Assert.Equal(expected.ToEntity(), expression.ToEntity().Simplify());
+        }
+
+        [Theory]
+        [InlineData("[1, 2] ^ 2")]
+        [InlineData("[1, 2] * [1, 2]")]
+        [InlineData("[[1, 2], [2, 4]] / [[1, 2], [2, 4]]")]
+        [InlineData("[[1, 2], [2, 4]] ^ (-1)")]
+        [InlineData("1 / [[1, 2], [2, 4]]")]
+        [InlineData("2 / [1, 2]")]
+        public void WhatIsNotDefinedOnMatricesStaysWritten(string expression)
+        {
+            Assert.IsNotType<Matrix>(expression.ToEntity().Evaled);
+            Assert.IsNotType<Matrix>(expression.ToEntity().Simplify());
+        }
+
+        // A number over a matrix is the number times its inverse, so that it agrees with the
+        // matrix to the power -1, which Simplify writes it as. A matrix over a number is still
+        // spread over the entries.
+        [Theory]
+        [InlineData("2 / [[1, 2], [3, 4]]", "[[-4, 2], [3, -1]]")]
+        [InlineData("[[1, 2], [3, 4]] ^ (-1)", "[[-2, 1], [3/2, -1/2]]")]
+        [InlineData("[[1, 2], [3, 4]] / 2", "[[1/2, 1], [3/2, 2]]")]
+        public void ANumberOverAMatrixIsItsInverseScaled(string expression, string expected)
+        {
+            Assert.Equal(expected.ToEntity(), expression.ToEntity().InnerSimplified);
+            Assert.Equal(expected.ToEntity(), expression.ToEntity().Simplify());
+        }
     }
 }

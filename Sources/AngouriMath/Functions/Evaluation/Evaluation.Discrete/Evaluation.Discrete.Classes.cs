@@ -298,10 +298,29 @@ namespace AngouriMath
                     _ => null,
                 };
 
+            /// <summary>
+            /// Two matrices are equal when they have one shape and are equal entry by entry, so
+            /// their equality is one statement, the conjunction of the entries' equalities. Left to
+            /// the elementwise branch every operation shares, <c>[1, 2] = [1, 3]</c> was the vector
+            /// <c>[True, False]</c>, while <c>[1, 2] = [1, 2]</c> was <c>True</c>.
+            /// https://github.com/asc-community/AngouriMath/issues/2141
+            /// </summary>
+            private static Entity MatricesAreEqual(Matrix left, Matrix right, bool isExact)
+            {
+                if (left.RowCount != right.RowCount || left.ColumnCount != right.ColumnCount)
+                    return False;
+                Entity all = True;
+                for (var row = 0; row < left.RowCount; row++)
+                    for (var column = 0; column < left.ColumnCount; column++)
+                        all &= left[row, column].Equalizes(right[row, column]);
+                return all.InnerSimplified(isExact);
+            }
+
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
                 => ExpandOnTwoArguments(Left, Right,
                     (left, right) => left == right ? true
+                    : left is Matrix matrixLeft && right is Matrix matrixRight ? MatricesAreEqual(matrixLeft, matrixRight, isExact)
                     // A size that is not a number is compared as a size, never by the difference
                     // of two expressions: card(ZZ) - card(QQ) is not zero, and the two are equal.
                     : AngouriMath.Core.Sets.Cardinality.IsSize(left) || AngouriMath.Core.Sets.Cardinality.IsSize(right) ? AngouriMath.Core.Sets.Cardinality.Compare(left, right, static sign => sign == 0, isExact)

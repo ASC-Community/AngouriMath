@@ -169,6 +169,15 @@ namespace AngouriMath
                 ExpandOnTwoArguments(Dividend, Divisor,
                 (a, b) => (a, b) switch
                 {
+                    // Dividing by a matrix multiplies by its inverse, as the wiki's Matrices page
+                    // says division does. Left to the elementwise branch every operation shares,
+                    // [[1, 2], [3, 4]] / [[1, 2], [3, 4]] was [[1, 1], [1, 1]]. A number over a
+                    // matrix too: x / y is x * y^(-1), which Simplify rewrites freely, and y^(-1)
+                    // of a matrix is its inverse, so 1 / M read elementwise disagreed with M^(-1).
+                    // A divisor with no inverse, singular or not square, leaves the quotient
+                    // written. A matrix over a number is still spread over the entries.
+                    // https://github.com/asc-community/AngouriMath/issues/2141
+                    (_, Matrix divisor) => divisor.Inverse is { } inverse ? (a * inverse).InnerSimplified(isExact) : a / b,
                     (Integer(0), var n0) =>
                         n0.Evaled is Complex c
                         ? c.IsZero ? MathS.NaN : 0
@@ -279,9 +288,13 @@ namespace AngouriMath
             
             private static bool TryPower(Matrix m, int exp, out Entity res)
             {
-                // Only a square matrix has powers; Pow throws for any other.
-                res = m.IsSquare ? m.Pow(exp) : 0;
-                return m.IsSquare;
+                // Only a square matrix has powers; Pow throws for any other. And only one with
+                // an inverse has negative powers: Pow threw for a singular one, out of eval and
+                // Simplify alike, and so did dividing by one once division used the inverse.
+                // https://github.com/asc-community/AngouriMath/issues/2141
+                var defined = m.IsSquare && (exp >= 0 || m.Inverse is not null);
+                res = defined ? m.Pow(exp) : 0;
+                return defined;
             }
 
             // Re(x) = x/2 * (1 + 1/sgn(x)^2)
@@ -293,6 +306,12 @@ namespace AngouriMath
                 (a, b) => (a, b) switch
                 {
                     (Matrix m, Integer(var exp)) when exp is { } expNotNull && TryPower(m, expNotNull, out var res) => res.InnerSimplified(isExact),
+                    // Only a square matrix has powers, and only whole ones. Anything else fell
+                    // through to the elementwise branch: [1, 2]^2 was [1, 4], which is no power
+                    // of a column, and Simplify, which writes x * x as x^2, made the undefined
+                    // product [1, 2] * [1, 2] into the same. It stays written.
+                    // https://github.com/asc-community/AngouriMath/issues/2141
+                    (Matrix, _) => MathS.Pow(a, b),
                     // An interval raised to a number, and a number raised to an interval, are
                     // the images of the interval under a monotone function where the function
                     // is one. https://github.com/asc-community/AngouriMath/issues/322

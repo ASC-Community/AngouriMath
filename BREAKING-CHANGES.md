@@ -60,6 +60,38 @@ mentions answers it as a parameter, as a short system does, where it was `null`
 | `MathS.Equations("x - 1", "x^2 - 1").Solve("x", "y")` | `null` | `[[1, t_1]]` |
 | `MathS.Equations("a - 1", "b * 0").Solve("a", "b")` | `null` | `[[1, t_1]]` |
 
+### A matrix is divided, raised to a power and compared as a matrix
+
+**Silent: wrong answers about matrices become right, or stay written.** Where an operation had no answer of its own
+for two matrices, or a matrix and a number, it fell through to a branch every operation shares, which applies the
+operation entry by entry. Addition and subtraction are meant to be that, and are unchanged, as is a matrix over a
+number. But the wiki's Matrices page says division multiplies by the divisor's inverse, and that a product of shapes
+that do not fit does not happen. Now:
+
+- **Dividing by a matrix** multiplies by its inverse. A number over a matrix does too: `x / y` and `x * y^(-1)` are
+  rewritten into each other, and `y^(-1)` of a matrix is its inverse. A divisor with no inverse leaves the quotient
+  written.
+- **A power** of anything but a square matrix stays written, and so does a negative power of a singular one, which
+  threw `InvalidDeterminantException`. `Simplify` writes `x * x` as `x^2`, so the undefined product `[1, 2] * [1, 2]`
+  had come out as `[1, 4]`.
+- **Two matrices are equal** when they have one shape and are equal entry by entry, and the equality is one
+  statement.
+
+([#2141](https://github.com/asc-community/AngouriMath/issues/2141)). `Evaled` and `Simplify()` give the same answers,
+except where shown.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `[[1, 2], [3, 4]] / [[1, 2], [3, 4]]` | `[[1, 1], [1, 1]]` | `[[1, 0], [0, 1]]` |
+| `2 / [[1, 2], [3, 4]]` | `[[2, 1], [2/3, 1/2]]` | `[[-4, 2], [3, -1]]` |
+| `2 / [1, 2]` | `[2, 1]` | `2 / [1, 2]` |
+| `[1, 2] ^ 2` | `[1, 4]` | `[1, 2] ^ 2` |
+| `([1, 2] * [1, 2]).Simplify()` | `[1, 4]` | `[1, 2] ^ 2` |
+| `[1, 2] = [1, 3]` | `[True, False]` | `False` |
+| `[a, b] = [c, d]` | `[a = c, b = d]` | `a = c and b = d` |
+| `([[1, 2], [2, 4]] ^ (-1)).Evaled` | throws `InvalidDeterminantException` | `[[1, 2], [2, 4]] ^ (-1)` |
+| `([[1, 2], [2, 4]] ^ (-1)).Simplify()` | throws `InvalidDeterminantException` | `1 / [[1, 2], [2, 4]]` |
+
 ### A polynomial system is not answered with some of its solutions missing
 
 **Silent: a polynomial system that lost solutions has all of them.** `EquationSystem.Solve` triangularises a
