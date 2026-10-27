@@ -200,6 +200,19 @@ for `u` made a matrix of vectors. A lambda written in place is now applied befor
 | `apply(lambda(u, [[0, -1], [1, 0]] * u), [p, q])` | `[[0, [-p, -q]], [[p, q], 0]]` | `[-q, p]` |
 | `apply(lambda(u, [1, 1]T * u), [p, q])` | `[[[p, q], [p, q]]]` | `p + q` |
 
+### One and a squared tangent are found anywhere in a sum
+
+**Silent: an identity reaches its value whichever way the sum is sorted.** `1 + tan(x)^2 = sec(x)^2` and
+`1 + cot(x)^2 = csc(x)^2` were rules for two siblings, and secant sorts before tangent, so `1 + tan(x)^2 - sec(x)^2`
+became `1 - sec(x)^2 + tan(x)^2` and stayed, while its cotangent twin, sorted the other way, was `0`. Both identities
+are now also found wherever the `1` and the square sit in a sum, under the condition the tangent's domain carries
+([#2142](https://github.com/asc-community/AngouriMath/issues/2142)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"1 + tan(x)^2 - sec(x)^2".Simplify()` | `1 + tan(x) ^ 2 - sec(x) ^ 2` | `0 provided not cos(x) = 0` |
+| `"a + 1 + tan(y)^2 - sec(y)^2".Simplify()` | `a + 1 + tan(y) ^ 2 - sec(y) ^ 2` | `a provided not cos(y) = 0` |
+
 ### A square system is not answered with rows that are no solution
 
 **Silent: a row that is no solution is gone, and a system with a row that fails for some values is `null`.**

@@ -437,16 +437,24 @@ namespace AngouriMath.Tests.Core.Transformations
         [Fact]
         public void ARuleThatForgetsAHoleHasNoBackwardsReading()
         {
-            // Both rules of the set, with a coefficient and without, drop the argument.
-            foreach (var pythagoras in MatchedRules.PythagoreanIdentity.Rules)
+            // Both Pythagorean rules of the set, with a coefficient and without, drop the
+            // argument. The set's other two, 1 + tan^2 = sec^2 and its cotangent twin, keep it,
+            // and they are the only ones its reversal holds.
+            var pythagoras = MatchedRules.PythagoreanIdentity.Rules
+                .Where(rule => rule.Name.StartsWith("squared-sine-and-cosine", StringComparison.Ordinal))
+                .ToList();
+            Assert.Equal(2, pythagoras.Count);
+            foreach (var rule in pythagoras)
             {
-                Assert.Equal(RuleReversal.ReplacementDropsHoles, pythagoras.Reversal);
-                Assert.Null(pythagoras.Reversed);
+                Assert.Equal(RuleReversal.ReplacementDropsHoles, rule.Reversal);
+                Assert.Null(rule.Reversed);
             }
 
-            // And the reversed set is empty rather than absent, which is the difference being
-            // reported rather than hidden.
-            Assert.Empty(MatchedRules.PythagoreanIdentity.Reversed.Rules);
+            // And what the reversed set holds is the reversals of the others only, rather than
+            // anything standing for the two that have none.
+            Assert.Equal(
+                MatchedRules.PythagoreanIdentity.Rules.Count(rule => rule.Reversed is not null),
+                MatchedRules.PythagoreanIdentity.Reversed.Rules.Count);
             Assert.Equal(
                 "1 + a".ToEntity(),
                 MatchedRules.PythagoreanIdentity.Reversed.ApplyHere("1 + a".ToEntity()));

@@ -43,8 +43,8 @@ namespace AngouriMath.Core.Transformations
         /// one, and that is a measurement rather than a preference.</b> It reads like the value a
         /// ceiling should refuse — it means the rule's growth was not judged, because its
         /// replacement is code rather than a written pattern, so admitting it accepts a rewrite
-        /// nobody measured. But it is where the rules are: of the 338 rules in
-        /// <see cref="MatchedRules"/>, <b>127 collect, 49 rearrange, 36 expand and 126 are
+        /// nobody measured. But it is where the rules are: of the 340 rules in
+        /// <see cref="MatchedRules"/>, <b>129 collect, 49 rearrange, 36 expand and 126 are
         /// unjudged</b>. A ceiling that refuses the fourth value still refuses 37% of the library,
         /// and what is left could not do much when this was written — over six expression pairs
         /// equal only through a larger intermediate form, the
