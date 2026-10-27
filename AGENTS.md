@@ -55,6 +55,14 @@ wherever the input was exact, and interval arithmetic for what is genuinely appr
 shape of the answer, and they are queued for v3 in
 [#1019](https://github.com/asc-community/AngouriMath/issues/1019).
 
+**A fix for an approximation quirk before v3 is temporary, and it says so.** v3 removes
+downcasting ([#1019](https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225)).
+With it go the decimal answers, the rounding onto rationals and the residuals taken as zero that
+such a fix works around. These fixes are to be simplified away for v3
+([#2139](https://github.com/asc-community/AngouriMath/issues/2139#issuecomment-6443699564)). So
+each one links that decision in its comment and in the test that pins it, and a search for
+`5754734225` lists what v3 has to take back out.
+
 ## Not answering is a legitimate answer. Answering wrongly is not.
 
 The most important distinction in this codebase:
