@@ -547,6 +547,16 @@ namespace AngouriMath
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
+                // A lambda written in place is applied to its argument before its body is
+                // simplified. Simplified first, the body treats its parameter as a number:
+                // [[0, -1], [1, 0]] * u becomes [[0, -u], [u, 0]], and the vector [p, q] put in
+                // for u afterwards made a matrix of vectors where the product is [-q, p].
+                // https://github.com/asc-community/AngouriMath/issues/2132
+                => Expression is Lambda(var parameter, var body) && Arguments is (var first, var rest)
+                    ? ApplyOthersIfNeeded(body.Substitute(parameter, first.InnerSimplified(isExact)), rest).InnerSimplified(isExact)
+                    : ApplyingTheSimplified(isExact);
+
+            private Entity ApplyingTheSimplified(bool isExact)
                 => ((Expression.InnerSimplified(isExact), Arguments.Map(arg => arg.InnerSimplified(isExact))) switch
                 {
                     (var identifier, LEmpty<Entity>) => identifier,
