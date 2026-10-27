@@ -10,8 +10,8 @@ coverage:
 
 # Flags are declared so that each one is scoped to the code it actually measures and is
 # carried forward when its leg does not run. Both matter here: every flag is uploaded from
-# exactly one operating system of its matrix (csharp from windows, fsharp and interactive
-# from ubuntu), so on any run where that leg is skipped an undeclared flag reports as
+# exactly one operating system of its matrix (csharp from windows, fsharp, interactive and
+# cpp from ubuntu), so on any run where that leg is skipped an undeclared flag reports as
 # missing rather than unchanged, and the report reads as a coverage drop that did not
 # happen. https://github.com/asc-community/AngouriMath/issues/397
 flags:
@@ -27,6 +27,10 @@ flags:
     paths:
       - Sources/Wrappers/AngouriMath.Interactive/
       - Sources/Terminal/
+    carryforward: true
+  cpp:
+    paths:
+      - Sources/Wrappers/AngouriMath.CPP.Importing/
     carryforward: true
 
 parsers:

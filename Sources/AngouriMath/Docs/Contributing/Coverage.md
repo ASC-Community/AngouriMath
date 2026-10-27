@@ -57,3 +57,25 @@ The filter is the honest part. Without it the report is mostly vendored googlete
 
 To reproduce it locally, publish the exporting project as `CPPTest.yml` does, then configure the
 tests with the two cmake flags above and run `gcovr` from the build directory.
+
+## How a report reaches Codecov
+
+Codecov takes an upload without a token only from a fork's branch. From a branch of this
+repository, `master` included, it answers `Token required because branch is protected`, and
+`codecov-action` logs that as an error and finishes green unless `fail_ci_if_error` is set. No
+leg had a token or set it, so the four legs collected coverage and Codecov kept none of it: the
+newest `master` commit it holds is from 2022-11-28, and the newest pull request upload came from
+a fork on 2026-08-04.
+
+Each upload step now sets `use_oidc: true`, in a job granted `id-token: write`. The job asks
+GitHub for a token that lasts for the run, so no secret is stored anywhere. On a fork's pull
+request the action skips it, since GitHub gives a fork no id-token, and Codecov takes that upload
+without one. `fail_ci_if_error` is set on pushes to `master` only, so a rejected upload turns
+`master` red, and an outage at Codecov does not fail a pull request.
+
+To check a run, read the upload step's log. `Upload queued for processing complete` is followed
+by `Upload queued for processing failed: …` when Codecov refused it. To see what Codecov holds:
+
+```
+curl -s 'https://api.codecov.io/api/v2/github/asc-community/repos/AngouriMath/commits/?branch=master'
+```

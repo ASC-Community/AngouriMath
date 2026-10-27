@@ -21,6 +21,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    # id-token is what the codecov step signs in with. Naming one permission sets every other to
+    # none, so contents: read is there for the checkout.
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
     - uses: actions/checkout@v6
       with:
@@ -95,9 +101,17 @@ jobs:
     # `files`, not `file`. v5 of the action does not take `file`: it warns about an unexpected
     # input, ignores the path, and searches the workspace instead, so the named report was never
     # what made this flag.
+    # Codecov takes an upload from a branch of this repository only with a token, and without one
+    # it rejected them while this step stayed green: master's newest report there is from
+    # 2022-11-28. use_oidc gets a token for the run; on a fork's pull request the action skips it,
+    # and Codecov takes that upload without one. A rejected upload fails the run on a push to
+    # master only, so that an outage at Codecov does not fail a pull request. See
+    # Sources/AngouriMath/Docs/Contributing/Coverage.md.
     - name: 'Send to codecov'
       if: ${{ matrix.os == 'windows-latest' }}
       uses: codecov/codecov-action@v5
       with:
         files: ./Sources/Tests/UnitTests/coverage.opencover.xml
         flags: csharp
+        use_oidc: true
+        fail_ci_if_error: ${{ github.event_name == 'push' }}
