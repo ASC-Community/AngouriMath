@@ -249,15 +249,21 @@ namespace AngouriMath.Functions.Algebra.Groebner
         /// radical is not bounded by anything, and an early version of this spent longer
         /// failing to prove a degree-nine root satisfied its system than the old solver takes
         /// to solve the whole thing. `InnerSimplified` is one structural pass, which is
-        /// cheap enough to be safe here and still proves what is needed:
+        /// cheap enough to be safe here and still settles what is needed:
         /// <c>sqrt(2)^2 - 2</c>, <c>(3^(1/3))^3 - 3</c> and a Cardano cube root all reduce to
         /// zero in single-digit milliseconds.
         /// </para>
         /// <para>
-        /// It only ever proves zero, never disproves it, so a candidate it cannot settle is
-        /// declined and the system falls back. That costs coverage and never costs
-        /// correctness — and no tolerance is involved anywhere, which is what would turn a
-        /// root that is merely close into one that gets reported.
+        /// It only ever answers zero, never disproves it, so a candidate it cannot settle is
+        /// declined and the system falls back, which costs coverage. The zero is decided to
+        /// about fifty digits, though, not exactly. With downcasting on, the default, a
+        /// residual that evaluates below <c>DowncastingTolerance</c>, half the hundred digits
+        /// of <see cref="MathS.Settings.DecimalPrecisionContext"/>, times the scale that
+        /// cancelled is taken as <c>0</c>. So a candidate that is close enough passes as
+        /// well: <c>8y^3 + 4y^2 - 4y - 1</c> at the Cardano root for <c>cos(2pi/7)</c>, with
+        /// one <c>7</c> made <c>7 + 10^(-50)</c>, comes out <c>0</c>, where its value is
+        /// <c>2.48e-52 - 3.26e-52 i</c>.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2143">#2143</a>
         /// </para>
         /// </remarks>
         static bool Satisfies(
