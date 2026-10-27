@@ -51,5 +51,24 @@ namespace AngouriMath.Tests.Algebra
             using var _ = MathS.Settings.Codomain.Set(Domain.Real);
             Assert.Equal(expected.ToEntity(), equation.ToEntity().Solve("x"));
         }
+
+        /// <summary>
+        /// A modulus of a polynomial keeps one sign between the polynomial's neighbouring real
+        /// roots, so those are its kinks. <c>x^2/|1 - x^2| = x</c> was answered by a numerical
+        /// search, in decimals and with two non-real numbers that solve nothing.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2139">#2139</a>
+        /// </summary>
+        [Theory]
+        [InlineData("x^2/abs(1 - x^2) = x", "{ 0, (-1 + sqrt(5)) / 2, (1 + sqrt(5)) / 2 }")]
+        [InlineData("abs(x^2 - 4) = 3 x", "{ 1, 4 }")]
+        [InlineData("abs(x^2 - 1) + abs(x - 2) = 3", "{ -1, 0, 2 }")]
+        [InlineData("abs(x^2 - 2) = 1", "{ -sqrt(3), 1, -1, sqrt(3) }")]
+        [InlineData("abs(x^2 + 1) = 2", "{ 1, -1 }")]
+        [InlineData("x^2 + 1 = abs(x)", "{ }")]
+        public void OverTheRealsAPolynomialIsCutAtItsRealRoots(string equation, string expected)
+        {
+            using var _ = MathS.Settings.Codomain.Set(Domain.Real);
+            Assert.Equal(expected.ToEntity(), equation.ToEntity().Solve("x"));
+        }
     }
 }
