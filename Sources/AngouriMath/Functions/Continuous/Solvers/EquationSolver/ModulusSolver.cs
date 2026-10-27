@@ -52,27 +52,35 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 
         /// <summary>
         /// The real <paramref name="x"/> at which <paramref name="expr"/> is zero, where every
-        /// modulus in it with <paramref name="x"/> inside is of a linear function with real
-        /// coefficients; <see langword="null"/> otherwise, or where a piece is not solved.
+        /// modulus in it with <paramref name="x"/> inside is of a polynomial with real
+        /// coefficients whose real roots are found; <see langword="null"/> otherwise, or where a
+        /// piece is not solved.
         /// </summary>
+        /// <remarks>
+        /// A polynomial keeps one sign between two neighbouring real roots, so its real roots are
+        /// where a modulus of it can change from the argument to its negation, as a linear one's
+        /// single root is. <c>x^2/|1 - x^2| = x</c> has kinks at -1 and 1, and on each piece an
+        /// equation with no modulus, solved exactly; it was answered by a numerical search, in
+        /// decimals and with two non-real numbers that solve nothing.
+        /// https://github.com/asc-community/AngouriMath/issues/2139
+        /// </remarks>
         internal static Set? SolveOverTheReals(Entity expr, Variable x)
         {
             var moduli = new List<Entity>();
-            var kinks = new List<Real>();
+            var kinks = new List<(Entity Exact, Real Value)>();
             foreach (var node in expr.Nodes)
             {
                 if (node is not Absf(var argument) || !argument.ContainsNode(x))
                     continue;
-                if (!TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out var intercept)
-                    || intercept.ContainsNode(x) || slope.Evaled is not Real { IsZero: false }
-                    || (-intercept / slope).InnerSimplified is not Real kink)
+                if (RealRootsOf(argument, x) is not { } roots)
                     return null;
                 moduli.Add(argument);
-                kinks.Add(kink);
+                kinks.AddRange(roots);
             }
             if (moduli.Count == 0)
                 return null;
-            var ends = kinks.Distinct().OrderBy(kink => kink.EDecimal).ToList();
+            var ends = kinks.GroupBy(kink => kink.Value).Select(same => same.First())
+                .OrderBy(kink => kink.Value.EDecimal).Select(kink => kink.Exact).ToList();
 
             // The pieces between neighbouring kinks, closed where they end at one, and on each the
             // sign every modulus takes, read at a point inside it.
@@ -81,7 +89,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             {
                 Entity left = i == 0 ? Real.NegativeInfinity : ends[i - 1];
                 Entity right = i == ends.Count ? Real.PositiveInfinity : ends[i];
-                Entity inside = i == 0 ? (Entity)ends[0] - 1 : i == ends.Count ? (Entity)ends[^1] + 1 : ((Entity)ends[i - 1] + ends[i]) / 2;
+                Entity inside = ends.Count == 0 ? Integer.Zero
+                    : i == 0 ? ends[0] - 1 : i == ends.Count ? ends[^1] + 1 : (ends[i - 1] + ends[i]) / 2;
                 var signs = new Dictionary<Entity, bool>();
                 foreach (var argument in moduli)
                     if (!signs.ContainsKey(argument))
@@ -116,6 +125,39 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                         answer = answer.Unite(new FiniteSet(root));
             }
             return (Set)answer.InnerSimplified;
+        }
+
+        /// <summary>
+        /// The real roots of <paramref name="argument"/>, exact and with their values, where it is a
+        /// polynomial in <paramref name="x"/> with real numeric coefficients whose roots the solver
+        /// finds; <see langword="null"/> otherwise.
+        /// </summary>
+        private static List<(Entity Exact, Real Value)>? RealRootsOf(Entity argument, Variable x)
+        {
+            if (TreeAnalyzer.TryGetPolyLinear(argument, x, out var slope, out var intercept))
+                return !intercept.ContainsNode(x) && slope.Evaled is Real { IsZero: false }
+                    && (-intercept / slope).InnerSimplified is Real kink
+                    ? new() { (kink, kink) }
+                    : null;
+            if (!TreeAnalyzer.TryGetPolynomial(argument, x, out var monomials)
+                || monomials.Count == 0
+                || monomials.Keys.Any(power => power.Sign < 0)
+                || monomials.Values.Any(coefficient => coefficient.ContainsNode(x) || coefficient.Evaled is not Real))
+                return null;
+            if (AnalyticalEquationSolver.Solve(argument, x) is not FiniteSet roots)
+                return null;
+            var real = new List<(Entity, Real)>();
+            foreach (var root in roots)
+                switch (root.Evaled)
+                {
+                    case Real value:
+                        real.Add((root, value));
+                        break;
+                    case Complex { ImaginaryPart.IsZero: true } value:
+                        real.Add((root, value.RealPart));
+                        break;
+                }
+            return real;
         }
 
         private static bool Within(Real value, Entity left, Entity right)

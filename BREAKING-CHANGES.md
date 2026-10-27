@@ -258,6 +258,20 @@ variable's name ([#2136](https://github.com/asc-community/AngouriMath/issues/213
 | `"conj(z)".ToEntity()` | `conj * z` | throws `UnrecognizedFunctionParseException` |
 | `"det([[1, 2], [3, 4]])".ToEntity()` | `det * [[1, 2], [3, 4]]` | throws `UnrecognizedFunctionParseException` |
 
+### Over the reals, a modulus of a polynomial is split at the polynomial's real roots
+
+**Silent: an answer with entries that solve nothing is exact.** With the real codomain an equation in moduli was
+solved by cases only where every modulus was of a linear function. A modulus of a polynomial fell through to a
+numerical search, which answered in decimals and kept non-real numbers near a root that solve nothing: an answer
+over the reals with entries that are neither real nor roots. A polynomial keeps one sign between its neighbouring
+real roots, so those are now the kinks, and each piece is solved exactly
+([#2139](https://github.com/asc-community/AngouriMath/issues/2139)).
+
+| Input, with `MathS.Settings.Codomain` set to `Domain.Real` | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^2/abs(1-x^2) = x".Solve("x")` | `{ 0, 0.618…, 1.618…, 1.618… + 1.7E-9i, … }` | `{ 0, (-1 + sqrt(5)) / 2, (1 + sqrt(5)) / 2 }` |
+| `"abs(x^2 - 4) = 3*x".Solve("x")` | `{ 1, 4, 4.0000000000000062… + 1.6E-7i }` | `{ 1, 4 }` |
+
 ### A system with more or fewer equations than unknowns is solved or declined
 
 **Not silent: what was an exception is an answer or `null`.** `EquationSystem.Solve` threw
