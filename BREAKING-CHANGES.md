@@ -175,6 +175,19 @@ its rows in the order it finds them, which can differ from the eliminator's
 | `MathS.Equations("x*y", "x + y^2 - 1").Solve("x", "y")` | `[[1, 0]]` | `[[1, 0], [0, 1], [0, -1]]` |
 | `MathS.Equations("x*y + 3*x - 5*y - 15", "x^2 - 3*x - 4*y - 10").Solve("x", "y")` | `[[1, -3], [2, -3]]` | `[[5, 0], [1, -3], [2, -3]]` |
 
+### A squared sine and cosine with one coefficient are found anywhere in a sum
+
+**Silent: an identity reaches its value however the sum is written.** `k sin(x)^2 + k cos(x)^2` was reduced to `k`
+only where the two terms were siblings, so the order a sum was sorted into decided: with the constant `2` sorted
+between them, `2 + (-2) cos(x)^2 + (-2) sin(x)^2` stayed as written while `2 - 2 cos(x)^2 - 2 sin(x)^2` was `0`. The
+Pythagorean identity with a coefficient is now a rule of its own, found wherever the two terms sit
+([#2133](https://github.com/asc-community/AngouriMath/issues/2133)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"2 + (-2)*cos(x)^2 + (-2)*sin(x)^2".Simplify()` | `2 + (-2) * cos(x) ^ 2 + (-2) * sin(x) ^ 2` | `0` |
+| `"2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2".Simplify()` | unchanged | `0` |
+
 ### A lambda applied to a vector multiplies by it as a vector
 
 **Silent: a matrix of vectors becomes the product.** Applying a lambda simplified its body first, and a simplified

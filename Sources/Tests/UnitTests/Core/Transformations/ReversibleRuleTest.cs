@@ -370,6 +370,7 @@ namespace AngouriMath.Tests.Core.Transformations
                     "one-less-a-squared-sine-is-a-squared-cosine: ReplacementIsCode",
                     "sine-of-a-whole-multiple-of-an-angle: ReplacementIsCode",
                     "squared-sine-and-cosine-of-one-argument-sum-to-one: ReplacementDropsHoles",
+                    "squared-sine-and-cosine-with-one-coefficient-sum-to-it: ReplacementDropsHoles",
                     "the-arctangent-of-one-over-root-three: ReplacementIsCode",
                     "the-arctangent-of-root-three: ReplacementIsCode",
                     "the-negation-of-a-greater-turns-it-round: ReplacementIsCode",
@@ -436,9 +437,12 @@ namespace AngouriMath.Tests.Core.Transformations
         [Fact]
         public void ARuleThatForgetsAHoleHasNoBackwardsReading()
         {
-            var pythagoras = MatchedRules.PythagoreanIdentity.Rules.Single();
-            Assert.Equal(RuleReversal.ReplacementDropsHoles, pythagoras.Reversal);
-            Assert.Null(pythagoras.Reversed);
+            // Both rules of the set, with a coefficient and without, drop the argument.
+            foreach (var pythagoras in MatchedRules.PythagoreanIdentity.Rules)
+            {
+                Assert.Equal(RuleReversal.ReplacementDropsHoles, pythagoras.Reversal);
+                Assert.Null(pythagoras.Reversed);
+            }
 
             // And the reversed set is empty rather than absent, which is the difference being
             // reported rather than hidden.
