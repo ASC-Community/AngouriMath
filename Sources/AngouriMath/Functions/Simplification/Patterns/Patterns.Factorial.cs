@@ -17,12 +17,14 @@ namespace AngouriMath.Functions
         /// writing the product out is not a simplification.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// A static method rather than the local function it was, so that the <c>switch</c> below
         /// is the whole of the method and its arms can be read as data. See
         /// <see cref="Core.Transformations.RewriteRuleSet.Rules"/> and
         /// <a href="https://github.com/asc-community/AngouriMath/issues/825">#825</a>.
+        /// </para>
+        /// <para>Internal so that the data form of this set calls it rather than repeating it.</para>
         /// </remarks>
-        /// <remarks>Internal so that the data form of this set calls it rather than repeating it.</remarks>
         internal static Entity CancelFactorials(Entity whole, Entity x, Entity x2, Number num, Number den)
         {
             static Entity Add(Entity a, Number b) =>

@@ -3996,39 +3996,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// Reads <paramref name="expr"/> as a numerator over a denominator, in either of the two
-        /// spellings a quotient has here.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// <c>1/(1 + x^3)</c> is a <c>Divf</c> and <c>(1 + x^3)^(-1)</c> is a <c>Powf</c>, and
-        /// they are the same integrand. <see cref="SolveByPartialFractions"/> matched the first
-        /// and declined the second, so which of them was asked decided whether the integral came
-        /// back — and the second is not an exotic way to write it: it is what
-        /// <see cref="SolveAsPolynomialTerm"/> builds whenever it takes a factor out of a
-        /// quotient. That is why <c>a/(1 + x^3)</c> had no antiderivative while
-        /// <c>1/(1 + x^3)</c> and <c>a * (1/(1 + x^3))</c> both did.
-        /// </para>
-        /// <para>
-        /// <b>And the third spelling, a product with a negative power in it.</b>
-        /// <c>3 u (4 - u^3)^(-1)</c> is what <c>Simplify</c> makes of <c>3u/(4 - u^3)</c>, and it
-        /// is neither a <c>Divf</c> nor a bare <c>Powf</c>, so it was declined here -- and then
-        /// taken by integration by parts with <c>v' = (4 - u^3)^(-1)</c>, which integrates to a
-        /// hundred-node sum of logarithms and arctangents that the search then spent thirty
-        /// seconds failing to integrate against <c>3u</c>. Read as the quotient it is, the same
-        /// integrand is answered in a fifth of a second. The factors are gathered and one quotient
-        /// rebuilt from them, which is what makes the verdict independent of how the product
-        /// happens to be associated.
-        /// </para>
-        /// <para>
-        /// <b>Only a negative whole power.</b> A positive one is not a quotient; a fractional or
-        /// symbolic exponent is not one either, and <c>(a/b)^(1/2)</c> is not <c>sqrt(a)/sqrt(b)</c>
-        /// on the branch cut. Nothing here rewrites a quotient back into a power, so this cannot
-        /// re-enter the mutual recursion <see cref="Integration.Normalized"/> records.
-        /// </para>
-        /// https://github.com/asc-community/AngouriMath/issues/718
-        /// </remarks>
-        /// <summary>
         /// A rational function with rational coefficients whose denominator the splits above
         /// could not take apart -- irreducible over the rationals past degree two, or with
         /// real factors that carry the roots of something worse -- integrated by the Hermite
@@ -4340,6 +4307,39 @@ namespace AngouriMath.Functions.Algebra
             => expr.Nodes.Any(node => node is Entity.Divf(_, var divisor) && divisor.ContainsNode(x)
                 || node is Entity.Powf(var @base, Number.Integer { EInteger.Sign: < 0 }) && @base.ContainsNode(x));
 
+        /// <summary>
+        /// Reads <paramref name="expr"/> as a numerator over a denominator, in either of the two
+        /// spellings a quotient has here.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>1/(1 + x^3)</c> is a <c>Divf</c> and <c>(1 + x^3)^(-1)</c> is a <c>Powf</c>, and
+        /// they are the same integrand. <see cref="SolveByPartialFractions"/> matched the first
+        /// and declined the second, so which of them was asked decided whether the integral came
+        /// back — and the second is not an exotic way to write it: it is what
+        /// <see cref="SolveAsPolynomialTerm"/> builds whenever it takes a factor out of a
+        /// quotient. That is why <c>a/(1 + x^3)</c> had no antiderivative while
+        /// <c>1/(1 + x^3)</c> and <c>a * (1/(1 + x^3))</c> both did.
+        /// </para>
+        /// <para>
+        /// <b>And the third spelling, a product with a negative power in it.</b>
+        /// <c>3 u (4 - u^3)^(-1)</c> is what <c>Simplify</c> makes of <c>3u/(4 - u^3)</c>, and it
+        /// is neither a <c>Divf</c> nor a bare <c>Powf</c>, so it was declined here -- and then
+        /// taken by integration by parts with <c>v' = (4 - u^3)^(-1)</c>, which integrates to a
+        /// hundred-node sum of logarithms and arctangents that the search then spent thirty
+        /// seconds failing to integrate against <c>3u</c>. Read as the quotient it is, the same
+        /// integrand is answered in a fifth of a second. The factors are gathered and one quotient
+        /// rebuilt from them, which is what makes the verdict independent of how the product
+        /// happens to be associated.
+        /// </para>
+        /// <para>
+        /// <b>Only a negative whole power.</b> A positive one is not a quotient; a fractional or
+        /// symbolic exponent is not one either, and <c>(a/b)^(1/2)</c> is not <c>sqrt(a)/sqrt(b)</c>
+        /// on the branch cut. Nothing here rewrites a quotient back into a power, so this cannot
+        /// re-enter the mutual recursion <see cref="Integration.Normalized"/> records.
+        /// </para>
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
         private static bool TryReadAsQuotient(Entity expr, out Entity numerator, out Entity denominator)
         {
             // An exponent read evaluated: the normalisation writes `(u^2 - 1)^5` below the bar
@@ -23005,13 +23005,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// <paramref name="denominator"/> with each written factor taken into its irreducible
-        /// factors over the rationals and equal factors gathered into one power, or
-        /// <see langword="null"/> where the written factors already have that structure -- the
-        /// same count of distinct factors with the same multiplicities -- so that a
-        /// denominator which is already factored keeps its own spelling.
-        /// </summary>
-        /// <summary>
         /// <paramref name="denominator"/> with each written base that is a polynomial in
         /// <paramref name="x"/> with rational coefficients, of degree at least two and not a
         /// sum of monomials as it stands, written as that sum; null where every base already is.
@@ -23829,6 +23822,13 @@ namespace AngouriMath.Functions.Algebra
             return besideASymbol && split ? product : null;
         }
 
+        /// <summary>
+        /// <paramref name="denominator"/> with each written factor taken into its irreducible
+        /// factors over the rationals and equal factors gathered into one power, or
+        /// <see langword="null"/> where the written factors already have that structure -- the
+        /// same count of distinct factors with the same multiplicities -- so that a
+        /// denominator which is already factored keeps its own spelling.
+        /// </summary>
         private static Entity? TryWriteInIrreducibleFactors(Entity denominator, Entity.Variable x)
         {
             // Only where the written bases, each taken once, share a factor among them or
@@ -24627,12 +24627,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// Whether <paramref name="expr"/> is <c>A + B ln(c x^r)</c> with <c>A</c>, <c>B</c>,
-        /// <c>c</c> and <c>r</c> free of <paramref name="x"/> and the logarithm present: one
-        /// logarithm of <paramref name="x"/> in it, the expression linear in that logarithm,
-        /// and the logarithm's argument a constant times a power of <paramref name="x"/>.
-        /// </summary>
-        /// <summary>
         /// Whether <paramref name="expr"/> is built from <paramref name="x"/> and constants by
         /// products, quotients and powers with exponents free of <paramref name="x"/>, however
         /// nested: <c>c (d x^m)^n</c>, and not <c>x + 1</c> or <c>e^x</c>.
@@ -24646,6 +24640,12 @@ namespace AngouriMath.Functions.Algebra
                 _ => false,
             };
 
+        /// <summary>
+        /// Whether <paramref name="expr"/> is <c>A + B ln(c x^r)</c> with <c>A</c>, <c>B</c>,
+        /// <c>c</c> and <c>r</c> free of <paramref name="x"/> and the logarithm present: one
+        /// logarithm of <paramref name="x"/> in it, the expression linear in that logarithm,
+        /// and the logarithm's argument a constant times a power of <paramref name="x"/>.
+        /// </summary>
         private static bool IsAffineInALogarithmOfAPowerOfX(Entity expr, Entity.Variable x)
         {
             Entity? logarithm = null;
@@ -25687,6 +25687,14 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// The highest power of the quadratic below the bar that
+        /// <see cref="ReducedOverThePolynomialsInItsSymbols"/> takes: with six symbols the fifth
+        /// ran past twenty seconds in the elimination, where the reduction a power at a time
+        /// declines it in half a second.
+        /// </summary>
+        private const int LargestPowerSolvedAtOnce = 4;
+
+        /// <summary>
         /// The reduction of <see cref="SolveAPolynomialOverAPowerOfAQuadraticBesideTheRootOfAnother"/>
         /// as one linear system over the polynomials in the symbols: <c>P/(A^n sqrt(B))</c> is
         /// <c>(Q sqrt(B)/A^(n - 1))' + (g + h x)/(A sqrt(B)) + sigma/sqrt(B)</c> with <c>Q</c> of
@@ -25716,14 +25724,6 @@ namespace AngouriMath.Functions.Algebra
         /// https://github.com/asc-community/AngouriMath/issues/233
         /// </para>
         /// </remarks>
-        /// <summary>
-        /// The highest power of the quadratic below the bar that
-        /// <see cref="ReducedOverThePolynomialsInItsSymbols"/> takes: with six symbols the fifth
-        /// ran past twenty seconds in the elimination, where the reduction a power at a time
-        /// declines it in half a second.
-        /// </summary>
-        private const int LargestPowerSolvedAtOnce = 4;
-
         private static Entity? ReducedOverThePolynomialsInItsSymbols(Entity[] coefficients, int power,
             Entity a2, Entity a1, Entity a0, Entity b2, Entity b1, Entity b0, Entity quadratic, Entity radicand, Entity constant, Entity.Variable x, Entity expr)
         {
@@ -29654,51 +29654,6 @@ namespace AngouriMath.Functions.Algebra
             return null;
         }
 
-        /// <summary>
-        /// A rational function of <c>e^(k x)</c>, turned into a rational function of one variable
-        /// by <c>u = e^(k x)</c>.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// With <c>u = e^(k x)</c> we have <c>dx = du/(k u)</c>, and every exponential in the
-        /// integrand becomes a whole power of <c>u</c>, so a quotient built from them is a
-        /// quotient of polynomials — which the rational integrator answers.
-        /// </para>
-        /// <para>
-        /// <b>What was missing.</b> <c>1/(1 + e^x)</c> had no antiderivative, and neither did
-        /// <c>1/(e^x + e^(-x))</c>. <c>e^x/(1 + e^x)</c> did, which is the shape of the gap: the
-        /// general substitution answers an exponential integrand only when the numerator happens
-        /// to be the derivative of something in it, and declines the rest for want of anything to
-        /// substitute for.
-        /// </para>
-        /// <para>
-        /// <b>It is also how the hyperbolic functions get integrated</b>, since they are not nodes
-        /// here — <c>tanh(x)</c> is built as <c>(e^(2x) - 1)/(e^(2x) + 1)</c> and <c>sech(x)</c>
-        /// as <c>2/(e^x + e^(-x))</c>, so both are rational functions of an exponential, and
-        /// <c>tanh</c>, <c>coth</c>, <c>sech</c> and <c>csch</c> had no antiderivative at all.
-        /// </para>
-        /// <para>
-        /// The answers come out in the exponential rather than as <c>ln(cosh(x))</c> or
-        /// <c>2 arctan(e^x)</c>, and unfolded — the rational integrator writes a logarithm as
-        /// <c>ln((2ax + b - D)/(2ax + b + D))</c> and leaves the arithmetic in the coefficients
-        /// standing. That is its shape on plain rational integrands too, not something this
-        /// rewrite introduces; <c>1/(x(x+1))</c> comes out as
-        /// <c>ln((2x + 1 - 1)/(2x + 1 + 1))</c> with nothing exponential in sight.
-        /// </para>
-        /// <para>
-        /// <b>One <c>k</c> for the whole integrand.</b> The exponents are read as linear in the
-        /// variable and their slopes taken together by greatest common divisor, so <c>e^x</c>
-        /// beside <c>e^(2x)</c> gives <c>u</c> and <c>u^2</c> under one substitution. A slope that
-        /// is not a whole number, or an exponent that is not linear — <c>e^(x^2)</c>, whose
-        /// integral is not elementary at all — is declined.
-        /// </para>
-        /// <para>
-        /// <b>No condition is owed.</b> <c>e^(k x)</c> is positive for every real <c>x</c> and
-        /// never zero, so the substitution is invertible on the whole line and introduces no
-        /// interval of its own; <c>u</c> is a genuine change of variable rather than a branch.
-        /// </para>
-        /// https://github.com/asc-community/AngouriMath/issues/718
-        /// </remarks>
         /// <summary>
         /// A quotient by an exponential, handed on as the product with its reciprocal:
         /// <c>N/b^(f(x))</c> as <c>N * b^(-f(x))</c>.
@@ -33675,6 +33630,52 @@ namespace AngouriMath.Functions.Algebra
             return answer.Nodes.Any(node => node == MathS.NaN) ? null : answer;
         }
 
+        /// <summary>
+        /// A rational function of <c>e^(k x)</c>, turned into a rational function of one variable
+        /// by <c>u = e^(k x)</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With <c>u = e^(k x)</c> we have <c>dx = du/(k u)</c>, and every exponential in the
+        /// integrand becomes a whole power of <c>u</c>, so a quotient built from them is a
+        /// quotient of polynomials — which the rational integrator answers.
+        /// </para>
+        /// <para>
+        /// <b>What was missing.</b> <c>1/(1 + e^x)</c> had no antiderivative, and neither did
+        /// <c>1/(e^x + e^(-x))</c>. <c>e^x/(1 + e^x)</c> did, which is the shape of the gap: the
+        /// general substitution answers an exponential integrand only when the numerator happens
+        /// to be the derivative of something in it, and declines the rest for want of anything to
+        /// substitute for.
+        /// </para>
+        /// <para>
+        /// <b>It is also how the hyperbolic functions get integrated</b>, since they are not nodes
+        /// here — <c>tanh(x)</c> is built as <c>(e^(2x) - 1)/(e^(2x) + 1)</c> and <c>sech(x)</c>
+        /// as <c>2/(e^x + e^(-x))</c>, so both are rational functions of an exponential, and
+        /// <c>tanh</c>, <c>coth</c>, <c>sech</c> and <c>csch</c> had no antiderivative at all.
+        /// </para>
+        /// <para>
+        /// The answers come out in the exponential rather than as <c>ln(cosh(x))</c> or
+        /// <c>2 arctan(e^x)</c>, and unfolded — the rational integrator writes a logarithm as
+        /// <c>ln((2ax + b - D)/(2ax + b + D))</c> and leaves the arithmetic in the coefficients
+        /// standing. That is its shape on plain rational integrands too, not something this
+        /// rewrite introduces; <c>1/(x(x+1))</c> comes out as
+        /// <c>ln((2x + 1 - 1)/(2x + 1 + 1))</c> with nothing exponential in sight.
+        /// </para>
+        /// <para>
+        /// <b>One <c>k</c> for the whole integrand.</b> The exponents are read as linear in the
+        /// variable and their slopes taken together by greatest common divisor, so <c>e^x</c>
+        /// beside <c>e^(2x)</c> gives <c>u</c> and <c>u^2</c> under one substitution, and
+        /// <c>e^(x/2)</c> beside <c>e^x</c> gives <c>u = e^(x/2)</c>. Symbolic slopes are taken
+        /// where they are rational multiples of one another. An exponent that is not linear —
+        /// <c>e^(x^2)</c>, whose integral is not elementary at all — is declined.
+        /// </para>
+        /// <para>
+        /// <b>No condition is owed.</b> <c>e^(k x)</c> is positive for every real <c>x</c> and
+        /// never zero, so the substitution is invertible on the whole line and introduces no
+        /// interval of its own; <c>u</c> is a genuine change of variable rather than a branch.
+        /// </para>
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
         internal static Entity? SolveByExponentialSubstitution(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             // Rational slopes, so that `e^(x/2)` beside `e^x` is read: the base is `e^(k x)` with
@@ -35095,10 +35096,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// Whether both read as polynomials in <paramref name="x"/> with the numerator's
-        /// degree below the denominator's; false where either does not read.
-        /// </summary>
-        /// <summary>
         /// False where <paramref name="numerator"/> is shown not to be a constant multiple of
         /// <paramref name="derivative"/>, both read as polynomials in <paramref name="x"/>: their
         /// leading terms are of different degrees, or a coefficient is not the ratio of the
@@ -35124,6 +35121,10 @@ namespace AngouriMath.Functions.Algebra
             return true;
         }
 
+        /// <summary>
+        /// Whether both read as polynomials in <paramref name="x"/> with the numerator's
+        /// degree below the denominator's; false where either does not read.
+        /// </summary>
         private static bool IsProperByDegree(Entity numerator, Entity denominator, Entity.Variable x)
             => TreeAnalyzer.TryGetPolynomial(numerator, x, out var above) && above.Count > 0
                && TreeAnalyzer.TryGetPolynomial(denominator, x, out var below) && below.Count > 0
@@ -36863,39 +36864,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// Several square roots of polynomials in the variable, written as one:
-        /// <c>sqrt(1 + x^2) sqrt(1 - x^2)</c> is <c>sqrt(1 - x^4)</c>, and a root below the bar
-        /// is a root above it over its own base, <c>1/sqrt(B) = sqrt(B)/B</c>.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// <c>x/(sqrt(1 + x^2) sqrt(1 - x^2))</c> had no antiderivative and <c>x/sqrt(1 - x^4)</c>
-        /// is one substitution. Nothing reads two radicals: the substitution wants one subtree
-        /// to replace, Euler's rule wants one root of one quadratic, and each rule looked at
-        /// this integrand and saw two of what it takes one of. It is what by parts leaves from
-        /// <c>arcsin(x)/(1 + x^2)^(3/2)</c> and from <c>ln(x + sqrt(1 + x^2))/(1 - x^2)^(3/2)</c>,
-        /// and from every other pairing of an inverse function's radical with the one in
-        /// the power it stands over.
-        /// </para>
-        /// <para>
-        /// <b>When the identity holds.</b> On the principal branch, <c>sqrt(P) sqrt(Q) = sqrt(PQ)</c>
-        /// whenever at most one of <c>P</c> and <c>Q</c> is negative: with both negative the
-        /// left is <c>i sqrt|P| * i sqrt|Q| = -sqrt|PQ|</c> and the right is <c>+sqrt|PQ|</c>.
-        /// For <c>k</c> roots the same count applies -- <c>i^k</c> against <c>i^(k mod 2)</c> --
-        /// so the rule asks whether there is a real <c>x</c> at which two of the bases are
-        /// negative, and only rewrites when there is not. The bases are polynomials with
-        /// numeric coefficients; their real roots cut the line into intervals on each of which
-        /// every base keeps its sign, so the count at one point of each interval is the count
-        /// on the interval. Where the solver cannot give the roots, the rule declines.
-        /// </para>
-        /// <para>
-        /// A rewriting rule, unscoped: what it hands on has strictly fewer radicals than what
-        /// it was given, and it is asked one level down more often than at the top, since the
-        /// two-radical shape is what a by-parts step produces.
-        /// </para>
-        /// https://github.com/asc-community/AngouriMath/issues/718
-        /// </remarks>
-        /// <summary>
         /// A square root of a polynomial with a repeated factor, the factor taken out of the
         /// root: <c>sqrt(9 + 3x - 5x^2 + x^3)</c> is <c>sqrt((x - 3)^2 (x + 1))</c>, which is
         /// <c>|x - 3| sqrt(x + 1)</c>, and the modulus is <c>sgn(x - 3) (x - 3)</c> -- a constant
@@ -37012,6 +36980,16 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <see cref="SolveAReciprocalOfABinomialInAPowerOfASineOverItsRoots"/> asked first where a power of
+        /// the function stands above or below the binomial: the rules before it in the dispatcher spent
+        /// the budget on `sinh(y)^4/(a + b sinh(y)^3)`, and the bare reciprocal they answer is left to them.
+        /// </summary>
+        internal static Entity? SolveAPowerOverABinomialInAPowerOfASineOverItsRoots(Entity expr, Entity.Variable x)
+            => Integration.AnsweringTheQuestionAsked && TryReadAsQuotient(expr, out var above, out _) && above.ContainsNode(x)
+                ? SolveAReciprocalOfABinomialInAPowerOfASineOverItsRoots(expr, x)
+                : null;
+
+        /// <summary>
         /// The reciprocal of <c>a + b s^n</c>, <c>s</c> a sine or a cosine of a linear and a symbol in
         /// <c>a</c> or <c>b</c>, over the roots of the binomial: with <c>q = 2</c> for an even <c>n</c>
         /// and <c>1</c> for an odd one, <c>m = n/q</c> and <c>r_k</c> the <c>m</c>-th roots of
@@ -37027,16 +37005,6 @@ namespace AngouriMath.Functions.Algebra
         /// <c>1/(a + b sin(x)^5)</c>, <c>1/(a - b cos(x)^6)</c> and the like were declined.
         /// https://github.com/asc-community/AngouriMath/issues/718
         /// </remarks>
-        /// <summary>
-        /// <see cref="SolveAReciprocalOfABinomialInAPowerOfASineOverItsRoots"/> asked first where a power of
-        /// the function stands above or below the binomial: the rules before it in the dispatcher spent
-        /// the budget on `sinh(y)^4/(a + b sinh(y)^3)`, and the bare reciprocal they answer is left to them.
-        /// </summary>
-        internal static Entity? SolveAPowerOverABinomialInAPowerOfASineOverItsRoots(Entity expr, Entity.Variable x)
-            => Integration.AnsweringTheQuestionAsked && TryReadAsQuotient(expr, out var above, out _) && above.ContainsNode(x)
-                ? SolveAReciprocalOfABinomialInAPowerOfASineOverItsRoots(expr, x)
-                : null;
-
         internal static Entity? SolveAReciprocalOfABinomialInAPowerOfASineOverItsRoots(Entity expr, Entity.Variable x)
         {
             if (!TryReadAsQuotient(expr, out var numerator, out var denominator))
@@ -40019,6 +39987,39 @@ namespace AngouriMath.Functions.Algebra
             return (signs[0], signs[1]);
         }
 
+        /// <summary>
+        /// Several square roots of polynomials in the variable, written as one:
+        /// <c>sqrt(1 + x^2) sqrt(1 - x^2)</c> is <c>sqrt(1 - x^4)</c>, and a root below the bar
+        /// is a root above it over its own base, <c>1/sqrt(B) = sqrt(B)/B</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>x/(sqrt(1 + x^2) sqrt(1 - x^2))</c> had no antiderivative and <c>x/sqrt(1 - x^4)</c>
+        /// is one substitution. Nothing reads two radicals: the substitution wants one subtree
+        /// to replace, Euler's rule wants one root of one quadratic, and each rule looked at
+        /// this integrand and saw two of what it takes one of. It is what by parts leaves from
+        /// <c>arcsin(x)/(1 + x^2)^(3/2)</c> and from <c>ln(x + sqrt(1 + x^2))/(1 - x^2)^(3/2)</c>,
+        /// and from every other pairing of an inverse function's radical with the one in
+        /// the power it stands over.
+        /// </para>
+        /// <para>
+        /// <b>When the identity holds.</b> On the principal branch, <c>sqrt(P) sqrt(Q) = sqrt(PQ)</c>
+        /// whenever at most one of <c>P</c> and <c>Q</c> is negative: with both negative the
+        /// left is <c>i sqrt|P| * i sqrt|Q| = -sqrt|PQ|</c> and the right is <c>+sqrt|PQ|</c>.
+        /// For <c>k</c> roots the same count applies -- <c>i^k</c> against <c>i^(k mod 2)</c> --
+        /// so the rule asks whether there is a real <c>x</c> at which two of the bases are
+        /// negative, and only rewrites when there is not. The bases are polynomials with
+        /// numeric coefficients; their real roots cut the line into intervals on each of which
+        /// every base keeps its sign, so the count at one point of each interval is the count
+        /// on the interval. Where the solver cannot give the roots, the rule declines.
+        /// </para>
+        /// <para>
+        /// A rewriting rule, unscoped: what it hands on has strictly fewer radicals than what
+        /// it was given, and it is asked one level down more often than at the top, since the
+        /// two-radical shape is what a by-parts step produces.
+        /// </para>
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
         internal static Entity? SolveByCombiningRadicals(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             // A secant or cosecant under a root is the reciprocal of a cosine or sine there:
@@ -47531,22 +47532,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// <c>A + i A tan(z)</c> is <c>A e^(i z)/cos(z)</c>, and <c>A + i A cot(z)</c> is
-        /// <c>i A e^(-i z)/sin(z)</c> -- exactly, wherever the tangent is defined, since
-        /// <c>cos(z) + i sin(z)</c> is <c>e^(i z)</c>. A power of one of them below the bar is
-        /// then a power of the cosine times an exponential, and beside a polynomial that is a
-        /// shape the closed rules answer: <c>(c + d x)^2/(a + i a tan(pe + f x))^2</c> is a
-        /// search past the budget as written and a second once rewritten.
-        /// </summary>
-        /// <remarks>
-        /// The four signs are the four identities: <c>A - i A tan(z)</c> is
-        /// <c>A e^(-i z)/cos(z)</c> and <c>A - i A cot(z)</c> is <c>-i A e^(i z)/sin(z)</c>.
-        /// Rubi's 4.3.10 and 4.4.10, where every such row carries the imaginary unit in the
-        /// coefficient and nothing else reads it. The same question, not one of its own: what is
-        /// handed on is the integrand in another spelling.
-        /// https://github.com/asc-community/AngouriMath/issues/718
-        /// </remarks>
-        /// <summary>
         /// <paramref name="expr"/> integrated in <c>u = g + f x</c> where x stands only in trigonometric
         /// functions of that one linear, other than x itself, and a root of something in x stands: <c>dx = du/f</c>. Null
         /// otherwise.
@@ -47589,6 +47574,22 @@ namespace AngouriMath.Functions.Algebra
             return answer.Substitute(u, linear);
         }
 
+        /// <summary>
+        /// <c>A + i A tan(z)</c> is <c>A e^(i z)/cos(z)</c>, and <c>A + i A cot(z)</c> is
+        /// <c>i A e^(-i z)/sin(z)</c> -- exactly, wherever the tangent is defined, since
+        /// <c>cos(z) + i sin(z)</c> is <c>e^(i z)</c>. A power of one of them below the bar is
+        /// then a power of the cosine times an exponential, and beside a polynomial that is a
+        /// shape the closed rules answer: <c>(c + d x)^2/(a + i a tan(pe + f x))^2</c> is a
+        /// search past the budget as written and a second once rewritten.
+        /// </summary>
+        /// <remarks>
+        /// The four signs are the four identities: <c>A - i A tan(z)</c> is
+        /// <c>A e^(-i z)/cos(z)</c> and <c>A - i A cot(z)</c> is <c>-i A e^(i z)/sin(z)</c>.
+        /// Rubi's 4.3.10 and 4.4.10, where every such row carries the imaginary unit in the
+        /// coefficient and nothing else reads it. The same question, not one of its own: what is
+        /// handed on is the integrand in another spelling.
+        /// https://github.com/asc-community/AngouriMath/issues/718
+        /// </remarks>
         internal static Entity? SolveByWritingAnImaginaryTangentAsAnExponential(Entity expr, Entity.Variable x, bool integrateByParts)
         {
             // Below the bar only: `(A + i A tan(z))^3` above it is a polynomial in the tangent,
@@ -49674,10 +49675,6 @@ namespace AngouriMath.Functions.Algebra
             => integrandInU is Providedf(var inner, _) ? inner : integrandInU; // TODO: singularities ignored but not handled properly
 
         /// <summary>
-        /// Attempts to solve an integral using u-substitution.
-        /// Looks for patterns where f(g(x)) * g'(x) can be integrated as F(g(x)).
-        /// </summary>
-        /// <summary>
         /// Whether <paramref name="expr"/> holds an even root of something in <paramref name="x"/>
         /// other than <paramref name="radicand"/>: the only way it can be real where the radicand is
         /// negative and its own root imaginary.
@@ -49846,6 +49843,10 @@ namespace AngouriMath.Functions.Algebra
         /// <summary>Whether a linear renaming is being asked as the same question on this thread.</summary>
         [System.ThreadStatic] private static bool renamingLinearly;
 
+        /// <summary>
+        /// Attempts to solve an integral using u-substitution.
+        /// Looks for patterns where f(g(x)) * g'(x) can be integrated as F(g(x)).
+        /// </summary>
         internal static Entity? SolveBySubstitution(Entity expr, Entity.Variable x, bool integrateByParts = true)
         {
             // A rational function over written linear factors with symbols in their
@@ -50704,18 +50705,6 @@ namespace AngouriMath.Functions.Algebra
         private const int LargestSumOffered = 30;
 
         /// <summary>
-        /// Finds potential substitution candidates u = g(x) from the expression.
-        /// For example, common patterns to try:
-        /// 1. f(ax + b) * a  ->  u = ax + b
-        /// 2. f(x^n) * x^(n-1)  ->  u = x^n
-        /// 3. f(g(x)) * g'(x)  ->  u = g(x)
-        /// </summary>
-        /// <summary>
-        /// The special functions of
-        /// <a href="https://github.com/asc-community/AngouriMath/issues/1501">#1501</a>: the error
-        /// functions and the exponential, logarithmic, sine, cosine and hyperbolic integrals.
-        /// </summary>
-        /// <summary>
         /// Set while the terms of a remainder after a special function are asked as questions of
         /// their own, so that the asking is not nested; see <c>TryIntegrateByPartsOnce</c>.
         /// </summary>
@@ -50738,6 +50727,11 @@ namespace AngouriMath.Functions.Algebra
             return false;
         }
 
+        /// <summary>
+        /// The special functions of
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1501">#1501</a>: the error
+        /// functions and the exponential, logarithmic, sine, cosine and hyperbolic integrals.
+        /// </summary>
         private static bool IsASpecialFunction(Entity node)
             => node is Entity.Erff or Entity.Erfcf or Entity.Erfif or Entity.Eif or Entity.Lif
                 or Entity.Sif or Entity.Cif or Entity.Shif or Entity.Chif;
@@ -50844,6 +50838,13 @@ namespace AngouriMath.Functions.Algebra
             };
         }
 
+        /// <summary>
+        /// Finds potential substitution candidates u = g(x) from the expression.
+        /// For example, common patterns to try:
+        /// 1. f(ax + b) * a  ->  u = ax + b
+        /// 2. f(x^n) * x^(n-1)  ->  u = x^n
+        /// 3. f(g(x)) * g'(x)  ->  u = g(x)
+        /// </summary>
         private static IEnumerable<Entity> FindSubstitutionCandidates(Entity expr, Entity.Variable x)
         {
             var candidates = new List<Entity>();

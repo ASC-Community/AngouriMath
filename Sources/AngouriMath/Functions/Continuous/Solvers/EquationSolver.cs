@@ -55,18 +55,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// Solves a system of equations by solving one after another with substitution, e.g. <br/>
-        /// let { x - y + a = 0, y + 2a = 0 } be a system of equations for variables { x, y } <br/>
-        /// Then we first find y from the first equation, <br/>
-        /// y = x + a <br/>
-        /// then we substitute it to all others <br/>
-        /// x + a + 2a = 0 <br/>
-        /// then we find x <br/>
-        /// x = -3a <br/>
-        /// Then we substitute back <br/>
-        /// y = -3a + a = -2a <br/>
-        /// </summary>
-        /// <summary>
         /// What a whole system solve is allowed to spend before it declines.
         /// </summary>
         /// <remarks>
@@ -94,6 +82,31 @@ namespace AngouriMath.Functions.Algebra
         internal static readonly WorkBudget SystemSolveBudget =
             new() { Steps = 10_000, Time = TimeSpan.FromSeconds(60) };
 
+        /// <summary>
+        /// Solves a system of equations for <paramref name="vars"/>, one row per solution, or
+        /// <see langword="null"/> where it cannot.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Tried in order: a Gröbner basis, where the system is polynomial over Q; row reduction,
+        /// where a linear system has fewer equations than unknowns; once for each factor, where
+        /// an equation is a product in more than one unknown; <see cref="NonSquareSystemSolver"/>,
+        /// where the count is not square or an unknown is in no equation; and elimination.
+        /// </para>
+        /// <para>
+        /// Elimination solves one equation after another with substitution, e.g. <br/>
+        /// let { x - y + a = 0, y + 2a = 0 } be a system of equations for variables { x, y } <br/>
+        /// Then we first find y from the first equation, <br/>
+        /// y = x + a <br/>
+        /// then we substitute it to all others <br/>
+        /// x + a + 2a = 0 <br/>
+        /// then we find x <br/>
+        /// x = -3a <br/>
+        /// Then we substitute back <br/>
+        /// y = -3a + a = -2a <br/>
+        /// and each row it answers is put back into the equations as they were written.
+        /// </para>
+        /// </remarks>
         internal static Matrix? SolveSystem(IEnumerable<Entity> inputEquations, ReadOnlySpan<Variable> vars)
         {
             var written = inputEquations.ToList();

@@ -417,18 +417,6 @@ namespace AngouriMath.Functions
         }
 
         /// <summary>
-        /// Reads a factor of a product as a base and an exponent.
-        /// </summary>
-        /// <remarks>
-        /// The nested case is not cosmetic: <see cref="Mulf.LinearChildren"/> writes a
-        /// divisor as <c>(...)^(-1)</c>, so <c>x^3 / x^2</c> arrives as
-        /// <c>x^3 * (x^2)^(-1)</c>, whose second factor has base <c>x^2</c> rather than
-        /// <c>x</c> and would be read as an unrelated base. Unwrapping it is
-        /// <c>(a^b)^n = a^(b*n)</c>, which holds for a whole <c>n</c> whatever the sign of
-        /// <c>a</c> -- the same guard the <c>({}^{})^{}</c> rule above carries, and for the
-        /// same reason. https://github.com/asc-community/AngouriMath/issues/752
-        /// </remarks>
-        /// <summary>
         /// Whether <paramref name="entity"/> is a real strictly above zero, decided rather than
         /// assumed. <c>ln</c> of such a number is a real, so a real multiple of it stays on the
         /// real line and inside <c>ln</c>'s principal strip.
@@ -474,6 +462,18 @@ namespace AngouriMath.Functions
                || IsKnownReal(entity)
                || entity.Evaled is Real { EDecimal.IsFinite: true };
 
+        /// <summary>
+        /// Reads a factor of a product as a base and an exponent.
+        /// </summary>
+        /// <remarks>
+        /// The nested case is not cosmetic: <see cref="Mulf.LinearChildren"/> writes a
+        /// divisor as <c>(...)^(-1)</c>, so <c>x^3 / x^2</c> arrives as
+        /// <c>x^3 * (x^2)^(-1)</c>, whose second factor has base <c>x^2</c> rather than
+        /// <c>x</c> and would be read as an unrelated base. Unwrapping it is
+        /// <c>(a^b)^n = a^(b*n)</c>, which holds for a whole <c>n</c> whatever the sign of
+        /// <c>a</c> -- the same guard the <c>({}^{})^{}</c> rule above carries, and for the
+        /// same reason. https://github.com/asc-community/AngouriMath/issues/752
+        /// </remarks>
         private static (Entity Base, Entity Exponent) Decompose(Entity factor)
         {
             if (factor is not Powf(var @base, var exponent))

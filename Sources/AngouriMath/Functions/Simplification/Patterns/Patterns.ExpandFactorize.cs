@@ -133,9 +133,9 @@ namespace AngouriMath.Functions
         /// -- a polynomial trinomial is collapsed by the rules above -- and to keep the cost
         /// of that <c>Simplify</c> off every three-term sum in every tree.
         /// </para>
+        /// <para>Internal so that the data form of this set calls it rather than repeating it.</para>
         /// </remarks>
         /// <returns><see langword="null"/> when the sum is not a square, so the rule does not fire.</returns>
-        /// <remarks>Internal so that the data form of this set calls it rather than repeating it.</remarks>
         internal static Entity? CollapseToPerfectSquare(Entity expr)
         {
             if (!expr.Nodes.Any(node => node is Powf(_, Rational and not Integer)))
@@ -209,11 +209,6 @@ namespace AngouriMath.Functions
               EDecimal.FromString("0.8"), EDecimal.FromString("2.3") };
 
         /// <summary>
-        /// Whether a proposed collapse is the same number as what it replaces, checked at
-        /// <see cref="PerfectSquareSamplePoints"/> with each free variable offset from the
-        /// last so that two of them never take the same value.
-        /// </summary>
-        /// <summary>
         /// Whether the sum evaluates to a number at the sample points at all, which
         /// <see cref="AgreesNumerically"/> requires of any collapse this proposes.
         /// </summary>
@@ -281,6 +276,11 @@ namespace AngouriMath.Functions
             return false;
         }
 
+        /// <summary>
+        /// Whether a proposed collapse is the same number as what it replaces, checked at
+        /// <see cref="PerfectSquareSamplePoints"/> with each free variable offset from the
+        /// last so that two of them never take the same value.
+        /// </summary>
         private static bool AgreesNumerically(Entity original, Entity candidate)
         {
             var variables = original.Vars.ToList();
@@ -316,13 +316,15 @@ namespace AngouriMath.Functions
         /// <c>(a + b) * (c + d)</c> on the next pass.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// The pairwise rules only ever see two adjacent terms of the sum tree, so a sum of
         /// four was left half-factored at <c>a*(c + d) + b*c + b*d</c> -- that is
         /// https://github.com/asc-community/AngouriMath/issues/531. Sums
         /// of two are left to those rules, which are older and better tested.
+        /// </para>
+        /// <para>Internal so the data form of this set calls it rather than repeating it.</para>
         /// </remarks>
         /// <returns><see langword="null"/> when no factor is shared, so the rule does not fire.</returns>
-        /// <remarks>Internal so the data form of this set calls it rather than repeating it.</remarks>
         internal static Entity? CollectCommonFactors(Entity expr)
         {
             var terms = Sumf.LinearChildren(expr).ToList();

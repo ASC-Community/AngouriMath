@@ -595,17 +595,6 @@ namespace AngouriMath
         }
 
         /// <summary>
-        /// Adds up the terms of an expanded sum that differ only by a numeric factor, so
-        /// that expanding actually finishes: <c>(x+1)^2 * (x+1)^2</c> multiplied out gives
-        /// sixteen terms, of which only five are distinct.
-        /// </summary>
-        /// <remarks>
-        /// Deliberately not <see cref="Simplify(int)"/>, which is far too expensive to run
-        /// inside <see cref="Expand(int)"/>. Each term is reduced to a coefficient and a
-        /// product of powers, and terms whose products agree are added together --
-        /// enough to collect like terms and nothing more.
-        /// </remarks>
-        /// <summary>
         /// Whether every node of the expression is one that monomial collection describes:
         /// numbers, variables, and the operations that build a polynomial out of them.
         /// </summary>
@@ -621,6 +610,17 @@ namespace AngouriMath
             => expression.Nodes.All(node =>
                 node is Number or Variable or Mulf or Powf or Sumf or Minusf or Divf);
 
+        /// <summary>
+        /// Adds up the terms of an expanded sum that differ only by a numeric factor, so
+        /// that expanding actually finishes: <c>(x+1)^2 * (x+1)^2</c> multiplied out gives
+        /// sixteen terms, of which only five are distinct.
+        /// </summary>
+        /// <remarks>
+        /// Deliberately not <see cref="Simplify(int)"/>, which is far too expensive to run
+        /// inside <see cref="Expand(int)"/>. Each term is reduced to a coefficient and a
+        /// product of powers, and terms whose products agree are added together --
+        /// enough to collect like terms and nothing more.
+        /// </remarks>
         private static Entity CollectLikeTerms(Entity expanded)
         {
             if (expanded is not Sumf and not Minusf)

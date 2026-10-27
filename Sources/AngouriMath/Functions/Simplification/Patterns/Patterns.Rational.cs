@@ -85,33 +85,6 @@ namespace AngouriMath.Functions
             => node is Powf(_, Rational and not Integer);
 
         /// <summary>
-        /// <c>num / (a + b)</c> becomes <c>num * (a - b) / (a^2 - b^2)</c>, which clears a
-        /// square root out of a two-term denominator:
-        /// <c>(5 - sqrt(3)) / (5 + sqrt(3))</c> is <c>14/11 - 5/11 * sqrt(3)</c>.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// The library already prefers a denominator without a surd -- <c>1/sqrt(2)</c> has
-        /// always come back as <c>sqrt(2)/2</c> -- so this extends an existing preference to
-        /// the binomial case. https://github.com/asc-community/AngouriMath/issues/205
-        /// </para>
-        /// <para>
-        /// Three conditions, and each is load-bearing. The denominator must be constant,
-        /// because multiplying numerator and denominator by <c>a - b</c> is only valid where
-        /// that is non-zero, and for a symbolic denominator it is not decidable -- rewriting
-        /// there would either lose a value or attach a condition to every such quotient.
-        /// <c>a^2 - b^2</c> must fold to a rational, which is what says the root was
-        /// actually cleared: a conjugate does nothing for a cube root, where
-        /// <c>1 - 2^(2/3)</c> is no better than <c>1 + 2^(1/3)</c>. And it must be non-zero,
-        /// which rules out <c>a = b</c> and, since it is <c>(a-b)(a+b)</c>, guarantees the
-        /// original denominator was non-zero too.
-        /// </para>
-        /// <para>
-        /// Terminates because the rewritten denominator is a rational and this rule requires
-        /// a surd in the denominator to fire at all.
-        /// </para>
-        /// </remarks>
-        /// <summary>
         /// <c>p * value / q</c> for a rational <c>p/q</c>, written so that the rational is
         /// split across the quotient rather than left as a factor: a unit-numerator rational
         /// carries its own weight in the complexity criteria, so <c>(1/2) * value</c> would
@@ -162,6 +135,31 @@ namespace AngouriMath.Functions
         /// <c>num / (a + b)</c> becomes <c>num * (a - b) / (a^2 - b^2)</c> where that clears a
         /// surd out of the denominator, and <paramref name="expr"/> where it does not.
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>(5 - sqrt(3)) / (5 + sqrt(3))</c> is <c>14/11 - 5/11 * sqrt(3)</c>.
+        /// </para>
+        /// <para>
+        /// The library already prefers a denominator without a surd -- <c>1/sqrt(2)</c> has
+        /// always come back as <c>sqrt(2)/2</c> -- so this extends an existing preference to
+        /// the binomial case. https://github.com/asc-community/AngouriMath/issues/205
+        /// </para>
+        /// <para>
+        /// Three conditions, and each is load-bearing. The denominator must be constant,
+        /// because multiplying numerator and denominator by <c>a - b</c> is only valid where
+        /// that is non-zero, and for a symbolic denominator it is not decidable -- rewriting
+        /// there would either lose a value or attach a condition to every such quotient.
+        /// <c>a^2 - b^2</c> must fold to a rational, which is what says the root was
+        /// actually cleared: a conjugate does nothing for a cube root, where
+        /// <c>1 - 2^(2/3)</c> is no better than <c>1 + 2^(1/3)</c>. And it must be non-zero,
+        /// which rules out <c>a = b</c> and, since it is <c>(a-b)(a+b)</c>, guarantees the
+        /// original denominator was non-zero too.
+        /// </para>
+        /// <para>
+        /// Terminates because the rewritten denominator is a rational and this rule requires
+        /// a surd in the denominator to fire at all.
+        /// </para>
+        /// </remarks>
         internal static Entity MultiplyByTheConjugate(Entity expr)
         {
             if (expr is not Divf(var num, var den))
