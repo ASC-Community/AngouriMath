@@ -139,6 +139,25 @@ except where shown.
 | `([[1, 2], [2, 4]] ^ (-1)).Evaled` | throws `InvalidDeterminantException` | `[[1, 2], [2, 4]] ^ (-1)` |
 | `([[1, 2], [2, 4]] ^ (-1)).Simplify()` | throws `InvalidDeterminantException` | `1 / [[1, 2], [2, 4]]` |
 
+### A sum of fractions that is a constant over one denominator simplifies to it
+
+**Silent: an identity in fractions reaches its value, and conditions are written shorter.** `Simplify` gathered
+fractions a pair or a sort level at a time and left some sums apart that are a constant over one denominator. It now
+also offers the rational canonical form (`Transformation.RationalCanonicalization`) as a candidate, where the
+expression is a rational function with a quotient in it and of complexity at most 64, and not while the integrator is
+running. The candidate wins only where it rates shorter, and a tie keeps the old answer. Where it wins, the condition
+is the canonical one: square-free, and without what the answer's own denominator already excludes
+([#2137](https://github.com/asc-community/AngouriMath/issues/2137)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x/(x+y) + y/(x+y)".Simplify()` | `x / (x + y) + y / (x + y)` | `1 provided not x + y = 0` |
+| `"1/(1 - (b/a)^2) - a^2/(a^2 - b^2)".Simplify()` | unchanged | `0 provided not a ^ 3 - a * b ^ 2 = 0` |
+| `"x/c + (y*c - x*d)/(c^2*(z + d/c)) - (x*z + y)/(c*z + d)".Simplify()` | unchanged | `0 provided not c * d + c ^ 2 * z = 0` |
+| `"R^2 - R^2*(a+b)*(1/a+1/b)/4 - R^2*(a-b)*(1/a-1/b)/4".Simplify()` | `R ^ 2 + -1/2 * (R ^ 2 + R ^ 2) provided not a = 0 and not b = 0` | `0 provided not a * b = 0` |
+| `"(a - 1)/(1 - b) - (1 - a)/(b - 1)".Simplify()` | `0 provided not (b - 1) * (1 - b) = 0` | `0 provided not b - 1 = 0` |
+| `"(x*y*a*b*c)/(c*b*a*x*x)".Simplify()` | `y / x provided not a * b * c * x = 0` | `y / x provided not a * b * c = 0` |
+
 ### A polynomial system is not answered with some of its solutions missing
 
 **Silent: a polynomial system that lost solutions has all of them.** `EquationSystem.Solve` triangularises a

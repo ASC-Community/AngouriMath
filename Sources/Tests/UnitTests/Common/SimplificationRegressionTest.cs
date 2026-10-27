@@ -121,8 +121,10 @@ namespace AngouriMath.Tests.Common
         // The general case still brings unlike denominators together, which needs the
         // numerator fully simplified to reach 0.
         [Fact]
+        // The condition is the square-free part of (b - 1)(1 - b), which vanishes at the same
+        // points, since #2137 offers the rational canonical form as a candidate.
         public void Issue403_UnlikeDenominatorsStillCombine() =>
-            Assert.Equal("0 provided not (b - 1) * (1 - b) = 0".ToEntity(),
+            Assert.Equal("0 provided not b - 1 = 0".ToEntity(),
                 "(a - 1) / (1 - b) - (1 - a) / (b - 1)".ToEntity().Simplify());
 
         // Three separate defects sat on top of each other in the integrator,

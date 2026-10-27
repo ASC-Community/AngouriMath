@@ -449,6 +449,13 @@ namespace AngouriMath.Functions.Algebra
         internal static bool AnsweringTheQuestionAsked => descentDepth == 1;
 
         /// <summary>
+        /// Whether the integrator is running on this thread: for a <c>Simplify</c> candidate that
+        /// is wanted by its callers and not by the integrator's rules, which read the shape of what
+        /// <c>Simplify</c> returns.
+        /// </summary>
+        internal static bool IsIntegrating => descentDepth > 0;
+
+        /// <summary>
         /// The question asked or one step below it: the remainder by parts leaves, the
         /// integrand a substitution makes. For a rewriting rule that lands on the chain and is
         /// wanted there and no deeper, where the same rewriting fed a search that did not return.
