@@ -217,6 +217,23 @@ its arguments and answers may change in a minor release. `amcli mcp` no longer l
 | `am_classify` on `G*M*m/r^2`, to `amcli mcp` | `solved`, `Newtonian gravitation` first | `failed`: `'am_classify' is preliminary, and is served only when the server is started as 'amcli mcp --preliminary'` |
 | the same, to `amcli mcp --preliminary` | `solved` (the flag is ignored) | `solved`, and `"preliminary": true` |
 
+### A cosine of a sum is expanded, as a sine of one is
+
+**Silent: identities in a shifted cosine reduce, and `Expand` opens a cosine of a sum.** The expansion rules had the
+sine's addition theorem and not the cosine's, so no shift of a cosine was reduced: `sin(pi - x) - sin(x)` was `0` and
+`cos(pi - x) + cos(x)` stayed as written. `cos(a + b)` and `cos(a - b)` are now expanded too. A shift whose reduced
+form is shorter comes back reduced. `cos(pi - x)` on its own stays, as `sin(pi + x)` always has, because `-cos(x)`
+is rated no shorter ([#2135](https://github.com/asc-community/AngouriMath/issues/2135)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"cos(pi/2 - x)".Simplify()` | `cos(pi / 2 - x)` | `sin(x)` |
+| `"cos(2*pi - x)".Simplify()` | `cos(2 * pi - x)` | `cos(x)` |
+| `"cos(pi - x) + cos(x)".Simplify()` | `cos(pi - x) + cos(x)` | `0` |
+| `"cos(s + t) - cos(s)*cos(t) + sin(s)*sin(t)".Simplify()` | unchanged | `0` |
+| `"cos(a + b)".Expand()` | `cos(a + b)` | `cos(a) * cos(b) + -sin(a) * sin(b)` |
+| `"cos(a - b)".Expand()` | `cos(a - b)` | `cos(a) * cos(b) + sin(a) * sin(b)` |
+
 ### A subscript may have a subscript
 
 **Not silent: what was a parse error is a name.** A name took at most one `_`, so `x_1_2` and `X_a_beta` were lexer

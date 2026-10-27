@@ -21,6 +21,10 @@ namespace AngouriMath.Functions
         {
             Sinf(Sumf(var any1, var any2)) => new Sinf(any1) * new Cosf(any2) + new Sinf(any2) * new Cosf(any1),
             Sinf(Minusf(var any1, var any2)) => new Sinf(any1) * new Cosf(any2) - new Sinf(any2) * new Cosf(any1),
+            // The cosine's, which were missing: cos(pi - x) + cos(x) did not reduce to 0 where
+            // sin(pi - x) - sin(x) did. https://github.com/asc-community/AngouriMath/issues/2135
+            Cosf(Sumf(var any1, var any2)) => new Cosf(any1) * new Cosf(any2) - new Sinf(any1) * new Sinf(any2),
+            Cosf(Minusf(var any1, var any2)) => new Cosf(any1) * new Cosf(any2) + new Sinf(any1) * new Sinf(any2),
 
             _ => x
         };
