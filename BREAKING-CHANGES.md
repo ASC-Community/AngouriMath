@@ -57,6 +57,21 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A quadratic whose discriminant is a square is answered without the root
+
+**Silent: the same roots, written as what they are.** The quadratic formula wrote `sqrt(b^2 - 4ac)` whatever the
+discriminant was, so a symbolic quadratic with a square discriminant came back with the square under the root.
+Either square root gives the same pair of roots, so where the coefficients are polynomials and the discriminant is
+a rational number times the square of one, the roots are written with that polynomial and reduced over `2a`
+([#2140](https://github.com/asc-community/AngouriMath/issues/2140)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"a*z^2 - (a^2 - b*c)*z - a*b*c = 0".Solve("z")` | `{ (a ^ 2 + -b * c - sqrt((-(a ^ 2 + -b * c)) ^ 2 - 4 * a * -a * b * c)) / (2 * a), … }` | `{ -b * c / a, a }` |
+| `"x^2 - (p + q)*x + p*q = 0".Solve("x")` | `{ (p + q - sqrt((-(p + q)) ^ 2 - 4 * p * q)) / 2, … }` | `{ q, p }` |
+| `"x^2 - 2*a*x + a^2 - 2 = 0".Solve("x")` | `{ (-(-2) * a - sqrt(((-2) * a) ^ 2 - 4 * (a ^ 2 + -2))) / 2, … }` | `{ a - sqrt(2), a + sqrt(2) }` |
+| `"2*x^2 - 2*(p + q)*x + p^2 + q^2 = 0".Solve("x")` | `{ (-(-2) * (p + q) - sqrt(((-2) * (p + q)) ^ 2 - 8 * (p ^ 2 + q ^ 2))) / 4, … }` | `{ 1/2 * p + 1/2 * q - i * (1/2 * p - 1/2 * q), … }` |
+
 ### A system with a product equation is solved branch by branch
 
 **Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,

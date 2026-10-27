@@ -69,9 +69,154 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         {
             if (TreeAnalyzer.IsZero(c)) return SolveLinear(a, b).Append(0);
             if (TreeAnalyzer.IsZero(a)) return SolveLinear(b, c);
+            if (RootsOverASquareDiscriminant(a, b, c) is { } exact)
+                return exact;
             var D = MathS.Sqr(b) - 4 * a * c;
             return new[] { ((-b - MathS.Sqrt(D)) / (2 * a)).InnerSimplified,
                            ((-b + MathS.Sqrt(D)) / (2 * a)).InnerSimplified };
+        }
+
+        /// <summary>
+        /// The two roots, written without a radical, where the coefficients are polynomials and
+        /// the discriminant is a rational number times the square of one; otherwise
+        /// <see langword="null"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Either square root of the discriminant will do. The roots are <c>(-b - r)/(2a)</c> and
+        /// <c>(-b + r)/(2a)</c>, the same pair for <c>r</c> and <c>-r</c>, so any <c>r</c> with
+        /// <c>r^2 = b^2 - 4ac</c> gives the same set, and a polynomial one needs no absolute value.
+        /// <c>a z^2 - (a^2 - bc) z - abc</c> has discriminant <c>(a^2 + bc)^2</c> and roots
+        /// <c>a</c> and <c>-bc/a</c>; through <c>sqrt</c> they were written with the square under
+        /// it, and <c>z^2 - (p + q) z + pq</c> with <c>sqrt((p + q)^2 - 4pq)</c> for <c>p - q</c>.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2140">#2140</a>
+        /// </para>
+        /// <para>
+        /// The numerators are polynomials then too, so each root is reduced by the greatest common
+        /// divisor of its numerator and <c>2a</c> rather than left for a later pass to cancel.
+        /// The discriminant's rational factor comes out first, and where its square root is not
+        /// rational -- <c>2 (p - q)^2</c>, or <c>-(p - q)^2</c> -- the roots are written with it,
+        /// <c>sqrt(2) (p - q)</c> and <c>i (p - q)</c>, and left as quotients. A discriminant that
+        /// is a number is left to the formula, whose evaluation settles it already.
+        /// </para>
+        /// </remarks>
+        private static Entity[]? RootsOverASquareDiscriminant(Entity a, Entity b, Entity c)
+        {
+            // A square has an even degree in every variable, and where 2 deg b and deg a + deg c
+            // differ, that larger one is the discriminant's degree. Most quadratics with a symbol
+            // in them are refused here, before any polynomial is built: x^2 + x + a, whose
+            // discriminant 1 - 4a is of degree one in a, allocated 4.6% more to be solved without
+            // it. Degrees as written bound the true ones, so a coefficient that cancels inside
+            // itself can be refused when it need not be, which only leaves it to the formula.
+            if (!HasEvenDegreesWherever(a, b, c))
+                return null;
+            var names = new SortedSet<Variable>(Comparer<Variable>.Create(static (x, y) => string.CompareOrdinal(x.Name, y.Name)));
+            foreach (var coefficient in new[] { a, b, c })
+                foreach (var variable in coefficient.Vars)
+                    names.Add(variable);
+            if (names.Count == 0 || names.Count > MultivariatePolynomial.MaxVariables)
+                return null;
+            var variables = names.ToList();
+            var indices = new Dictionary<Variable, int>(variables.Count);
+            for (var i = 0; i < variables.Count; i++)
+                indices[variables[i]] = i;
+            if (MultivariatePolynomial.TryParse(a, indices) is not { } pa
+                || MultivariatePolynomial.TryParse(b, indices) is not { } pb
+                || MultivariatePolynomial.TryParse(c, indices) is not { } pc
+                || pb.Multiply(pb) is not { } bSquared || pa.Multiply(pc) is not { } ac)
+                return null;
+            var discriminant = bSquared.Subtract(ac.ScaleBy(ERational.FromInt32(4)));
+            if (discriminant.Normalized(out var scale).TrySquareRoot() is not { } root)
+                return null;
+            var denominator = pa.ScaleBy(ERational.FromInt32(2));
+            var order = Enumerable.Range(0, variables.Count).ToArray();
+            // A quotient over 2a with what it shares with 2a cancelled, rational factors included.
+            Entity Reduced(MultivariatePolynomial numerator)
+            {
+                if (numerator.IsZero)
+                    return Integer.Zero;
+                var below = denominator;
+                if (PolynomialGcd.Gcd(numerator, denominator, order, 0) is { } common
+                    && numerator.DivideExact(common) is { } reducedAbove
+                    && denominator.DivideExact(common) is { } reducedBelow)
+                    (numerator, below) = (reducedAbove, reducedBelow);
+                below = below.Normalized(out var unit);
+                numerator = numerator.ScaleBy(unit);
+                return below.IsConstant
+                    ? numerator.ScaleBy(ERational.One.Divide(below.Terms.Single().Value)).ToEntity(variables)
+                    : numerator.ToEntity(variables) / below.ToEntity(variables);
+            }
+            var minusB = MultivariatePolynomial.Zero(variables.Count).Subtract(pb);
+            var overScale = ERational.Create(scale.Denominator, scale.Numerator);
+            if (MultivariatePolynomial.Constant(variables.Count, overScale).TrySquareRoot() is { } rational)
+            {
+                var r = root.ScaleBy(rational.IsZero ? ERational.Zero : rational.Terms.Single().Value);
+                return new[] { Reduced(minusB.Subtract(r)), Reduced(minusB.Add(r)) };
+            }
+            // sqrt(2) (p - q), i (p - q): sqrt(n/d) is (s/d) sqrt(k) for n d = s^2 k, the s/d goes
+            // into the polynomial, and sqrt(k) -- or i sqrt(k) for a negative scale -- is the one
+            // factor left outside it.
+            var (square, rest) = SquarePart(overScale.Numerator.Multiply(overScale.Denominator).Abs());
+            var outside = MathS.Sqrt(overScale.Sign < 0 ? -(Entity)Integer.Create(rest) : Integer.Create(rest)).InnerSimplified;
+            var middle = Reduced(minusB);
+            var spread = (outside * Reduced(root.ScaleBy(ERational.Create(square, overScale.Denominator)))).InnerSimplified;
+            return new[] { (middle - spread).InnerSimplified, (middle + spread).InnerSimplified };
+        }
+
+        /// <summary>
+        /// Whether, for every variable in <paramref name="a"/>, <paramref name="b"/> or
+        /// <paramref name="c"/>, the degree of <c>b^2 - 4ac</c> is not known to be odd.
+        /// </summary>
+        private static bool HasEvenDegreesWherever(Entity a, Entity b, Entity c)
+        {
+            static bool Even(Entity a, Entity b, Entity c, Variable v)
+            {
+                var (twiceB, ac) = (2 * DegreeAsWritten(b, v), DegreeAsWritten(a, v) + DegreeAsWritten(c, v));
+                return twiceB == ac || System.Math.Max(twiceB, ac) % 2 == 0;
+            }
+            foreach (var coefficient in new[] { a, b, c })
+                foreach (var variable in coefficient.Vars)
+                    if (!Even(a, b, c, variable))
+                        return false;
+            return true;
+        }
+
+        /// <summary>
+        /// The degree of <paramref name="expr"/> in <paramref name="x"/> as it is written, which
+        /// bounds the degree it has: of a power its base's times the exponent, of a product the
+        /// sum, of a sum the most.
+        /// </summary>
+        private static int DegreeAsWritten(Entity expr, Variable x) => expr switch
+        {
+            _ when !expr.ContainsNode(x) => 0,
+            Variable => 1,
+            Powf(var @base, Integer power) when power.EInteger.CanFitInInt32() => DegreeAsWritten(@base, x) * power.EInteger.ToInt32Checked(),
+            Mulf(var left, var right) => DegreeAsWritten(left, x) + DegreeAsWritten(right, x),
+            Sumf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            Minusf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            _ => 0,
+        };
+
+        /// <summary>
+        /// <paramref name="value"/> as <c>s^2 k</c>, with the square taken out by trial division
+        /// by the primes up to 1000 and by whatever of <c>k</c> is left a square; a larger square
+        /// factor stays in <c>k</c>, which leaves <c>sqrt(k)</c> correct and only less reduced.
+        /// </summary>
+        private static (EInteger Root, EInteger Remaining) SquarePart(EInteger value)
+        {
+            var root = EInteger.One;
+            var rest = value;
+            for (var prime = 2; prime <= 1000 && EInteger.FromInt32(prime * prime).CompareTo(rest) <= 0; prime++)
+            {
+                var square = EInteger.FromInt32(prime * prime);
+                while (rest.Remainder(square).IsZero)
+                {
+                    rest = rest.Divide(square);
+                    root = root.Multiply(prime);
+                }
+            }
+            var whole = rest.Sqrt();
+            return whole.Multiply(whole).Equals(rest) ? (root.Multiply(whole), EInteger.One) : (root, rest);
         }
 
         /// <summary>Solves ax^3 + bx^2 + cx + d</summary>
