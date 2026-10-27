@@ -6,7 +6,7 @@ round to instrumenting.
 
 | leg | workflow | what it runs | how coverage is collected | codecov flag |
 |---|---|---|---|---|
-| C# | `CSharpTest.yml` | `dotnet test Sources/Tests/UnitTests` | coverlet, both as `/p:CollectCoverage=true` and as the VSTest `XPlat Code Coverage` collector | `csharp` |
+| C# | `CSharpTest.yml` | `dotnet test Sources/Tests/UnitTests`, collected on the Windows leg | coverlet, as the VSTest `XPlat Code Coverage` collector | `csharp` |
 | F# | `FSharpTest.yml` | `dotnet test Sources/Tests/FSharpWrapperUnitTests` | VSTest `XPlat Code Coverage` collector | `fsharp` |
 | Interactive | `InteractiveTest.yml` | `dotnet test` over the Interactive wrapper and the terminal | VSTest `XPlat Code Coverage` collector | `interactive` |
 | C++ | `CPPTest.yml` | `ctest` over a native executable | `gcov`, reported by `gcovr` as Cobertura | `cpp` |

@@ -43,10 +43,15 @@ jobs:
         dotnet add "Sources/Tests/UnitTests" package GitHubActionsTestLogger
         dotnet build Sources/Tests/UnitTests
 
+    # No coverage on these two legs: the Windows leg's report is the one uploaded. With coverlet's
+    # MSBuild integration they printed `AngouriMath | 0%` on every run, because VSTest stops the
+    # test host before coverlet writes its hits (coverlet's KnownIssues.md), and instrumenting
+    # the suite took about two fifths of its time, measured locally.
+    # https://github.com/asc-community/AngouriMath/issues/397
     - name: Test if not to send
       if: ${{ matrix.os != 'windows-latest' }}
       run: |
-        dotnet test "Sources/Tests/UnitTests" -c Release -l GitHubActions -l "trx;LogFileName=results.trx" --results-directory "Sources/Tests/UnitTests/TestResults" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+        dotnet test "Sources/Tests/UnitTests" -c Release -l GitHubActions -l "trx;LogFileName=results.trx" --results-directory "Sources/Tests/UnitTests/TestResults"
 
     # Where the suite's time goes, by the Area trait every test class carries, written to the
     # job's summary. One leg is enough to see the breakdown, and running the tool builds the
