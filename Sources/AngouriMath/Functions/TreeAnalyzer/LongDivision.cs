@@ -213,6 +213,17 @@ namespace AngouriMath.Functions
             // https://github.com/asc-community/AngouriMath/issues/180
             if (!replaceVars && ((maxvalQ.Vars.Any() && !genericCase) || maxvalQ.Evaled == Integer.Create(0)))
                 return null;
+            // **And with the variables replaced, where the divisor has more than one term.** That
+            // pass divides by a leading coefficient as much as this one does, and it was left
+            // unguarded only because it predates the guard. `(t x + y)/(1 - y x)` divided in `y`
+            // is `-1/x + (t x + 1/x)/(1 - x y)`, undefined at `x = 0`, where the divisor is 1; and
+            // `Simplify` answered `-(t x + y)/(1 - y x) + (t x + y)/(1 - y x)` with
+            // `0 provided not x = 0`, a condition the input does not have. A divisor of one term,
+            // `a x^k`, is zero wherever its coefficient is, so dividing by that coefficient loses
+            // nothing the input had: `(a x - b x)/(a x)` is `(a - b)/a`.
+            // https://github.com/asc-community/AngouriMath/issues/2134
+            if (replaceVars && maxvalQ.Vars.Any() && !genericCase && powersOfQ.Count > 1)
+                return null;
 
             // A leading coefficient with a symbol in it can be zero as a value without being zero
             // as written: `(-(a - a u^2) - (u^2 + 1) a)^3` is `-8 a^3`, and expanded it leaves

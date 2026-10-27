@@ -75,6 +75,19 @@ mentions answers it as a parameter, as a short system does, where it was `null`
 | `MathS.Equations("x - 1", "x^2 - 1").Solve("x", "y")` | `null` | `[[1, t_1]]` |
 | `MathS.Equations("a - 1", "b * 0").Solve("a", "b")` | `null` | `[[1, t_1]]` |
 
+### `Simplify` does not add a condition the input does not have
+
+**Silent: an answer defined at fewer points is defined at all of the input's.** A polynomial division in a
+variable divided by the divisor's leading coefficient, and with the variables replaced it did so even where that
+coefficient is a symbol and the divisor has another term. `(t x + y)/(1 - y x)` divided in `y` has `1/x` in it,
+and `Simplify` passed that on as `not x = 0`, though at `x = 0` the input is `-y + y`. A divisor of one term,
+`a x^k`, is still divided, since the input is undefined wherever its coefficient is zero
+([#2134](https://github.com/asc-community/AngouriMath/issues/2134)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"-(t*x + y)/(1 - y*x) + (t*x + y)/(1 - y*x)".Simplify()` | `0 provided not 1 - x * y = 0 and not x = 0` | `0 provided not 1 - x * y = 0` |
+
 ### A matrix is divided, raised to a power and compared as a matrix
 
 **Silent: wrong answers about matrices become right, or stay written.** Where an operation had no answer of its own
