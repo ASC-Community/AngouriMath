@@ -299,7 +299,7 @@ namespace AngouriMath.Tests.Core.Transformations
             // are thirty-three; NumericNeat's sixteen are eleven, six of them being three rules
             // written once per side a negative factor can sit on; and the two factorial sets are
             // eight arms each written as three. Every other repointed set is one arm for one rule.
-            Assert.Equal(332, withRules.Sum(set => set.Rules.Count));
+            Assert.Equal(334, withRules.Sum(set => set.Rules.Count));
         }
 
         /// <summary>

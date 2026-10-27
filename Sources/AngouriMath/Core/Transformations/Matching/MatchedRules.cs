@@ -612,7 +612,39 @@ namespace AngouriMath.Core.Transformations.Matching
                         MatchPattern.Node<Sinf>(MatchPattern.Any("b")),
                         MatchPattern.Node<Cosf>(MatchPattern.Any("a")))),
                 Soundness.Sound,
-                description: "sin(a - b) = sin(a)cos(b) - sin(b)cos(a)"));
+                description: "sin(a - b) = sin(a)cos(b) - sin(b)cos(a)"),
+
+            // cos(a + b) -> cos(a)cos(b) - sin(a)sin(b)
+            // https://github.com/asc-community/AngouriMath/issues/2135
+            new MatchedRule(
+                "cosine-of-a-sum",
+                MatchPattern.Node<Cosf>(
+                    MatchPattern.Node<Sumf>(MatchPattern.Any("a"), MatchPattern.Any("b"))),
+                MatchPattern.Node<Minusf>(
+                    MatchPattern.Node<Mulf>(
+                        MatchPattern.Node<Cosf>(MatchPattern.Any("a")),
+                        MatchPattern.Node<Cosf>(MatchPattern.Any("b"))),
+                    MatchPattern.Node<Mulf>(
+                        MatchPattern.Node<Sinf>(MatchPattern.Any("a")),
+                        MatchPattern.Node<Sinf>(MatchPattern.Any("b")))),
+                // The addition theorem again, for every complex a and b.
+                Soundness.Sound,
+                description: "cos(a + b) = cos(a)cos(b) - sin(a)sin(b)"),
+
+            // cos(a - b) -> cos(a)cos(b) + sin(a)sin(b)
+            new MatchedRule(
+                "cosine-of-a-difference",
+                MatchPattern.Node<Cosf>(
+                    MatchPattern.Node<Minusf>(MatchPattern.Any("a"), MatchPattern.Any("b"))),
+                MatchPattern.Node<Sumf>(
+                    MatchPattern.Node<Mulf>(
+                        MatchPattern.Node<Cosf>(MatchPattern.Any("a")),
+                        MatchPattern.Node<Cosf>(MatchPattern.Any("b"))),
+                    MatchPattern.Node<Mulf>(
+                        MatchPattern.Node<Sinf>(MatchPattern.Any("a")),
+                        MatchPattern.Node<Sinf>(MatchPattern.Any("b")))),
+                Soundness.Sound,
+                description: "cos(a - b) = cos(a)cos(b) + sin(a)sin(b)"));
 
         /// <summary>
         /// <see cref="Functions.Patterns.ExpandTrigonometricRules"/>, as data.
