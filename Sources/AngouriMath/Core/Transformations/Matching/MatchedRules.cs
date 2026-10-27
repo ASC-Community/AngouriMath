@@ -372,6 +372,32 @@ namespace AngouriMath.Core.Transformations.Matching
                 Soundness.Sound,
                 description: "k sin(x)^2 + k cos(x)^2 = k"),
 
+            // ... + sin(x)^2 / d + ... + cos(x)^2 / d + ...  ->  1 / d + (everything else)
+            // A rational coefficient is written as a divisor, cos(x)^2 / 2 and not 1/2 cos(x)^2,
+            // so the rule above does not see it. The power reduction cos(x)^2 = (1 + cos(2x))/2
+            // reached -1/2 + cos(x)^2 / 2 + sin(x)^2 / 2 and stopped, while its sine twin was 0.
+            // Sound: both sides are defined exactly where d is not 0.
+            // https://github.com/asc-community/AngouriMath/issues/2142
+            new MatchedRule(
+                "squared-sine-and-cosine-over-one-divisor-sum-to-its-reciprocal",
+                MatchPattern.Gathered<Sumf>(
+                    "rest",
+                    MatchPattern.Node<Divf>(
+                        MatchPattern.Node<Powf>(
+                            MatchPattern.Node<Sinf>(MatchPattern.Any("x")),
+                            MatchPattern.Exact(Integer.Create(2))),
+                        MatchPattern.Any("d")),
+                    MatchPattern.Node<Divf>(
+                        MatchPattern.Node<Powf>(
+                            MatchPattern.Node<Cosf>(MatchPattern.Any("x")),
+                            MatchPattern.Exact(Integer.Create(2))),
+                        MatchPattern.Any("d"))),
+                MatchPattern.Node<Sumf>(
+                    MatchPattern.Node<Divf>(MatchPattern.Exact(Integer.Create(1)), MatchPattern.Any("d")),
+                    MatchPattern.Any("rest")),
+                Soundness.Sound,
+                description: "sin(x)^2 / d + cos(x)^2 / d = 1 / d"),
+
             // ... + 1 + ... + tan(x)^2 + ...  ->  sec(x)^2 + (everything else), and the same with
             // the cotangent. The identity divided through by cos^2 and by sin^2 is also in
             // TrigonometricRules, but for two siblings only, so the sort decided again: secant

@@ -88,8 +88,8 @@ namespace AngouriMath.Tests.Core.Transformations
         public void SoundnessIsFinerPerRuleThanPerSet()
         {
             var rules = MatchedRules.All.SelectMany(set => set.Rules).ToList();
-            Assert.Equal(340, rules.Count);
-            Assert.Equal(189,rules.Count(rule => rule.Soundness is Soundness.Sound));
+            Assert.Equal(341, rules.Count);
+            Assert.Equal(190,rules.Count(rule => rule.Soundness is Soundness.Sound));
             Assert.Equal(151, rules.Count(rule => rule.Soundness is Soundness.SoundUnderAssumptions));
 
             // And every set still reports the weakest of them, which is what makes the set grain
