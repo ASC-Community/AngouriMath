@@ -370,7 +370,46 @@ namespace AngouriMath.Core.Transformations.Matching
                             MatchPattern.Exact(Integer.Create(2))))),
                 MatchPattern.Node<Sumf>(MatchPattern.Any("k"), MatchPattern.Any("rest")),
                 Soundness.Sound,
-                description: "k sin(x)^2 + k cos(x)^2 = k"));
+                description: "k sin(x)^2 + k cos(x)^2 = k"),
+
+            // ... + 1 + ... + tan(x)^2 + ...  ->  sec(x)^2 + (everything else), and the same with
+            // the cotangent. The identity divided through by cos^2 and by sin^2 is also in
+            // TrigonometricRules, but for two siblings only, so the sort decided again: secant
+            // sorts before tangent, and 1 + tan(x)^2 - sec(x)^2 became 1 - sec(x)^2 + tan(x)^2
+            // and stayed, while cotangent sorts before cosecant and its twin was 0.
+            // SoundUnderAssumptions as there: each side is defined only where cos (sin) is not 0.
+            // https://github.com/asc-community/AngouriMath/issues/2142
+            new MatchedRule(
+                "one-and-a-squared-tangent-anywhere-in-a-sum-make-a-squared-secant",
+                MatchPattern.Gathered<Sumf>(
+                    "rest",
+                    MatchPattern.Exact(Integer.Create(1)),
+                    MatchPattern.Node<Powf>(
+                        MatchPattern.Node<Tanf>(MatchPattern.Any("x")),
+                        MatchPattern.Exact(Integer.Create(2)))),
+                MatchPattern.Node<Sumf>(
+                    MatchPattern.Node<Powf>(
+                        MatchPattern.Node<Secantf>(MatchPattern.Any("x")),
+                        MatchPattern.Exact(Integer.Create(2))),
+                    MatchPattern.Any("rest")),
+                Soundness.SoundUnderAssumptions,
+                description: "1 + tan(x)^2 = sec(x)^2"),
+
+            new MatchedRule(
+                "one-and-a-squared-cotangent-anywhere-in-a-sum-make-a-squared-cosecant",
+                MatchPattern.Gathered<Sumf>(
+                    "rest",
+                    MatchPattern.Exact(Integer.Create(1)),
+                    MatchPattern.Node<Powf>(
+                        MatchPattern.Node<Cotanf>(MatchPattern.Any("x")),
+                        MatchPattern.Exact(Integer.Create(2)))),
+                MatchPattern.Node<Sumf>(
+                    MatchPattern.Node<Powf>(
+                        MatchPattern.Node<Cosecantf>(MatchPattern.Any("x")),
+                        MatchPattern.Exact(Integer.Create(2))),
+                    MatchPattern.Any("rest")),
+                Soundness.SoundUnderAssumptions,
+                description: "1 + cotan(x)^2 = cosec(x)^2"));
 
         /// <summary>
         /// <see cref="Functions.Patterns.InvertNegativePowers"/>, as data.
