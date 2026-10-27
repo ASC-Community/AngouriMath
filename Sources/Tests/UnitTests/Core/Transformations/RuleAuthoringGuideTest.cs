@@ -43,7 +43,7 @@ namespace AngouriMath.Tests.Core.Transformations
         public void WhereARuleGoes()
         {
             Stated(33, MatchedRules.All.Count, "the number of rule sets written as data");
-            Stated(337, MatchedRules.All.Sum(set => set.Rules.Count), "the number of rules written as data");
+            Stated(338, MatchedRules.All.Sum(set => set.Rules.Count), "the number of rules written as data");
             Stated(30, RewriteRules.All.Count, "the number of registered sets");
             // Two families register under one name and run a data set under another --
             // CommonDenominator over MatchedRules.CommonDenominator(level), CanonicalOrder over
@@ -64,7 +64,7 @@ namespace AngouriMath.Tests.Core.Transformations
         {
             var names = MatchedRules.All.SelectMany(set => set.Rules)
                 .Select(rule => rule.Name).Distinct(StringComparer.Ordinal).ToList();
-            Stated(308, names.Count, "the number of distinct rule names");
+            Stated(309, names.Count, "the number of distinct rule names");
 
             var words = names.Select(name => name.Split('-').Length).ToList();
             Stated(4, words.Min(), "the shortest rule name in words");
@@ -73,7 +73,7 @@ namespace AngouriMath.Tests.Core.Transformations
 
         [Fact]
         public void TheIdentityIsNotTheName()
-            => Stated(334,
+            => Stated(335,
                 MatchedRules.All.SelectMany(set => set.Rules).Count(rule => rule.Description is not null),
                 "how many rules carry an identity");
 
@@ -85,7 +85,7 @@ namespace AngouriMath.Tests.Core.Transformations
         public void ReplacementAPatternOrCode()
         {
             var rules = MatchedRules.All.SelectMany(set => set.Rules).ToList();
-            Stated(38, rules.Count(rule => rule.Right is not null),
+            Stated(39, rules.Count(rule => rule.Right is not null),
                 "how many rules have a pattern on both sides");
             Stated(34, rules.Count(rule => rule.Reversed is not null),
                 "how many two-sided rules have a direction");
@@ -97,17 +97,17 @@ namespace AngouriMath.Tests.Core.Transformations
             // rearrange, 9 expand and 270 unjudged", measured before the growth declarations
             // went in. The argument survived; the arithmetic did not. A number a remark reasons
             // from belongs somewhere that fails when it moves.
-            Stated(126, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Collects),
+            Stated(127, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Collects),
                 "how many rules are declared Collects");
             Stated(49, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Rearranges),
                 "how many rules are declared Rearranges");
             Stated(36, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Expands),
                 "how many rules are declared Expands");
 
-            // And the three the document names. By their own names rather than by what the prose
+            // And the ones the document names. By their own names rather than by what the prose
             // calls them: the first is `squared-sine-and-cosine-of-one-argument-sum-to-one` and
             // the prose calls it the Pythagorean identity, which is right and is not what to
-            // match on. All three forget something the backwards direction would have to invent
+            // match on. All of them forget something the backwards direction would have to invent
             // -- the angle, the name the set builder bound, and which constant was raised.
             var oneWay = rules
                 .Where(rule => rule.Right is not null && rule.Reversed is null)
@@ -121,6 +121,7 @@ namespace AngouriMath.Tests.Core.Transformations
                     "a-constant-raised-to-a-logarithm-of-itself-is-the-antilogarithm",
                     "a-constant-raised-to-a-multiple-of-a-logarithm-of-itself-is-a-power-of-the-antilogarithm",
                     "squared-sine-and-cosine-of-one-argument-sum-to-one",
+                    "squared-sine-and-cosine-with-one-coefficient-sum-to-it",
                 },
                 oneWay);
             Assert.All(
@@ -132,7 +133,7 @@ namespace AngouriMath.Tests.Core.Transformations
         public void SoundnessIsPerRule()
         {
             var rules = MatchedRules.All.SelectMany(set => set.Rules).ToList();
-            Stated(188, rules.Count(rule => rule.Soundness is Soundness.Sound),
+            Stated(189, rules.Count(rule => rule.Soundness is Soundness.Sound),
                 "how many rules are Sound");
             Stated(149, rules.Count(rule => rule.Soundness is Soundness.SoundUnderAssumptions),
                 "how many rules are SoundUnderAssumptions");

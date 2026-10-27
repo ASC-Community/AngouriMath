@@ -345,7 +345,32 @@ namespace AngouriMath.Core.Transformations.Matching
                 // "x" is bound by the first part and re-matched by the second, so the two terms
                 // are required to be about the same argument rather than merely both squared.
                 MatchPattern.Node<Sumf>(MatchPattern.Exact(Integer.Create(1)), MatchPattern.Any("rest")),
-                Soundness.Sound));
+                Soundness.Sound),
+
+            // ... + k sin(x)^2 + ... + k cos(x)^2 + ...  ->  k + (everything else)
+            // With a coefficient the pair was left to SharedFactor, which sees two siblings
+            // only, so the sort decided: y + (-2) cos(x)^2 + (-2) sin(x)^2 came out y - 2, and
+            // 2 + (-2) cos(x)^2 + (-2) sin(x)^2, where the constant sorts between them, stayed.
+            // "k" is bound by the first part and re-matched by the second, so the coefficients
+            // are required to be the same, as "x" requires the arguments to be.
+            // https://github.com/asc-community/AngouriMath/issues/2133
+            new MatchedRule(
+                "squared-sine-and-cosine-with-one-coefficient-sum-to-it",
+                MatchPattern.Gathered<Sumf>(
+                    "rest",
+                    MatchPattern.Commutative<Mulf>(
+                        MatchPattern.Any("k"),
+                        MatchPattern.Node<Powf>(
+                            MatchPattern.Node<Sinf>(MatchPattern.Any("x")),
+                            MatchPattern.Exact(Integer.Create(2)))),
+                    MatchPattern.Commutative<Mulf>(
+                        MatchPattern.Any("k"),
+                        MatchPattern.Node<Powf>(
+                            MatchPattern.Node<Cosf>(MatchPattern.Any("x")),
+                            MatchPattern.Exact(Integer.Create(2))))),
+                MatchPattern.Node<Sumf>(MatchPattern.Any("k"), MatchPattern.Any("rest")),
+                Soundness.Sound,
+                description: "k sin(x)^2 + k cos(x)^2 = k"));
 
         /// <summary>
         /// <see cref="Functions.Patterns.InvertNegativePowers"/>, as data.
