@@ -11,6 +11,13 @@ coverage:
   # never been valid, so none of it applied, the flags below included. Check an edit with
   #   curl -s -X POST --data-binary @.github/codecov.yml https://api.codecov.io/validate
   status:
+    # The project figure is compared with the base commit's, and with no threshold any fall at
+    # all fails: #2171 was red at -0.02%, five lines a new guard returns before. A percent lets
+    # the ordinary movement of a change through and still fails a leg whose report goes empty,
+    # which moved the figure from 86.41% to 0.38%.
+    project:
+      default:
+        threshold: 1%
     patch: no
     changes: no
 
