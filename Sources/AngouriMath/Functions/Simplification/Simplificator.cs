@@ -619,7 +619,66 @@ namespace AngouriMath.Functions
                 }
             }
 
+            // A rational function's canonical form, offered as one more candidate. The passes
+            // above gather fractions a pair or a sort level at a time, which reaches most sums of
+            // fractions and not all: x/(x + y) + y/(x + y) stayed as it was, and so did
+            // 1/(1 - (b/a)^2) - a^2/(a^2 - b^2), whose canonical forms are 1 and 0 with their
+            // conditions. RationalCanonicalization decides every such identity, and the complexity
+            // metric decides whether its quotient is the better answer, which as an expanded
+            // quotient it often is not. Last, so that a tie goes to the form the rules reached;
+            // with whole coefficients, so that it reads 2/(4x^2 + 1) and not (1/2)/(x^2 + 1/4);
+            // and only where there is a quotient to gather, since a polynomial's canonical form is
+            // its expansion, which is offered above. That is asked by a walk that allocates
+            // nothing: SimplifyEasy, which has a logarithm in it and is never a rational function,
+            // allocated 3.4% more when it was asked through Nodes. Only up to a complexity of 64,
+            // well above the 11 to 39 of the identities this is for, so that a large quotient is
+            // not gathered for a form that will mostly lose. And not while the integrator is
+            // running: its rules read the shape of what Simplify hands back, and a gathered
+            // quotient that rated shorter sent 1/(b cosh x + c sinh x + sqrt(b^2 - c^2))^4 down a
+            // route that took 4.8 s to an answer of 737 characters, where master's took 1.1 s to
+            // one of 427.
+            // https://github.com/asc-community/AngouriMath/issues/2137
+            var canonicalMark = recording?.Mark() ?? 0;
+            if (!Algebra.Integration.IsIntegrating && stage1.Complexity <= 64 && IsARationalFunctionWithAQuotient(stage1)
+                && RationalFunction.TryCanonicalize(stage1, out var canonical, wholeCoefficients: true))
+                AddHistory(Noted(recording, stage1, canonical, "RationalCanonicalization", canonicalMark));
+
             return history.Values.SelectMany(x => x);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is made of numbers, variables, sums, differences,
+        /// products, quotients and whole powers alone, with a quotient or a negative power among
+        /// them: the expressions <see cref="RationalFunction.TryCanonicalize"/> may gather into
+        /// one quotient.
+        /// </summary>
+        private static bool IsARationalFunctionWithAQuotient(Entity expr)
+        {
+            var quotient = false;
+            return IsARationalFunction(expr, ref quotient) && quotient;
+        }
+
+        private static bool IsARationalFunction(Entity node, ref bool quotient)
+        {
+            switch (node)
+            {
+                case Number or Variable:
+                    return true;
+                case Divf(var dividend, var divisor):
+                    quotient = true;
+                    return IsARationalFunction(dividend, ref quotient) && IsARationalFunction(divisor, ref quotient);
+                case Powf(var @base, Integer exponent):
+                    quotient |= exponent.EInteger.Sign < 0;
+                    return IsARationalFunction(@base, ref quotient);
+                case Sumf(var left, var right):
+                    return IsARationalFunction(left, ref quotient) && IsARationalFunction(right, ref quotient);
+                case Minusf(var left, var right):
+                    return IsARationalFunction(left, ref quotient) && IsARationalFunction(right, ref quotient);
+                case Mulf(var left, var right):
+                    return IsARationalFunction(left, ref quotient) && IsARationalFunction(right, ref quotient);
+                default:
+                    return false;
+            }
         }
 
         /// <summary>

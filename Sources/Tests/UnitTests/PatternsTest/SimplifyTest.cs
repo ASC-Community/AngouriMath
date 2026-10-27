@@ -61,8 +61,10 @@ namespace AngouriMath.Tests.PatternsTest
         // The condition used to read `not c = 0 and not a * b * c * x ^ 2 = 0`, which says
         // the same thing twice: a product is nonzero exactly when each of its factors is,
         // so a b c x^2 != 0 already carries c != 0. Cancelling the common divisor in one
-        // step states the domain once, over the same set of points.
-        [Fact] public void Patt12() => AssertSimplify((x * y * a * b * c) / (c * b * a * x * x), "y / x provided not a * b * c * x = 0", 4);
+        // step states the domain once, over the same set of points. And x is not repeated in
+        // the condition, since y/x already has no value at x = 0: the rational canonical form
+        // writes the condition without what its own denominator excludes (#2137).
+        [Fact] public void Patt12() => AssertSimplify((x * y * a * b * c) / (c * b * a * x * x), "y / x provided not a * b * c = 0", 4);
         [Fact] public void Frac1() => AssertSimplify("x / (y / z)", "x * z / y");
         [Fact] public void Frac2() => AssertSimplify("x / y / z", "x / (y * z)");
         [Fact] public void Factorial2() => AssertSimplify(MathS.Factorial(2), 2);

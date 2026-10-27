@@ -71,7 +71,14 @@ namespace AngouriMath.Functions
         /// <see langword="false"/> where it is not a rational function over <c>Q</c> in its
         /// free variables, or where a bound is reached.
         /// </summary>
-        internal static bool TryCanonicalize(Entity expr, [NotNullWhen(true)] out Entity? canonical)
+        /// <param name="expr">The expression.</param>
+        /// <param name="canonical">Its canonical form.</param>
+        /// <param name="wholeCoefficients">Whether the quotient is scaled at the end so that its
+        /// denominator has whole coprime coefficients and a positive leading one, rather than a
+        /// leading one of 1: <c>2/(4x^2 + 1)</c>, not <c>(1/2)/(x^2 + 1/4)</c>. The same quotient
+        /// either way, and still one tree per function; the monic form is the specification's,
+        /// and this is the one written for a reader, as <c>Simplify</c> offers it.</param>
+        internal static bool TryCanonicalize(Entity expr, [NotNullWhen(true)] out Entity? canonical, bool wholeCoefficients = false)
         {
             canonical = null;
             if (expr.Complexity > MaxComplexity)
@@ -140,6 +147,11 @@ namespace AngouriMath.Functions
                 denominator = denominator.ScaleBy(inverse);
             }
 
+            if (wholeCoefficients && !denominator.IsConstant)
+            {
+                denominator = denominator.Normalized(out var whole);
+                numerator = numerator.ScaleBy(whole);
+            }
             // The denominator is now monic, so a constant one is exactly 1 and is dropped.
             var quotient = denominator.IsConstant
                 ? numerator.ToEntity(variables)
