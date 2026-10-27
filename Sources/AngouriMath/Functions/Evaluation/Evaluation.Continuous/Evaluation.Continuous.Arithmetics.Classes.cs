@@ -177,7 +177,7 @@ namespace AngouriMath
                     // A divisor with no inverse, singular or not square, leaves the quotient
                     // written. A matrix over a number is still spread over the entries.
                     // https://github.com/asc-community/AngouriMath/issues/2141
-                    (_, Matrix divisor) => divisor.Inverse is { } inverse ? (a * inverse).InnerSimplified(isExact) : a / b,
+                    (_, Matrix divisor) => Powf.MayHaveAnInverse(divisor) ? (a * divisor.Pow(-1)).InnerSimplified(isExact) : a / b,
                     (Integer(0), var n0) =>
                         n0.Evaled is Complex c
                         ? c.IsZero ? MathS.NaN : 0
@@ -292,10 +292,25 @@ namespace AngouriMath
                 // an inverse has negative powers: Pow threw for a singular one, out of eval and
                 // Simplify alike, and so did dividing by one once division used the inverse.
                 // https://github.com/asc-community/AngouriMath/issues/2141
-                var defined = m.IsSquare && (exp >= 0 || m.Inverse is not null);
+                var defined = m.IsSquare && (exp >= 0 || MayHaveAnInverse(m));
                 res = defined ? m.Pow(exp) : 0;
                 return defined;
             }
+
+            /// <summary>
+            /// Whether a square matrix may have an inverse: not where its determinant is zero.
+            /// </summary>
+            /// <remarks>
+            /// Asked of the exact elimination, not of <see cref="Matrix.Inverse"/> or
+            /// <see cref="Matrix.Determinant"/>, which can go through GenericTensor's compiled
+            /// operations: those are not safe in a native build, and every node reaches this.
+            /// Using them here broke the native build of every wrapper. A determinant the
+            /// elimination cannot write is not known to be zero.
+            /// </remarks>
+            internal static bool MayHaveAnInverse(Matrix m)
+                => m.IsSquare
+                   && (Functions.PolynomialDeterminant.Of(m.RowCount, (row, column) => m[row, column]) is not { } determinant
+                       || determinant.InnerSimplified != 0);
 
             // Re(x) = x/2 * (1 + 1/sgn(x)^2)
             internal static Entity Re(Entity x) => x / 2 * (1 + 1 / new Signumf(x).Pow(2));
