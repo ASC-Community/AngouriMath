@@ -5,13 +5,19 @@ coverage:
   precision: 2
   round: down
   range: "50...100"
-  patch: no
-  changes: no
+  # Under status, which is where Codecov reads them. Written directly under coverage, as they
+  # were from 2021, they made the file invalid, and for an invalid file Codecov "keep[s] using
+  # the last valid YAML provided" (https://docs.codecov.com/docs/codecov-yaml). This one had
+  # never been valid, so none of it applied, the flags below included. Check an edit with
+  #   curl -s -X POST --data-binary @.github/codecov.yml https://api.codecov.io/validate
+  status:
+    patch: no
+    changes: no
 
 # Flags are declared so that each one is scoped to the code it actually measures and is
 # carried forward when its leg does not run. Both matter here: every flag is uploaded from
-# exactly one operating system of its matrix (csharp from windows, fsharp and interactive
-# from ubuntu), so on any run where that leg is skipped an undeclared flag reports as
+# exactly one operating system of its matrix (csharp from windows, fsharp, interactive and
+# cpp from ubuntu), so on any run where that leg is skipped an undeclared flag reports as
 # missing rather than unchanged, and the report reads as a coverage drop that did not
 # happen. https://github.com/asc-community/AngouriMath/issues/397
 flags:
@@ -27,6 +33,10 @@ flags:
     paths:
       - Sources/Wrappers/AngouriMath.Interactive/
       - Sources/Terminal/
+    carryforward: true
+  cpp:
+    paths:
+      - Sources/Wrappers/AngouriMath.CPP.Importing/
     carryforward: true
 
 parsers:
