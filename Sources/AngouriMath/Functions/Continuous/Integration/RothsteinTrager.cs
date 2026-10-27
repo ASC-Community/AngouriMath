@@ -85,12 +85,6 @@ namespace AngouriMath.Functions.Algebra
         private const int MaxReducedLogarithmicDegree = 16;
 
         /// <summary>
-        /// The integral of <paramref name="numerator"/> over <paramref name="denominator"/>,
-        /// both polynomials in <paramref name="x"/> with rational coefficients and the fraction
-        /// proper; <see langword="null"/> where they are not, or where the answer does not
-        /// differentiate back to the integrand at the sampled points.
-        /// </summary>
-        /// <summary>
         /// <see cref="Integrate"/>, for a denominator past <see cref="MaxDegree"/> only: what the
         /// rest of the integrator never answered, asked before it searches.
         /// </summary>
@@ -109,6 +103,12 @@ namespace AngouriMath.Functions.Algebra
         internal static Entity? Integrate(Entity numerator, Entity denominator, Variable x)
             => IntegrateUpToDegree(numerator, denominator, x, MaxDegree);
 
+        /// <summary>
+        /// The integral of <paramref name="numerator"/> over <paramref name="denominator"/>,
+        /// both polynomials in <paramref name="x"/> with rational coefficients and the fraction
+        /// proper; <see langword="null"/> where they are not, or where the answer does not
+        /// differentiate back to the integrand at the sampled points.
+        /// </summary>
         private static Entity? IntegrateUpToDegree(Entity numerator, Entity denominator, Variable x, int degree)
         {
             if (!PolynomialFactoring.TryGetRationalCoefficients(numerator, x, 1, 0, degree, out var aboveCoefficients)

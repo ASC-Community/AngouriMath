@@ -132,14 +132,14 @@ namespace AngouriMath.Core.Transformations
         /// Offered on its own as well as inside <see cref="FactorizationAtLevel"/>, because it is
         /// the one step of factorisation whose answer a caller might want without the rest.
         /// </para>
-        /// </remarks>
-        /// <remarks>
+        /// <para>
         /// Held in a nested class rather than in a static field of this one, and that is not a
         /// style choice. <see cref="Factorization"/> is declared <i>above</i> this and calls
         /// <see cref="FactorizationAtLevel"/> in its own initialiser, which reads this — and a
         /// static field initialiser runs in declaration order, so it would read <see langword="null"/>
         /// and fail as a <c>TypeInitializationException</c> from somewhere else entirely. A nested
         /// type initialises on first use instead, whatever order the fields are written in.
+        /// </para>
         /// </remarks>
         public static Transformation NumericContentExtraction => Held.Instance;
 
@@ -307,8 +307,7 @@ namespace AngouriMath.Core.Transformations
         /// and anything whose answer is not a product — a refusal leaves the expression exactly as
         /// the rules left it, so nothing that factored before can stop factoring.
         /// </para>
-        /// </remarks>
-        /// <remarks>
+        /// <para>
         /// Held in a nested class rather than in a static field of this one. Static field
         /// initialisers run in declaration order, and <see cref="Factorization"/> — declared
         /// above — is eager, so a field here would still be <see langword="null"/> when its
@@ -316,6 +315,7 @@ namespace AngouriMath.Core.Transformations
         /// combinator rather than as anything naming the real cause, and this file has had that
         /// failure before. A nested type is initialised on first touch, whatever order this
         /// one's members are written in.
+        /// </para>
         /// </remarks>
         public static Transformation PolynomialFactorization => PolynomialFactorizationHolder.Instance;
 
@@ -575,8 +575,6 @@ namespace AngouriMath.Core.Transformations
         /// in the library calls this — like <see cref="Canonicalization"/> it is offered, not
         /// applied.
         /// </para>
-        /// </remarks>
-        /// <remarks>
         /// <para>
         /// <b>Built on <see cref="Canonicalization"/> rather than beside it.</b> The graph does
         /// not sort a commutative operand pair: the rules that do build their replacement in code,

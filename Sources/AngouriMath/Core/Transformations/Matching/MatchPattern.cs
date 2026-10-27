@@ -1382,10 +1382,6 @@ namespace AngouriMath.Core.Transformations.Matching
                 return rest ?? (OverSum ? Entity.Number.Integer.Zero : Entity.Number.Integer.One);
             }
 
-            /// <summary>
-            /// Shared across one <see cref="Match"/> call so the bound is on the whole search and
-            /// not on each branch of it, which is the difference between a bound and a suggestion.
-            /// </summary>
             /// <summary>Choosing which operands the parts claim is the whole of what it does.</summary>
             internal override bool IsDeterministic => false;
 
@@ -1439,6 +1435,10 @@ namespace AngouriMath.Core.Transformations.Matching
             private bool IsIdentity(Entity operand)
                 => operand.Equals(OverSum ? Entity.Number.Integer.Zero : Entity.Number.Integer.One);
 
+            /// <summary>
+            /// Shared across one <see cref="Match"/> call so the bound is on the whole search and
+            /// not on each branch of it, which is the difference between a bound and a suggestion.
+            /// </summary>
             private sealed class Budget
             {
                 private int left;

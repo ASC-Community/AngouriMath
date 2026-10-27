@@ -597,7 +597,6 @@ namespace AngouriMath
             return EDecimal.One.Divide(x.Arcsin(context), context);
         }
 
-        /// <summary>Truncates <paramref name="x"/> to [-2*<see cref="Math.PI"/>, 2*<see cref="Math.PI"/>] </summary>
         /// <summary>Analogy of <see cref="Math.Asin(double)"/></summary>
         /// <remarks>
         /// <c>arcsin(x) = arctan(x/sqrt(1 - x^2))</c>, with <c>1 - x^2</c> as <c>(1 - x)(1 + x)</c>

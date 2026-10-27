@@ -446,14 +446,16 @@ namespace AngouriMath.Core.Transformations
         /// Opens a trigonometric function of a multiplied angle.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// Written out, <c>sin(4x)</c> is far longer than it started, which is why the
         /// simplifier offers the result as a candidate rather than taking it.
-        /// </remarks>
-        /// <remarks>
+        /// </para>
+        /// <para>
         /// <b>Run by the matcher rather than by the <c>switch</c></b> —
         /// <see cref="Matching.MatchedRules.ExpandMultipleAngle"/>. See the note on
         /// <see cref="CollapseMultipleFractions"/> for what that costs and why the <c>switch</c>
         /// stays.
+        /// </para>
         /// </remarks>
         public static RewriteRuleSet ExpandMultipleAngle { get; } = new(
             nameof(ExpandMultipleAngle),

@@ -632,7 +632,6 @@ namespace AngouriMath.Core.Transformations.Matching
         /// </summary>
         internal IReadOnlyList<MatchedRule> RulesByPriority => byPriority;
 
-        /// <summary>One rewrite at this node only, leaving children alone.</summary>
         /// <summary>
         /// These rules as <see cref="RewriteRule"/> values, so that a set written as data can
         /// appear in the registry beside the sets written as a <c>switch</c>.
@@ -695,6 +694,7 @@ namespace AngouriMath.Core.Transformations.Matching
             return built;
         }
 
+        /// <summary>One rewrite at this node only, leaving children alone.</summary>
         internal Entity ApplyHere(Entity expr)
         {
             // The rules this node's type can possibly match, rather than all of them. See the

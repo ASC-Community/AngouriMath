@@ -1320,17 +1320,6 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
-        /// The antiderivative of <c>sqrt(a x^2 + b x + c)</c>:
-        /// <c>(2ax + b) sqrt(Q) / (4a) + ((4ac - b^2) / (8a))</c> times the integral of
-        /// <c>1/sqrt(Q)</c> -- integration by parts once, leaving the reciprocal form that
-        /// <see cref="IntegrateOverRootOfQuadratic"/> already knows.
-        /// </summary>
-        /// <remarks>
-        /// Only where the leading coefficient is a number other than zero. With a = 0 this
-        /// is the square root of something linear, which the ordinary power rule already
-        /// integrates, and dividing by a would not be allowed anyway.
-        /// </remarks>
-        /// <summary>
         /// Reads <c>k / (x^2 * sqrt(ax^2 + c))</c>, giving back k, the radicand and its
         /// constant term. The radicand has to be a quadratic in x with no linear term and
         /// with neither of its two coefficients zero: a zero constant makes the formula
@@ -1372,6 +1361,17 @@ namespace AngouriMath.Functions.Algebra
             return true;
         }
 
+        /// <summary>
+        /// The antiderivative of <c>sqrt(a x^2 + b x + c)</c>:
+        /// <c>(2ax + b) sqrt(Q) / (4a) + ((4ac - b^2) / (8a))</c> times the integral of
+        /// <c>1/sqrt(Q)</c> -- integration by parts once, leaving the reciprocal form that
+        /// <see cref="IntegrateOverRootOfQuadratic"/> already knows.
+        /// </summary>
+        /// <remarks>
+        /// Only where the leading coefficient is a number other than zero. With a = 0 this
+        /// is the square root of something linear, which the ordinary power rule already
+        /// integrates, and dividing by a would not be allowed anyway.
+        /// </remarks>
         private static Entity IntegrateRootOfQuadratic(
             Entity a, Entity b, Entity c, Entity radicand, Entity.Variable x)
             => (2 * a * x + b) * MathS.Sqrt(radicand) / (4 * a)
