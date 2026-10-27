@@ -73,6 +73,17 @@ request the action skips it, since GitHub gives a fork no id-token, and Codecov 
 without one. `fail_ci_if_error` is set on pushes to `master` only, so a rejected upload turns
 `master` red, and an outage at Codecov does not fail a pull request.
 
+`.github/codecov.yml` itself had not been valid since it was added: `patch` and `changes` sat
+directly under `coverage` instead of under `coverage.status`. Codecov keeps using the last valid
+version of an invalid file, and there was none, so the flags it declares had never applied.
+Check an edit to it with
+
+```
+curl -s -X POST --data-binary @.github/codecov.yml https://api.codecov.io/validate
+```
+
+which answers `Valid!` or names the field it rejects.
+
 To check a run, read the upload step's log. `Upload queued for processing complete` is followed
 by `Upload queued for processing failed: …` when Codecov refused it. To see what Codecov holds:
 
