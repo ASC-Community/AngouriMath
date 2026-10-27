@@ -433,6 +433,12 @@ list above, Wolfram MathWorld, Wikipedia's notation tables — and say which was
 Terminology the sources themselves call non-standard (MathWorld on *natural number*, *whole
 number*, *counting number*) is a reason to pick the unambiguous spelling, not the familiar one.
 
+**That holds for a question as much as for a decision.** A notation, a name, a convention or a
+definition put to the maintainer comes with what those sources say about it, quoted and linked,
+and a recommendation that follows from them. Bare alternatives are not a question, only reading
+left undone. On [#2131](https://github.com/asc-community/AngouriMath/issues/2131) the notation
+choices were first asked bare; with Wikipedia and MathWorld read, most of them answered themselves.
+
 The output of the reading is a document with those lists — objects, notation, operations,
 methods, what is wrong, test cases — kept beside the goal it came from, and the docket of work is
 derived from it. A summary written before the reading is finished is the thing this section
