@@ -103,7 +103,19 @@ namespace AngouriMath
                 if (Base.ContainsNode(x))
                 {
                     if (Exponent is Integer { EInteger: var pow })
-                        return Together(Number.GetAllRootsOf1(pow).Select(root => Base.Invert(root * MathS.Pow(value, 1 / Exponent), x)));
+                    {
+                        // x^n = v has |n| roots for a negative n as well, those of x^|n| = 1/v:
+                        // each n-th root of v times a root of unity of order |n|, whose n-th
+                        // power is 1. GetAllRootsOf1 counts up to its argument, so given -2 it
+                        // gave no roots at all, and 1/(1 + x^(-2)) = 1/2 was answered { }. A
+                        // negative power is never zero, so x^(-2) = 0 is the one that has none.
+                        // https://github.com/asc-community/AngouriMath/issues/2144
+                        if (pow.IsZero)
+                            return null;
+                        if (pow.Sign < 0 && value.Evaled is Complex { IsZero: true })
+                            return Enumerable.Empty<Entity>();
+                        return Together(Number.GetAllRootsOf1(pow.Abs()).Select(root => Base.Invert(root * MathS.Pow(value, 1 / Exponent), x)));
+                    }
                     else
                         return Base.Invert(MathS.Pow(value, 1 / Exponent), x);
                 }  

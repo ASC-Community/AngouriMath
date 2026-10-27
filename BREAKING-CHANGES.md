@@ -42,6 +42,21 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### An equation through a negative whole power is not answered with no roots
+
+**Silent: an empty answer becomes the roots.** Inverting `x^n = v` for a negative whole `n` multiplied by the roots
+of unity of order `n`, and there are none of order `-2`, so the inversion found no roots, and an equation that reached
+one inside another was answered with the empty set, a claim that it has no solution. `x^n = v` has the roots of
+`x^|n| = 1/v`, and they are found now. `x^(-2) = 4` on its own was already answered by another route
+([#2144](https://github.com/asc-community/AngouriMath/issues/2144)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"1/(1 + x^(-2)) = 1/2".Solve("x")` | `{ }` | `{ 1, -1 }` |
+| `"2/(1 + x^(-2)) = 1".Solve("x")` | `{ }` | `{ 1, -1 }` |
+| `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
+| `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
+
 ### A system with a product equation is solved branch by branch
 
 **Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,
