@@ -102,6 +102,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// </remarks>
         private static Entity[]? RootsOverASquareDiscriminant(Entity a, Entity b, Entity c)
         {
+            // A square has an even degree in every variable, and where 2 deg b and deg a + deg c
+            // differ, that larger one is the discriminant's degree. Most quadratics with a symbol
+            // in them are refused here, before any polynomial is built: x^2 + x + a, whose
+            // discriminant 1 - 4a is of degree one in a, allocated 4.6% more to be solved without
+            // it. Degrees as written bound the true ones, so a coefficient that cancels inside
+            // itself can be refused when it need not be, which only leaves it to the formula.
+            if (!HasEvenDegreesWherever(a, b, c))
+                return null;
             var names = new SortedSet<Variable>(Comparer<Variable>.Create(static (x, y) => string.CompareOrdinal(x.Name, y.Name)));
             foreach (var coefficient in new[] { a, b, c })
                 foreach (var variable in coefficient.Vars)
@@ -154,6 +162,40 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var spread = (outside * Reduced(root.ScaleBy(ERational.Create(square, overScale.Denominator)))).InnerSimplified;
             return new[] { (middle - spread).InnerSimplified, (middle + spread).InnerSimplified };
         }
+
+        /// <summary>
+        /// Whether, for every variable in <paramref name="a"/>, <paramref name="b"/> or
+        /// <paramref name="c"/>, the degree of <c>b^2 - 4ac</c> is not known to be odd.
+        /// </summary>
+        private static bool HasEvenDegreesWherever(Entity a, Entity b, Entity c)
+        {
+            static bool Even(Entity a, Entity b, Entity c, Variable v)
+            {
+                var (twiceB, ac) = (2 * DegreeAsWritten(b, v), DegreeAsWritten(a, v) + DegreeAsWritten(c, v));
+                return twiceB == ac || System.Math.Max(twiceB, ac) % 2 == 0;
+            }
+            foreach (var coefficient in new[] { a, b, c })
+                foreach (var variable in coefficient.Vars)
+                    if (!Even(a, b, c, variable))
+                        return false;
+            return true;
+        }
+
+        /// <summary>
+        /// The degree of <paramref name="expr"/> in <paramref name="x"/> as it is written, which
+        /// bounds the degree it has: of a power its base's times the exponent, of a product the
+        /// sum, of a sum the most.
+        /// </summary>
+        private static int DegreeAsWritten(Entity expr, Variable x) => expr switch
+        {
+            _ when !expr.ContainsNode(x) => 0,
+            Variable => 1,
+            Powf(var @base, Integer power) when power.EInteger.CanFitInInt32() => DegreeAsWritten(@base, x) * power.EInteger.ToInt32Checked(),
+            Mulf(var left, var right) => DegreeAsWritten(left, x) + DegreeAsWritten(right, x),
+            Sumf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            Minusf(var left, var right) => System.Math.Max(DegreeAsWritten(left, x), DegreeAsWritten(right, x)),
+            _ => 0,
+        };
 
         /// <summary>
         /// <paramref name="value"/> as <c>s^2 k</c>, with the square taken out by trial division
