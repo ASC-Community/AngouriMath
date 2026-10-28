@@ -40,8 +40,13 @@ namespace AngouriMath
                 /// <summary>
                 /// Conjugate of a complex number. Given this = a + ib, Conjugate = a - ib
                 /// </summary>
-                public Complex Conjugate => conjugate.GetValue(static @this => Create(@this.RealPart, -@this.ImaginaryPart), this);
-                private LazyPropertyA<Complex> conjugate;
+                /// <remarks>
+                /// Made under the downcasting setting in force, as any other number is, and so not kept
+                /// on the instance: the first to ask decided it for everyone. A division by <c>i</c> with
+                /// the downcasting off left <c>0 - 1i</c>, in decimals, on <see cref="ImaginaryOne"/>, and
+                /// <c>conj(i)</c> was that from then on, in every thread.
+                /// </remarks>
+                public Complex Conjugate => Create(RealPart, -ImaginaryPart);
 
                 internal override Priority Priority =>
                     (RealPart, ImaginaryPart) switch
