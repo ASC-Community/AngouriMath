@@ -263,20 +263,18 @@ the expression's own domain as its condition ([#2142](https://github.com/asc-com
 | `"(1 - cos(a))/(1 + cos(a))/tan(a/2)^2".Simplify()` | `(1 - cos(a)) / ((cos(a) + 1) * tan(a / 2) ^ 2)` | `1 provided not cos(a) + 1 = 0 and not tan(a / 2) = 0 and not cos(a / 2) = 0` |
 | `"(cos(2*x) - 1)^2 + sin(2*x)^2 - 4*sin(x)^2".Simplify()` ([#2133](https://github.com/asc-community/AngouriMath/issues/2133)) | `2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2` | `0` |
 
-### `conj`, `arg` and `det` are refused by name
+### `conj` and `arg` are refused by name
 
 **Not silent: these now throw `UnrecognizedFunctionParseException` where they parsed.** A name the parser does not
 know, followed by a bracket, is read as a product, so `arg(z)` was the variable `arg` times `z`, and `arg(z) = 1`
 solved to `{ 1 / arg }`. `conjugate` was already refused by name; `conj` and `arg` are the conjugate and the argument
-as other systems spell them, and `det` is the determinant, which a `Matrix` has as the property `Determinant` but an
-expression cannot call. `re` and `im` are still read as products, as before: two letters is short enough to be a
+as other systems spell them. `re` and `im` are still read as products, as before: two letters is short enough to be a
 variable's name ([#2136](https://github.com/asc-community/AngouriMath/issues/2136)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"arg(z)".ToEntity()` | `arg * z` | throws `UnrecognizedFunctionParseException` |
 | `"conj(z)".ToEntity()` | `conj * z` | throws `UnrecognizedFunctionParseException` |
-| `"det([[1, 2], [3, 4]])".ToEntity()` | `det * [[1, 2], [3, 4]]` | throws `UnrecognizedFunctionParseException` |
 
 ### Over the reals, a modulus of a polynomial is split at the polynomial's real roots
 
@@ -356,6 +354,26 @@ is rated no shorter ([#2135](https://github.com/asc-community/AngouriMath/issues
 | `"cos(s + t) - cos(s)*cos(t) + sin(s)*sin(t)".Simplify()` | unchanged | `0` |
 | `"cos(a + b)".Expand()` | `cos(a + b)` | `cos(a) * cos(b) + -sin(a) * sin(b)` |
 | `"cos(a - b)".Expand()` | `cos(a - b)` | `cos(a) * cos(b) + sin(a) * sin(b)` |
+
+### `det`, `transpose`, `dot`, `cross` and `resultant` are functions in an expression
+
+**Not silent: these names followed by a bracket are now computed, or refused, where they were read as products or
+did not parse.** `det(M)` is the determinant, `transpose(M)` the transpose, `dot(a, b)` the sum of the products of the
+components, `cross(a, b)` the vector product in three dimensions and `cross(a)` a vector of the plane turned through a
+right angle anticlockwise, as Mathematica's `Cross` of one vector is; `resultant(p, q, x)` eliminates `x`. There is
+no node for any of them, so each is computed when it is parsed, and left as unsimplified as what it stands for would
+be written out: `dot([1, 2], [3, 4])` is `1 * 3 + 2 * 4`. An argument that is not a matrix or a vector of
+the right shape, written out or once its operations are carried out, throws `InvalidArgumentParseException`
+([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"det([[1, 2], [3, 4]])".ToEntity()` | `det * [[1, 2], [3, 4]]` | `-2` |
+| `"transpose([1, 2])".ToEntity()` | `transpose * [1, 2]` | `[[1, 2]]`, the row |
+| `"transpose(x)".ToEntity()` | `transpose * x` | throws `InvalidArgumentParseException` |
+| `"cross([a, b])".ToEntity()` | `cross * [a, b]` | `[-b, a]` |
+| `"dot([1, 2], [3, 4])".ToEntity()` | throws `UnhandledParseException` | `1 * 3 + 2 * 4` |
+| `"resultant(x^2 - 1, x - a, x)".ToEntity()` | throws `UnhandledParseException` | `a ^ 2 - 1` |
 
 ### A subscript may have a subscript
 
