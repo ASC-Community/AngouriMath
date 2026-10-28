@@ -341,6 +341,21 @@ namespace AngouriMath
                 null;
         }
 
+        partial record Argf
+        {
+            // Where the argument is a value is a ray, a set of points no list of values of x is.
+            // Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
+        partial record Conjugatef
+        {
+            // The conjugate is its own inverse: conjugate(f) = value is f = conjugate(value).
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                Argument.Invert(new Conjugatef(value), x);
+        }
+
         partial record Iversonf
         {
             // Where an Iverson bracket is 1 is where its statement holds: a set, which the

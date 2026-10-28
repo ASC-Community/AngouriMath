@@ -125,9 +125,9 @@ internal partial class AngouriMathParser : Parser {
 		"'max('", "'argmax('", "'argmin('", "'gcd('", "'lcm('", "'binomial('", 
 		"'iverson('", "'aleph('", "'erf('", "'erfc('", "'erfi('", "'Ei('", "'li('", 
 		"'polygamma('", "'digamma('", "'Si('", "'Ci('", "'Shi('", "'Chi('", "'det('", 
-		"'transpose('", "'dot('", "'cross('", "'resultant('", "'trunc('", "'conjugate('", 
-		"'conj('", "'arg('", "'domain('", "'piecewise('", "'apply('", "'lambda('", 
-		null, null, null, null, "'NaN'"
+		"'transpose('", "'dot('", "'cross('", "'resultant('", "'conjugate('", 
+		"'conj('", "'arg('", "'trunc('", "'domain('", "'piecewise('", "'apply('", 
+		"'lambda('", null, null, null, null, "'NaN'"
 	};
 	private static readonly string[] _SymbolicNames = {
 		null, null, null, null, null, null, null, null, null, null, null, null, 
@@ -5039,7 +5039,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1141;
 				Match(T__30);
-				 _localctx.value =  NotImplementedFunction("trunc", "rounding functions"); 
+				 Assert("conjugate", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
 				}
 				break;
 			case 145:
@@ -5051,7 +5051,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1146;
 				Match(T__30);
-				 _localctx.value =  NotImplementedFunction("conjugate", "complex conjugate as a symbolic function"); 
+				 Assert("conj", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
 				}
 				break;
 			case 146:
@@ -5063,7 +5063,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1151;
 				Match(T__30);
-				 _localctx.value =  NotImplementedFunction("conj", "complex conjugate as a symbolic function"); 
+				 Assert("arg", 1, _localctx.args.list.Count); _localctx.value =  MathS.Arg(_localctx.args.list[0]); 
 				}
 				break;
 			case 147:
@@ -5075,7 +5075,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1156;
 				Match(T__30);
-				 _localctx.value =  NotImplementedFunction("arg", "complex argument as a symbolic function"); 
+				 _localctx.value =  NotImplementedFunction("trunc", "rounding functions"); 
 				}
 				break;
 			case 148:

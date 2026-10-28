@@ -1394,6 +1394,54 @@ namespace AngouriMath
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity Iverson(Entity statement) => new Iversonf(statement);
 
+        /// <summary>The complex conjugate <c>conjugate(z)</c>: <c>a - b i</c> for <c>z = a + b i</c></summary>
+        /// <param name="z">The argument, any complex number</param>
+        /// <returns>The <see cref="Entity.Conjugatef"/> node</returns>
+        /// <remarks>
+        /// It is carried through sums, products, quotients and whole powers, and fixes what is known to
+        /// be real: a number, and a node whose codomain is real, such as a modulus or <c>domain(x, RR)</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2145
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// using System;
+        /// using static AngouriMath.MathS;
+        ///
+        /// Console.WriteLine(Conjugate("3 + 4i").Simplify());
+        /// Console.WriteLine(Conjugate("a * b + i").Simplify());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// 3 - 4i
+        /// -i + conjugate(a) * conjugate(b)
+        /// </code>
+        /// </example>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Entity Conjugate(Entity z) => new Conjugatef(z);
+
+        /// <summary>The principal argument <c>arg(z)</c>, in <c>(-pi, pi]</c>, so that <c>z = |z| e^(i arg(z))</c></summary>
+        /// <param name="z">The argument, any complex number but 0, where it has no value</param>
+        /// <returns>The <see cref="Entity.Argf"/> node</returns>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2145</remarks>
+        /// <example>
+        /// <code>
+        /// using System;
+        /// using static AngouriMath.MathS;
+        ///
+        /// Console.WriteLine(Arg("-1").Simplify());
+        /// Console.WriteLine(Arg("1 + i").Simplify());
+        /// Console.WriteLine(Arg("-1 - i").Simplify());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// pi
+        /// pi / 4
+        /// -3/4 * pi
+        /// </code>
+        /// </example>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Entity Arg(Entity z) => new Argf(z);
+
         /// <summary>The aleph number <c>aleph(k)</c>, the size of an infinite set</summary>
         /// <param name="index">The index, a whole number from zero</param>
         /// <returns>The <see cref="Entity.Alephf"/> node</returns>

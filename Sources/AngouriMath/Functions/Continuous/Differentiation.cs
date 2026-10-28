@@ -545,6 +545,18 @@ namespace AngouriMath
                 base.InnerDifferentiate(variable);
         }
 
+        partial record Conjugatef
+        {
+            // Along the real line of the variable, as the modulus's derivative is read below: the
+            // difference quotient's step is real, so it commutes with the conjugate, and the
+            // derivative of conjugate(f) is conjugate(f'). There is no complex derivative: the
+            // conjugate is nowhere holomorphic.
+            // https://github.com/asc-community/AngouriMath/issues/2145
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => IsConstantIn(variable) ? Integer.Zero : new Conjugatef(Argument.DerivativeOver(variable));
+        }
+
         partial record Signumf
         {
             // sgn is flat either side of zero and has no derivative at zero, so the

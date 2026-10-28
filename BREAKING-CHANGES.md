@@ -263,19 +263,23 @@ the expression's own domain as its condition ([#2142](https://github.com/asc-com
 | `"(1 - cos(a))/(1 + cos(a))/tan(a/2)^2".Simplify()` | `(1 - cos(a)) / ((cos(a) + 1) * tan(a / 2) ^ 2)` | `1 provided not cos(a) + 1 = 0 and not tan(a / 2) = 0 and not cos(a / 2) = 0` |
 | `"(cos(2*x) - 1)^2 + sin(2*x)^2 - 4*sin(x)^2".Simplify()` ([#2133](https://github.com/asc-community/AngouriMath/issues/2133)) | `2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2` | `0` |
 
-### `conj` and `arg` are refused by name
+### `conjugate`, `conj` and `arg` are functions
 
-**Not silent: these now throw `UnrecognizedFunctionParseException` where they parsed.** A name the parser does not
-know, followed by a bracket, is read as a product, so `arg(z)` was the variable `arg` times `z`, and `arg(z) = 1`
-solved to `{ 1 / arg }`. `conjugate` was already refused by name; `conj` and `arg` are the conjugate and the argument
-as other systems spell them. `re` and `im` are still read as products, as before: two letters is short enough to be a
-variable's name ([#2136](https://github.com/asc-community/AngouriMath/issues/2136)).
+**Not silent: these names followed by a bracket are now the complex conjugate and the principal argument, where they
+were read as products or refused.** A name the parser does not know, followed by a bracket, is read as a product, so
+`arg(z)` was the variable `arg` times `z`, and `arg(z) = 1` solved to `{ 1 / arg }`. `conjugate(z)` and `conj(z)` are
+`Entity.Conjugatef`, carried through sums, differences, products, quotients and whole powers and not through a root or
+a logarithm; `arg(z)` is `Entity.Argf`, in `(-pi, pi]`, with no value at `0`
+([#2136](https://github.com/asc-community/AngouriMath/issues/2136),
+[#2145](https://github.com/asc-community/AngouriMath/issues/2145)). `re` and `im` are still read as products.
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
-| `"arg(z)".ToEntity()` | `arg * z` | throws `UnrecognizedFunctionParseException` |
-| `"conj(z)".ToEntity()` | `conj * z` | throws `UnrecognizedFunctionParseException` |
-
+| `"conjugate(z)".ToEntity()` | throws `UnrecognizedFunctionParseException` | `conjugate(z)` |
+| `"conj(z)".ToEntity()` | `conj * z` | `conjugate(z)` |
+| `"conj(3 + 4i)".ToEntity().Simplify()` | `(3 + 4i) * conj` | `3 - 4i` |
+| `"arg(z)".ToEntity()` | `arg * z` | `arg(z)` |
+| `"arg(-1)".ToEntity().Simplify()` | `-arg` | `pi` |
 ### Over the reals, a modulus of a polynomial is split at the polynomial's real roots
 
 **Silent: an answer with entries that solve nothing is exact.** With the real codomain an equation in moduli was

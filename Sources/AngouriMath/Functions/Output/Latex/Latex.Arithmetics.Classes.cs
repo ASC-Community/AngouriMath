@@ -165,6 +165,22 @@ namespace AngouriMath
                 => $@"\operatorname{{erf}}\left({Argument.Latexize()}\right)";
         }
 
+        partial record Argf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => @"\arg\left(" + Argument.Latexize() + @"\right)";
+        }
+
+        partial record Conjugatef
+        {
+            // The bar over the argument, as every text on complex numbers writes it.
+            // https://github.com/asc-community/AngouriMath/issues/2145
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => $@"\overline{{{Argument.Latexize()}}}";
+        }
+
         partial record Iversonf
         {
             // The double bracket of Iverson's notation, drawn as two brackets pulled together:

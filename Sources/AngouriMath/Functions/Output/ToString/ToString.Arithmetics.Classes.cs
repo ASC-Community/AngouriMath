@@ -140,6 +140,22 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        public partial record Argf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"arg({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        public partial record Conjugatef
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"conjugate({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Iversonf
         {
             /// <inheritdoc/>

@@ -635,6 +635,12 @@ atom returns[Entity value]
     | 'dot(' args = function_arguments ')' { Assert("dot", 2, $args.list.Count); $value = ParsingHelpers.Dot($args.list[0], $args.list[1]); }
     | 'cross(' args = function_arguments ')' { Assert("cross", (1, 2), $args.list.Count); $value = ParsingHelpers.Cross($args.list); }
     | 'resultant(' args = function_arguments ')' { Assert("resultant", 3, $args.list.Count); $value = ParsingHelpers.Resultant($args.list[0], $args.list[1], $args.list[2]); }
+    /* The complex conjugate, by its name and by the shorter one other systems use.
+       https://github.com/asc-community/AngouriMath/issues/2145 */
+    | 'conjugate(' args = function_arguments ')' { Assert("conjugate", 1, $args.list.Count); $value = MathS.Conjugate($args.list[0]); }
+    | 'conj(' args = function_arguments ')' { Assert("conj", 1, $args.list.Count); $value = MathS.Conjugate($args.list[0]); }
+    /* The principal argument, in (-pi, pi]. https://github.com/asc-community/AngouriMath/issues/2145 */
+    | 'arg(' args = function_arguments ')' { Assert("arg", 1, $args.list.Count); $value = MathS.Arg($args.list[0]); }
 
     /* Names the library does not have. Each is a function every other CAS spells this way, so
        a caller reaches for it, and without these rules each is silently read as a product --
@@ -642,12 +648,6 @@ atom returns[Entity value]
        between a missing function and a wrong answer. */
 
     | 'trunc(' args = function_arguments ')' { $value = NotImplementedFunction("trunc", "rounding functions"); }
-    | 'conjugate(' args = function_arguments ')' { $value = NotImplementedFunction("conjugate", "complex conjugate as a symbolic function"); }
-    /* conj and arg are the conjugate and the argument as other systems spell them. Each was read
-       as a product: arg(z) was arg * z. re and im are left as products, as
-       MissingFunctionNamesRefusedTest records. https://github.com/asc-community/AngouriMath/issues/2136 */
-    | 'conj(' args = function_arguments ')' { $value = NotImplementedFunction("conj", "complex conjugate as a symbolic function"); }
-    | 'arg(' args = function_arguments ')' { $value = NotImplementedFunction("arg", "complex argument as a symbolic function"); }
     | 'domain(' args = function_arguments ')' 
         { 
             Assert("domain", 2, $args.list.Count); 

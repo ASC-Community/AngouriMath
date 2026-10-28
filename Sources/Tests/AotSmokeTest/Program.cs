@@ -107,6 +107,13 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("det at x = 0", At(determinant, "x", 0), -6);
             var dot = MathS.FromString("dot(cross([1, 0, 0], [0, 1, 0]), [0, 0, x])");
             CheckClose("dot of a cross at x = 5", At(dot, "x", 5), 5);
+
+            // The conjugate and the argument are nodes the parser builds and the evaluator reads.
+            // https://github.com/asc-community/AngouriMath/issues/2145
+            var conjugate = MathS.FromString("conj(z) * z");
+            CheckClose("conj(z) z at z = 3 + 4i", At(conjugate, "z", new Complex(3, 4)), 25);
+            var argument = MathS.FromString("arg(z)");
+            CheckClose("arg at z = -1", At(argument, "z", -1), Math.PI);
         }
 
         private static void Simplification()
