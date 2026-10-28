@@ -1442,6 +1442,48 @@ namespace AngouriMath
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity Arg(Entity z) => new Argf(z);
 
+        /// <summary>The real part <c>re(z)</c>: <c>a</c> for <c>z = a + b i</c></summary>
+        /// <param name="z">The argument, any complex number</param>
+        /// <returns>The <see cref="Entity.Ref"/> node</returns>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2145</remarks>
+        /// <example>
+        /// <code>
+        /// using System;
+        /// using static AngouriMath.MathS;
+        ///
+        /// Console.WriteLine(Re("3 + 4i").Simplify());
+        /// Console.WriteLine(Re("a + conj(b)").Simplify());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// 3
+        /// Re(a) + Re(b)
+        /// </code>
+        /// </example>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Entity Re(Entity z) => new Ref(z);
+
+        /// <summary>The imaginary part <c>im(z)</c>: the real number <c>b</c> for <c>z = a + b i</c></summary>
+        /// <param name="z">The argument, any complex number</param>
+        /// <returns>The <see cref="Entity.Imf"/> node</returns>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2145</remarks>
+        /// <example>
+        /// <code>
+        /// using System;
+        /// using static AngouriMath.MathS;
+        ///
+        /// Console.WriteLine(Im("3 + 4i").Simplify());
+        /// Console.WriteLine(Im("conj(z)").Simplify());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// 4
+        /// -Im(z)
+        /// </code>
+        /// </example>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Entity Im(Entity z) => new Imf(z);
+
         /// <summary>The aleph number <c>aleph(k)</c>, the size of an infinite set</summary>
         /// <param name="index">The index, a whole number from zero</param>
         /// <returns>The <see cref="Entity.Alephf"/> node</returns>

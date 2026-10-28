@@ -157,16 +157,18 @@ namespace AngouriMath.Tests.Convenience
             Assert.NotNull(written.ToEntity());
 
         /// <summary>
-        /// Deliberately not refused. <c>re</c> and <c>im</c> are the sympy spellings for the
-        /// real and imaginary parts and the library has neither, so they misparse the same
-        /// way -- but two letters is short enough that a caller may reasonably have a variable
-        /// of that name, and refusing would break their expression to fix nobody's. They are
-        /// left, and pinned here so the choice is visible rather than an oversight.
+        /// <c>re</c> and <c>im</c> were deliberately not refused while the library had neither: two
+        /// letters is short enough to be somebody's variable, and refusing them would have broken an
+        /// expression to fix nobody's. They are the real and the imaginary part now, and the name
+        /// without a bracket is still a variable.
+        /// https://github.com/asc-community/AngouriMath/issues/2145
         /// </summary>
         [Theory]
-        [InlineData("re(x)", "re * x")]
-        [InlineData("im(x)", "im * x")]
-        public void TheTwoLetterNamesAreLeftAsProducts(string written, string expected) =>
-            Assert.Equal(expected.ToEntity(), written.ToEntity());
+        [InlineData("re(x)", typeof(Entity.Ref))]
+        [InlineData("im(x)", typeof(Entity.Imf))]
+        [InlineData("re * x", typeof(Entity.Mulf))]
+        [InlineData("im + x", typeof(Entity.Sumf))]
+        public void TheTwoLetterNamesAreTheRealAndTheImaginaryPart(string written, System.Type node) =>
+            Assert.IsType(node, written.ToEntity());
     }
 }

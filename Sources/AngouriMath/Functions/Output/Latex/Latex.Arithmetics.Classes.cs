@@ -165,6 +165,21 @@ namespace AngouriMath
                 => $@"\operatorname{{erf}}\left({Argument.Latexize()}\right)";
         }
 
+        partial record Ref
+        {
+            // Upright, as ISO 80000-2 writes Re z, rather than the fraktur \Re.
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => @"\operatorname{Re}\left(" + Argument.Latexize() + @"\right)";
+        }
+
+        partial record Imf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => @"\operatorname{Im}\left(" + Argument.Latexize() + @"\right)";
+        }
+
         partial record Argf
         {
             /// <inheritdoc/>

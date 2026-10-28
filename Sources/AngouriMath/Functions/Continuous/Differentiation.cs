@@ -545,6 +545,23 @@ namespace AngouriMath
                 base.InnerDifferentiate(variable);
         }
 
+        partial record Ref
+        {
+            // Along the real line of the variable, as the conjugate's: re is real-linear, so the
+            // derivative of re(f) is re(f').
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => IsConstantIn(variable) ? Integer.Zero : new Ref(Argument.DerivativeOver(variable));
+        }
+
+        partial record Imf
+        {
+            // Along the real line of the variable: the derivative of im(f) is im(f').
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => IsConstantIn(variable) ? Integer.Zero : new Imf(Argument.DerivativeOver(variable));
+        }
+
         partial record Conjugatef
         {
             // Along the real line of the variable, as the modulus's derivative is read below: the

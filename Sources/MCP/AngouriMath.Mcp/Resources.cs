@@ -78,7 +78,7 @@ internal static class Resources
 
         **2. An unknown function name becomes a multiplication.**
 
-        `im(z)` is not a function here — it is the product `im * z`. The parse succeeds and
+        `beta(z)` is not a function here — it is the product `beta * z`. The parse succeeds and
         produces a different expression. Some names are refused outright, but not every
         unknown name can be: refusing them all would refuse `a(b + c)`.
 
@@ -93,8 +93,8 @@ internal static class Resources
           `asinh acosh atanh acotanh acoth asech acosech acsch arsh arch arth arcth arcoth
           arsch arcsch` — **not** `arcsinh`, which is refused
         - `ln log log2 log10 exp pow sqrt cbrt sqr abs signum sign sgn`
-        - complex numbers: `conjugate`, also spelled `conj`, and `arg`, the principal argument
-          in `(-pi, pi]`
+        - complex numbers: `conjugate`, also spelled `conj`; `arg`, the principal argument
+          in `(-pi, pi]`; `Re` and `Im`, also spelled `re`, `im`, `real` and `imag`, `Im(x + i y)` being `y`
         - `floor ceil ceiling round min max gcd lcm`
         - `gamma factorial binomial phi prime valuation`
         - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, and `gamma(a, z)`, the
@@ -114,7 +114,6 @@ internal static class Resources
         |---|---|
         | `arcsinh(x)` | **refused.** The inverse hyperbolics are area functions: write `arsinh`, `asinh` or `arsh` |
         | `trunc` | refused by name — the library has no such function |
-        | `im(z)`, `re(z)` | **silently become `im * z`.** There is no real- or imaginary-part function; write `(z + conj(z))/2` and `(z - conj(z))/(2i)` |
         | `elementin(x, A)`, `setsubtraction(A, B)`, `impl(a, b)` | **silently become products.** Use the infix `x in A`, `A \ B`, `a -> b` |
         | `union(A, B)`, `intersection(A, B)` | refused: both are indexed, `union(A_i, i in I)`. For two sets write `A \/ B` and `A /\ B` |
         | `7 mod 3` | `mod` is FLOORED: `-7 mod 3` is `2`, not `-1` |

@@ -68,7 +68,7 @@ public sealed class ParsingTest
     }
 
     [Theory]
-    [InlineData("im")]
+    [InlineData("beta")]
     [InlineData("Γ")]
     [InlineData("e")]
     [InlineData("pi")]

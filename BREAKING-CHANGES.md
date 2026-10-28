@@ -286,6 +286,20 @@ the expression's own domain as its condition ([#2142](https://github.com/asc-com
 | `"(1 - cos(a))/(1 + cos(a))/tan(a/2)^2".Simplify()` | `(1 - cos(a)) / ((cos(a) + 1) * tan(a / 2) ^ 2)` | `1 provided not cos(a) + 1 = 0 and not tan(a / 2) = 0 and not cos(a / 2) = 0` |
 | `"(cos(2*x) - 1)^2 + sin(2*x)^2 - 4*sin(x)^2".Simplify()` ([#2133](https://github.com/asc-community/AngouriMath/issues/2133)) | `2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2` | `0` |
 
+### `re` and `im` are the real and the imaginary part
+
+**Not silent: `re(…)` and `im(…)`, and `real(…)` and `imag(…)`, are now the real and the imaginary part, where they were
+read as products, and they print as `Re(…)` and `Im(…)`, as Mathematica, Maple and ISO 80000-2 write them.** `re(z)` was the variable `re` times `z`. They were left as products while the library had neither
+function, since two letters is short enough to be somebody's variable; the name without a bracket is still a variable.
+Both are real, `im(3 + 4i)` being `4`, real-linear, and turned by the conjugate as they should be
+([#2145](https://github.com/asc-community/AngouriMath/issues/2145)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"re(z)".ToEntity()` | `re * z` | `Re(z)` |
+| `"im(3 + 4i)".ToEntity().Simplify()` | `(3 + 4i) * im` | `4` |
+| `"re * x".ToEntity()` | `re * x` | `re * x` |
+
 ### `conjugate`, `conj` and `arg` are functions
 
 **Not silent: these names followed by a bracket are now the complex conjugate and the principal argument, where they

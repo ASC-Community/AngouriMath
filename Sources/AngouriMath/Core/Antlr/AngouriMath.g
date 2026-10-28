@@ -641,6 +641,16 @@ atom returns[Entity value]
     | 'conj(' args = function_arguments ')' { Assert("conj", 1, $args.list.Count); $value = MathS.Conjugate($args.list[0]); }
     /* The principal argument, in (-pi, pi]. https://github.com/asc-community/AngouriMath/issues/2145 */
     | 'arg(' args = function_arguments ')' { Assert("arg", 1, $args.list.Count); $value = MathS.Arg($args.list[0]); }
+    /* The real and the imaginary part, written Re and Im as Mathematica, Maple and ISO 80000-2
+       write them, and accepted as SymPy's re and im and as MATLAB's real and imag. re and im were
+       read as products, re(z) being re * z, while there was nothing for them to mean.
+       https://github.com/asc-community/AngouriMath/issues/2145 */
+    | 'Re(' args = function_arguments ')' { Assert("Re", 1, $args.list.Count); $value = MathS.Re($args.list[0]); }
+    | 'Im(' args = function_arguments ')' { Assert("Im", 1, $args.list.Count); $value = MathS.Im($args.list[0]); }
+    | 're(' args = function_arguments ')' { Assert("re", 1, $args.list.Count); $value = MathS.Re($args.list[0]); }
+    | 'real(' args = function_arguments ')' { Assert("real", 1, $args.list.Count); $value = MathS.Re($args.list[0]); }
+    | 'im(' args = function_arguments ')' { Assert("im", 1, $args.list.Count); $value = MathS.Im($args.list[0]); }
+    | 'imag(' args = function_arguments ')' { Assert("imag", 1, $args.list.Count); $value = MathS.Im($args.list[0]); }
 
     /* Names the library does not have. Each is a function every other CAS spells this way, so
        a caller reaches for it, and without these rules each is silently read as a product --

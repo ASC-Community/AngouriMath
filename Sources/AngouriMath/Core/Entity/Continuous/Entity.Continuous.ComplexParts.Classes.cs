@@ -58,5 +58,41 @@ namespace AngouriMath
             /// <inheritdoc/>
             protected override Entity[] InitDirectChildren() => new[] { Argument };
         }
+
+        /// <summary>
+        /// The real part <c>Re(z)</c>, also written <c>re(z)</c> and <c>real(z)</c>: <c>a</c> for
+        /// <c>z = a + b i</c>.
+        /// </summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2145</remarks>
+        public sealed partial record Ref(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            private Ref New(Entity arg) =>
+                ReferenceEquals(Argument, arg) ? this : new(arg) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
+        /// The imaginary part <c>Im(z)</c>, also written <c>im(z)</c> and <c>imag(z)</c>: the real
+        /// number <c>b</c> for <c>z = a + b i</c>, not <c>b i</c>.
+        /// </summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2145</remarks>
+        public sealed partial record Imf(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            private Imf New(Entity arg) =>
+                ReferenceEquals(Argument, arg) ? this : new(arg) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
     }
 }
