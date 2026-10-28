@@ -484,10 +484,22 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in ZZ : x < 0 }`, `ZZ+ \ PP` is `{ x in ZZ+ : not x in PP }` and `QQ \ ZZ` is
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
-**Refused by name** — `trunc`. AngouriMath has no such function, and it is what some other
-CAS calls one, so a caller reaches for it. Left alone it would be read as a product under the rule
-above and answer silently and wrongly; it raises a parse error naming the function instead. Short
-names that could be somebody's variable, such as `beta` or `norm`, are *not* refused.
+**Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
+`hurwitzzeta` `lambertw` `productlog` `mobius` `moebiusmu` `divisorsigma` `primenu` `primeomega`
+`primepi` `harmonicnumber` `catalannumber` `multinomial` `fallingfactorial` `factorialpower`
+`risingfactorial` `forwarddifference` `laplacian` `jacobian` `hessian`. Each is what some other
+system calls a function, so a caller reaches for it, and left alone it would be read as a product
+under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse
+error naming the function instead. What each will mean is fixed in
+[#2182](https://github.com/asc-community/AngouriMath/issues/2182).
+
+Some names will not be functions, because what they mean differs between sources or is already
+written exactly, and are refused with the spelling to use. `heaviside` takes `0`, `1/2` or `1` at
+`0` by source: write `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2`; `unitstep` is
+`iverson(x >= 0)`. `isprime(n)` is `n in PP`, `fractionalpart(x)` is `x mod 1`,
+`quotient(a, b)` is `floor(a / b)`, and `pochhammer` is the rising factorial to some authors and the
+falling one to others. Short names that could be somebody's variable, such as `beta` or `norm`, are
+not refused.
 
 ## `sum` and `product`, which declare a name
 

@@ -33,8 +33,41 @@ namespace AngouriMath.Tests.Convenience
         // https://github.com/asc-community/AngouriMath/issues/2136, since arg(z) was arg * z;
         // conjugate, conj and arg until https://github.com/asc-community/AngouriMath/issues/2145,
         // and det until https://github.com/asc-community/AngouriMath/issues/2147.
+        // And the long names of the functions to come, reserved until each is implemented, and the
+        // names that will not be functions, refused with the spelling to use:
+        // https://github.com/asc-community/AngouriMath/issues/2182. zeta(s) was zeta * s.
         [Theory]
         [InlineData("trunc(x)")]
+        [InlineData("zeta(s)")]
+        [InlineData("zeta(s, a)")]
+        [InlineData("riemannzeta(s)")]
+        [InlineData("hurwitzzeta(s, a)")]
+        [InlineData("lambertw(x)")]
+        [InlineData("productlog(x)")]
+        [InlineData("mobius(n)")]
+        [InlineData("moebiusmu(n)")]
+        [InlineData("divisorsigma(k, n)")]
+        [InlineData("primenu(n)")]
+        [InlineData("primeomega(n)")]
+        [InlineData("primepi(n)")]
+        [InlineData("harmonicnumber(n)")]
+        [InlineData("catalannumber(n)")]
+        [InlineData("multinomial(a, b, c)")]
+        [InlineData("fallingfactorial(x, k)")]
+        [InlineData("factorialpower(x, k)")]
+        [InlineData("risingfactorial(x, k)")]
+        [InlineData("forwarddifference(f, k)")]
+        [InlineData("laplacian(f, x)")]
+        [InlineData("jacobian(f, x)")]
+        [InlineData("hessian(f, x)")]
+        [InlineData("heaviside(x)")]
+        [InlineData("unitstep(x)")]
+        [InlineData("isprime(n)")]
+        [InlineData("pochhammer(x, k)")]
+        [InlineData("doublefactorial(n)")]
+        [InlineData("factorial2(n)")]
+        [InlineData("fractionalpart(x)")]
+        [InlineData("quotient(a, b)")]
         public void ANameTheLibraryDoesNotHaveIsRefused(string written) =>
             Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity());
 
@@ -45,6 +78,7 @@ namespace AngouriMath.Tests.Convenience
         [Theory]
         [InlineData("re * (x + 1)", "re * (x + 1)")]
         [InlineData("im + arg", "im + arg")]
+        [InlineData("zeta + quotient * 2", "zeta + quotient * 2")]
         [InlineData("rect(x)", "rect * x")]
         public void TheSameNameWithoutTheBracketIsStillAVariable(string written, string expected) =>
             Assert.Equal(expected, written.ToEntity().Stringize());
@@ -55,6 +89,11 @@ namespace AngouriMath.Tests.Convenience
         /// </summary>
         [Theory]
         [InlineData("trunc(x)", "trunc")]
+        [InlineData("zeta(s)", "zeta")]
+        [InlineData("isprime(n)", "n in PP")]
+        [InlineData("heaviside(x)", "iverson(x >= 0)")]
+        [InlineData("fractionalpart(x)", "x mod 1")]
+        [InlineData("pochhammer(x, k)", "risingfactorial")]
         public void TheRefusalNamesTheFunction(string written, string name) =>
             Assert.Contains(name,
                 Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity()).Message);

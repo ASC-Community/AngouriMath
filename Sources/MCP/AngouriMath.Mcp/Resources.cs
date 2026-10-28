@@ -113,7 +113,8 @@ internal static class Resources
         | You might write | Reality |
         |---|---|
         | `arcsinh(x)` | **refused.** The inverse hyperbolics are area functions: write `arsinh`, `asinh` or `arsh` |
-        | `trunc` | refused by name — the library has no such function |
+        | `trunc`, `zeta`, `lambertw`, `mobius`, `divisorsigma`, `primepi`, `harmonicnumber`, `catalannumber`, `multinomial`, `fallingfactorial`, `risingfactorial` and other long names of functions to come | refused by name — not yet in the library |
+        | `heaviside`, `unitstep`, `isprime`, `fractionalpart`, `quotient`, `pochhammer` | refused, with what to write: `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2`; `n in PP`; `x mod 1`; `floor(a / b)` |
         | `elementin(x, A)`, `setsubtraction(A, B)`, `impl(a, b)` | **silently become products.** Use the infix `x in A`, `A \ B`, `a -> b` |
         | `union(A, B)`, `intersection(A, B)` | refused: both are indexed, `union(A_i, i in I)`. For two sets write `A \/ B` and `A /\ B` |
         | `7 mod 3` | `mod` is FLOORED: `-7 mod 3` is `2`, not `-1` |

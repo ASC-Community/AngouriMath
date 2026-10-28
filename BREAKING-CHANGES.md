@@ -420,6 +420,26 @@ the right shape, written out or once its operations are carried out, throws `Inv
 | `"dot([1, 2], [3, 4])".ToEntity()` | throws `UnhandledParseException` | `1 * 3 + 2 * 4` |
 | `"resultant(x^2 - 1, x - a, x)".ToEntity()` | throws `UnhandledParseException` | `a ^ 2 - 1` |
 
+### The names of functions to come are refused by name
+
+**Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
+products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
+`2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
+is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `mobius`, `moebiusmu`, `divisorsigma`, `primenu`,
+`primeomega`, `primepi`, `harmonicnumber`, `catalannumber`, `multinomial`, `fallingfactorial`, `factorialpower`,
+`risingfactorial`, `forwarddifference`, `laplacian`, `jacobian` and `hessian`. Names that will not be functions,
+because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
+`heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
+Each name without a bracket is still a variable, and short names such as `beta` and `norm` are still read as products
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"zeta(s)".ToEntity()` | `zeta * s` | throws `UnrecognizedFunctionParseException` |
+| `"zeta(2)".ToEntity().Simplify()` | `2 * zeta` | throws `UnrecognizedFunctionParseException` |
+| `"isprime(7)".ToEntity()` | `isprime * 7` | throws `UnrecognizedFunctionParseException`: write `n in PP` |
+| `"heaviside(x)".ToEntity()` | `heaviside * x` | throws `UnrecognizedFunctionParseException`: write `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2` |
+| `"divisorsigma(k, n)".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 ### A subscript may have a subscript
 
 **Not silent: what was a parse error is a name.** A name took at most one `_`, so `x_1_2` and `X_a_beta` were lexer
