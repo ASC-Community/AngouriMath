@@ -85,8 +85,9 @@ outside the sector: `sqrt(x) = a` was `{ a ^ 2 }`, and at `a = -1` that is `1`, 
 the sector, written with `arg`, as `abs`'s inversion carries its own condition. A number on the other side is decided
 as before, and `|p| > 1` needs no condition, since every value is then a power. What the equation is provided is known
 while it is solved, as a provided expression is differentiated: a value known to be real, or declared real, has the
-half-line for its sector, one known to lie on it needs no condition, and one known to lie off it has no root. A condition that is already part of
-another is no longer stated twice: a system's rows carried the same condition once a substitution
+half-line for its sector, one known to lie on it needs no condition, and one known to lie off it has no root. A conjunct of a condition that
+another conjunct already forces is not stated, so `a > -5 and a >= 0` is `a >= 0`, and a condition stated twice is
+stated once, as a system's rows carried theirs once a substitution
 ([#212](https://github.com/asc-community/AngouriMath/issues/212)).
 
 | Input | Was (2.6.0) | Now |
@@ -97,6 +98,9 @@ another is no longer stated twice: a system's rows carried the same condition on
 | `"(sqrt(x) = a) provided a in RR".ToEntity().Solve("x")` | `{ a ^ 2 provided a in RR }` | `{ a ^ 2 provided a in RR and a >= 0 }` |
 | `"(sqrt(x) = a) provided a > 0".ToEntity().Solve("x")` | `{ a ^ 2 provided a > 0 }` | `{ a ^ 2 provided a > 0 }` |
 | `"(sqrt(x) = a) provided a < 0".ToEntity().Solve("x")` | `{ a ^ 2 provided a < 0 }` | `{ }` |
+| `"(sqrt(x) = a) provided a > -5".ToEntity().Solve("x")` | `{ a ^ 2 provided a > -5 }` | `{ a ^ 2 provided a >= 0 }` |
+| `"x provided a > 1 and a > 2".ToEntity().InnerSimplified` | `x provided a > 1 and a > 2` | `x provided a > 2` |
+| `"(x provided a > 0) provided a >= 0".ToEntity().InnerSimplified` | `x provided a >= 0 and a > 0` | `x provided a > 0` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
 
 ### A system with a product equation is solved branch by branch
