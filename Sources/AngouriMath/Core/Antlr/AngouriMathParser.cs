@@ -125,20 +125,20 @@ internal partial class AngouriMathParser : Parser {
 		"'arcsech('", "'acosech('", "'arcosech('", "'arcsch('", "'arccosech('", 
 		"'acsch('", "'factorial('", "'gamma('", "'derivative('", "'integral('", 
 		"'limit('", "'limitleft('", "'limitright('", "'sum('", "'product('", "'signum('", 
-		"'sgn('", "'sign('", "'abs('", "'phi('", "'prime('", "'valuation('", "'card('", 
-		"'powerset('", "'union('", "'intersection('", "'complement('", "'image('", 
-		"'preimage('", "'floor('", "'ceil('", "'ceiling('", "'round('", "'min('", 
-		"'max('", "'argmax('", "'argmin('", "'gcd('", "'lcm('", "'binomial('", 
+		"'sgn('", "'sign('", "'abs('", "'phi('", "'prime('", "'valuation('", "'mobius('", 
+		"'moebiusmu('", "'divisorsigma('", "'primenu('", "'primeomega('", "'primepi('", 
+		"'card('", "'powerset('", "'union('", "'intersection('", "'complement('", 
+		"'image('", "'preimage('", "'floor('", "'ceil('", "'ceiling('", "'round('", 
+		"'min('", "'max('", "'argmax('", "'argmin('", "'gcd('", "'lcm('", "'binomial('", 
 		"'iverson('", "'aleph('", "'erf('", "'erfc('", "'erfi('", "'Ei('", "'li('", 
 		"'polygamma('", "'digamma('", "'Si('", "'Ci('", "'Shi('", "'Chi('", "'det('", 
 		"'transpose('", "'dot('", "'cross('", "'resultant('", "'conjugate('", 
 		"'conj('", "'arg('", "'Re('", "'Im('", "'re('", "'real('", "'im('", "'imag('", 
 		"'trunc('", "'zeta('", "'riemannzeta('", "'hurwitzzeta('", "'lambertw('", 
-		"'productlog('", "'mobius('", "'moebiusmu('", "'divisorsigma('", "'primenu('", 
-		"'primeomega('", "'primepi('", "'harmonicnumber('", "'catalannumber('", 
-		"'multinomial('", "'fallingfactorial('", "'factorialpower('", "'risingfactorial('", 
-		"'forwarddifference('", "'laplacian('", "'jacobian('", "'hessian('", "'heaviside('", 
-		"'unitstep('", "'isprime('", "'pochhammer('", "'doublefactorial('", "'factorial2('", 
+		"'productlog('", "'harmonicnumber('", "'catalannumber('", "'multinomial('", 
+		"'fallingfactorial('", "'factorialpower('", "'risingfactorial('", "'forwarddifference('", 
+		"'laplacian('", "'jacobian('", "'hessian('", "'heaviside('", "'unitstep('", 
+		"'isprime('", "'pochhammer('", "'doublefactorial('", "'factorial2('", 
 		"'fractionalpart('", "'quotient('", "'domain('", "'piecewise('", "'apply('", 
 		"'lambda('", null, null, null, null, "'NaN'"
 	};
@@ -4826,7 +4826,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 969;
 				Match(T__32);
-				 Assert("card", 1, _localctx.args.list.Count); _localctx.value =  MathS.Sets.Card(_localctx.args.list[0]); 
+				 Assert("mobius", 1, _localctx.args.list.Count); _localctx.value =  MathS.NumberTheory.Mobius(_localctx.args.list[0]); 
 				}
 				break;
 			case 109:
@@ -4838,7 +4838,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 974;
 				Match(T__32);
-				 Assert("powerset", 1, _localctx.args.list.Count); _localctx.value =  MathS.Sets.PowerSet(_localctx.args.list[0]); 
+				 Assert("moebiusmu", 1, _localctx.args.list.Count); _localctx.value =  MathS.NumberTheory.Mobius(_localctx.args.list[0]); 
 				}
 				break;
 			case 110:
@@ -4850,7 +4850,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 979;
 				Match(T__32);
-				 Assert("union", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } unionRange ? MathS.Sets.IndexedUnion(_localctx.args.list[0], unionRange.Element, unionRange.SupSet) : throw new InvalidArgumentParseException("union expects its second argument to say which name ranges over which set, as in union(A_i, i in I)"); 
+				 Assert("divisorsigma", 2, _localctx.args.list.Count); _localctx.value =  MathS.NumberTheory.DivisorSigma(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 111:
@@ -4862,7 +4862,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 984;
 				Match(T__32);
-				 Assert("intersection", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } intersectionRange ? MathS.Sets.IndexedIntersection(_localctx.args.list[0], intersectionRange.Element, intersectionRange.SupSet) : throw new InvalidArgumentParseException("intersection expects its second argument to say which name ranges over which set, as in intersection(A_i, i in I)"); 
+				 Assert("primenu", 1, _localctx.args.list.Count); _localctx.value =  MathS.NumberTheory.PrimeNu(_localctx.args.list[0]); 
 				}
 				break;
 			case 112:
@@ -4874,7 +4874,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 989;
 				Match(T__32);
-				 Assert("complement", 2, _localctx.args.list.Count); _localctx.value =  MathS.Sets.Complement(_localctx.args.list[0], _localctx.args.list[1]); 
+				 Assert("primeomega", 1, _localctx.args.list.Count); _localctx.value =  MathS.NumberTheory.PrimeOmega(_localctx.args.list[0]); 
 				}
 				break;
 			case 113:
@@ -4886,7 +4886,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 994;
 				Match(T__32);
-				 Assert("image", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } imageRange ? MathS.Sets.Image(_localctx.args.list[0], imageRange.Element, imageRange.SupSet) : throw new InvalidArgumentParseException("image expects its second argument to say which name ranges over which set, as in image(f(x), x in A)"); 
+				 Assert("primepi", 1, _localctx.args.list.Count); _localctx.value =  MathS.NumberTheory.PrimePi(_localctx.args.list[0]); 
 				}
 				break;
 			case 114:
@@ -4898,7 +4898,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 999;
 				Match(T__32);
-				 Assert("preimage", 3, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } preimageRange ? MathS.Sets.PreImage(_localctx.args.list[0], preimageRange.Element, preimageRange.SupSet, _localctx.args.list[2]) : throw new InvalidArgumentParseException("preimage expects its second argument to say which name ranges over which set, as in preimage(f(x), x in A, Y)"); 
+				 Assert("card", 1, _localctx.args.list.Count); _localctx.value =  MathS.Sets.Card(_localctx.args.list[0]); 
 				}
 				break;
 			case 115:
@@ -4910,7 +4910,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1004;
 				Match(T__32);
-				 Assert("floor", 1, _localctx.args.list.Count); _localctx.value =  MathS.Floor(_localctx.args.list[0]); 
+				 Assert("powerset", 1, _localctx.args.list.Count); _localctx.value =  MathS.Sets.PowerSet(_localctx.args.list[0]); 
 				}
 				break;
 			case 116:
@@ -4922,7 +4922,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1009;
 				Match(T__32);
-				 Assert("ceil", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ceil(_localctx.args.list[0]); 
+				 Assert("union", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } unionRange ? MathS.Sets.IndexedUnion(_localctx.args.list[0], unionRange.Element, unionRange.SupSet) : throw new InvalidArgumentParseException("union expects its second argument to say which name ranges over which set, as in union(A_i, i in I)"); 
 				}
 				break;
 			case 117:
@@ -4934,7 +4934,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1014;
 				Match(T__32);
-				 Assert("ceiling", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ceil(_localctx.args.list[0]); 
+				 Assert("intersection", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } intersectionRange ? MathS.Sets.IndexedIntersection(_localctx.args.list[0], intersectionRange.Element, intersectionRange.SupSet) : throw new InvalidArgumentParseException("intersection expects its second argument to say which name ranges over which set, as in intersection(A_i, i in I)"); 
 				}
 				break;
 			case 118:
@@ -4946,7 +4946,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1019;
 				Match(T__32);
-				 Assert("round", 1, _localctx.args.list.Count); _localctx.value =  MathS.Round(_localctx.args.list[0]); 
+				 Assert("complement", 2, _localctx.args.list.Count); _localctx.value =  MathS.Sets.Complement(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 119:
@@ -4958,7 +4958,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1024;
 				Match(T__32);
-				 AssertAtLeast("min", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Count == 1 && _localctx.args.list[0] is Entity.Set minSet ? MathS.Minimum(Variable.CreateUnique(minSet, "x"), Variable.CreateUnique(minSet, "x"), minSet) : _localctx.args.list.Count == 2 && AngouriMath.Functions.ExtremumOverSet.AsRange(_localctx.args.list[1]) is var (minVar, minOver) ? MathS.Minimum(_localctx.args.list[0], minVar, minOver) : _localctx.args.list.Aggregate((a, b) => MathS.Min(a, b)); 
+				 Assert("image", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } imageRange ? MathS.Sets.Image(_localctx.args.list[0], imageRange.Element, imageRange.SupSet) : throw new InvalidArgumentParseException("image expects its second argument to say which name ranges over which set, as in image(f(x), x in A)"); 
 				}
 				break;
 			case 120:
@@ -4970,7 +4970,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1029;
 				Match(T__32);
-				 AssertAtLeast("max", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Count == 1 && _localctx.args.list[0] is Entity.Set maxSet ? MathS.Maximum(Variable.CreateUnique(maxSet, "x"), Variable.CreateUnique(maxSet, "x"), maxSet) : _localctx.args.list.Count == 2 && AngouriMath.Functions.ExtremumOverSet.AsRange(_localctx.args.list[1]) is var (maxVar, maxOver) ? MathS.Maximum(_localctx.args.list[0], maxVar, maxOver) : _localctx.args.list.Aggregate((a, b) => MathS.Max(a, b)); 
+				 Assert("preimage", 3, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } preimageRange ? MathS.Sets.PreImage(_localctx.args.list[0], preimageRange.Element, preimageRange.SupSet, _localctx.args.list[2]) : throw new InvalidArgumentParseException("preimage expects its second argument to say which name ranges over which set, as in preimage(f(x), x in A, Y)"); 
 				}
 				break;
 			case 121:
@@ -4982,7 +4982,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1034;
 				Match(T__32);
-				 Assert("argmax", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } argmaxRange ? MathS.Argmax(_localctx.args.list[0], argmaxRange.Element, argmaxRange.SupSet) : throw new InvalidArgumentParseException("argmax expects its second argument to say which variable ranges over which set, as in argmax(f(t), t in S)"); 
+				 Assert("floor", 1, _localctx.args.list.Count); _localctx.value =  MathS.Floor(_localctx.args.list[0]); 
 				}
 				break;
 			case 122:
@@ -4994,7 +4994,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1039;
 				Match(T__32);
-				 Assert("argmin", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } argminRange ? MathS.Argmin(_localctx.args.list[0], argminRange.Element, argminRange.SupSet) : throw new InvalidArgumentParseException("argmin expects its second argument to say which variable ranges over which set, as in argmin(f(t), t in S)"); 
+				 Assert("ceil", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ceil(_localctx.args.list[0]); 
 				}
 				break;
 			case 123:
@@ -5006,7 +5006,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1044;
 				Match(T__32);
-				 AssertAtLeast("gcd", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Aggregate((a, b) => MathS.Gcd(a, b)); 
+				 Assert("ceiling", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ceil(_localctx.args.list[0]); 
 				}
 				break;
 			case 124:
@@ -5018,7 +5018,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1049;
 				Match(T__32);
-				 AssertAtLeast("lcm", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Aggregate((a, b) => MathS.Lcm(a, b)); 
+				 Assert("round", 1, _localctx.args.list.Count); _localctx.value =  MathS.Round(_localctx.args.list[0]); 
 				}
 				break;
 			case 125:
@@ -5030,7 +5030,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1054;
 				Match(T__32);
-				 Assert("binomial", 2, _localctx.args.list.Count); _localctx.value =  MathS.Binomial(_localctx.args.list[0], _localctx.args.list[1]); 
+				 AssertAtLeast("min", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Count == 1 && _localctx.args.list[0] is Entity.Set minSet ? MathS.Minimum(Variable.CreateUnique(minSet, "x"), Variable.CreateUnique(minSet, "x"), minSet) : _localctx.args.list.Count == 2 && AngouriMath.Functions.ExtremumOverSet.AsRange(_localctx.args.list[1]) is var (minVar, minOver) ? MathS.Minimum(_localctx.args.list[0], minVar, minOver) : _localctx.args.list.Aggregate((a, b) => MathS.Min(a, b)); 
 				}
 				break;
 			case 126:
@@ -5042,7 +5042,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1059;
 				Match(T__32);
-				 Assert("iverson", 1, _localctx.args.list.Count); _localctx.value =  MathS.Iverson(_localctx.args.list[0]); 
+				 AssertAtLeast("max", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Count == 1 && _localctx.args.list[0] is Entity.Set maxSet ? MathS.Maximum(Variable.CreateUnique(maxSet, "x"), Variable.CreateUnique(maxSet, "x"), maxSet) : _localctx.args.list.Count == 2 && AngouriMath.Functions.ExtremumOverSet.AsRange(_localctx.args.list[1]) is var (maxVar, maxOver) ? MathS.Maximum(_localctx.args.list[0], maxVar, maxOver) : _localctx.args.list.Aggregate((a, b) => MathS.Max(a, b)); 
 				}
 				break;
 			case 127:
@@ -5054,7 +5054,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1064;
 				Match(T__32);
-				 Assert("aleph", 1, _localctx.args.list.Count); _localctx.value =  MathS.Aleph(_localctx.args.list[0]); 
+				 Assert("argmax", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } argmaxRange ? MathS.Argmax(_localctx.args.list[0], argmaxRange.Element, argmaxRange.SupSet) : throw new InvalidArgumentParseException("argmax expects its second argument to say which variable ranges over which set, as in argmax(f(t), t in S)"); 
 				}
 				break;
 			case 128:
@@ -5066,7 +5066,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1069;
 				Match(T__32);
-				 Assert("erf", 1, _localctx.args.list.Count); _localctx.value =  MathS.Erf(_localctx.args.list[0]); 
+				 Assert("argmin", 2, _localctx.args.list.Count); _localctx.value =  _localctx.args.list[1] is Entity.Set.Inf { Element: Variable } argminRange ? MathS.Argmin(_localctx.args.list[0], argminRange.Element, argminRange.SupSet) : throw new InvalidArgumentParseException("argmin expects its second argument to say which variable ranges over which set, as in argmin(f(t), t in S)"); 
 				}
 				break;
 			case 129:
@@ -5078,7 +5078,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1074;
 				Match(T__32);
-				 Assert("erfc", 1, _localctx.args.list.Count); _localctx.value =  MathS.Erfc(_localctx.args.list[0]); 
+				 AssertAtLeast("gcd", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Aggregate((a, b) => MathS.Gcd(a, b)); 
 				}
 				break;
 			case 130:
@@ -5090,7 +5090,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1079;
 				Match(T__32);
-				 Assert("erfi", 1, _localctx.args.list.Count); _localctx.value =  MathS.Erfi(_localctx.args.list[0]); 
+				 AssertAtLeast("lcm", 1, _localctx.args.list.Count); _localctx.value =  _localctx.args.list.Aggregate((a, b) => MathS.Lcm(a, b)); 
 				}
 				break;
 			case 131:
@@ -5102,7 +5102,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1084;
 				Match(T__32);
-				 Assert("Ei", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ei(_localctx.args.list[0]); 
+				 Assert("binomial", 2, _localctx.args.list.Count); _localctx.value =  MathS.Binomial(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 132:
@@ -5114,7 +5114,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1089;
 				Match(T__32);
-				 Assert("li", 1, _localctx.args.list.Count); _localctx.value =  MathS.Li(_localctx.args.list[0]); 
+				 Assert("iverson", 1, _localctx.args.list.Count); _localctx.value =  MathS.Iverson(_localctx.args.list[0]); 
 				}
 				break;
 			case 133:
@@ -5126,7 +5126,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1094;
 				Match(T__32);
-				 Assert("polygamma", 2, _localctx.args.list.Count); _localctx.value =  MathS.Polygamma(_localctx.args.list[0], _localctx.args.list[1]); 
+				 Assert("aleph", 1, _localctx.args.list.Count); _localctx.value =  MathS.Aleph(_localctx.args.list[0]); 
 				}
 				break;
 			case 134:
@@ -5138,7 +5138,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1099;
 				Match(T__32);
-				 Assert("digamma", 1, _localctx.args.list.Count); _localctx.value =  MathS.Digamma(_localctx.args.list[0]); 
+				 Assert("erf", 1, _localctx.args.list.Count); _localctx.value =  MathS.Erf(_localctx.args.list[0]); 
 				}
 				break;
 			case 135:
@@ -5150,7 +5150,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1104;
 				Match(T__32);
-				 Assert("Si", 1, _localctx.args.list.Count); _localctx.value =  MathS.Si(_localctx.args.list[0]); 
+				 Assert("erfc", 1, _localctx.args.list.Count); _localctx.value =  MathS.Erfc(_localctx.args.list[0]); 
 				}
 				break;
 			case 136:
@@ -5162,7 +5162,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1109;
 				Match(T__32);
-				 Assert("Ci", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ci(_localctx.args.list[0]); 
+				 Assert("erfi", 1, _localctx.args.list.Count); _localctx.value =  MathS.Erfi(_localctx.args.list[0]); 
 				}
 				break;
 			case 137:
@@ -5174,7 +5174,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1114;
 				Match(T__32);
-				 Assert("Shi", 1, _localctx.args.list.Count); _localctx.value =  MathS.Shi(_localctx.args.list[0]); 
+				 Assert("Ei", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ei(_localctx.args.list[0]); 
 				}
 				break;
 			case 138:
@@ -5186,7 +5186,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1119;
 				Match(T__32);
-				 Assert("Chi", 1, _localctx.args.list.Count); _localctx.value =  MathS.Chi(_localctx.args.list[0]); 
+				 Assert("li", 1, _localctx.args.list.Count); _localctx.value =  MathS.Li(_localctx.args.list[0]); 
 				}
 				break;
 			case 139:
@@ -5198,7 +5198,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1124;
 				Match(T__32);
-				 Assert("det", 1, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Determinant(_localctx.args.list[0]); 
+				 Assert("polygamma", 2, _localctx.args.list.Count); _localctx.value =  MathS.Polygamma(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 140:
@@ -5210,7 +5210,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1129;
 				Match(T__32);
-				 Assert("transpose", 1, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Transposed(_localctx.args.list[0]); 
+				 Assert("digamma", 1, _localctx.args.list.Count); _localctx.value =  MathS.Digamma(_localctx.args.list[0]); 
 				}
 				break;
 			case 141:
@@ -5222,7 +5222,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1134;
 				Match(T__32);
-				 Assert("dot", 2, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Dot(_localctx.args.list[0], _localctx.args.list[1]); 
+				 Assert("Si", 1, _localctx.args.list.Count); _localctx.value =  MathS.Si(_localctx.args.list[0]); 
 				}
 				break;
 			case 142:
@@ -5234,7 +5234,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1139;
 				Match(T__32);
-				 Assert("cross", (1, 2), _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Cross(_localctx.args.list); 
+				 Assert("Ci", 1, _localctx.args.list.Count); _localctx.value =  MathS.Ci(_localctx.args.list[0]); 
 				}
 				break;
 			case 143:
@@ -5246,7 +5246,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1144;
 				Match(T__32);
-				 Assert("resultant", 3, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Resultant(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2]); 
+				 Assert("Shi", 1, _localctx.args.list.Count); _localctx.value =  MathS.Shi(_localctx.args.list[0]); 
 				}
 				break;
 			case 144:
@@ -5258,7 +5258,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1149;
 				Match(T__32);
-				 Assert("conjugate", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
+				 Assert("Chi", 1, _localctx.args.list.Count); _localctx.value =  MathS.Chi(_localctx.args.list[0]); 
 				}
 				break;
 			case 145:
@@ -5270,7 +5270,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1154;
 				Match(T__32);
-				 Assert("conj", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
+				 Assert("det", 1, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Determinant(_localctx.args.list[0]); 
 				}
 				break;
 			case 146:
@@ -5282,7 +5282,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1159;
 				Match(T__32);
-				 Assert("arg", 1, _localctx.args.list.Count); _localctx.value =  MathS.Arg(_localctx.args.list[0]); 
+				 Assert("transpose", 1, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Transposed(_localctx.args.list[0]); 
 				}
 				break;
 			case 147:
@@ -5294,7 +5294,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1164;
 				Match(T__32);
-				 Assert("Re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
+				 Assert("dot", 2, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Dot(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 148:
@@ -5306,7 +5306,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1169;
 				Match(T__32);
-				 Assert("Im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
+				 Assert("cross", (1, 2), _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Cross(_localctx.args.list); 
 				}
 				break;
 			case 149:
@@ -5318,7 +5318,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1174;
 				Match(T__32);
-				 Assert("re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
+				 Assert("resultant", 3, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Resultant(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2]); 
 				}
 				break;
 			case 150:
@@ -5330,7 +5330,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1179;
 				Match(T__32);
-				 Assert("real", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
+				 Assert("conjugate", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
 				}
 				break;
 			case 151:
@@ -5342,7 +5342,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1184;
 				Match(T__32);
-				 Assert("im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
+				 Assert("conj", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
 				}
 				break;
 			case 152:
@@ -5354,7 +5354,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1189;
 				Match(T__32);
-				 Assert("imag", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
+				 Assert("arg", 1, _localctx.args.list.Count); _localctx.value =  MathS.Arg(_localctx.args.list[0]); 
 				}
 				break;
 			case 153:
@@ -5366,7 +5366,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1194;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("trunc", "rounding functions"); 
+				 Assert("Re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
 				}
 				break;
 			case 154:
@@ -5378,7 +5378,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1199;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("zeta", "Riemann or Hurwitz zeta function yet"); 
+				 Assert("Im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
 				}
 				break;
 			case 155:
@@ -5390,7 +5390,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1204;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("riemannzeta", "Riemann zeta function yet"); 
+				 Assert("re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
 				}
 				break;
 			case 156:
@@ -5402,7 +5402,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1209;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); 
+				 Assert("real", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
 				}
 				break;
 			case 157:
@@ -5414,7 +5414,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1214;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("lambertw", "Lambert W function yet"); 
+				 Assert("im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
 				}
 				break;
 			case 158:
@@ -5426,7 +5426,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1219;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("productlog", "Lambert W function yet"); 
+				 Assert("imag", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
 				}
 				break;
 			case 159:
@@ -5438,7 +5438,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1224;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("mobius", "Mobius function yet"); 
+				 _localctx.value =  NotImplementedFunction("trunc", "rounding functions"); 
 				}
 				break;
 			case 160:
@@ -5450,7 +5450,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1229;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("moebiusmu", "Mobius function yet"); 
+				 _localctx.value =  NotImplementedFunction("zeta", "Riemann or Hurwitz zeta function yet"); 
 				}
 				break;
 			case 161:
@@ -5462,7 +5462,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1234;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("divisorsigma", "divisor function yet"); 
+				 _localctx.value =  NotImplementedFunction("riemannzeta", "Riemann zeta function yet"); 
 				}
 				break;
 			case 162:
@@ -5474,7 +5474,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1239;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("primenu", "count of distinct prime factors yet"); 
+				 _localctx.value =  NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); 
 				}
 				break;
 			case 163:
@@ -5486,7 +5486,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1244;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("primeomega", "count of prime factors with multiplicity yet"); 
+				 _localctx.value =  NotImplementedFunction("lambertw", "Lambert W function yet"); 
 				}
 				break;
 			case 164:
@@ -5498,7 +5498,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1249;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("primepi", "prime-counting function yet"); 
+				 _localctx.value =  NotImplementedFunction("productlog", "Lambert W function yet"); 
 				}
 				break;
 			case 165:

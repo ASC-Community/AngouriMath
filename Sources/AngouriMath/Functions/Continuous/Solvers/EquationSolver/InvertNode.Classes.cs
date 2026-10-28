@@ -905,6 +905,41 @@ namespace AngouriMath
                 => null;
         }
 
+        partial record Mobiusf
+        {
+            // Every argument with a given value is a set no list of values of x is. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
+        partial record DivisorSigmaf
+        {
+            // Every argument with a given value is a set no list of values of x is. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
+        partial record PrimeNuf
+        {
+            // Every argument with a given value is a set no list of values of x is. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
+        partial record PrimeOmegaf
+        {
+            // Every argument with a given value is a set no list of values of x is. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
+        partial record PrimePif
+        {
+            // Every argument with a given value is a set no list of values of x is. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
         partial record Phif
         {
             // We can't easily calculate (compute) all solutions there are for this function

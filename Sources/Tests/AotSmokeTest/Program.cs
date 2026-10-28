@@ -118,6 +118,13 @@ namespace AngouriMath.AotSmokeTest
             // The double factorial is a postfix the parser builds. https://github.com/asc-community/AngouriMath/issues/2182
             var doubleFactorial = MathS.FromString("x!! + 0");
             CheckClose("x!! at x = 7", At(doubleFactorial, "x", 7), 105);
+
+            // The functions of a factorisation, and the count of primes by a sieve.
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            var mobius = MathS.FromString("mobius(n) + divisorsigma(1, n) + primeomega(n)");
+            CheckClose("mu + sigma + Omega at n = 12", At(mobius, "n", 12), 0 + 28 + 3);
+            var primes = MathS.FromString("primepi(x)");
+            CheckClose("primepi at x = 100", At(primes, "x", 100), 25);
         }
 
         private static void Simplification()

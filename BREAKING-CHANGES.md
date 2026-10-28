@@ -440,8 +440,7 @@ the right shape, written out or once its operations are carried out, throws `Inv
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
-is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `mobius`, `moebiusmu`, `divisorsigma`, `primenu`,
-`primeomega`, `primepi`, `harmonicnumber`, `catalannumber`, `multinomial`, `fallingfactorial`, `factorialpower`,
+is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber`, `catalannumber`, `multinomial`, `fallingfactorial`, `factorialpower`,
 `risingfactorial`, `forwarddifference`, `laplacian`, `jacobian` and `hessian`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
@@ -454,7 +453,24 @@ Each name without a bracket is still a variable, and short names such as `beta` 
 | `"zeta(2)".ToEntity().Simplify()` | `2 * zeta` | throws `UnrecognizedFunctionParseException` |
 | `"isprime(7)".ToEntity()` | `isprime * 7` | throws `UnrecognizedFunctionParseException`: write `n in PP` |
 | `"heaviside(x)".ToEntity()` | `heaviside * x` | throws `UnrecognizedFunctionParseException`: write `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2` |
-| `"divisorsigma(k, n)".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
+| `"multinomial(a, b, c)".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
+
+### The Möbius, divisor and prime-counting functions
+
+**Not silent: `mobius(n)`, `divisorsigma(k, n)`, `primenu(n)`, `primeomega(n)` and `primepi(x)` are now functions, where
+they were read as products or, with two arguments, were a parse error.** `mobius` (also `moebiusmu`) is the Möbius
+function μ, `divisorsigma(k, n)` the sum of the `k`-th powers of the divisors of `n`, and `primenu` and `primeomega` the
+number of prime factors without and with multiplicity, ω and Ω. Each is defined on the positive integers and is `NaN`
+elsewhere. `primepi(x)` counts the primes at most the real number `x`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"mobius(6)".ToEntity().Simplify()` | `6 * mobius` | `1` |
+| `"divisorsigma(1, 6)".ToEntity().Simplify()` | throws `UnhandledParseException` | `12` |
+| `"primeomega(12)".ToEntity().Simplify()` | `12 * primeomega` | `3` |
+| `"primepi(10)".ToEntity().Evaled` | `primepi * 10` | `4` |
+| `"mobius(0)".ToEntity().Simplify()` | `0` | `NaN` |
 ### A subscript may have a subscript
 
 **Not silent: what was a parse error is a name.** A name took at most one `_`, so `x_1_2` and `X_a_beta` were lexer

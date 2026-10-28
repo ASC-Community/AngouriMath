@@ -368,6 +368,38 @@ namespace AngouriMath
             private protected override string LatexizeNode() => $@"\operatorname{{prime}}\left({Argument.Latexize()}\right)";
         }
 
+        // A Greek letter that could be a variable is wrapped in \operatorname, as phi is, since
+        // mu * (n + 1) draws as \mu \left(n+1\right). https://github.com/asc-community/AngouriMath/issues/2182
+        partial record Mobiusf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\operatorname{{\mu}}\left({Argument.Latexize()}\right)";
+        }
+
+        partial record PrimeNuf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\operatorname{{\omega}}\left({Argument.Latexize()}\right)";
+        }
+
+        partial record PrimeOmegaf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\operatorname{{\Omega}}\left({Argument.Latexize()}\right)";
+        }
+
+        partial record PrimePif
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\operatorname{{\pi}}\left({Argument.Latexize()}\right)";
+        }
+
+        partial record DivisorSigmaf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\operatorname{{\sigma}}_{{{Order.Latexize()}}}\left({Argument.Latexize()}\right)";
+        }
+
         partial record Valuationf
         {
             /// <inheritdoc/>

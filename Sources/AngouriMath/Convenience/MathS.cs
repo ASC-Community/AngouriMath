@@ -50,6 +50,26 @@ namespace AngouriMath
             /// </example>
             public static Entity Phi(Entity integer) => new Phif(integer);
 
+            /// <summary>The Möbius function <c>μ(n)</c> of a positive integer</summary>
+            /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+            public static Entity Mobius(Entity n) => new Mobiusf(n);
+
+            /// <summary>The divisor function <c>σ_k(n)</c>: the sum of the <c>k</c>-th powers of the divisors of <c>n</c></summary>
+            /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+            public static Entity DivisorSigma(Entity order, Entity n) => new DivisorSigmaf(order, n);
+
+            /// <summary>The number of distinct prime factors <c>ω(n)</c> of a positive integer</summary>
+            /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+            public static Entity PrimeNu(Entity n) => new PrimeNuf(n);
+
+            /// <summary>The number of prime factors <c>Ω(n)</c> of a positive integer, with multiplicity</summary>
+            /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+            public static Entity PrimeOmega(Entity n) => new PrimeOmegaf(n);
+
+            /// <summary>The prime-counting function <c>π(x)</c>: how many primes are at most <c>x</c></summary>
+            /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+            public static Entity PrimePi(Entity x) => new PrimePif(x);
+
             /// <summary>
             /// The <c>n</c>-th prime, <c>prime(n)</c>: <c>prime(1)</c> is <c>2</c> and
             /// <c>prime(25)</c> is <c>97</c>. Defined on the positive whole numbers, and a

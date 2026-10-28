@@ -271,6 +271,32 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.prime({Argument.ToSymPy()})";
         }
 
+        public partial record Mobiusf
+        {
+            internal override string ToSymPy() => $"sympy.mobius({Argument.ToSymPy()})";
+        }
+
+        public partial record PrimeNuf
+        {
+            internal override string ToSymPy() => $"sympy.primenu({Argument.ToSymPy()})";
+        }
+
+        public partial record PrimeOmegaf
+        {
+            internal override string ToSymPy() => $"sympy.primeomega({Argument.ToSymPy()})";
+        }
+
+        public partial record PrimePif
+        {
+            internal override string ToSymPy() => $"sympy.primepi({Argument.ToSymPy()})";
+        }
+
+        public partial record DivisorSigmaf
+        {
+            // SymPy takes the argument first and the order second.
+            internal override string ToSymPy() => $"sympy.divisor_sigma({Argument.ToSymPy()}, {Order.ToSymPy()})";
+        }
+
         public partial record Valuationf
         {
             internal override string ToSymPy() => $"sympy.multiplicity({Prime.ToSymPy()}, {Argument.ToSymPy()})";

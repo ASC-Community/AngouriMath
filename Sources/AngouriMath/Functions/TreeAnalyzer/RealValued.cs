@@ -71,8 +71,9 @@ namespace AngouriMath.Functions
                 case Polygammaf(var order, var argument) when !order.ContainsNode(x):
                     return IsRealValued(argument, x);
                 // A modulus is real whatever it is taken of, and so are an argument and a real
-                // and an imaginary part; an Iverson bracket is 0 or 1.
-                case Absf or Iversonf or Argf or Ref or Imf:
+                // and an imaginary part; an Iverson bracket is 0 or 1, and the Möbius function and
+                // the counts of primes are integers.
+                case Absf or Iversonf or Argf or Ref or Imf or Mobiusf or PrimeNuf or PrimeOmegaf or PrimePif:
                     return true;
                 default:
                     return false;
@@ -157,7 +158,7 @@ namespace AngouriMath.Functions
                     return GatherTheBasesOfRoots(expr.DirectChildren[0], x, bases);
                 case Polygammaf(var order, var argument) when !order.ContainsNode(x):
                     return GatherTheBasesOfRoots(argument, x, bases);
-                case Absf or Iversonf or Argf or Ref or Imf:
+                case Absf or Iversonf or Argf or Ref or Imf or Mobiusf or PrimeNuf or PrimeOmegaf or PrimePif:
                     return true;
                 default:
                     return false;

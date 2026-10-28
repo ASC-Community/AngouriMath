@@ -563,6 +563,31 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "prime_";
         }
 
+        partial record Mobiusf
+        {
+            private protected override string SortHashName(SortLevel level) => "mobius_";
+        }
+
+        partial record DivisorSigmaf
+        {
+            private protected override string SortHashName(SortLevel level) => "divisorsigma_";
+        }
+
+        partial record PrimeNuf
+        {
+            private protected override string SortHashName(SortLevel level) => "primenu_";
+        }
+
+        partial record PrimeOmegaf
+        {
+            private protected override string SortHashName(SortLevel level) => "primeomega_";
+        }
+
+        partial record PrimePif
+        {
+            private protected override string SortHashName(SortLevel level) => "primepi_";
+        }
+
         partial record Valuationf
         {
             private protected override string SortHashName(SortLevel level) => "valuation_";

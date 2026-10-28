@@ -77,6 +77,11 @@ namespace AngouriMath
         }
         [EntityJsonConverter] partial record Orf;
         [EntityJsonConverter] partial record Phif;
+        [EntityJsonConverter] partial record Mobiusf;
+        [EntityJsonConverter] partial record DivisorSigmaf;
+        [EntityJsonConverter] partial record PrimeNuf;
+        [EntityJsonConverter] partial record PrimeOmegaf;
+        [EntityJsonConverter] partial record PrimePif;
         [EntityJsonConverter] partial record Primef;
         [EntityJsonConverter] partial record Valuationf;
         [EntityJsonConverter] partial record Dividesf;

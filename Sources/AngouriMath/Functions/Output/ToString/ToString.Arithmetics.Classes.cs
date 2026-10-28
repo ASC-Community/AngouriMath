@@ -105,6 +105,46 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        partial record Mobiusf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $@"mobius({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record PrimeNuf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $@"primenu({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record PrimeOmegaf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $@"primeomega({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record PrimePif
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $@"primepi({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record DivisorSigmaf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $@"divisorsigma({Order.Stringize()}, {Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         partial record Valuationf
         {
             /// <inheritdoc/>

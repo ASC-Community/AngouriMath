@@ -452,6 +452,107 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// The Möbius function <c>mobius(n)</c>, <c>μ(n)</c>: 0 where a square of a prime divides the positive integer <c>n</c>, and <c>(-1)^k</c> where <c>n</c> is a product of <c>k</c> distinct primes, so <c>μ(1) = 1</c>.
+        /// </summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public sealed partial record Mobiusf(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            internal Mobiusf New(Entity argument)
+                   => ReferenceEquals(argument, Argument) ? this : new(argument) { Codomain = Codomain };
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
+        /// The number of distinct prime factors <c>primenu(n)</c>, <c>ω(n)</c>, of a positive integer: <c>ω(12) = 2</c> and <c>ω(1) = 0</c>.
+        /// </summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public sealed partial record PrimeNuf(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            internal PrimeNuf New(Entity argument)
+                   => ReferenceEquals(argument, Argument) ? this : new(argument) { Codomain = Codomain };
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
+        /// The number of prime factors <c>primeomega(n)</c>, <c>Ω(n)</c>, of a positive integer, counted with multiplicity: <c>Ω(12) = 3</c>.
+        /// </summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public sealed partial record PrimeOmegaf(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            internal PrimeOmegaf New(Entity argument)
+                   => ReferenceEquals(argument, Argument) ? this : new(argument) { Codomain = Codomain };
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
+        /// The prime-counting function <c>primepi(x)</c>, <c>π(x)</c>: how many primes are at most the real number <c>x</c>, so <c>π(10) = 4</c>.
+        /// </summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public sealed partial record PrimePif(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            internal PrimePif New(Entity argument)
+                   => ReferenceEquals(argument, Argument) ? this : new(argument) { Codomain = Codomain };
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
+        /// The divisor function <c>divisorsigma(k, n)</c>, <c>σ_k(n)</c>: the sum of the <c>k</c>-th powers of
+        /// the positive divisors of the positive integer <c>n</c>, so <c>σ_0</c> counts them and <c>σ_1</c> sums
+        /// them. The order first, as the notation and Mathematica's <c>DivisorSigma[k, n]</c> read.
+        /// </summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public sealed partial record DivisorSigmaf(Entity Order, Entity Argument) : Function, IBinaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeFirstChild => Order;
+
+            /// <inheritdoc/>
+            public Entity NodeSecondChild => Argument;
+
+            internal DivisorSigmaf New(Entity order, Entity argument)
+                => ReferenceEquals(Order, order) && ReferenceEquals(Argument, argument) ? this : new(order, argument) { Codomain = Codomain };
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func)
+                => func(New(Order.Replace(func), Argument.Replace(func)));
+
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Order, Argument };
+        }
+
+        /// <summary>
         /// This node represents whether the first argument divides the second: <c>a divides b</c>
         /// is the statement that <c>b</c> is a whole multiple of <c>a</c>, which for integers is
         /// <c>b mod a = 0</c>, and <c>0 divides b</c> exactly when <c>b</c> is 0. A statement
