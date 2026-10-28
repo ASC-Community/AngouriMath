@@ -75,7 +75,7 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("(sqrt(x) = a) provided a in RR", "{ a ^ 2 provided a in RR and a >= 0 }")]
         [InlineData("(sqrt(x) = a) provided a > 0", "{ a ^ 2 provided a > 0 }")]
         [InlineData("(sqrt(x) = a) provided a >= 1", "{ a ^ 2 provided a >= 1 }")]
-        [InlineData("(sqrt(x) = a) provided a > -5", "{ a ^ 2 provided a > -5 and a >= 0 }")]
+        [InlineData("(sqrt(x) = a) provided a > -5", "{ a ^ 2 provided a >= 0 }")]
         [InlineData("(x^(-1/2) = a) provided a in RR", "{ a ^ (-2) provided a in RR and a > 0 }")]
         [InlineData("(sqrt(x) = a) provided a < 0", "{ }")]
         [InlineData("(x^(-1/2) = a) provided a <= 0", "{ }")]

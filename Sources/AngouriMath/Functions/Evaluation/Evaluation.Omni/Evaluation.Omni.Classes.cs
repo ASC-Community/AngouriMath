@@ -458,19 +458,21 @@ namespace AngouriMath
                             Decide(exprProvided.Expression, Both(Both(exprProvided.Predicate, predProvided.Predicate), predProvided.Expression)),
                         (var expr, Providedf predProvided) => Decide(expr, Both(predProvided.Predicate, predProvided.Expression)),
                         (Providedf exprProvided, var pred) => Decide(exprProvided.Expression, Both(pred, exprProvided.Predicate)),
+                        (var expr, Andf(var left, var right)) => Decide(expr, Both(left, right)),
                         (var expr, var pred) => Decide(expr, pred),
                     },
                     (@this, a, b) => ((Providedf)@this).New(a, b), isExact);
 
-            // Two conditions joined, with a conjunct already stated not stated again. A row of a
-            // system substituted into the expressions that carry its condition had it conjoined
-            // once a substitution, five times over for sqrt(y) - x, y - a. The conjunction is
-            // rebuilt only where something repeats, so every other condition keeps its shape.
+            // Two conditions joined, with a conjunct that another conjunct already forces not stated:
+            // a > -5 beside a >= 0 says nothing more, and neither does a condition stated twice,
+            // which a row of a system substituted into the expressions carrying it had once a
+            // substitution, five times over for sqrt(y) - x, y - a. Of two that force each other,
+            // the first is kept. The conjunction is rebuilt only where something goes, so every
+            // other condition keeps its shape.
             // https://github.com/asc-community/AngouriMath/issues/212
             private static Entity Both(Entity first, Entity second)
             {
                 var conjuncts = new List<Entity>();
-                var repeated = false;
                 void Gather(Entity condition)
                 {
                     if (condition is Andf(var left, var right))
@@ -478,14 +480,23 @@ namespace AngouriMath
                         Gather(left);
                         Gather(right);
                     }
-                    else if (conjuncts.Contains(condition))
-                        repeated = true;
                     else
                         conjuncts.Add(condition);
                 }
                 Gather(first);
                 Gather(second);
-                return repeated ? conjuncts.Aggregate((joined, next) => joined & next) : first & second;
+                var kept = new List<Entity>(conjuncts.Count);
+                for (var i = 0; i < conjuncts.Count; i++)
+                {
+                    var forced = false;
+                    for (var j = 0; j < conjuncts.Count && !forced; j++)
+                        forced = j != i
+                            && Functions.PredicateEntailment.Entails(conjuncts[j], conjuncts[i])
+                            && (j < i || !Functions.PredicateEntailment.Entails(conjuncts[i], conjuncts[j]));
+                    if (!forced)
+                        kept.Add(conjuncts[i]);
+                }
+                return kept.Count == conjuncts.Count ? first & second : kept.Aggregate((joined, next) => joined & next);
             }
         }
 
