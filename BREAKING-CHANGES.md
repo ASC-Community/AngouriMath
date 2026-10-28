@@ -76,6 +76,24 @@ the square root the solver takes after solving for `x^2`, where an equation has 
 | `"x^4 - (a^2 + b^2)*x^2 + a^2*b^2 = 0".Solve("x")` | `{ sqrt((a ^ 2 + b ^ 2 - sqrt((-(a ^ 2 + b ^ 2)) ^ 2 - 4 * a ^ 2 * b ^ 2)) / 2), … }` | `{ -b, b, -a, a }` |
 | `"sin(x)^2 = (a + 1)^2".Solve("x")` | `{ arcsin(sqrt((a + 1) ^ 2)) + 2 * pi * n_1, … }` | `{ arcsin(-a - 1) + 2 * pi * n_1, … }` |
 
+### A fractional power is inverted where its values lie
+
+**Silent: a root gains the condition under which it is one.** The principal power `z^p` has argument `p arg(z)`, so
+for `0 < p < 1` its values lie in the sector `-p pi < arg <= p pi`, with `0`, and for `-1 < p < 0` in
+`p pi <= arg < -p pi`, without `0`. `x^p = a` was solved to `a^(1/p)` with no condition, which is no root where `a` is
+outside the sector: `sqrt(x) = a` was `{ a ^ 2 }`, and at `a = -1` that is `1`, whose square root is `1` and not `-1`. The root now carries
+the sector, written with `arg`, as `abs`'s inversion carries its own condition. A number on the other side is decided
+as before, and `|p| > 1` needs no condition, since every value is then a power. A condition that is already part of
+another is no longer stated twice: a system's rows carried the same condition once a substitution
+([#212](https://github.com/asc-community/AngouriMath/issues/212)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sqrt(x) = a".ToEntity().Solve("x")` | `{ a ^ 2 }` | `{ a ^ 2 provided a = 0 or -1/2 * pi < arg(a) and arg(a) <= 1/2 * pi }` |
+| `"x^(1/3) = a".ToEntity().Solve("x")` | `{ a ^ 3 }` | `{ a ^ 3 provided a = 0 or -1/3 * pi < arg(a) and arg(a) <= 1/3 * pi }` |
+| `"x^(-1/2) = a".ToEntity().Solve("x")` | `{ a ^ (-2) }` | `{ a ^ (-2) provided not a = 0 and -1/2 * pi <= arg(a) and arg(a) < 1/2 * pi }` |
+| `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
+
 ### A system with a product equation is solved branch by branch
 
 **Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,
@@ -229,7 +247,7 @@ is `null`. A row with symbols in it is tried at one value of them, and where it 
 | `MathS.Equations("sqrt(y) - x", "x + 1").Solve("x", "y")` | `[[-1, 1]]` | `null`: `sqrt(1) - (-1)` is 2 |
 | `MathS.Equations("sqrt(y) - x", "y - 4").Solve("x", "y")` | `[[2, 4], [-2, 4]]` | `[[2, 4]]` |
 | `MathS.Equations("ln(x) + ln(y)", "x - y").Solve("x", "y")` | `[[-1, -1], [1, 1]]` | `[[1, 1]]`: `ln(-1) + ln(-1)` is `2 pi i` |
-| `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `null`: the second row is a solution only at `a = 0` |
+| `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | both rows, each with where it holds: see *A fractional power is inverted where its values lie* |
 
 ### The power reduction of a squared cosine is proved, as the squared sine's is
 

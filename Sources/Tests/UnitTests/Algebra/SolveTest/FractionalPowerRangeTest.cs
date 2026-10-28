@@ -1,0 +1,77 @@
+//
+// Copyright (c) 2019-2026 Angouri.
+// AngouriMath is licensed under MIT.
+// Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
+// Website: https://am.angouri.org.
+//
+
+using AngouriMath;
+using AngouriMath.Extensions;
+using System.Linq;
+using Xunit;
+using static AngouriMath.Entity;
+
+namespace AngouriMath.Tests.Algebra
+{
+    /// <summary>
+    /// The principal power <c>z^p</c> has argument <c>p arg(z)</c>, so for <c>|p| &lt; 1</c> its
+    /// values lie in a sector, and an equation with its other side outside the sector has no
+    /// solution. <c>sqrt(x) = a</c> was answered <c>{ a ^ 2 }</c>, which is wrong at
+    /// <c>a = -1</c>: <c>sqrt((-1)^2)</c> is <c>1</c>.
+    /// <a href="https://github.com/asc-community/AngouriMath/issues/212">#212</a>
+    /// </summary>
+    [Trait("Area", "Algebra")]
+    public sealed class FractionalPowerRangeTest
+    {
+        private static Entity OnlyRoot(string equation)
+        {
+            var roots = Assert.IsType<Set.FiniteSet>(equation.ToEntity().Solve("x"));
+            return Assert.Single(roots);
+        }
+
+        /// <summary>
+        /// The root holds exactly where its condition does, at a value inside the sector, one on
+        /// its included edge, and one outside.
+        /// </summary>
+        [Theory]
+        [InlineData("sqrt(x) = a", "2", true)]
+        [InlineData("sqrt(x) = a", "0", true)]
+        [InlineData("sqrt(x) = a", "i", true)]
+        [InlineData("sqrt(x) = a", "-i", false)]
+        [InlineData("sqrt(x) = a", "-1", false)]
+        [InlineData("x^(1/3) = a", "1 + i", true)]
+        [InlineData("x^(1/3) = a", "-1", false)]
+        [InlineData("x^(-1/2) = a", "-i", true)]
+        [InlineData("x^(-1/2) = a", "i", false)]
+        [InlineData("x^(-1/2) = a", "0", false)]
+        public void TheRootHoldsWhereItsConditionDoes(string equation, string value, bool holds)
+        {
+            var root = Assert.IsType<Providedf>(OnlyRoot(equation));
+            var at = value.ToEntity();
+            Assert.Equal(Boolean.Create(holds), root.Predicate.Substitute("a", at).EvalBoolean());
+            if (!holds)
+                return;
+            var lhs = equation.Split('=')[0].ToEntity();
+            var residual = (lhs.Substitute("x", root.Expression.Substitute("a", at)) - at).EvalNumerical();
+            Assert.True(Number.Abs(residual).EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromString("1e-30")) < 0,
+                $"{equation} at a = {value}: the residual is {residual}");
+        }
+
+        /// <summary>A number on the other side is decided, as it was.</summary>
+        [Theory]
+        [InlineData("sqrt(x) = 2", "{ 4 }")]
+        [InlineData("sqrt(x) = -1", "{ }")]
+        [InlineData("sqrt(x) = i", "{ -1 }")]
+        [InlineData("sqrt(x) = -i", "{ }")]
+        public void ANumberIsDecided(string equation, string expected)
+            => Assert.Equal(expected.ToEntity(), equation.ToEntity().Solve("x"));
+
+        /// <summary>
+        /// For <c>|p| &gt; 1</c> the sector is the whole plane, and <c>v^(1/p)</c> is a preimage
+        /// of every <c>v</c>, so there is nothing to state.
+        /// </summary>
+        [Fact]
+        public void APowerAboveOneNeedsNoCondition()
+            => Assert.IsNotType<Providedf>(OnlyRoot("x^(3/2) = a"));
+    }
+}
