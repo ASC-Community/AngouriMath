@@ -643,6 +643,22 @@ namespace AngouriMath.Functions
                 && RationalFunction.TryCanonicalize(stage1, out var canonical, wholeCoefficients: true))
                 AddHistory(Noted(recording, stage1, canonical, "RationalCanonicalization", canonicalMark));
 
+            // The constant a rational function of sines and cosines is, where it is one. The rules
+            // above open an angle sum, double an angle and take the Pythagorean pair a step at a
+            // time, and an identity that needs all three in one order was not reached:
+            // sin(a/2)^2 - (1 - cos(a))/2, the Weierstrass forms and sum-to-product, and the tangent
+            // addition formula. TrigonometricIdentity decides every such identity. It is the value
+            // wherever the expression has one, so the condition is the expression's own domain, as
+            // for a - a. Under the same complexity bound as the quotient above, and asked by a walk
+            // that allocates nothing. Not where the rules already reached the same answer, so that
+            // what a derivation records is their steps and not one step that names no identity.
+            // https://github.com/asc-community/AngouriMath/issues/2142
+            var identityMark = recording?.Mark() ?? 0;
+            if (stage1.Complexity <= 64 && IsARationalFunctionOfTrigonometricFunctions(stage1)
+                && TrigonometricIdentity.TryConstant(stage1, out var identity)
+                && identity.Provided(stage1.DomainCondition) is var proved && !registered.Contains(proved))
+                AddHistory(Noted(recording, stage1, proved, "TrigonometricIdentity", identityMark));
+
             return history.Values.SelectMany(x => x);
         }
 
@@ -676,6 +692,46 @@ namespace AngouriMath.Functions
                     return IsARationalFunction(left, ref quotient) && IsARationalFunction(right, ref quotient);
                 case Mulf(var left, var right):
                     return IsARationalFunction(left, ref quotient) && IsARationalFunction(right, ref quotient);
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is made of numbers, variables, the four operations, whole
+        /// powers and sines, cosines, tangents, cotangents, secants and cosecants, with at least one
+        /// of those: the expressions <see cref="TrigonometricIdentity.TryConstant"/> may decide.
+        /// What the functions are applied to is its own question.
+        /// </summary>
+        private static bool IsARationalFunctionOfTrigonometricFunctions(Entity expr)
+        {
+            var trigonometric = false;
+            return IsARationalFunctionOfTrigonometricFunctions(expr, ref trigonometric) && trigonometric;
+        }
+
+        private static bool IsARationalFunctionOfTrigonometricFunctions(Entity node, ref bool trigonometric)
+        {
+            switch (node)
+            {
+                case Number or Variable:
+                    return true;
+                case Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf:
+                    trigonometric = true;
+                    return true;
+                case Divf(var dividend, var divisor):
+                    return IsARationalFunctionOfTrigonometricFunctions(dividend, ref trigonometric)
+                        && IsARationalFunctionOfTrigonometricFunctions(divisor, ref trigonometric);
+                case Powf(var @base, Integer):
+                    return IsARationalFunctionOfTrigonometricFunctions(@base, ref trigonometric);
+                case Sumf(var left, var right):
+                    return IsARationalFunctionOfTrigonometricFunctions(left, ref trigonometric)
+                        && IsARationalFunctionOfTrigonometricFunctions(right, ref trigonometric);
+                case Minusf(var left, var right):
+                    return IsARationalFunctionOfTrigonometricFunctions(left, ref trigonometric)
+                        && IsARationalFunctionOfTrigonometricFunctions(right, ref trigonometric);
+                case Mulf(var left, var right):
+                    return IsARationalFunctionOfTrigonometricFunctions(left, ref trigonometric)
+                        && IsARationalFunctionOfTrigonometricFunctions(right, ref trigonometric);
                 default:
                     return false;
             }
