@@ -56,6 +56,14 @@ options
             $"there is no function {name}: AngouriMath has no {what}. It is refused by name " +
             $"rather than read as the product of a variable named {name} with its argument, " +
             $"which is what an unknown name followed by a bracket would otherwise mean");
+
+    // A name that will not be a function, because what it means is ambiguous or is already
+    // written exactly another way, refused with the spelling to use, as NN is refused with ZZ+
+    // and ZZ*. https://github.com/asc-community/AngouriMath/issues/2182
+    static Entity NotAFunctionHere(string name, string instead)
+        => throw new UnrecognizedFunctionParseException(
+            $"{name} is not a function in AngouriMath: {instead}. It is refused by name rather " +
+            $"than read as the product of a variable named {name} with its argument");
 }
 
 @namespace { Antlr }
@@ -658,6 +666,42 @@ atom returns[Entity value]
        between a missing function and a wrong answer. */
 
     | 'trunc(' args = function_arguments ')' { $value = NotImplementedFunction("trunc", "rounding functions"); }
+    /* Names of functions to come, reserved so that each is refused rather than read as a
+       product until it is implemented: zeta(s) was zeta * s. Only names no one writes as a
+       variable before a bracket; beta, norm, grad, div, curl and the other short ones are left
+       as products until each lands. The names and their conventions are in
+       https://github.com/asc-community/AngouriMath/issues/2182 */
+    | 'zeta(' args = function_arguments ')' { $value = NotImplementedFunction("zeta", "Riemann or Hurwitz zeta function yet"); }
+    | 'riemannzeta(' args = function_arguments ')' { $value = NotImplementedFunction("riemannzeta", "Riemann zeta function yet"); }
+    | 'hurwitzzeta(' args = function_arguments ')' { $value = NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); }
+    | 'lambertw(' args = function_arguments ')' { $value = NotImplementedFunction("lambertw", "Lambert W function yet"); }
+    | 'productlog(' args = function_arguments ')' { $value = NotImplementedFunction("productlog", "Lambert W function yet"); }
+    | 'mobius(' args = function_arguments ')' { $value = NotImplementedFunction("mobius", "Mobius function yet"); }
+    | 'moebiusmu(' args = function_arguments ')' { $value = NotImplementedFunction("moebiusmu", "Mobius function yet"); }
+    | 'divisorsigma(' args = function_arguments ')' { $value = NotImplementedFunction("divisorsigma", "divisor function yet"); }
+    | 'primenu(' args = function_arguments ')' { $value = NotImplementedFunction("primenu", "count of distinct prime factors yet"); }
+    | 'primeomega(' args = function_arguments ')' { $value = NotImplementedFunction("primeomega", "count of prime factors with multiplicity yet"); }
+    | 'primepi(' args = function_arguments ')' { $value = NotImplementedFunction("primepi", "prime-counting function yet"); }
+    | 'harmonicnumber(' args = function_arguments ')' { $value = NotImplementedFunction("harmonicnumber", "harmonic numbers yet"); }
+    | 'catalannumber(' args = function_arguments ')' { $value = NotImplementedFunction("catalannumber", "Catalan numbers yet"); }
+    | 'multinomial(' args = function_arguments ')' { $value = NotImplementedFunction("multinomial", "multinomial coefficients yet"); }
+    | 'fallingfactorial(' args = function_arguments ')' { $value = NotImplementedFunction("fallingfactorial", "falling factorial yet"); }
+    | 'factorialpower(' args = function_arguments ')' { $value = NotImplementedFunction("factorialpower", "falling factorial yet"); }
+    | 'risingfactorial(' args = function_arguments ')' { $value = NotImplementedFunction("risingfactorial", "rising factorial yet"); }
+    | 'forwarddifference(' args = function_arguments ')' { $value = NotImplementedFunction("forwarddifference", "forward difference yet"); }
+    | 'laplacian(' args = function_arguments ')' { $value = NotImplementedFunction("laplacian", "Laplacian yet"); }
+    | 'jacobian(' args = function_arguments ')' { $value = NotImplementedFunction("jacobian", "Jacobian yet"); }
+    | 'hessian(' args = function_arguments ')' { $value = NotImplementedFunction("hessian", "Hessian yet"); }
+    /* Names that will not be functions, refused with the spelling to use: what they mean is
+       ambiguous between sources, or is already written exactly another way. */
+    | 'heaviside(' args = function_arguments ')' { $value = NotAFunctionHere("heaviside", "its value at 0 is 0, 1/2 or 1 by source; write iverson(x > 0), iverson(x >= 0) or (1 + sgn(x))/2"); }
+    | 'unitstep(' args = function_arguments ')' { $value = NotAFunctionHere("unitstep", "write iverson(x >= 0), which is 1 at 0"); }
+    | 'isprime(' args = function_arguments ')' { $value = NotAFunctionHere("isprime", "write n in PP"); }
+    | 'pochhammer(' args = function_arguments ')' { $value = NotAFunctionHere("pochhammer", "(x)_n is the rising factorial to some and the falling one to others; write risingfactorial or fallingfactorial"); }
+    | 'doublefactorial(' args = function_arguments ')' { $value = NotAFunctionHere("doublefactorial", "the double factorial is to be the postfix n!!, which is not implemented yet"); }
+    | 'factorial2(' args = function_arguments ')' { $value = NotAFunctionHere("factorial2", "the double factorial is to be the postfix n!!, which is not implemented yet"); }
+    | 'fractionalpart(' args = function_arguments ')' { $value = NotAFunctionHere("fractionalpart", "write x mod 1, which is in [0, 1)"); }
+    | 'quotient(' args = function_arguments ')' { $value = NotAFunctionHere("quotient", "write floor(a / b)"); }
     | 'domain(' args = function_arguments ')' 
         { 
             Assert("domain", 2, $args.list.Count); 
