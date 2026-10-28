@@ -171,6 +171,39 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         }
 
         /// <summary>
+        /// Where the elimination declines, <c>Determinant</c> expands along the first row itself,
+        /// since GenericTensor's expansion cannot be published to a native build, and it has to
+        /// agree with GenericTensor's on what neither reads as a polynomial.
+        /// https://github.com/asc-community/AngouriMath/issues/2147
+        /// </summary>
+        [Fact]
+        public void TheExpansionAgreesWithGenericTensorsWhereTheEliminationDeclines()
+        {
+            var random = new System.Random(2147);
+            var atoms = new Entity[] { MathS.Sqrt("a"), MathS.Sin("b"), MathS.Var("c"), MathS.Ln("d") };
+            var disagreements = new List<string>();
+            for (var trial = 0; trial < 60; trial++)
+            {
+                var size = 2 + trial % 3;
+                var cells = new Entity[size, size];
+                for (var row = 0; row < size; row++)
+                    for (var column = 0; column < size; column++)
+                        cells[row, column] = random.Next(0, 2) == 0
+                            ? atoms[random.Next(0, atoms.Length)] * random.Next(1, 4)
+                            : random.Next(-4, 5);
+                cells[0, 0] = atoms[0];
+                var matrix = MathS.Matrix(cells);
+                var byLaplace = GenTensorGuard.DeterminantLaplace(matrix.InnerMatrix).InnerSimplified;
+                // Compared by value at a point: a 4x4 expansion is past what Simplify proves zero.
+                var difference = (matrix.Determinant! - byLaplace)
+                    .Substitute("a", 2).Substitute("b", 3).Substitute("c", 5).Substitute("d", 7).EvalNumerical();
+                if (Entity.Number.Abs(difference).EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromString("1e-40")) > 0)
+                    disagreements.Add($"{matrix.Stringize()}: {matrix.Determinant!.Stringize()} vs {byLaplace.Stringize()}");
+            }
+            Assert.True(disagreements.Count == 0, string.Join("\n  ", disagreements));
+        }
+
+        /// <summary>
         /// The size the issue is about. Laplace is <c>O(n!)</c>, so a 10×10 took about fourteen
         /// seconds and an 11×11 did not return; this is the same work in milliseconds.
         /// </summary>

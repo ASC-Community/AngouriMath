@@ -29,14 +29,14 @@ namespace AngouriMath.Tests.Convenience
         // floor, ceil, ceiling, round, min, max, gcd and lcm were all on this list until they
         // were implemented: https://github.com/asc-community/AngouriMath/issues/809, and erf
         // until https://github.com/asc-community/AngouriMath/issues/1501.
-        // conj, arg and det since https://github.com/asc-community/AngouriMath/issues/2136:
-        // arg(z) was arg * z.
+        // conj and arg since https://github.com/asc-community/AngouriMath/issues/2136: arg(z)
+        // was arg * z. det was refused there too, until
+        // https://github.com/asc-community/AngouriMath/issues/2147.
         [Theory]
         [InlineData("trunc(x)")]
         [InlineData("conjugate(x)")]
         [InlineData("conj(z)")]
         [InlineData("arg(z)")]
-        [InlineData("det([[1, 2], [3, 4]])")]
         public void ANameTheLibraryDoesNotHaveIsRefused(string written) =>
             Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity());
 
@@ -59,7 +59,6 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("trunc(x)", "trunc")]
         [InlineData("conjugate(x)", "conjugate")]
         [InlineData("arg(z)", "arg")]
-        [InlineData("det([[1, 2], [3, 4]])", "det")]
         public void TheRefusalNamesTheFunction(string written, string name) =>
             Assert.Contains(name,
                 Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity()).Message);

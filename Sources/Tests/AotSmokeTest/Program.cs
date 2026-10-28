@@ -99,6 +99,14 @@ namespace AngouriMath.AotSmokeTest
 
             var piecewise = MathS.FromString("piecewise(1 provided x > 0, 0 provided x <= 0)");
             CheckClose("piecewise at x = 2", At(piecewise, "x", 2), 1);
+
+            // det is computed while parsing, so it is reached from every native build. A sine is not
+            // a polynomial entry, so this takes the Laplace expansion rather than the elimination.
+            // https://github.com/asc-community/AngouriMath/issues/2147
+            var determinant = MathS.FromString("det([[1, 2], [3, sin(x)]])");
+            CheckClose("det at x = 0", At(determinant, "x", 0), -6);
+            var dot = MathS.FromString("dot(cross([1, 0, 0], [0, 1, 0]), [0, 0, x])");
+            CheckClose("dot of a cross at x = 5", At(dot, "x", 5), 5);
         }
 
         private static void Simplification()

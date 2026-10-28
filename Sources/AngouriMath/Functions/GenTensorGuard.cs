@@ -56,7 +56,11 @@ namespace AngouriMath.Functions
         /// </remarks>
         [ConstantField] private static readonly object ScratchPool = new object();
 
-        /// <summary>Laplace expansion, serialised on <see cref="ScratchPool"/>.</summary>
+        /// <summary>
+        /// Laplace expansion, serialised on <see cref="ScratchPool"/>. <see cref="Entity.Matrix.Determinant"/>
+        /// has its own expansion now, which a native build can publish; this is GenericTensor's,
+        /// kept as the independent one the tests compare it with.
+        /// </summary>
         internal static Entity DeterminantLaplace(GenTensor matrix)
         {
             lock (ScratchPool)

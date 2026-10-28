@@ -31,6 +31,92 @@ namespace AngouriMath.Core.Antlr
             return tb.ToMatrix() ?? throw new AngouriBugException("Should've been checked already");
         }
 
+        // det, transpose, dot, cross and resultant are computed from what they are applied to, and
+        // there is no node for any of them: det(A) of a symbol A has nothing to be. So an argument
+        // has to be a matrix written out, or an expression that is one once its operations are
+        // carried out, as 2 [[1, 2], [3, 4]] is.
+        // https://github.com/asc-community/AngouriMath/issues/2147
+        private static Matrix MatrixArgument(string function, Entity argument, string example)
+            => argument as Matrix ?? argument.InnerSimplified as Matrix
+                ?? throw new InvalidArgumentParseException(
+                    $"{function} is computed from the entries of a matrix or a vector written out, " +
+                    $"as in {example}, and {argument} is not one");
+
+        /// <summary>The entries of a vector, written as a column or as a row.</summary>
+        private static Entity[] Components(string function, Entity argument)
+        {
+            var vector = MatrixArgument(function, argument, $"{function}([1, 2, 3], [4, 5, 6])");
+            if (vector.ColumnCount == 1)
+                return Enumerable.Range(0, vector.RowCount).Select(i => vector[i, 0]).ToArray();
+            if (vector.RowCount == 1)
+                return Enumerable.Range(0, vector.ColumnCount).Select(j => vector[0, j]).ToArray();
+            throw new InvalidArgumentParseException(
+                $"{function} is taken of vectors, and {vector} is a {vector.RowCount} by {vector.ColumnCount} matrix");
+        }
+
+        /// <summary><c>det(M)</c>: the determinant of a square matrix.</summary>
+        internal static Entity Determinant(Entity argument)
+        {
+            var matrix = MatrixArgument("det", argument, "det([[1, 2], [3, 4]])");
+            return matrix.Determinant ?? throw new InvalidArgumentParseException(
+                $"det is taken of a square matrix, and {matrix} is {matrix.RowCount} by {matrix.ColumnCount}");
+        }
+
+        /// <summary><c>transpose(M)</c>, which <c>]T</c> writes only after a bracket.</summary>
+        internal static Entity Transposed(Entity argument)
+            => MatrixArgument("transpose", argument, "transpose([[1, 2], [3, 4]])").T;
+
+        /// <summary>
+        /// <c>dot(a, b)</c>: the sum of the products of the components, without conjugating either
+        /// side, as SymPy's <c>dot</c> and Mathematica's <c>Dot</c> are.
+        /// </summary>
+        internal static Entity Dot(Entity left, Entity right)
+        {
+            var a = Components("dot", left);
+            var b = Components("dot", right);
+            if (a.Length != b.Length)
+                throw new InvalidArgumentParseException(
+                    $"dot is taken of two vectors of one length, and these have {a.Length} and {b.Length} components");
+            return Enumerable.Range(0, a.Length).Select(i => a[i] * b[i]).Aggregate((sum, term) => sum + term);
+        }
+
+        /// <summary>
+        /// <c>cross(a, b)</c>, the vector product in three dimensions, and <c>cross(a)</c>, the vector
+        /// in the plane that <c>a</c> turns into through a right angle anticlockwise: <c>(-a_2, a_1)</c>,
+        /// as Mathematica's <c>Cross</c> of one vector is. So <c>dot(cross(a), b)</c> is the plane's
+        /// pseudo-scalar product <c>a_1 b_2 - a_2 b_1</c>.
+        /// </summary>
+        internal static Entity Cross(List<Entity> arguments)
+        {
+            if (arguments.Count == 1)
+            {
+                var a = Components("cross", arguments[0]);
+                if (a.Length != 2)
+                    throw new InvalidArgumentParseException(
+                        $"cross of one vector is its turn through a right angle in the plane, and this vector has {a.Length} components");
+                return MathS.Vector(-a[1], a[0]);
+            }
+            var u = Components("cross", arguments[0]);
+            var v = Components("cross", arguments[1]);
+            if (u.Length != 3 || v.Length != 3)
+                throw new InvalidArgumentParseException(
+                    $"cross of two vectors is the vector product in three dimensions, and these have {u.Length} and {v.Length} components");
+            return MathS.Vector(
+                u[1] * v[2] - u[2] * v[1],
+                u[2] * v[0] - u[0] * v[2],
+                u[0] * v[1] - u[1] * v[0]);
+        }
+
+        /// <summary><c>resultant(p, q, x)</c>, eliminating <c>x</c> between two polynomials.</summary>
+        internal static Entity Resultant(Entity left, Entity right, Entity eliminate)
+        {
+            if (eliminate is not Variable { IsConstant: false } variable)
+                throw new InvalidArgumentParseException(
+                    $"resultant's third argument is the variable to eliminate, and {eliminate} is not a variable");
+            return MathS.Polynomials.Resultant(left, right, variable) ?? throw new InvalidArgumentParseException(
+                $"resultant is taken of two polynomials in {variable} with rational coefficients, and {left} and {right} are not both");
+        }
+
         /// <summary>
         /// The <see cref="Number.Rational"/> that a quotient of two integer literals denotes, or
         /// the node unchanged where it denotes none.

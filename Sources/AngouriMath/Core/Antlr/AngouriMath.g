@@ -626,6 +626,15 @@ atom returns[Entity value]
     | 'Ci(' args = function_arguments ')' { Assert("Ci", 1, $args.list.Count); $value = MathS.Ci($args.list[0]); }
     | 'Shi(' args = function_arguments ')' { Assert("Shi", 1, $args.list.Count); $value = MathS.Shi($args.list[0]); }
     | 'Chi(' args = function_arguments ')' { Assert("Chi", 1, $args.list.Count); $value = MathS.Chi($args.list[0]); }
+    /* The determinant, the transpose, the scalar and the vector product, and the resultant, each
+       computed from what it is applied to: there is no node for any of them, so a matrix or a
+       vector has to be written out, or be one once its operations are carried out.
+       https://github.com/asc-community/AngouriMath/issues/2147 */
+    | 'det(' args = function_arguments ')' { Assert("det", 1, $args.list.Count); $value = ParsingHelpers.Determinant($args.list[0]); }
+    | 'transpose(' args = function_arguments ')' { Assert("transpose", 1, $args.list.Count); $value = ParsingHelpers.Transposed($args.list[0]); }
+    | 'dot(' args = function_arguments ')' { Assert("dot", 2, $args.list.Count); $value = ParsingHelpers.Dot($args.list[0], $args.list[1]); }
+    | 'cross(' args = function_arguments ')' { Assert("cross", (1, 2), $args.list.Count); $value = ParsingHelpers.Cross($args.list); }
+    | 'resultant(' args = function_arguments ')' { Assert("resultant", 3, $args.list.Count); $value = ParsingHelpers.Resultant($args.list[0], $args.list[1], $args.list[2]); }
 
     /* Names the library does not have. Each is a function every other CAS spells this way, so
        a caller reaches for it, and without these rules each is silently read as a product --
@@ -634,13 +643,11 @@ atom returns[Entity value]
 
     | 'trunc(' args = function_arguments ')' { $value = NotImplementedFunction("trunc", "rounding functions"); }
     | 'conjugate(' args = function_arguments ')' { $value = NotImplementedFunction("conjugate", "complex conjugate as a symbolic function"); }
-    /* conj and arg are the conjugate and the argument as other systems spell them, and det the
-       determinant, which exists on a matrix but not in an expression. Each was read as a product:
-       arg(z) was arg * z. re and im are left as products, as MissingFunctionNamesRefusedTest
-       records. https://github.com/asc-community/AngouriMath/issues/2136 */
+    /* conj and arg are the conjugate and the argument as other systems spell them. Each was read
+       as a product: arg(z) was arg * z. re and im are left as products, as
+       MissingFunctionNamesRefusedTest records. https://github.com/asc-community/AngouriMath/issues/2136 */
     | 'conj(' args = function_arguments ')' { $value = NotImplementedFunction("conj", "complex conjugate as a symbolic function"); }
     | 'arg(' args = function_arguments ')' { $value = NotImplementedFunction("arg", "complex argument as a symbolic function"); }
-    | 'det(' args = function_arguments ')' { $value = NotImplementedFunction("det", "determinant in an expression; a Matrix has the property Determinant"); }
     | 'domain(' args = function_arguments ')' 
         { 
             Assert("domain", 2, $args.list.Count); 

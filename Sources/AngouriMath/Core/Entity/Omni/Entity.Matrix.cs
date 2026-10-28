@@ -301,15 +301,39 @@ namespace AngouriMath
                     if (Functions.PolynomialDeterminant.Of(@this.RowCount, (r, c) => @this[r, c])
                         is { } byElimination)
                         return byElimination.InnerSimplified;
-                    // GenericTensor's Laplace determinant writes into a process-wide scratch
-                    // matrix, so two threads here silently corrupt each other's minors. See
-                    // Functions.GenTensorGuard.
-                    return Functions.GenTensorGuard
-                        .DeterminantLaplace(@this.InnerMatrix).InnerSimplified;
+                    return Laplace(@this, 0, Enumerable.Range(0, @this.ColumnCount).ToArray()).InnerSimplified;
                 },
                 this
                 );
             private LazyPropertyA<Entity?> determinant;
+
+            /// <summary>
+            /// The determinant of the rows from <paramref name="row"/> down and the given
+            /// <paramref name="columns"/>, expanded along its first row.
+            /// </summary>
+            /// <remarks>
+            /// Written over the entries rather than taken from GenericTensor, whose expansion
+            /// compiles an expression tree, which a native build cannot publish -- <c>det(M)</c> in
+            /// the parser makes this reachable from every one -- and writes its minors into a
+            /// scratch matrix shared by every thread.
+            /// https://github.com/asc-community/AngouriMath/issues/2147
+            /// </remarks>
+            private static Entity Laplace(Matrix matrix, int row, int[] columns)
+            {
+                if (columns.Length == 1)
+                    return matrix[row, columns[0]];
+                Entity? sum = null;
+                for (var k = 0; k < columns.Length; k++)
+                {
+                    var rest = new int[columns.Length - 1];
+                    for (int from = 0, to = 0; from < columns.Length; from++)
+                        if (from != k)
+                            rest[to++] = columns[from];
+                    var term = matrix[row, columns[k]] * Laplace(matrix, row + 1, rest);
+                    sum = sum is null ? term : k % 2 == 0 ? sum + term : sum - term;
+                }
+                return sum!;
+            }
 
             /// <summary>
             /// The characteristic polynomial of this square matrix, <c>det(x I - A)</c> in the

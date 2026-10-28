@@ -219,6 +219,17 @@ other; `Domain.Any` is a codomain and not a candidate for the job
 (1 by 3). There is no empty vector: `[]` is not a value this library has
 ([#1028](https://github.com/asc-community/AngouriMath/issues/1028)), while the empty set `{}` is.
 
+`det(M)` is the determinant of a square matrix and `transpose(M)` its transpose. `dot(a, b)` is the
+sum of the products of two vectors' components, with neither side conjugated. `cross(a, b)` is the
+vector product in three dimensions, and `cross(a)` turns a vector in the plane through a right angle
+anticlockwise, `cross([x, y])` being `[-y, x]`, so `dot(cross(a), b)` is the plane's pseudo-scalar
+product. `resultant(p, q, x)` eliminates `x` between two polynomials:
+`resultant(x^2 + y^2 - 1, x + y - 1, y)` is `2 * x ^ 2 - 2 * x`. Each is computed from its
+arguments when it is parsed, and there is no node for any of them, so a matrix or a vector has to be
+written out, or be one once its operations are carried out: `det(2 * [[1, 2], [3, 4]])` is `-8`,
+and `det(A)` of a symbol `A` is refused
+([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
+
 `(|x|)` is the absolute value of `x`, and prints back as `abs(x)`.
 
 ## Functions
