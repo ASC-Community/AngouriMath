@@ -243,6 +243,26 @@ carry their coefficient as a divisor, and no rule found a squared sine and cosin
 |---|---|---|
 | `"cos(x)^2 - (1 + cos(2*x))/2".Simplify()` | `cos(x) ^ 2 - (1 + cos(2 * x)) / 2` | `0` |
 
+### A trigonometric identity is proved where it needs several of the rules in one order
+
+**Silent: an identity reaches its value.** The tangent addition formula, the half-angle formulas, the Weierstrass
+forms and sum-to-product were not proved. Each needs an angle opened, doubled or halved and the Pythagorean pair taken,
+in one order, and the rules take them a step at a time. A rational function of the six trigonometric functions, whose
+angles are rational combinations of its variables with no constant term, is now decided. It is written over a sine and
+a cosine of each variable's base angle, with every `sin(u)^2` written as `1 - cos(u)^2`, and it is a constant exactly
+when its numerator is that constant times its denominator. The constant is its value wherever it has one, and carries
+the expression's own domain as its condition ([#2142](https://github.com/asc-community/AngouriMath/issues/2142)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"tan(s + t) - (tan(s) + tan(t))/(1 - tan(s)*tan(t))".Simplify()` | `tan(s + t) - (tan(s) + tan(t)) / (1 - tan(s) * tan(t))` | `0 provided not cos(s + t) = 0 and not 1 - tan(s) * tan(t) = 0 and not cos(s) = 0 and not cos(t) = 0` |
+| `"sin(a/2)^2 - (1 - cos(a))/2".Simplify()` | `sin(a / 2) ^ 2 - (1 - cos(a)) / 2` | `0` |
+| `"tan(a/2) - sin(a)/(1 + cos(a))".Simplify()` | `tan(a / 2) - sin(a) / (1 + cos(a))` | `0 provided not cos(a / 2) * (cos(a) + 1) = 0` |
+| `"sin(a) - 2*tan(a/2)/(1 + tan(a/2)^2)".Simplify()` | `sin(a) - 2 * tan(a / 2) / (1 + tan(a / 2) ^ 2)` | `0 provided not 1 + tan(a / 2) ^ 2 = 0 and not cos(a / 2) = 0` |
+| `"sin(a) + sin(b) - 2*sin((a + b)/2)*cos((a - b)/2)".Simplify()` | `sin(a) + sin(b) - 2 * sin((a + b) / 2) * cos((a - b) / 2)` | `0` |
+| `"(1 - cos(a))/(1 + cos(a))/tan(a/2)^2".Simplify()` | `(1 - cos(a)) / ((cos(a) + 1) * tan(a / 2) ^ 2)` | `1 provided not cos(a) + 1 = 0 and not tan(a / 2) = 0 and not cos(a / 2) = 0` |
+| `"(cos(2*x) - 1)^2 + sin(2*x)^2 - 4*sin(x)^2".Simplify()` ([#2133](https://github.com/asc-community/AngouriMath/issues/2133)) | `2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2` | `0` |
+
 ### `conj`, `arg` and `det` are refused by name
 
 **Not silent: these now throw `UnrecognizedFunctionParseException` where they parsed.** A name the parser does not
