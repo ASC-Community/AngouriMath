@@ -21,6 +21,24 @@ namespace DotnetBenchmark
     [MemoryDiagnoser]
     public class CommonFunctionsInterVersion
     {
+        // BenchmarkDotNet times one call before it decides how to measure, and where that call
+        // takes more than two thirds of its 500 ms iteration it times one call per iteration from
+        // then on. For a call of tens of microseconds that is another measurement: on CI, with the
+        // first call at 349-362 ms, SimplifyEasy read 12x its time and 3% more allocation and failed
+        // the gate, while at 300 ms it was piloted and matched the baseline. The first call paid for
+        // this class's static fields, parsed when the class is first touched, and for the library's
+        // own set-up, which is why EvalEasy's took 133 ms. Done here, before the timed call,
+        // SimplifyEasy's first call is 8 ms where it was 172 ms, on one machine, and what each
+        // benchmark allocates is unchanged.
+        [GlobalSetup]
+        public void SetUpBeforeTheFirstTimedCall()
+        {
+            GC.KeepAlive(simplifyEasy);
+            "x + 1".ToEntity().Simplify();
+            "x2 + 1".ToEntity().SolveEquation("x");
+            MathS.Sin(2).EvalNumerical();
+        }
+
         // Testing parsing
         [Benchmark] public void ParseEasy() => MathS.FromString("1 + 2 / x + 2 / (y + x)", useCache: false);
         [Benchmark] public void ParseHard() => MathS.FromString("x ^ (x + y ^ 2 ^ sin(3 / z + i)) - log(-i, 3) ^ (x + x * y) - sqrt(y) / (i + sqrt(-1))", useCache: false);
