@@ -34,9 +34,10 @@ namespace AngouriMath.Tests.Core
 
         /// <summary>
         /// The entries are deliberately not polynomial. <c>Determinant</c> tries
-        /// <c>PolynomialDeterminant.Of</c> first and only falls back to GenericTensor's Laplace
-        /// where that declines, so a matrix of polynomials never reaches the shared scratch buffer
-        /// -- which is exactly why the first version of this test found nothing.
+        /// <c>PolynomialDeterminant.Of</c> first and only falls back to a Laplace expansion
+        /// where that declines, so a matrix of polynomials never reaches it -- which is exactly
+        /// why the first version of this test found nothing, when the expansion was
+        /// GenericTensor's and wrote into a shared scratch buffer.
         /// </summary>
         private static Matrix Build(int seed)
         {

@@ -388,6 +388,19 @@ in LaTeX as `X_{a_{\beta}}`. `_` still neither begins nor ends a name, and two d
 | `MathS.Var("X_a_beta").Latexize()` | an `UnhandledParseException` | `X_{a_{\beta}}` |
 | `"x__1".ToEntity()` | an `UnhandledParseException` | an `UnhandledParseException` |
 
+### A determinant of entries that are not polynomials is expanded by the library itself
+
+**Silent: the same value, printed differently.** Where the fraction-free elimination cannot read the entries as
+polynomials, `Matrix.Determinant` expanded along the first row with GenericTensor's Laplace expansion. That expansion
+compiles an expression tree, which a native build cannot publish, and `det(M)` in an expression made it reachable from
+every one. It is now written over the entries, with the same expansion along the first row and the cofactors'
+alternating signs as subtractions ([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"[[sin(x), cos(x)], [-cos(x), sin(x)]]".ToEntity()` as a `Matrix`, `.Determinant` | `sin(x) ^ 2 + -cos(x) * -cos(x)` | `sin(x) ^ 2 - cos(x) * -cos(x)` |
+| `.Determinant.Simplify()` of `[[sqrt(a), b, 1], [c, sin(d), 2], [3, e_1, ln(f)]]` | `e_1 * ((-2) * sqrt(a) + c) + sin(d) * (sqrt(a) * ln(f) - 3) + 6 * b - b * c * ln(f)` | `sqrt(a) * (sin(d) * ln(f) - 2 * e_1) - b * (c * ln(f) - 6) + c * e_1 - 3 * sin(d)` |
+
 ### A numerical definite integral is Gauss–Legendre, with the digits it knows
 
 **Silent: wrong answers, and values where there was NaN.** `Entity.DefiniteIntegral(x, a, b, steps)` was the mean of
