@@ -117,6 +117,69 @@ namespace AngouriMath.Core.Antlr
                 $"resultant is taken of two polynomials in {variable} with rational coefficients, and {left} and {right} are not both");
         }
 
+        // laplacian, jacobian and hessian are written in the derivatives they are made of, which
+        // stay derivatives until they are evaluated: the operators are taken in the variables
+        // listed, a vector of names written out, [x, y, z], or one name for a single variable.
+        // https://github.com/asc-community/AngouriMath/issues/2182
+        private static Variable[] Variables(string function, Entity argument, string example)
+        {
+            var names = argument is Variable ? new[] { argument }
+                : argument is Matrix ? Components(function, argument)
+                : throw new InvalidArgumentParseException(
+                    $"{function} is taken in the variables listed as a vector, as in {example}, and {argument} is not one");
+            var variables = new Variable[names.Length];
+            for (var i = 0; i < names.Length; i++)
+                variables[i] = names[i] is Variable { IsConstant: false } variable && !variables.Take(i).Contains(variable) ? variable
+                    : throw new InvalidArgumentParseException(
+                        $"{function} is taken in distinct variables, as in {example}, and {names[i]} is {(names[i] is Variable { IsConstant: false } ? "listed twice" : "not a variable")}");
+            return variables;
+        }
+
+        /// <summary>The function a scalar operator is taken of, refused where it is a vector or a matrix.</summary>
+        private static Entity ScalarFunction(string function, Entity argument, string example)
+            => argument is Matrix
+                ? throw new InvalidArgumentParseException($"{function} is taken of a scalar function, as in {example}, and {argument} is a matrix")
+                : argument;
+
+        /// <summary>
+        /// <c>laplacian(f, [x, y, z])</c>: the sum of the second derivatives of a scalar <c>f</c> in
+        /// each variable, <c>∇²f</c>.
+        /// </summary>
+        internal static Entity Laplacian(Entity function, Entity variables)
+        {
+            const string example = "laplacian(x^2 y, [x, y])";
+            var f = ScalarFunction("laplacian", function, example);
+            return Variables("laplacian", variables, example)
+                .Select(x => MathS.Derivative(f, x, 2))
+                .Aggregate((sum, term) => sum + term);
+        }
+
+        /// <summary>
+        /// <c>jacobian(F, [x, y])</c>: the matrix of the first derivatives of the components of
+        /// <c>F</c>, a row for each component and a column for each variable, so that the entry in
+        /// row <c>i</c> and column <c>j</c> is <c>∂F_i/∂x_j</c>. A scalar <c>F</c> is one row.
+        /// </summary>
+        internal static Entity Jacobian(Entity function, Entity variables)
+        {
+            var x = Variables("jacobian", variables, "jacobian([x y, x + y], [x, y])");
+            var components = function is Matrix ? Components("jacobian", function) : new[] { function };
+            return MathS.Matrix(components.Length, x.Length, (i, j) => MathS.Derivative(components[i], x[j]));
+        }
+
+        /// <summary>
+        /// <c>hessian(f, [x, y])</c>: the matrix of the second derivatives of a scalar <c>f</c>, the
+        /// entry in row <c>i</c> and column <c>j</c> being <c>∂²f/∂x_i∂x_j</c>, the derivative in
+        /// <c>x_i</c> of the derivative in <c>x_j</c>.
+        /// </summary>
+        internal static Entity Hessian(Entity function, Entity variables)
+        {
+            const string example = "hessian(x^2 y, [x, y])";
+            var f = ScalarFunction("hessian", function, example);
+            var x = Variables("hessian", variables, example);
+            return MathS.Matrix(x.Length, x.Length,
+                (i, j) => i == j ? MathS.Derivative(f, x[i], 2) : MathS.Derivative(MathS.Derivative(f, x[j]), x[i]));
+        }
+
         /// <summary>
         /// The <see cref="Number.Rational"/> that a quotient of two integer literals denotes, or
         /// the node unchanged where it denotes none.

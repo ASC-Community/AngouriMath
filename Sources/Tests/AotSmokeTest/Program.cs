@@ -115,6 +115,13 @@ namespace AngouriMath.AotSmokeTest
             var argument = MathS.FromString("arg(z)");
             CheckClose("arg at z = -1", At(argument, "z", -1), Math.PI);
 
+            // The operators of vector calculus are made of derivatives when they are parsed.
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            var laplacian = MathS.FromString("laplacian(x^2 y + y^3, [x, y])").InnerSimplified;
+            CheckClose("laplacian at y = 2", At(laplacian, "y", 2), 16);
+            var jacobian = MathS.FromString("det(jacobian([r cos(t), r sin(t)], [r, t]))").InnerSimplified;
+            CheckClose("polar Jacobian determinant at r = 3, t = 1", At(jacobian.Substitute("t", 1), "r", 3), 3);
+
             // The double factorial is a postfix the parser builds. https://github.com/asc-community/AngouriMath/issues/2182
             var doubleFactorial = MathS.FromString("x!! + 0");
             CheckClose("x!! at x = 7", At(doubleFactorial, "x", 7), 105);

@@ -653,6 +653,9 @@ atom returns[Entity value]
     | 'transpose(' args = function_arguments ')' { Assert("transpose", 1, $args.list.Count); $value = ParsingHelpers.Transposed($args.list[0]); }
     | 'dot(' args = function_arguments ')' { Assert("dot", 2, $args.list.Count); $value = ParsingHelpers.Dot($args.list[0], $args.list[1]); }
     | 'cross(' args = function_arguments ')' { Assert("cross", (1, 2), $args.list.Count); $value = ParsingHelpers.Cross($args.list); }
+    | 'laplacian(' args = function_arguments ')' { Assert("laplacian", 2, $args.list.Count); $value = ParsingHelpers.Laplacian($args.list[0], $args.list[1]); }
+    | 'jacobian(' args = function_arguments ')' { Assert("jacobian", 2, $args.list.Count); $value = ParsingHelpers.Jacobian($args.list[0], $args.list[1]); }
+    | 'hessian(' args = function_arguments ')' { Assert("hessian", 2, $args.list.Count); $value = ParsingHelpers.Hessian($args.list[0], $args.list[1]); }
     | 'resultant(' args = function_arguments ')' { Assert("resultant", 3, $args.list.Count); $value = ParsingHelpers.Resultant($args.list[0], $args.list[1], $args.list[2]); }
     /* The complex conjugate, by its name and by the shorter one other systems use.
        https://github.com/asc-community/AngouriMath/issues/2145 */
@@ -694,9 +697,6 @@ atom returns[Entity value]
     | 'factorialpower(' args = function_arguments ')' { $value = NotImplementedFunction("factorialpower", "falling factorial yet"); }
     | 'risingfactorial(' args = function_arguments ')' { $value = NotImplementedFunction("risingfactorial", "rising factorial yet"); }
     | 'forwarddifference(' args = function_arguments ')' { $value = NotImplementedFunction("forwarddifference", "forward difference yet"); }
-    | 'laplacian(' args = function_arguments ')' { $value = NotImplementedFunction("laplacian", "Laplacian yet"); }
-    | 'jacobian(' args = function_arguments ')' { $value = NotImplementedFunction("jacobian", "Jacobian yet"); }
-    | 'hessian(' args = function_arguments ')' { $value = NotImplementedFunction("hessian", "Hessian yet"); }
     /* Names that will not be functions, refused with the spelling to use: what they mean is
        ambiguous between sources, or is already written exactly another way. */
     | 'heaviside(' args = function_arguments ')' { $value = NotAFunctionHere("heaviside", "its value at 0 is 0, 1/2 or 1 by source; write iverson(x > 0), iverson(x >= 0) or (1 + sgn(x))/2"); }
