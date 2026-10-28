@@ -584,7 +584,7 @@ namespace AngouriMath
             // Real where the node's own codomain says so: a modulus, or a symbol declared with
             // domain(x, RR). A bare Variable is Domain.Any, so conjugate(x) stays. Not the codomain
             // setting, since what this returns is cached on the node and the setting is not.
-            private static bool IsKnownReal(Entity entity)
+            internal static bool IsKnownReal(Entity entity)
                 => entity.Codomain is Domain.Prime or Domain.PositiveInteger or Domain.NonNegativeInteger
                                    or Domain.Integer or Domain.Rational or Domain.Real;
 

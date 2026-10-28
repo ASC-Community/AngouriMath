@@ -67,6 +67,28 @@ namespace AngouriMath.Tests.Algebra
             => Assert.Equal(expected.ToEntity(), equation.ToEntity().Solve("x"));
 
         /// <summary>
+        /// What the equation is provided is known while it is solved. A real value has argument 0
+        /// or <c>pi</c>, so the sector is the half-line; a value known to lie on it needs nothing,
+        /// and one known to lie off it has no root.
+        /// </summary>
+        [Theory]
+        [InlineData("(sqrt(x) = a) provided a in RR", "{ a ^ 2 provided a in RR and a >= 0 }")]
+        [InlineData("(sqrt(x) = a) provided a > 0", "{ a ^ 2 provided a > 0 }")]
+        [InlineData("(sqrt(x) = a) provided a >= 1", "{ a ^ 2 provided a >= 1 }")]
+        [InlineData("(sqrt(x) = a) provided a > -5", "{ a ^ 2 provided a > -5 and a >= 0 }")]
+        [InlineData("(x^(-1/2) = a) provided a in RR", "{ a ^ (-2) provided a in RR and a > 0 }")]
+        [InlineData("(sqrt(x) = a) provided a < 0", "{ }")]
+        [InlineData("(x^(-1/2) = a) provided a <= 0", "{ }")]
+        public void WhatTheEquationIsProvidedIsKnown(string equation, string expected)
+            => Assert.Equal(expected.ToEntity(), equation.ToEntity().Solve("x"));
+
+        /// <summary>A symbol declared real is the same case: <c>domain(a, RR)</c>.</summary>
+        [Fact]
+        public void ASymbolDeclaredRealHasTheHalfLine()
+            => Assert.Equal("{ domain(a, RR) ^ 2 provided domain(a, RR) >= 0 }".ToEntity(),
+                "sqrt(x) = domain(a, RR)".ToEntity().Solve("x"));
+
+        /// <summary>
         /// For <c>|p| &gt; 1</c> the sector is the whole plane, and <c>v^(1/p)</c> is a preimage
         /// of every <c>v</c>, so there is nothing to state.
         /// </summary>

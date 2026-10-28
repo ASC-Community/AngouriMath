@@ -83,7 +83,9 @@ for `0 < p < 1` its values lie in the sector `-p pi < arg <= p pi`, with `0`, an
 `p pi <= arg < -p pi`, without `0`. `x^p = a` was solved to `a^(1/p)` with no condition, which is no root where `a` is
 outside the sector: `sqrt(x) = a` was `{ a ^ 2 }`, and at `a = -1` that is `1`, whose square root is `1` and not `-1`. The root now carries
 the sector, written with `arg`, as `abs`'s inversion carries its own condition. A number on the other side is decided
-as before, and `|p| > 1` needs no condition, since every value is then a power. A condition that is already part of
+as before, and `|p| > 1` needs no condition, since every value is then a power. What the equation is provided is known
+while it is solved, as a provided expression is differentiated: a value known to be real, or declared real, has the
+half-line for its sector, one known to lie on it needs no condition, and one known to lie off it has no root. A condition that is already part of
 another is no longer stated twice: a system's rows carried the same condition once a substitution
 ([#212](https://github.com/asc-community/AngouriMath/issues/212)).
 
@@ -92,6 +94,9 @@ another is no longer stated twice: a system's rows carried the same condition on
 | `"sqrt(x) = a".ToEntity().Solve("x")` | `{ a ^ 2 }` | `{ a ^ 2 provided a = 0 or -1/2 * pi < arg(a) and arg(a) <= 1/2 * pi }` |
 | `"x^(1/3) = a".ToEntity().Solve("x")` | `{ a ^ 3 }` | `{ a ^ 3 provided a = 0 or -1/3 * pi < arg(a) and arg(a) <= 1/3 * pi }` |
 | `"x^(-1/2) = a".ToEntity().Solve("x")` | `{ a ^ (-2) }` | `{ a ^ (-2) provided not a = 0 and -1/2 * pi <= arg(a) and arg(a) < 1/2 * pi }` |
+| `"(sqrt(x) = a) provided a in RR".ToEntity().Solve("x")` | `{ a ^ 2 provided a in RR }` | `{ a ^ 2 provided a in RR and a >= 0 }` |
+| `"(sqrt(x) = a) provided a > 0".ToEntity().Solve("x")` | `{ a ^ 2 provided a > 0 }` | `{ a ^ 2 provided a > 0 }` |
+| `"(sqrt(x) = a) provided a < 0".ToEntity().Solve("x")` | `{ a ^ 2 provided a < 0 }` | `{ }` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
 
 ### A system with a product equation is solved branch by branch

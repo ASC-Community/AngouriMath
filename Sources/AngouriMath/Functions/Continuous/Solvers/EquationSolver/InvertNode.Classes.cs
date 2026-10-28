@@ -138,6 +138,18 @@ namespace AngouriMath
                 if (Exponent.Evaled is not Real { EDecimal.IsFinite: true } p
                     || p.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.One) >= 0)
                     return Boolean.True;
+                // Where the value is known to be real -- by its codomain, or by what the equation
+                // it came from was provided -- arg(value) is 0 or pi, so the sector is the half-line
+                // value >= 0 for p > 0 and value > 0 for p < 0, and nothing is stated where that is
+                // known as well: sqrt(x) = a provided a > 0 is a ^ 2 provided a > 0.
+                Entity halfLine = p.IsPositive ? new GreaterOrEqualf(value, Integer.Zero) : new Greaterf(value, Integer.Zero);
+                Entity outside = p.IsPositive ? new Lessf(value, Integer.Zero) : new LessOrEqualf(value, Integer.Zero);
+                if (TreeAnalyzer.IsKnown(halfLine))
+                    return Boolean.True;
+                if (TreeAnalyzer.IsKnown(outside))
+                    return Boolean.False;
+                if (Conjugatef.IsKnownReal(value) || TreeAnalyzer.IsKnownToBeReal(value))
+                    return halfLine;
                 var bound = (Exponent * MathS.pi).InnerSimplified;
                 var opposite = ((-Exponent).InnerSimplified * MathS.pi).InnerSimplified;
                 var angle = MathS.Arg(value);
