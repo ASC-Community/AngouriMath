@@ -73,13 +73,17 @@ namespace AngouriMath
                                 or Complex { ImaginaryPart.IsZero: false, LatexPriority: >= Priority.Mul } /* don't combine upright "i" with an upright variable*/,
                              Variable { IsLatexUprightFormatted: true } or Number { LatexPriority: >= Priority.Mul }
                                 or Factorialf(Number { LatexPriority: Priority.Leaf } or Variable { IsLatexUprightFormatted: true })
+                                or DoubleFactorialf(Number { LatexPriority: Priority.Leaf } or Variable { IsLatexUprightFormatted: true })
                                 or Powf(Number { LatexPriority: Priority.Leaf } or Variable { IsLatexUprightFormatted: true }
-                                        or Factorialf(Number { LatexPriority: Priority.Leaf } or Variable { IsLatexUprightFormatted: true }), _)) => false,
+                                        or Factorialf(Number { LatexPriority: Priority.Leaf } or Variable { IsLatexUprightFormatted: true })
+                                        or DoubleFactorialf(Number { LatexPriority: Priority.Leaf } or Variable { IsLatexUprightFormatted: true }), _)) => false,
                             // 2 * (3/4) instead of 2 (3/4) which is a mixed number (= 2 + 3/4)
                             (Number { LatexPriority: Priority.Leaf }, { LatexPriority: Priority.Div }) => false,
                             // 2 * 3 instead of 2 3 (= 23), 2 * 3^4 instead of 2 3^4 (= 23^4), but "(2+i) 2", "2 (2+i)" and "2 (2+i)^2" are fine with the parentheses - so we have the LatexPriority check.
                             (_, Number { LatexPriority: >= Priority.Mul } or Factorialf(Number { LatexPriority: Priority.Leaf })
-                                or Powf(Number { LatexPriority: Priority.Leaf } or Factorialf(Number { LatexPriority: Priority.Leaf }), _)) => false, // Keep the \cdot in "f(x) \cdot -2" "f(x) \cdot 2i" "f(x) \cdot -2i"
+                                or DoubleFactorialf(Number { LatexPriority: Priority.Leaf })
+                                or Powf(Number { LatexPriority: Priority.Leaf } or Factorialf(Number { LatexPriority: Priority.Leaf })
+                                        or DoubleFactorialf(Number { LatexPriority: Priority.Leaf }), _)) => false, // Keep the \cdot in "f(x) \cdot -2" "f(x) \cdot 2i" "f(x) \cdot -2i"
                             (var left, var right) => left.LatexPriority >= right.LatexPriority &&
                                 !(left.LatexPriority == Priority.Div && right.LatexPriority == Priority.Div) // Without \cdot, the fraction lines may appear too closely together.
                         } ? $@"{prevOut} {currOut}" : $@"{prevOut} \cdot {currOut}";
@@ -142,6 +146,13 @@ namespace AngouriMath
                     return "{" + Base.Latexize(Base.LatexPriority <= LatexPriority) + "}^{" + Exponent.Latexize() + "}";
                 }
             }
+        }
+
+        public partial record DoubleFactorialf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() =>
+                Argument.Latexize(Argument.LatexPriority <= LatexPriority) + "!!";
         }
 
         public partial record Factorialf

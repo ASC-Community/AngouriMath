@@ -475,6 +475,7 @@ namespace AngouriMath.Core.Transformations.Matching
             [typeof(Entity.Iversonf)] = (1, static c => new Entity.Iversonf(c[0])),
             [typeof(Entity.Conjugatef)] = (1, static c => new Entity.Conjugatef(c[0])),
             [typeof(Entity.Argf)] = (1, static c => new Entity.Argf(c[0])),
+            [typeof(Entity.DoubleFactorialf)] = (1, static c => new Entity.DoubleFactorialf(c[0])),
             [typeof(Entity.Ref)] = (1, static c => new Entity.Ref(c[0])),
             [typeof(Entity.Imf)] = (1, static c => new Entity.Imf(c[0])),
             [typeof(Entity.Alephf)] = (1, static c => new Entity.Alephf(c[0])),

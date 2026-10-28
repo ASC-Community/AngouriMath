@@ -82,6 +82,11 @@ options
 // atom is defined later
 factorial_expression returns[Entity value]
     : p = atom '!' { $value = MathS.Factorial($p.value); }
+    /* The double factorial, n (n - 2) (n - 4) ..., which is not (n!)!: that keeps its parentheses.
+       Three marks are the triple factorial in the literature, which the library does not have, so
+       they are refused rather than read as (n!!)!. https://github.com/asc-community/AngouriMath/issues/2182 */
+    | p = atom '!!' { $value = MathS.DoubleFactorial($p.value); }
+    | p = atom '!!!' { throw new UnrecognizedFunctionParseException("n!!! is the triple factorial, which AngouriMath does not have; write (n!!)! for the factorial of a double factorial"); }
     | p = atom { $value = $p.value; }
     ;
 
@@ -698,8 +703,8 @@ atom returns[Entity value]
     | 'unitstep(' args = function_arguments ')' { $value = NotAFunctionHere("unitstep", "write iverson(x >= 0), which is 1 at 0"); }
     | 'isprime(' args = function_arguments ')' { $value = NotAFunctionHere("isprime", "write n in PP"); }
     | 'pochhammer(' args = function_arguments ')' { $value = NotAFunctionHere("pochhammer", "(x)_n is the rising factorial to some and the falling one to others; write risingfactorial or fallingfactorial"); }
-    | 'doublefactorial(' args = function_arguments ')' { $value = NotAFunctionHere("doublefactorial", "the double factorial is to be the postfix n!!, which is not implemented yet"); }
-    | 'factorial2(' args = function_arguments ')' { $value = NotAFunctionHere("factorial2", "the double factorial is to be the postfix n!!, which is not implemented yet"); }
+    | 'doublefactorial(' args = function_arguments ')' { $value = NotAFunctionHere("doublefactorial", "the double factorial is the postfix n!!"); }
+    | 'factorial2(' args = function_arguments ')' { $value = NotAFunctionHere("factorial2", "the double factorial is the postfix n!!"); }
     | 'fractionalpart(' args = function_arguments ')' { $value = NotAFunctionHere("fractionalpart", "write x mod 1, which is in [0, 1)"); }
     | 'quotient(' args = function_arguments ')' { $value = NotAFunctionHere("quotient", "write floor(a / b)"); }
     | 'domain(' args = function_arguments ')' 

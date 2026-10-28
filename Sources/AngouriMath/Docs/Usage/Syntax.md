@@ -268,7 +268,7 @@ which is `e ^ x`.
 **Powers and logarithms** — `sqrt` `cbrt` `sqr` `pow(a, b)` `exp` `ln` `log(base, x)`. `log` with
 one argument is base 10, so `log(100)` is 2; `log10` and `log2` say it in the name.
 
-**Other** — `abs` `signum` `sgn` `sign` `phi` `gamma` `factorial` (or postfix `!`); `prime(n)`
+**Other** — `abs` `signum` `sgn` `sign` `phi` `gamma` `factorial` (or postfix `!`), and the double factorial as the postfix `n!!`, `n (n - 2) (n - 4) ...` down to 1 or 2, which is not `(n!)!` (`7!!` is `105`, `0!!` and `(-1)!!` are `1`, `(-5)!!` is `1/3`, and it has no value at a negative even integer or off the integers; `n!!!`, the triple factorial, is refused); `prime(n)`
 for the `n`-th prime (`prime(25)` is `97`, `NaN` off the positive whole numbers, left as written
 for a symbol or an index past a million); `valuation(n, p)` for the `p`-adic valuation, the
 exponent of the prime `p` in `n` (`valuation(12, 2)` is `2`, `valuation(12, 5)` is `0`, `+oo` at

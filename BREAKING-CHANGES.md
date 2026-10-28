@@ -290,6 +290,21 @@ the expression's own domain as its condition ([#2142](https://github.com/asc-com
 | `"(1 - cos(a))/(1 + cos(a))/tan(a/2)^2".Simplify()` | `(1 - cos(a)) / ((cos(a) + 1) * tan(a / 2) ^ 2)` | `1 provided not cos(a) + 1 = 0 and not tan(a / 2) = 0 and not cos(a / 2) = 0` |
 | `"(cos(2*x) - 1)^2 + sin(2*x)^2 - 4*sin(x)^2".Simplify()` ([#2133](https://github.com/asc-community/AngouriMath/issues/2133)) | `2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2` | `0` |
 
+### The double factorial is the postfix `n!!`
+
+**Not silent: `n!!` is now the double factorial, where it was a parse error.** It is the product of the positive integers
+up to `n` with its parity, `0!!` and `(-1)!!` being `1`, and below them `n!! = (n + 2)!!/(n + 2)`. It has no value at a
+negative even integer or off the integers, since the extension through the gamma function does not give `0!! = 1`.
+`(n!)!` keeps its parentheses, and `n!!!`, the triple factorial, is refused rather than read as `(n!!)!`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"7!!".ToEntity().Simplify()` | throws `UnhandledParseException` | `105` |
+| `"(-5)!!".ToEntity().Simplify()` | throws `UnhandledParseException` | `1/3` |
+| `"n!!".ToEntity()` | throws `UnhandledParseException` | `n!!` |
+| `"n!!!".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
+
 ### `re` and `im` are the real and the imaginary part
 
 **Not silent: `re(…)` and `im(…)`, and `real(…)` and `imag(…)`, are now the real and the imaginary part, where they were

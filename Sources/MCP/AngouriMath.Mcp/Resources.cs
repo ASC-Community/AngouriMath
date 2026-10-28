@@ -96,7 +96,7 @@ internal static class Resources
         - complex numbers: `conjugate`, also spelled `conj`; `arg`, the principal argument
           in `(-pi, pi]`; `Re` and `Im`, also spelled `re`, `im`, `real` and `imag`, `Im(x + i y)` being `y`
         - `floor ceil ceiling round min max gcd lcm`
-        - `gamma factorial binomial phi prime valuation`
+        - `gamma factorial binomial phi prime valuation`, and the postfix `n!` and `n!!` (the double factorial, not `(n!)!`)
         - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, and `gamma(a, z)`, the
           upper incomplete gamma function
         - sets: `card powerset union intersection complement image preimage domain aleph

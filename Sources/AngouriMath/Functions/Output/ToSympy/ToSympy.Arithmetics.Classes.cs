@@ -98,6 +98,11 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.im({Argument.ToSymPy()})";
         }
 
+        public partial record DoubleFactorialf
+        {
+            internal override string ToSymPy() => $"sympy.factorial2({Argument.ToSymPy()})";
+        }
+
         public partial record Argf
         {
             internal override string ToSymPy() => $"sympy.arg({Argument.ToSymPy()})";

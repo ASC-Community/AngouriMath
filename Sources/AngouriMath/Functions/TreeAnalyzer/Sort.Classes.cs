@@ -255,6 +255,12 @@ namespace AngouriMath
                 => Choice(level, "im_", "im_", "im_");
         }
 
+        public partial record DoubleFactorialf
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "doublefactorial_", "doublefactorial_", "doublefactorial_");
+        }
+
         public partial record Argf
         {
             private protected override string SortHashName(SortLevel level)

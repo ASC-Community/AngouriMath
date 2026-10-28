@@ -148,7 +148,8 @@ namespace AngouriMath.Tests.Convenience
         [Fact] public void TestFormula18() => Assert.Equal(x * y, FromString("x y"));
         [Fact] public void TestFormula19() => Assert.Equal(x * MathS.Sqrt(3), FromString("x sqrt(3)"));
         [Fact] public void TestFormula20() => Assert.Equal(Factorial(x), FromString("x!"));
-        [Fact] public void TestFormula21() => Assert.Throws<UnhandledParseException>(() => FromString("x!!"));
+        // The double factorial, which was a parse error: https://github.com/asc-community/AngouriMath/issues/2182
+        [Fact] public void TestFormula21() => Assert.Equal(MathS.DoubleFactorial(x), FromString("x!!"));
         [Fact] public void TestFormula22() => Assert.Equal(Factorial(Sin(x)), FromString("sin(x)!"));
         [Fact] public void TestFormula23() => Assert.Equal(Pow(2, MathS.Factorial(3)), FromString("2^3!"));
         [Fact] public void TestFormula24() => Assert.Equal(Pow(MathS.Factorial(2), MathS.Factorial(3)), FromString("2!^3!"));

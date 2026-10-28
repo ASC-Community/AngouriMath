@@ -1484,6 +1484,33 @@ namespace AngouriMath
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity Im(Entity z) => new Imf(z);
 
+        /// <summary>The double factorial <c>n!!</c>: <c>n (n - 2) (n - 4) ...</c> down to 1 or 2</summary>
+        /// <param name="n">An integer, other than a negative even one</param>
+        /// <returns>The <see cref="Entity.DoubleFactorialf"/> node</returns>
+        /// <remarks>
+        /// <c>0!!</c> and <c>(-1)!!</c> are <c>1</c>, a negative odd <c>n</c> follows from
+        /// <c>n!! = (n + 2)!!/(n + 2)</c>, and off the integers it has no value. It is not <c>(n!)!</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// using System;
+        /// using static AngouriMath.MathS;
+        ///
+        /// Console.WriteLine(DoubleFactorial(7).Simplify());
+        /// Console.WriteLine(DoubleFactorial(8).Simplify());
+        /// Console.WriteLine(DoubleFactorial(-5).Simplify());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// 105
+        /// 384
+        /// 1/3
+        /// </code>
+        /// </example>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Entity DoubleFactorial(Entity n) => new DoubleFactorialf(n);
+
         /// <summary>The aleph number <c>aleph(k)</c>, the size of an infinite set</summary>
         /// <param name="index">The index, a whole number from zero</param>
         /// <returns>The <see cref="Entity.Alephf"/> node</returns>

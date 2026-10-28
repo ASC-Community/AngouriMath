@@ -31,6 +31,32 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// The double factorial <c>n!!</c>: the product of the positive integers up to <c>n</c> with its
+        /// parity, <c>n (n - 2) (n - 4) ...</c>, which is not <c>(n!)!</c>.
+        /// </summary>
+        /// <remarks>
+        /// Defined on the integers but the negative even ones: <c>0!!</c> and <c>(-1)!!</c> are the empty
+        /// product <c>1</c>, and below them <c>n!! = (n + 2)!!/(n + 2)</c>, so <c>(-3)!!</c> is
+        /// <c>-1</c> and <c>(-5)!!</c> is <c>1/3</c>. Off the integers it has no value: the extension
+        /// through the gamma function does not give <c>0!! = 1</c>, so no extension is the double
+        /// factorial's. https://github.com/asc-community/AngouriMath/issues/2182
+        /// </remarks>
+        public sealed partial record DoubleFactorialf(Entity Argument) : Function, IUnaryNode
+        {
+            private DoubleFactorialf New(Entity argument) => ReferenceEquals(Argument, argument) ? this : new(argument) { Codomain = Codomain };
+            // Written as the factorial is, a postfix after its argument.
+            internal override Priority Priority => Priority.Factorial;
+
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
         /// A node of the binomial coefficient <c>binomial(n, k)</c>, "n choose k".
         /// </summary>
         /// <remarks>
