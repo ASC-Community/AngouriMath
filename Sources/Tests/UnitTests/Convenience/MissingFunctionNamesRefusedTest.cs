@@ -29,14 +29,12 @@ namespace AngouriMath.Tests.Convenience
         // floor, ceil, ceiling, round, min, max, gcd and lcm were all on this list until they
         // were implemented: https://github.com/asc-community/AngouriMath/issues/809, and erf
         // until https://github.com/asc-community/AngouriMath/issues/1501.
-        // conj and arg since https://github.com/asc-community/AngouriMath/issues/2136: arg(z)
-        // was arg * z. det was refused there too, until
-        // https://github.com/asc-community/AngouriMath/issues/2147.
+        // conj, arg and det were refused too, from
+        // https://github.com/asc-community/AngouriMath/issues/2136, since arg(z) was arg * z;
+        // conjugate, conj and arg until https://github.com/asc-community/AngouriMath/issues/2145,
+        // and det until https://github.com/asc-community/AngouriMath/issues/2147.
         [Theory]
         [InlineData("trunc(x)")]
-        [InlineData("conjugate(x)")]
-        [InlineData("conj(z)")]
-        [InlineData("arg(z)")]
         public void ANameTheLibraryDoesNotHaveIsRefused(string written) =>
             Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity());
 
@@ -57,8 +55,6 @@ namespace AngouriMath.Tests.Convenience
         /// </summary>
         [Theory]
         [InlineData("trunc(x)", "trunc")]
-        [InlineData("conjugate(x)", "conjugate")]
-        [InlineData("arg(z)", "arg")]
         public void TheRefusalNamesTheFunction(string written, string name) =>
             Assert.Contains(name,
                 Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity()).Message);
@@ -70,11 +66,9 @@ namespace AngouriMath.Tests.Convenience
         /// absence was invisible or cryptic according to how the caller happened to write it.
         /// </summary>
         [Theory]
-        [InlineData("conjugate(x)")]
-        [InlineData("conjugate(x, y)")]
-        [InlineData("conjugate(x, y, z)")]
         [InlineData("trunc(x)")]
         [InlineData("trunc(x, y)")]
+        [InlineData("trunc(x, y, z)")]
         public void TheArgumentCountDoesNotDecideWhetherItIsReported(string written) =>
             Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity());
 

@@ -473,6 +473,8 @@ namespace AngouriMath.Core.Transformations.Matching
             [typeof(Entity.Signumf)] = (1, static c => new Entity.Signumf(c[0])),
             [typeof(Entity.Erff)] = (1, static c => new Entity.Erff(c[0])),
             [typeof(Entity.Iversonf)] = (1, static c => new Entity.Iversonf(c[0])),
+            [typeof(Entity.Conjugatef)] = (1, static c => new Entity.Conjugatef(c[0])),
+            [typeof(Entity.Argf)] = (1, static c => new Entity.Argf(c[0])),
             [typeof(Entity.Alephf)] = (1, static c => new Entity.Alephf(c[0])),
             [typeof(Entity.Erfcf)] = (1, static c => new Entity.Erfcf(c[0])),
             [typeof(Entity.Erfif)] = (1, static c => new Entity.Erfif(c[0])),

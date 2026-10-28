@@ -274,6 +274,17 @@ for a symbol or an index past a million); `valuation(n, p)` for the `p`-adic val
 exponent of the prime `p` in `n` (`valuation(12, 2)` is `2`, `valuation(12, 5)` is `0`, `+oo` at
 `n = 0`, `NaN` where `p` is not prime; `v_p(n)` in LaTeX); `#S` (or `card(S)`) for the number of elements of a set, counted for a finite set of numbers and left as written for an infinite one; `#` binds like a function call, so a set expression needs parentheses (`#(A \/ B)`).
 
+**Complex conjugate and argument** — `conjugate(z)`, or `conj(z)`, printed `conjugate(z)` and drawn as
+`\overline{z}`. It is carried through sums, differences, products, quotients and whole powers, so
+`conj(a * b + i)` is `-i + conjugate(a) * conjugate(b)`, but not through a root or a logarithm,
+whose cuts break it: `conj(sqrt(-1))` is `-i` and `sqrt(conj(-1))` is `i`. What is known to be real
+is its own conjugate: a number, a modulus, and a symbol declared real, `conj(domain(x, RR))`. A bare
+symbol is complex, so `conj(x)` stays as it is. Its derivative in a variable is taken along the
+variable's real line: that of `conj(f)` is `conj(f')`. `arg(z)` is the principal argument, in
+`(-pi, pi]`, so that `z = abs(z) e^(i arg(z))`: `arg(-1)` is `pi`, `arg(-1 - i)` is `-3/4 * pi`, and
+`arg(0)` has no value
+([#2145](https://github.com/asc-community/AngouriMath/issues/2145)).
+
 **Rounding** — `floor` `ceil` (`ceiling` is accepted on the way in and prints as `ceil`) `round`.
 All three round a complex argument componentwise. `floor` and `ceil` go toward the infinities
 rather than toward zero, so `floor(-3/2)` is `-2`; `round` goes to the **nearest even** on a tie,

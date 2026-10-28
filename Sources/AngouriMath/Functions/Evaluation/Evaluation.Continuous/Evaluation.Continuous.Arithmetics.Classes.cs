@@ -537,6 +537,84 @@ namespace AngouriMath
             }
         }
 
+        public partial record Argf
+        {
+            // Every angle fits 0 = 0 e^(i t), so arg(0) has no value.
+            private protected override Entity IntrinsicCondition => !Argument.EqualTo(Integer.Zero);
+
+            // Exact where the number is: the axes are 0, pi and +-pi/2, and anywhere else the
+            // angle is arctan(b/a), turned by pi into the left half-plane. arg(-1) is pi, the end
+            // of (-pi, pi] that is included, as the principal logarithm's imaginary part is.
+            private static Entity OfANumber(Complex number, bool isExact)
+            {
+                if (number.IsNaN || number.IsZero)
+                    return Real.NaN;
+                if (!isExact)
+                    return number.Phase();
+                var (a, b) = (number.RealPart, number.ImaginaryPart);
+                if (b.IsZero)
+                    return a.IsNegative ? MathS.pi : Integer.Zero;
+                if (a.IsZero)
+                    return (b.IsNegative ? -MathS.pi / 2 : MathS.pi / 2).InnerSimplified;
+                var angle = MathS.Arctan(b / a).InnerSimplified;
+                if (a.IsPositive)
+                    return angle;
+                var turn = b.IsPositive ? 1 : -1;
+                // A table value of the arctangent is a rational multiple of pi, and the turn is
+                // gathered into it: arg(-1 + i) is 3/4 pi rather than -pi/4 + pi.
+                if ((angle / MathS.pi).InnerSimplified is Rational multiple)
+                    return ((multiple + turn) * MathS.pi).InnerSimplified;
+                return (angle + turn * MathS.pi).InnerSimplified;
+            }
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument,
+                    a => a switch
+                    {
+                        Complex number => OfANumber(number, isExact),
+                        // A positive whole number declared so lies on the positive real axis.
+                        _ when a.Codomain is Domain.Prime or Domain.PositiveInteger => Integer.Zero,
+                        _ => null
+                    },
+                    (@this, a) => ((Argf)@this).New(a), isExact);
+        }
+
+        public partial record Conjugatef
+        {
+            // Defined everywhere on the complex plane.
+            private protected override Entity IntrinsicCondition => Boolean.True;
+
+            // Real where the node's own codomain says so: a modulus, or a symbol declared with
+            // domain(x, RR). A bare Variable is Domain.Any, so conjugate(x) stays. Not the codomain
+            // setting, since what this returns is cached on the node and the setting is not.
+            private static bool IsKnownReal(Entity entity)
+                => entity.Codomain is Domain.Prime or Domain.PositiveInteger or Domain.NonNegativeInteger
+                                   or Domain.Integer or Domain.Rational or Domain.Real;
+
+            // A field automorphism, so carried through the arithmetic and the whole powers, which
+            // keeps the conjugate on the symbols and lets conjugate(a + b) - conjugate(a) -
+            // conjugate(b) meet as 0. Not through a root or a logarithm, whose cuts break the
+            // reflection: conjugate(sqrt(-1)) is -i and sqrt(conjugate(-1)) is i.
+            private static Entity? Conjugated(Entity argument, bool isExact) => argument switch
+            {
+                Complex number => number.Conjugate,
+                _ when IsKnownReal(argument) => argument,
+                Conjugatef(var inner) => inner,
+                Sumf(var left, var right) => (new Conjugatef(left) + new Conjugatef(right)).InnerSimplified(isExact),
+                Minusf(var left, var right) => (new Conjugatef(left) - new Conjugatef(right)).InnerSimplified(isExact),
+                Mulf(var left, var right) => (new Conjugatef(left) * new Conjugatef(right)).InnerSimplified(isExact),
+                Divf(var left, var right) => (new Conjugatef(left) / new Conjugatef(right)).InnerSimplified(isExact),
+                Powf(var @base, Integer exponent) => new Powf(new Conjugatef(@base), exponent).InnerSimplified(isExact),
+                _ => null
+            };
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument, a => Conjugated(a, isExact),
+                    (@this, a) => ((Conjugatef)@this).New(a), isExact);
+        }
+
         public partial record Iversonf
         {
             // 1 or 0 for every statement. A number is not one, and is left as written, as a

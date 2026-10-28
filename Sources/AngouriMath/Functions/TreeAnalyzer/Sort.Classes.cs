@@ -243,6 +243,18 @@ namespace AngouriMath
                 => Choice(level, "erf_", "erf_", "erf_");
         }
 
+        public partial record Argf
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "arg_", "arg_", "arg_");
+        }
+
+        public partial record Conjugatef
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "conjugate_", "conjugate_", "conjugate_");
+        }
+
         public partial record Iversonf
         {
             private protected override string SortHashName(SortLevel level)
