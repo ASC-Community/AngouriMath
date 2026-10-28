@@ -101,6 +101,10 @@ internal static class Resources
           iverson`
         - `derivative integral limit limitleft limitright sum product argmax argmin piecewise
           apply lambda`
+        - matrices and vectors: `det transpose dot cross resultant`, computed from a matrix or
+          a vector written out, `[1, 2]` being a column and `[[1, 2], [3, 4]]` a matrix:
+          `det(A)` of a symbol is refused. `cross(a, b)` is the vector product in space and
+          `cross([x, y])` is `[-y, x]`; `resultant(p, q, x)` eliminates `x`
 
         ## Spellings worth knowing (verified against the grammar, not guessed)
 

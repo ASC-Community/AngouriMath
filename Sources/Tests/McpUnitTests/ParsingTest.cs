@@ -58,6 +58,10 @@ public sealed class ParsingTest
         {
             // A function of more arguments than one.
         }
+        catch (InvalidArgumentParseException)
+        {
+            // A function of a matrix or a vector written out, which x is not: det(x).
+        }
         var syntax = Resources.Read("angourimath://syntax")!;
         Assert.True(Regex.IsMatch(syntax, $@"(?<![A-Za-z0-9_]){Regex.Escape(name)}(?![A-Za-z0-9_])"),
             $"angourimath://syntax does not name {name}, which the grammar reads as a function");

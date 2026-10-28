@@ -36,16 +36,16 @@ namespace AngouriMath.Core.Antlr
         // has to be a matrix written out, or an expression that is one once its operations are
         // carried out, as 2 [[1, 2], [3, 4]] is.
         // https://github.com/asc-community/AngouriMath/issues/2147
-        private static Matrix MatrixArgument(string function, Entity argument)
+        private static Matrix MatrixArgument(string function, Entity argument, string example)
             => argument as Matrix ?? argument.InnerSimplified as Matrix
                 ?? throw new InvalidArgumentParseException(
                     $"{function} is computed from the entries of a matrix or a vector written out, " +
-                    $"as in {function}([[1, 2], [3, 4]]), and {argument} is not one");
+                    $"as in {example}, and {argument} is not one");
 
         /// <summary>The entries of a vector, written as a column or as a row.</summary>
         private static Entity[] Components(string function, Entity argument)
         {
-            var vector = MatrixArgument(function, argument);
+            var vector = MatrixArgument(function, argument, $"{function}([1, 2, 3], [4, 5, 6])");
             if (vector.ColumnCount == 1)
                 return Enumerable.Range(0, vector.RowCount).Select(i => vector[i, 0]).ToArray();
             if (vector.RowCount == 1)
@@ -57,14 +57,14 @@ namespace AngouriMath.Core.Antlr
         /// <summary><c>det(M)</c>: the determinant of a square matrix.</summary>
         internal static Entity Determinant(Entity argument)
         {
-            var matrix = MatrixArgument("det", argument);
+            var matrix = MatrixArgument("det", argument, "det([[1, 2], [3, 4]])");
             return matrix.Determinant ?? throw new InvalidArgumentParseException(
                 $"det is taken of a square matrix, and {matrix} is {matrix.RowCount} by {matrix.ColumnCount}");
         }
 
         /// <summary><c>transpose(M)</c>, which <c>]T</c> writes only after a bracket.</summary>
         internal static Entity Transposed(Entity argument)
-            => MatrixArgument("transpose", argument).T;
+            => MatrixArgument("transpose", argument, "transpose([[1, 2], [3, 4]])").T;
 
         /// <summary>
         /// <c>dot(a, b)</c>: the sum of the products of the components, without conjugating either
