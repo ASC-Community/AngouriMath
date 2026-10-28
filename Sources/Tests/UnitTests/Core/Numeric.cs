@@ -458,5 +458,20 @@ namespace AngouriMath.Tests.Core
                 Assert.Equal(Integer.Create(325), Complex.Create(EDecimal.FromInt32(75), rootOf100000).Abs());
             }
         }
+
+        /// <summary>
+        /// A conjugate is made under the setting in force, as every other number is. It was kept on
+        /// the instance, so a division by <c>i</c> with the downcasting off left <c>0 - 1i</c>, in
+        /// decimals, as the conjugate of <see cref="Complex.ImaginaryOne"/>, and <c>conj(i)</c> was
+        /// that for every caller after it: two tests failed or passed by the order the suite ran in.
+        /// </summary>
+        [Fact]
+        public void AConjugateIsMadeUnderTheSettingInForce()
+        {
+            using (MathS.Settings.DowncastingEnabled.Set(false))
+                Assert.IsType<Complex>((1 / Complex.ImaginaryOne).Evaled);
+            Assert.Equal(Complex.MinusImaginaryOne, Complex.ImaginaryOne.Conjugate);
+            Assert.Equal(Complex.MinusImaginaryOne, "conj(i)".ToEntity().InnerSimplified);
+        }
     }
 }

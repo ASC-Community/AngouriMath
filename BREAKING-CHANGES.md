@@ -319,6 +319,16 @@ Both are real, `im(3 + 4i)` being `4`, real-linear, and turned by the conjugate 
 | `"im(3 + 4i)".ToEntity().Simplify()` | `(3 + 4i) * im` | `4` |
 | `"re * x".ToEntity()` | `re * x` | `re * x` |
 
+### A number's conjugate is made under the setting in force
+
+**Silent: `Complex.Conjugate` is made under the downcasting setting of the caller, where the first caller's setting was
+kept on the number for every caller after it.** A division by `i` with the downcasting off conjugates `i`, and left its
+conjugate as `0 - 1i`, in decimals, on the one instance that every `i` is, in every thread from then on.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `Complex.ImaginaryOne.Conjugate`, after `(1 / Complex.ImaginaryOne).Evaled` with `DowncastingEnabled` off | `0 - 1i` | `-i` |
+
 ### `conjugate`, `conj` and `arg` are functions
 
 **Not silent: these names followed by a bracket are now the complex conjugate and the principal argument, where they
