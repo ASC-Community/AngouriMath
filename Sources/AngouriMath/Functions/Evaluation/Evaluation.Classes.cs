@@ -158,7 +158,9 @@ namespace AngouriMath
 
             return (left, right) switch
             {
-                (Providedf a, Providedf b) => ops(a.Expression, b.Expression).Provided(a.Predicate & b.Predicate),
+                // A condition both operands carry is stated once: (a provided b > 0) + (c provided b > 0)
+                // is a + c provided b > 0. https://github.com/asc-community/AngouriMath/issues/212
+                (Providedf a, Providedf b) => ops(a.Expression, b.Expression).Provided(Providedf.Both(a.Predicate, b.Predicate)),
                 (Providedf a, var b) => ExpandOnTwoArguments(a.Expression, b, operation, defaultCtor, isExact).Provided(a.Predicate),
                 (var a, Providedf b) => ExpandOnTwoArguments(a, b.Expression, operation, defaultCtor, isExact).Provided(b.Predicate),
                 (Piecewise a, Piecewise b) => CombinedCaseByCase(a, b, operation, defaultCtor, isExact),
@@ -449,7 +451,7 @@ namespace AngouriMath
 
             return (left, right, third) switch
             {
-                (Providedf a, Providedf b, _) => ops(a.Expression, b.Expression).Provided(a.Predicate & b.Predicate),
+                (Providedf a, Providedf b, _) => ops(a.Expression, b.Expression).Provided(Providedf.Both(a.Predicate, b.Predicate)),
                 (Providedf a, var b, _) => ExpandOnTwoAndTArguments(a.Expression, b, third, operation, defaultCtor, isExact).Provided(a.Predicate),
                 (var a, Providedf b, _) => ExpandOnTwoAndTArguments(a, b.Expression, third, operation, defaultCtor, isExact).Provided(b.Predicate),
                 (Piecewise a, Piecewise b, _) =>

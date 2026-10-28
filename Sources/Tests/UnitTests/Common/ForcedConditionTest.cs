@@ -36,6 +36,27 @@ namespace AngouriMath.Tests.Common
         public void ConjunctsThatForceNothingAreKept(string written)
             => Assert.Equal(written.ToEntity(), written.ToEntity().InnerSimplified);
 
+        /// <summary>
+        /// Two operands carrying the same condition, or one forcing the other's, give a result that
+        /// states it once. A second derivative of <c>1/sqrt(x^2 + 13)</c> stated
+        /// <c>not x ^ 2 + 13 = 0</c> three times.
+        /// </summary>
+        [Theory]
+        [InlineData("(a provided b > 0) + (c provided b > 0)", "a + c provided b > 0")]
+        [InlineData("(a provided b > 0) * (c provided b > 1)", "a * c provided b > 1")]
+        [InlineData("(a provided b > 0) + (c provided b > 0) + (d provided b > 0)", "a + c + d provided b > 0")]
+        [InlineData("log(a provided b > 0, c provided b > 0)", "log(a, c) provided b > 0")]
+        public void OperandsConditionsAreJoinedOnce(string written, string expected)
+            => Assert.Equal(expected.ToEntity().InnerSimplified, written.ToEntity().InnerSimplified);
+
+        [Fact]
+        public void ASecondDerivativeStatesItsConditionOnce()
+        {
+            var derivative = "derivative(1 / sqrt(x^2 + 13), x, 2)".ToEntity().InnerSimplified;
+            var condition = Assert.IsType<Entity.Providedf>(derivative).Predicate;
+            Assert.Equal("not x ^ 2 + 13 = 0".ToEntity(), condition);
+        }
+
         [Fact]
         public void ASolvedRootStatesItOnce()
             => Assert.Equal("{ a ^ 2 provided a >= 0 }".ToEntity(), "(sqrt(x) = a) provided a > -5".ToEntity().Solve("x"));

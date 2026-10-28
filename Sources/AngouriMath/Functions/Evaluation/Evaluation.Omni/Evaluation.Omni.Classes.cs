@@ -470,7 +470,7 @@ namespace AngouriMath
             // the first is kept. The conjunction is rebuilt only where something goes, so every
             // other condition keeps its shape.
             // https://github.com/asc-community/AngouriMath/issues/212
-            private static Entity Both(Entity first, Entity second)
+            internal static Entity Both(Entity first, Entity second)
             {
                 var conjuncts = new List<Entity>();
                 void Gather(Entity condition)
