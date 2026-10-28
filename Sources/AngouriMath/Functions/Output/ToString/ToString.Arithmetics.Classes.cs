@@ -383,6 +383,22 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        public partial record FallingFactorialf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"fallingfactorial({Argument.Stringize()}, {Order.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        public partial record RisingFactorialf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"risingfactorial({Argument.Stringize()}, {Order.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record DoubleFactorialf
         {
             /// <inheritdoc/>

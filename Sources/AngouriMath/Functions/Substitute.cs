@@ -174,6 +174,20 @@ namespace AngouriMath
                 => this == x ? value : New(Upper.Substitute(x, value), Lower.Substitute(x, value));
         }
 
+        partial record FallingFactorialf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value), Order.Substitute(x, value));
+        }
+
+        partial record RisingFactorialf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value), Order.Substitute(x, value));
+        }
+
         partial record Signumf
         {
             /// <inheritdoc/>

@@ -143,7 +143,9 @@ namespace AngouriMath
                 }
                 else
                 {
-                    return "{" + Base.Latexize(Base.LatexPriority <= LatexPriority) + "}^{" + Exponent.Latexize() + "}";
+                    // A conjugate as the whole exponent is bracketed, since x^{\overline{n}} is the rising
+                    // factorial. https://github.com/asc-community/AngouriMath/issues/2182
+                    return "{" + Base.Latexize(Base.LatexPriority <= LatexPriority) + "}^{" + Exponent.Latexize(Exponent is Conjugatef) + "}";
                 }
             }
         }
@@ -360,6 +362,25 @@ namespace AngouriMath
             /// <inheritdoc/>
             private protected override string LatexizeNode()
                 => $@"\binom{{{Upper.Latexize()}}}{{{Lower.Latexize()}}}";
+        }
+
+        // Knuth's bars over and under the exponent, from Concrete Mathematics; the argument is
+        // bracketed as a power's base is, the factorial power being drawn as one.
+        // https://github.com/asc-community/AngouriMath/issues/2182
+        partial record FallingFactorialf
+        {
+            internal override Priority LatexPriority => Priority.Pow;
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => "{" + Argument.Latexize(Argument.LatexPriority <= LatexPriority) + @"}^{\underline{" + Order.Latexize() + "}}";
+        }
+
+        partial record RisingFactorialf
+        {
+            internal override Priority LatexPriority => Priority.Pow;
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => "{" + Argument.Latexize(Argument.LatexPriority <= LatexPriority) + @"}^{\overline{" + Order.Latexize() + "}}";
         }
 
         partial record Primef

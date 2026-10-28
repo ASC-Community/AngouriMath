@@ -1387,6 +1387,14 @@ namespace AngouriMath
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity Binomial(Entity n, Entity k) => new Binomialf(n, k);
 
+        /// <summary>The falling factorial <c>x (x - 1) ... (x - n + 1)</c>, <c>x^{\underline{n}}</c></summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity FallingFactorial(Entity x, Entity n) => new FallingFactorialf(x, n);
+
+        /// <summary>The rising factorial <c>x (x + 1) ... (x + n - 1)</c>, <c>x^{\overline{n}}</c></summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity RisingFactorial(Entity x, Entity n) => new RisingFactorialf(x, n);
+
         /// <summary>The Iverson bracket <c>iverson(P)</c>: <c>1</c> where the statement holds, <c>0</c> where it does not</summary>
         /// <param name="statement">The statement</param>
         /// <returns>The <see cref="Entity.Iversonf"/> node</returns>

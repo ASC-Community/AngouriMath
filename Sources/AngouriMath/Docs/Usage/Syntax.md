@@ -330,6 +330,19 @@ or the odd indices (`sum(binomial(n, 2 l), l, 0, floor(n/2))` is `2^(n - 1)` for
 identities of chapter 8 of Sullivan and Mackey's *An Introduction to Proofs*, so that
 `forall n in ZZ+ : sum(k binomial(n, k), k, 0, n) = n 2^(n - 1)` is `True`.
 
+**Factorial powers** — `fallingfactorial(x, n)` (or `factorialpower`, Mathematica's name) and
+`risingfactorial(x, n)`, `x` to the `n` falling and rising: `x (x - 1) ... (x - n + 1)` and
+`x (x + 1) ... (x + n - 1)` for a whole `n >= 0`, drawn with Knuth's bars as `x^{\underline{n}}` and
+`x^{\overline{n}}` (*Concrete Mathematics*, §2.6). `fallingfactorial(5, 2)` is `20` and
+`risingfactorial(3, 2)` is `12`. A negative whole `n` gives the reciprocal of `(x + 1) ... (x - n)`
+falling and of `(x - 1) ... (x + n)` rising, so `fallingfactorial(5, -2)` is `1/42`, and any other `n`
+the gamma ratio `Γ(x + 1)/Γ(x - n + 1)` falling and `Γ(x + n)/Γ(x)` rising, evaluated numerically.
+Where the numerator has a pole there is no value, and where the denominator has one the value is `0`.
+`pochhammer` is refused, since `(x)_n` is the rising factorial to some authors and the falling one to
+others, and a conjugate as a whole exponent is drawn in brackets, `x^{\left(\overline{n}\right)}`,
+so that it does not read as a rising factorial
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 **Iverson bracket** — `iverson(P)`. `1` where the statement `P` holds and `0` where it does not,
 which is how a count is written as a sum: `sum(iverson(k divides 12), k, 1, 12)` is `6`, the number
 of divisors of `12`. A statement that is not decided keeps the node, which prints as `[\![P]\!]` in
@@ -501,8 +514,8 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
 **Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
-`hurwitzzeta` `lambertw` `productlog` `harmonicnumber` `catalannumber` `multinomial` `fallingfactorial` `factorialpower`
-`risingfactorial` `forwarddifference`. Each is what some other
+`hurwitzzeta` `lambertw` `productlog` `harmonicnumber` `catalannumber` `multinomial`
+`forwarddifference`. Each is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
 under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse
 error naming the function instead. What each will mean is fixed in

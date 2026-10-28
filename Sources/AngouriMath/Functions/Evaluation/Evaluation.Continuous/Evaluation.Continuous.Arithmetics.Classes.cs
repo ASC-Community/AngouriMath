@@ -583,6 +583,91 @@ namespace AngouriMath
             }
         }
 
+        public partial record FallingFactorialf
+        {
+            // Defined for every whole order n >= 0; for a negative whole n where no factor of
+            // (x + 1) (x + 2) ... (x - n) vanishes; for any other n where Γ(x + 1) is, which is
+            // everywhere but the negative whole numbers.
+            private protected override Entity IntrinsicCondition =>
+                Order.In(MathS.Sets.Z) & (Order >= 0 | !(Argument.In(MathS.Sets.Z) & Argument >= Order & Argument <= -1))
+                | !Order.In(MathS.Sets.Z) & !(Argument.In(MathS.Sets.Z) & Argument < 0);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact) =>
+                ExpandOnTwoArguments(Argument, Order,
+                    (x, n) => (x, n) switch
+                    {
+                        (_, Integer { IsZero: true }) => Integer.One,
+                        (Number value, Integer order) => FactorialPowers.OfAWholeOrder(value, order, falling: true),
+                        // Γ(x + 1)/Γ(x - n + 1): no value at a pole of the numerator, and 0 at one of
+                        // the denominator, whose reciprocal vanishes there.
+                        (Integer { EInteger.Sign: < 0 }, Number) => MathS.NaN,
+                        (Number value, Number order) when (value - order).Evaled is Integer { EInteger.Sign: < 0 } => Integer.Zero,
+                        (Complex value, Complex order) when !isExact
+                            && Number.Factorial(value) is var top && Number.Factorial(value - order) is var bottom && !top.IsNaN && !bottom.IsNaN
+                            => top / bottom,
+                        _ => null
+                    },
+                    (@this, x, n) => ((FallingFactorialf)@this).New(x, n), isExact);
+        }
+
+        public partial record RisingFactorialf
+        {
+            // Defined for every whole order n >= 0; for a negative whole n where no factor of
+            // (x - 1) (x - 2) ... (x + n) vanishes; for any other n where Γ(x + n) is, which is
+            // everywhere but where x + n is a whole number not above 0.
+            private protected override Entity IntrinsicCondition =>
+                Order.In(MathS.Sets.Z) & (Order >= 0 | !(Argument.In(MathS.Sets.Z) & Argument >= 1 & Argument <= -Order))
+                | !Order.In(MathS.Sets.Z) & !((Argument + Order).In(MathS.Sets.Z) & Argument + Order <= 0);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact) =>
+                ExpandOnTwoArguments(Argument, Order,
+                    (x, n) => (x, n) switch
+                    {
+                        (_, Integer { IsZero: true }) => Integer.One,
+                        (Number value, Integer order) => FactorialPowers.OfAWholeOrder(value, order, falling: false),
+                        // Γ(x + n)/Γ(x): no value at a pole of the numerator, and 0 at one of the
+                        // denominator.
+                        (Number value, Number order) when (value + order).Evaled is Integer { EInteger.Sign: <= 0 } => MathS.NaN,
+                        (Integer { EInteger.Sign: <= 0 }, Number) => Integer.Zero,
+                        (Complex value, Complex order) when !isExact
+                            && Number.Factorial(value + order - 1) is var top && Number.Factorial(value - 1) is var bottom && !top.IsNaN && !bottom.IsNaN
+                            => top / bottom,
+                        _ => null
+                    },
+                    (@this, x, n) => ((RisingFactorialf)@this).New(x, n), isExact);
+        }
+
+        /// <summary>The falling and the rising factorial of a number to a whole order, as products.</summary>
+        private static class FactorialPowers
+        {
+            /// <summary>How long a product is built before the node is left as written.</summary>
+            private const int LongestProduct = 10000;
+
+            /// <summary>
+            /// <c>x (x - 1) ... (x - n + 1)</c> falling and <c>x (x + 1) ... (x + n - 1)</c> rising for
+            /// <c>n &gt; 0</c>, and for <c>n &lt; 0</c> the reciprocal of <c>(x + 1) ... (x - n)</c>
+            /// falling and of <c>(x - 1) ... (x + n)</c> rising, <c>NaN</c> where a factor vanishes.
+            /// </summary>
+            internal static Entity? OfAWholeOrder(Number x, Integer order, bool falling)
+            {
+                if (order.EInteger.Abs().CompareTo(PeterO.Numbers.EInteger.FromInt32(LongestProduct)) > 0)
+                    return null;
+                var n = order.EInteger.ToInt32Checked();
+                var step = falling == n > 0 ? -1 : 1;
+                Entity product = Integer.One;
+                for (var i = 0; i < System.Math.Abs(n); i++)
+                {
+                    var factor = (x + Integer.Create(n > 0 ? step * i : step * (i + 1))).Evaled;
+                    if (n < 0 && factor is Complex { IsZero: true })
+                        return MathS.NaN;
+                    product = (product * factor).Evaled;
+                }
+                return n > 0 ? product : (Integer.One / product).Evaled;
+            }
+        }
+
         public partial record Ref
         {
             // Defined everywhere on the complex plane.

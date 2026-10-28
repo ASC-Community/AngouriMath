@@ -625,6 +625,9 @@ atom returns[Entity value]
     | 'gcd(' args = function_arguments ')' { AssertAtLeast("gcd", 1, $args.list.Count); $value = $args.list.Aggregate((a, b) => MathS.Gcd(a, b)); }
     | 'lcm(' args = function_arguments ')' { AssertAtLeast("lcm", 1, $args.list.Count); $value = $args.list.Aggregate((a, b) => MathS.Lcm(a, b)); }
     | 'binomial(' args = function_arguments ')' { Assert("binomial", 2, $args.list.Count); $value = MathS.Binomial($args.list[0], $args.list[1]); }
+    | 'fallingfactorial(' args = function_arguments ')' { Assert("fallingfactorial", 2, $args.list.Count); $value = MathS.FallingFactorial($args.list[0], $args.list[1]); }
+    | 'factorialpower(' args = function_arguments ')' { Assert("factorialpower", 2, $args.list.Count); $value = MathS.FallingFactorial($args.list[0], $args.list[1]); }
+    | 'risingfactorial(' args = function_arguments ')' { Assert("risingfactorial", 2, $args.list.Count); $value = MathS.RisingFactorial($args.list[0], $args.list[1]); }
     /* The Iverson bracket, 1 where a statement holds and 0 where it does not: a count written as
        a sum. https://github.com/asc-community/AngouriMath/issues/1478 */
     | 'iverson(' args = function_arguments ')' { Assert("iverson", 1, $args.list.Count); $value = MathS.Iverson($args.list[0]); }
@@ -693,9 +696,6 @@ atom returns[Entity value]
     | 'harmonicnumber(' args = function_arguments ')' { $value = NotImplementedFunction("harmonicnumber", "harmonic numbers yet"); }
     | 'catalannumber(' args = function_arguments ')' { $value = NotImplementedFunction("catalannumber", "Catalan numbers yet"); }
     | 'multinomial(' args = function_arguments ')' { $value = NotImplementedFunction("multinomial", "multinomial coefficients yet"); }
-    | 'fallingfactorial(' args = function_arguments ')' { $value = NotImplementedFunction("fallingfactorial", "falling factorial yet"); }
-    | 'factorialpower(' args = function_arguments ')' { $value = NotImplementedFunction("factorialpower", "falling factorial yet"); }
-    | 'risingfactorial(' args = function_arguments ')' { $value = NotImplementedFunction("risingfactorial", "rising factorial yet"); }
     | 'forwarddifference(' args = function_arguments ')' { $value = NotImplementedFunction("forwarddifference", "forward difference yet"); }
     /* Names that will not be functions, refused with the spelling to use: what they mean is
        ambiguous between sources, or is already written exactly another way. */
