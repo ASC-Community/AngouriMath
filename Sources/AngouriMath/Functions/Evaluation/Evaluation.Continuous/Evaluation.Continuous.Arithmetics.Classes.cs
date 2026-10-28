@@ -537,6 +537,59 @@ namespace AngouriMath
             }
         }
 
+        public partial record Ref
+        {
+            // Defined everywhere on the complex plane.
+            private protected override Entity IntrinsicCondition => Boolean.True;
+
+            // Real-linear, so carried through sums, differences, and products and quotients by a
+            // real number; re(conj z) is re(z). What is known to be real is its own real part, and
+            // has a value exactly where its real part has one.
+            private static Entity? RealPart(Entity argument, bool isExact) => argument switch
+            {
+                Complex number => number.RealPart,
+                _ when Conjugatef.IsKnownReal(argument) => argument,
+                Conjugatef(var z) => new Ref(z).InnerSimplified(isExact),
+                Sumf(var left, var right) => (new Ref(left) + new Ref(right)).InnerSimplified(isExact),
+                Minusf(var left, var right) => (new Ref(left) - new Ref(right)).InnerSimplified(isExact),
+                Mulf(Real factor, var z) => (factor * new Ref(z)).InnerSimplified(isExact),
+                Mulf(var z, Real factor) => (new Ref(z) * factor).InnerSimplified(isExact),
+                Divf(var z, Real divisor) => (new Ref(z) / divisor).InnerSimplified(isExact),
+                _ => null
+            };
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument, a => RealPart(a, isExact),
+                    (@this, a) => ((Ref)@this).New(a), isExact);
+        }
+
+        public partial record Imf
+        {
+            // Defined everywhere on the complex plane.
+            private protected override Entity IntrinsicCondition => Boolean.True;
+
+            // Real-linear as the real part is, and im(conj z) is -im(z). Not 0 for what is known to
+            // be real: a codomain says what a node's values are and not where it has one, and
+            // im(prime(x)) has no value at x = -3.
+            private static Entity? ImaginaryPart(Entity argument, bool isExact) => argument switch
+            {
+                Complex number => number.ImaginaryPart,
+                Conjugatef(var z) => (-new Imf(z)).InnerSimplified(isExact),
+                Sumf(var left, var right) => (new Imf(left) + new Imf(right)).InnerSimplified(isExact),
+                Minusf(var left, var right) => (new Imf(left) - new Imf(right)).InnerSimplified(isExact),
+                Mulf(Real factor, var z) => (factor * new Imf(z)).InnerSimplified(isExact),
+                Mulf(var z, Real factor) => (new Imf(z) * factor).InnerSimplified(isExact),
+                Divf(var z, Real divisor) => (new Imf(z) / divisor).InnerSimplified(isExact),
+                _ => null
+            };
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument, a => ImaginaryPart(a, isExact),
+                    (@this, a) => ((Imf)@this).New(a), isExact);
+        }
+
         public partial record Argf
         {
             // Every angle fits 0 = 0 e^(i t), so arg(0) has no value.

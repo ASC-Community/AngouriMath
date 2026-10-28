@@ -123,6 +123,8 @@ namespace AngouriMath
         [EntityJsonConverter] partial record Iversonf;
         [EntityJsonConverter] partial record Conjugatef;
         [EntityJsonConverter] partial record Argf;
+        [EntityJsonConverter] partial record Ref;
+        [EntityJsonConverter] partial record Imf;
         [EntityJsonConverter] partial record Alephf;
         [EntityJsonConverter] partial record Erfcf;
         [EntityJsonConverter] partial record Erfif;

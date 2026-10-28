@@ -374,6 +374,20 @@ namespace AngouriMath
                 null;
         }
 
+        partial record Ref
+        {
+            // Where the real part is a value is a line, which no list of values of x is. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
+        partial record Imf
+        {
+            // Where the imaginary part is a value is a line, which no list of values of x is. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
         partial record Argf
         {
             // Where the argument is a value is a ray, a set of points no list of values of x is.

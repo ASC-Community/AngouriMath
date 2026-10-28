@@ -274,7 +274,7 @@ for a symbol or an index past a million); `valuation(n, p)` for the `p`-adic val
 exponent of the prime `p` in `n` (`valuation(12, 2)` is `2`, `valuation(12, 5)` is `0`, `+oo` at
 `n = 0`, `NaN` where `p` is not prime; `v_p(n)` in LaTeX); `#S` (or `card(S)`) for the number of elements of a set, counted for a finite set of numbers and left as written for an infinite one; `#` binds like a function call, so a set expression needs parentheses (`#(A \/ B)`).
 
-**Complex conjugate and argument** — `conjugate(z)`, or `conj(z)`, printed `conjugate(z)` and drawn as
+**Complex conjugate, argument and parts** — `conjugate(z)`, or `conj(z)`, printed `conjugate(z)` and drawn as
 `\overline{z}`. It is carried through sums, differences, products, quotients and whole powers, so
 `conj(a * b + i)` is `-i + conjugate(a) * conjugate(b)`, but not through a root or a logarithm,
 whose cuts break it: `conj(sqrt(-1))` is `-i` and `sqrt(conj(-1))` is `i`. What is known to be real
@@ -282,7 +282,9 @@ is its own conjugate: a number, a modulus, and a symbol declared real, `conj(dom
 symbol is complex, so `conj(x)` stays as it is. Its derivative in a variable is taken along the
 variable's real line: that of `conj(f)` is `conj(f')`. `arg(z)` is the principal argument, in
 `(-pi, pi]`, so that `z = abs(z) e^(i arg(z))`: `arg(-1)` is `pi`, `arg(-1 - i)` is `-3/4 * pi`, and
-`arg(0)` has no value
+`arg(0)` has no value. `Re(z)` and `Im(z)`, also written `re` and `im` as in SymPy and `real` and
+`imag` as in MATLAB, are the real and the imaginary part, both real: `Im(3 + 4i)` is `4`. They are carried through sums, differences, and
+products and quotients by a real number, and `Re(conj(z))` is `Re(z)` and `Im(conj(z))` is `-Im(z)`
 ([#2145](https://github.com/asc-community/AngouriMath/issues/2145)).
 
 **Rounding** — `floor` `ceil` (`ceiling` is accepted on the way in and prints as `ceil`) `round`.
@@ -482,11 +484,10 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in ZZ : x < 0 }`, `ZZ+ \ PP` is `{ x in ZZ+ : not x in PP }` and `QQ \ ZZ` is
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
-**Refused by name** — `trunc` `conjugate`. AngouriMath has none of these, and each is
-what some other CAS calls a function, so a caller reaches for it. Left alone they would be read as
-products under the rule above and answer silently and wrongly; they raise a parse error naming the
-function instead. `re` and `im` are the same case and are *not* refused, being short enough to be
-somebody's variable.
+**Refused by name** — `trunc`. AngouriMath has no such function, and it is what some other
+CAS calls one, so a caller reaches for it. Left alone it would be read as a product under the rule
+above and answer silently and wrongly; it raises a parse error naming the function instead. Short
+names that could be somebody's variable, such as `beta` or `norm`, are *not* refused.
 
 ## `sum` and `product`, which declare a name
 

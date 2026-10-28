@@ -325,10 +325,13 @@ namespace AngouriMath.Tests.Convenience
             Assert.IsType<Entity.Derivativef>("derivative(f, x, 2)".ToEntity());
         }
 
-        /// <summary>Short enough to be somebody's variable, so read as a product and not refused.</summary>
+        /// <summary>
+        /// Short enough to be somebody's variable, so read as a product and not refused. <c>re</c> and
+        /// <c>im</c> were the examples until they became the real and the imaginary part.
+        /// </summary>
         [Theory]
-        [InlineData("re(x)")]
-        [InlineData("im(x)")]
+        [InlineData("beta(x)")]
+        [InlineData("norm(x)")]
         public void ANameTheLibraryDoesNotRefuseIsAProduct(string written) =>
             Assert.IsType<Entity.Mulf>(written.ToEntity());
 

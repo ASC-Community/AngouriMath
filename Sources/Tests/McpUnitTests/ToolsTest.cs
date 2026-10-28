@@ -50,7 +50,7 @@ public sealed class ToolsTest
 
     [Theory]
     [InlineData("Γ(x+1)", "Γ * (x + 1)")]
-    [InlineData("im(z)", "im * z")]
+    [InlineData("beta(z)", "beta * z")]
     public void AnUnknownNameBeforeABracketIsWarnedAboutAsAProduct(string expression, string parsed)
     {
         var answer = Mcp.Call("am_parse", $$"""{"expression":"{{expression}}"}""");

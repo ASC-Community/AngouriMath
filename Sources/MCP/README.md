@@ -111,7 +111,7 @@ the dangerous part: a valid parse of a different expression, with a plausible an
 
 - A number after a name is an **exponent**: `x2` is x², and `2(g+e)3` is 2(g+e)³. A variable
   named `x2` or `t0` is silently raised to a power.
-- An unknown name before a bracket is a **product**: `im(z)` is `im * z`.
+- An unknown name before a bracket is a **product**: `beta(z)` is `beta * z`.
 
 Both raise a warning, and the `parsed` field always shows what was understood. Whether a name is a
 function is asked of the parser itself, by parsing `name(x)`, so the warning cannot fall behind the

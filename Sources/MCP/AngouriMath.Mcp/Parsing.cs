@@ -21,11 +21,11 @@ namespace AngouriMath.Mcp;
 ///   * a trailing number is an EXPONENT, not a factor: `x2` is x², `2(g+e)3` is 2(g+e)³.
 ///     A model that names a variable `x2`, `v1` or `a0` — completely ordinary naming —
 ///     gets it silently squared. (MathS.cs documents this on ExplicitParsingOnly.)
-///   * an unknown identifier becomes implicit multiplication: `im(z)` is the product
-///     `im * z`, not the imaginary part. The library refuses some such names by name —
-///     `trunc`, `lcm`, `erf`, `conjugate` and the arc- spellings of the inverse hyperbolics —
-///     so those fail loudly; the rest degrade with nothing said, because refusing every
-///     unknown name is refusing `a(b + c)`.
+///   * an unknown identifier becomes implicit multiplication: `beta(z)` is the product
+///     `beta * z`, not the beta function. The library refuses some such names by name —
+///     `trunc`, the long names of functions to come such as `zeta`, and the arc- spellings of
+///     the inverse hyperbolics — so those fail loudly; the rest degrade with nothing said,
+///     because refusing every unknown name is refusing `a(b + c)`.
 ///
 /// Both produce a valid parse of a DIFFERENT expression, which is the worst failure class
 /// available: no exception, plausible answer, wrong. Rather than force strict mode on
@@ -76,8 +76,6 @@ internal static class Parsing
         ["setsubtraction"] = @"the infix '\' — write 'A \ B'",
         ["elementin"] = "the infix 'in' — write 'x in A'",
         ["impl"] = "'->' or 'implies' — write 'a -> b'",
-        ["re"] = "not in this grammar; there is no real-part function",
-        ["im"] = "not in this grammar; there is no imaginary-part function",
     };
 
     // The alphabet the grammar's VARIABLE rule accepts (Core/Antlr/AngouriMath.g): ASCII

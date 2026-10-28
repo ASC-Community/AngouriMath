@@ -230,6 +230,22 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Complex;
         }
 
+        partial record Ref
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Real;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Real;
+        }
+
+        partial record Imf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Real;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Real;
+        }
+
         partial record Argf
         {
             // An angle, whatever it is the angle of.
