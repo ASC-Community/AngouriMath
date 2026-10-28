@@ -453,7 +453,7 @@ the right shape, written out or once its operations are carried out, throws `Inv
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
 is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber`, `catalannumber`, `multinomial`, `fallingfactorial`, `factorialpower`,
-`risingfactorial`, `forwarddifference`, `laplacian`, `jacobian` and `hessian`. Names that will not be functions,
+`risingfactorial` and `forwarddifference`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
 Each name without a bracket is still a variable, and short names such as `beta` and `norm` are still read as products
@@ -483,6 +483,24 @@ elsewhere. `primepi(x)` counts the primes at most the real number `x`
 | `"primeomega(12)".ToEntity().Simplify()` | `12 * primeomega` | `3` |
 | `"primepi(10)".ToEntity().Evaled` | `primepi * 10` | `4` |
 | `"mobius(0)".ToEntity().Simplify()` | `0` | `NaN` |
+
+### The Laplacian, the Jacobian and the Hessian
+
+**Not silent: `laplacian(f, x)`, `jacobian(F, x)` and `hessian(f, x)` are now computed into derivatives, where they were
+read as products or, with two arguments, were a parse error.** They are taken in the variables listed as a vector,
+`[x, y, z]`, or in one variable. `laplacian` is the sum of the second derivatives of a scalar function. `jacobian` is the
+matrix with a row for each component of `F` and a column for each variable. `hessian` is the matrix of the second
+derivatives, the entry in row `i` and column `j` being the derivative in `x_i` of the derivative in `x_j`. Like `det`
+they are computed when parsed and have no node: the result is made of `derivative` nodes, evaluated as any derivative
+is ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"laplacian(x^2 y + y^3, [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `8 * y` |
+| `"jacobian([x y, x + y], [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[y, x], [1, 1]]` |
+| `"hessian(x^3 y^2, [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[6 * x * y ^ 2, 6 * x ^ 2 * y], [6 * x ^ 2 * y, 2 * x ^ 3]]` |
+| `"jacobian(x y, {x, y})".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: a set has no order for the columns |
+
 ### A subscript may have a subscript
 
 **Not silent: what was a parse error is a name.** A name took at most one `_`, so `x_1_2` and `X_a_beta` were lexer

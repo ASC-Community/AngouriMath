@@ -230,6 +230,14 @@ written out, or be one once its operations are carried out: `det(2 * [[1, 2], [3
 and `det(A)` of a symbol `A` is refused
 ([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
 
+`laplacian(f, [x, y, z])` is the sum of the second derivatives of a scalar `f`, `jacobian(F, [x, y])`
+the matrix of the first derivatives of the components of `F`, a row for each component and a column
+for each variable, and `hessian(f, [x, y])` the matrix of the second derivatives, the entry in row `i`
+and column `j` being the derivative in `x_i` of the derivative in `x_j`. The variables are listed as a
+vector, since a set has no order to give the columns, or written alone for one variable. These too
+are computed when parsed, into `derivative` nodes, so `det(jacobian([r cos(t), r sin(t)], [r, t]))`
+simplifies to `r` ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 `(|x|)` is the absolute value of `x`, and prints back as `abs(x)`.
 
 ## Functions
@@ -494,7 +502,7 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 
 **Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
 `hurwitzzeta` `lambertw` `productlog` `harmonicnumber` `catalannumber` `multinomial` `fallingfactorial` `factorialpower`
-`risingfactorial` `forwarddifference` `laplacian` `jacobian` `hessian`. Each is what some other
+`risingfactorial` `forwarddifference`. Each is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
 under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse
 error naming the function instead. What each will mean is fixed in
