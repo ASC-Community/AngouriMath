@@ -171,6 +171,15 @@ namespace AngouriMath.Tests.Convenience
             Assert.Equal(Domain.Real, "arg(z)".ToEntity().Codomain);
         }
 
+        /// <summary>
+        /// A codomain says what a node's values are, not where it has one: <c>prime(x)</c> is a
+        /// prime wherever it is defined, and at <c>x = -3</c> it is not, so its argument is not
+        /// <c>0</c> there. Found by BoundCheck.
+        /// </summary>
+        [Fact]
+        public void ADeclaredPositiveCodomainDoesNotDecideTheArgument()
+            => Assert.IsNotType<Integer>("arg(prime(x))".ToEntity().Simplify());
+
         [Theory]
         [InlineData("conj(z)", "conjugate(z)", @"\overline{z}", "sympy.conjugate(z)")]
         [InlineData("arg(z)", "arg(z)", @"\arg\left(z\right)", "sympy.arg(z)")]

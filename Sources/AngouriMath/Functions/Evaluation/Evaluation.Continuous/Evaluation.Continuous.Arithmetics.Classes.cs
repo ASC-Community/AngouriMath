@@ -570,13 +570,9 @@ namespace AngouriMath
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
                 => ExpandOnOneArgument(Argument,
-                    a => a switch
-                    {
-                        Complex number => OfANumber(number, isExact),
-                        // A positive whole number declared so lies on the positive real axis.
-                        _ when a.Codomain is Domain.Prime or Domain.PositiveInteger => Integer.Zero,
-                        _ => null
-                    },
+                    // Numbers only. A codomain says what a node's values are and not where it has
+                    // one: arg(prime(x)) is not 0 at x = -3, where prime(x) has no value.
+                    a => a is Complex number ? OfANumber(number, isExact) : null,
                     (@this, a) => ((Argf)@this).New(a), isExact);
         }
 
