@@ -540,6 +540,41 @@ namespace AngouriMath
                 => this == x ? value : New(Argument.Substitute(x, value));
         }
 
+        partial record Mobiusf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record PrimeNuf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record PrimeOmegaf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record PrimePif
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record DivisorSigmaf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Order.Substitute(x, value), Argument.Substitute(x, value));
+        }
+
         partial record Valuationf
         {
             /// <inheritdoc/>

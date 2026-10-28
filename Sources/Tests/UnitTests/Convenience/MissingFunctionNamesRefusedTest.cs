@@ -35,7 +35,9 @@ namespace AngouriMath.Tests.Convenience
         // and det until https://github.com/asc-community/AngouriMath/issues/2147.
         // And the long names of the functions to come, reserved until each is implemented, and the
         // names that will not be functions, refused with the spelling to use:
-        // https://github.com/asc-community/AngouriMath/issues/2182. zeta(s) was zeta * s.
+        // https://github.com/asc-community/AngouriMath/issues/2182. zeta(s) was zeta * s. mobius,
+        // moebiusmu, divisorsigma, primenu, primeomega and primepi were among them until they were
+        // implemented, in the same issue.
         [Theory]
         [InlineData("trunc(x)")]
         [InlineData("zeta(s)")]
@@ -44,12 +46,6 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("hurwitzzeta(s, a)")]
         [InlineData("lambertw(x)")]
         [InlineData("productlog(x)")]
-        [InlineData("mobius(n)")]
-        [InlineData("moebiusmu(n)")]
-        [InlineData("divisorsigma(k, n)")]
-        [InlineData("primenu(n)")]
-        [InlineData("primeomega(n)")]
-        [InlineData("primepi(n)")]
         [InlineData("harmonicnumber(n)")]
         [InlineData("catalannumber(n)")]
         [InlineData("multinomial(a, b, c)")]

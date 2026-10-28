@@ -764,6 +764,51 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Prime;
         }
 
+        partial record Mobiusf
+        {
+            // -1, 0 or 1.
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Integer;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Integer;
+        }
+
+        partial record PrimeNuf
+        {
+            // A count.
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.NonNegativeInteger;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.NonNegativeInteger;
+        }
+
+        partial record PrimeOmegaf
+        {
+            // A count.
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.NonNegativeInteger;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.NonNegativeInteger;
+        }
+
+        partial record PrimePif
+        {
+            // A count.
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.NonNegativeInteger;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.NonNegativeInteger;
+        }
+
+        partial record DivisorSigmaf
+        {
+            // A sum of powers, complex for a complex order.
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>

@@ -272,7 +272,15 @@ one argument is base 10, so `log(100)` is 2; `log10` and `log2` say it in the na
 for the `n`-th prime (`prime(25)` is `97`, `NaN` off the positive whole numbers, left as written
 for a symbol or an index past a million); `valuation(n, p)` for the `p`-adic valuation, the
 exponent of the prime `p` in `n` (`valuation(12, 2)` is `2`, `valuation(12, 5)` is `0`, `+oo` at
-`n = 0`, `NaN` where `p` is not prime; `v_p(n)` in LaTeX); `#S` (or `card(S)`) for the number of elements of a set, counted for a finite set of numbers and left as written for an infinite one; `#` binds like a function call, so a set expression needs parentheses (`#(A \/ B)`).
+`n = 0`, `NaN` where `p` is not prime; `v_p(n)` in LaTeX); `mobius(n)` for the Möbius function
+`μ(n)`, 0 where the square of a prime divides `n` and `(-1)^k` for a product of `k` distinct primes
+(`mobius(30)` is `-1`, `mobius(12)` is `0`; `moebiusmu` is the same); `divisorsigma(k, n)` for the
+sum of the `k`-th powers of the divisors of `n` (`divisorsigma(1, 12)` is `28`, `divisorsigma(0, 12)`
+counts them, `6`); `primenu(n)` and `primeomega(n)` for the number of prime factors without and with
+multiplicity, `ω(n)` and `Ω(n)` (`2` and `3` at `12`); these four are defined on the positive whole
+numbers, `NaN` elsewhere, and left as written for a number whose factorisation would need trial
+division past a million. `primepi(x)` counts the primes at most the real number `x` (`primepi(100)`
+is `25`, left as written past ten million); `#S` (or `card(S)`) for the number of elements of a set, counted for a finite set of numbers and left as written for an infinite one; `#` binds like a function call, so a set expression needs parentheses (`#(A \/ B)`).
 
 **Complex conjugate, argument and parts** — `conjugate(z)`, or `conj(z)`, printed `conjugate(z)` and drawn as
 `\overline{z}`. It is carried through sums, differences, products, quotients and whole powers, so
@@ -476,8 +484,8 @@ ZZ*` is `True`, `0 in ZZ+` is `False`, `-3 in ZZ*` is `False`) and left as writt
 `7 in PP` is `True`, `8 in PP` and `1 in PP` are `False`, `x in PP` stays as written, and a
 whole number past the machine word is left open rather than tested slowly. It is cut by an
 interval to its members where there are few enough to list — `PP /\ [1; 30]` is
-`{ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29 }`, so `card(PP /\ [1; n])` is the prime-counting function,
-`25` at `100` — and `min(PP)` is `2`, `min(x, x in PP and x > 14)` the next prime, `17`
+`{ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29 }`, so `card(PP /\ [1; n])` is the prime-counting function
+`primepi(n)`, `25` at `100` — and `min(PP)` is `2`, `min(x, x in PP and x > 14)` the next prime, `17`
 ([#1450](https://github.com/asc-community/AngouriMath/issues/1450)). The eight special sets nest,
 `PP ⊂ ZZ+ ⊂ ZZ* ⊂ ZZ ⊂ QQ ⊂ RR ⊂ CC` with `BB` beside them, and the set operators answer for two
 of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }`, `ZZ \ ZZ*` is
@@ -485,8 +493,7 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
 **Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
-`hurwitzzeta` `lambertw` `productlog` `mobius` `moebiusmu` `divisorsigma` `primenu` `primeomega`
-`primepi` `harmonicnumber` `catalannumber` `multinomial` `fallingfactorial` `factorialpower`
+`hurwitzzeta` `lambertw` `productlog` `harmonicnumber` `catalannumber` `multinomial` `fallingfactorial` `factorialpower`
 `risingfactorial` `forwarddifference` `laplacian` `jacobian` `hessian`. Each is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
 under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse

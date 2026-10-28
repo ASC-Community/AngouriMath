@@ -174,6 +174,91 @@ namespace AngouriMath.Functions
         /// <summary>How far a search for a prime, or a listing of them, is taken before the set is left as written.</summary>
         private const int LongestSearch = 100000;
 
+        /// <summary>
+        /// The prime factors of a positive whole number with their multiplicities, smallest first,
+        /// or <see langword="null"/> where trial division up to <see cref="LargestTrialDivisor"/>
+        /// leaves a part it cannot call prime: every number up to its square is factorised, and
+        /// a larger one is whenever what is left after the small primes is below that square.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </summary>
+        internal static List<(EInteger Prime, int Power)>? Factorization(EInteger n)
+        {
+            var factors = new List<(EInteger, int)>();
+            var rest = n;
+            for (long divisor = 2; divisor <= LargestTrialDivisor; divisor += divisor == 2 ? 1 : 2)
+            {
+                if (rest.CanFitInInt64())
+                    return Finish(rest.ToInt64Checked(), divisor);
+                var asInteger = EInteger.FromInt64(divisor);
+                var power = 0;
+                while (rest.Remainder(asInteger).IsZero)
+                {
+                    rest = rest.Divide(asInteger);
+                    power++;
+                }
+                if (power > 0)
+                    factors.Add((asInteger, power));
+            }
+            return null;
+
+            // The same division on a machine word, once what is left fits one.
+            List<(EInteger, int)>? Finish(long left, long from)
+            {
+                for (var divisor = from; divisor <= LargestTrialDivisor && divisor * divisor <= left; divisor += divisor == 2 ? 1 : 2)
+                {
+                    var power = 0;
+                    while (left % divisor == 0)
+                    {
+                        left /= divisor;
+                        power++;
+                    }
+                    if (power > 0)
+                        factors.Add((EInteger.FromInt64(divisor), power));
+                }
+                if (left > 1)
+                {
+                    // No divisor up to the bound, so what is left is prime if it is below the square.
+                    if (left / LargestTrialDivisor >= LargestTrialDivisor)
+                        return null;
+                    factors.Add((EInteger.FromInt64(left), 1));
+                }
+                return factors;
+            }
+        }
+
+        /// <summary>How far trial division goes: far enough to factorise every number up to 10^12.</summary>
+        private const long LargestTrialDivisor = 1000000;
+
+        /// <summary>
+        /// How many primes are at most <paramref name="n"/>, by a sieve over the odd numbers, or
+        /// <see langword="null"/> above <see cref="LargestCounted"/>.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </summary>
+        internal static int? CountUpTo(EInteger n)
+        {
+            if (n.CompareTo(EInteger.FromInt32(2)) < 0)
+                return 0;
+            if (n.CompareTo(EInteger.FromInt32(LargestCounted)) > 0)
+                return null;
+            var last = n.ToInt32Checked();
+            // composite[i] is whether 2i + 1 is composite.
+            var composite = new System.Collections.BitArray(last / 2 + 1);
+            var count = 1;
+            for (var i = 1; 2 * i + 1 <= last; i++)
+            {
+                if (composite[i])
+                    continue;
+                count++;
+                long odd = 2 * i + 1;
+                for (var multiple = odd * odd; multiple <= last; multiple += 2 * odd)
+                    composite[(int)(multiple / 2)] = true;
+            }
+            return count;
+        }
+
+        /// <summary>How far <see cref="CountUpTo"/> sieves before a count is left as written.</summary>
+        private const int LargestCounted = 10000000;
+
         internal static Integer GetPrime(int index)
         {
             // One volatile read, then an array that is never written again.

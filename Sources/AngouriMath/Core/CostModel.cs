@@ -176,6 +176,7 @@ namespace AngouriMath.Core
             Powf(_, Real { IsNegative: true }) => HeavyWeight + ChildrenCost(expr), // Number of negative powers
             Logf => TinyWeight + ChildrenCost(expr), // Number of logarithms
             Phif => ExtraHeavyWeight + ChildrenCost(expr), // Number of phi functions
+            Mobiusf or DivisorSigmaf or PrimeNuf or PrimeOmegaf or PrimePif => ExtraHeavyWeight + ChildrenCost(expr),
             Primef => ExtraHeavyWeight + ChildrenCost(expr),
             Valuationf => ExtraHeavyWeight + ChildrenCost(expr),
             Real { IsNegative: true } => MajorWeight + ChildrenCost(expr), // Number of negative reals

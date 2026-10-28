@@ -688,6 +688,92 @@ namespace AngouriMath
             private const int LargestIndex = 1000000;
         }
 
+        partial record Mobiusf
+        {
+            // Defined on the positive integers, as are the other functions of a factorisation.
+            private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.PositiveIntegers);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument,
+                    a => OfAFactorization(a, factors => factors.Any(factor => factor.Power > 1) ? Integer.Zero
+                        : factors.Count % 2 == 0 ? Integer.One : Integer.MinusOne),
+                    (@this, a) => ((Mobiusf)@this).New(a), isExact);
+        }
+
+        partial record PrimeNuf
+        {
+            private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.PositiveIntegers);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument,
+                    a => OfAFactorization(a, factors => Integer.Create(factors.Count)),
+                    (@this, a) => ((PrimeNuf)@this).New(a), isExact);
+        }
+
+        partial record PrimeOmegaf
+        {
+            private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.PositiveIntegers);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument,
+                    a => OfAFactorization(a, factors => Integer.Create(factors.Sum(factor => factor.Power))),
+                    (@this, a) => ((PrimeOmegaf)@this).New(a), isExact);
+        }
+
+        partial record DivisorSigmaf
+        {
+            // Any complex order; the divisors are those of a positive integer.
+            private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.PositiveIntegers);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnTwoArguments(Order, Argument,
+                    (k, n) => k is Number ? OfAFactorization(n, factors => Multiplicatively(k, factors).InnerSimplified(isExact)) : null,
+                    (@this, k, n) => ((DivisorSigmaf)@this).New(k, n), isExact);
+
+            // The function is multiplicative: the product over the prime powers p^a dividing n of
+            // 1 + p^k + p^(2k) + ... + p^(ak).
+            private static Entity Multiplicatively(Entity order, List<(EInteger Prime, int Power)> factors)
+                => factors.Select(factor => (Entity)Enumerable.Range(0, factor.Power + 1)
+                        .Select(j => (Entity)Integer.Create(factor.Prime.Pow(j)).Pow(order))
+                        .Aggregate((sum, term) => sum + term))
+                    .Aggregate(Integer.One as Entity, (product, sum) => product * sum);
+        }
+
+        partial record PrimePif
+        {
+            // A count of the primes up to any real number.
+            private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.R);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument,
+                    a => a switch
+                    {
+                        Real { IsFinite: true } x when Functions.Primes.CountUpTo(x.EDecimal.RoundToExponent(EInteger.Zero, ERounding.Floor).ToEInteger()) is { } count
+                            => Integer.Create(count),
+                        Real => null,
+                        Number => MathS.NaN,
+                        _ => null
+                    },
+                    (@this, a) => ((PrimePif)@this).New(a), isExact);
+        }
+
+        /// <summary>
+        /// A function of the factorisation of a positive integer; not a number for any other
+        /// number, and left as written for an expression or an integer too large to factorise.
+        /// </summary>
+        private static Entity? OfAFactorization(Entity argument, System.Func<List<(EInteger Prime, int Power)>, Entity> function)
+            => argument switch
+            {
+                Integer { EInteger.Sign: > 0 } positive => Functions.Primes.Factorization(positive.EInteger) is { } factors ? function(factors) : null,
+                Number => MathS.NaN,
+                _ => null
+            };
+
         partial record Phif
         {
             // Euler's totient function is defined for all integers in this library.
