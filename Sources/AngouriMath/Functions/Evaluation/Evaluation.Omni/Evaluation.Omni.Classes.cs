@@ -455,12 +455,38 @@ namespace AngouriMath
                     (a, b) => (a, b) switch
                     {
                         (Providedf exprProvided, Providedf predProvided) =>
-                            Decide(exprProvided.Expression, exprProvided.Predicate & predProvided.Predicate & predProvided.Expression),
-                        (var expr, Providedf predProvided) => Decide(expr, predProvided.Predicate & predProvided.Expression),
-                        (Providedf exprProvided, var pred) => Decide(exprProvided.Expression, pred & exprProvided.Predicate),
+                            Decide(exprProvided.Expression, Both(Both(exprProvided.Predicate, predProvided.Predicate), predProvided.Expression)),
+                        (var expr, Providedf predProvided) => Decide(expr, Both(predProvided.Predicate, predProvided.Expression)),
+                        (Providedf exprProvided, var pred) => Decide(exprProvided.Expression, Both(pred, exprProvided.Predicate)),
                         (var expr, var pred) => Decide(expr, pred),
                     },
                     (@this, a, b) => ((Providedf)@this).New(a, b), isExact);
+
+            // Two conditions joined, with a conjunct already stated not stated again. A row of a
+            // system substituted into the expressions that carry its condition had it conjoined
+            // once a substitution, five times over for sqrt(y) - x, y - a. The conjunction is
+            // rebuilt only where something repeats, so every other condition keeps its shape.
+            // https://github.com/asc-community/AngouriMath/issues/212
+            private static Entity Both(Entity first, Entity second)
+            {
+                var conjuncts = new List<Entity>();
+                var repeated = false;
+                void Gather(Entity condition)
+                {
+                    if (condition is Andf(var left, var right))
+                    {
+                        Gather(left);
+                        Gather(right);
+                    }
+                    else if (conjuncts.Contains(condition))
+                        repeated = true;
+                    else
+                        conjuncts.Add(condition);
+                }
+                Gather(first);
+                Gather(second);
+                return repeated ? conjuncts.Aggregate((joined, next) => joined & next) : first & second;
+            }
         }
 
         partial record Piecewise

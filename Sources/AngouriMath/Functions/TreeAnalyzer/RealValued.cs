@@ -173,6 +173,32 @@ namespace AngouriMath.Functions
         [ThreadStatic] private static Entity? assumed;
 
         /// <summary>
+        /// Whether what <see cref="Assuming"/> says is known forces <paramref name="predicate"/>.
+        /// </summary>
+        internal static bool IsKnown(Entity predicate)
+            => assumed is { } known && PredicateEntailment.Entails(known, predicate);
+
+        /// <summary>
+        /// Whether what <see cref="Assuming"/> says is known makes <paramref name="expr"/> real: it is
+        /// in <c>RR</c>, or it is ordered against something, which an order comparison has a truth
+        /// value only for.
+        /// </summary>
+        internal static bool IsKnownToBeReal(Entity expr)
+        {
+            if (assumed is not { } known)
+                return false;
+            if (PredicateEntailment.Entails(known, expr.In(AngouriMath.Core.Domain.Real)))
+                return true;
+            static bool Orders(Entity condition, Entity expr) => condition switch
+            {
+                Andf(var left, var right) => Orders(left, expr) || Orders(right, expr),
+                ComparisonSign sign => sign.DirectChildren[0] == expr || sign.DirectChildren[1] == expr,
+                _ => false
+            };
+            return Orders(known, expr);
+        }
+
+        /// <summary>
         /// Runs <paramref name="work"/> with <paramref name="condition"/> known to hold, as well
         /// as whatever was known already.
         /// </summary>

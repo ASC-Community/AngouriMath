@@ -52,13 +52,40 @@ namespace AngouriMath.Tests.Algebra
 
         /// <summary>
         /// <c>[-sqrt(a), a]</c> fails at <c>a = 137/100</c> and holds at <c>a = 0</c>, so it
-        /// cannot be dropped as no solution, and the system is declined instead of being
-        /// answered by the other row alone. A row like it that holds for some values only, as
-        /// <c>sqrt(t^2) = t</c> does for positive <c>t</c>, would be lost by dropping it.
+        /// cannot be dropped as no solution. It was declined, until the inversion of
+        /// <c>sqrt(y) = x</c> came to carry where it holds, <c>x = 0</c> or
+        /// <c>-pi/2 &lt; arg(x) &lt;= pi/2</c>: now each row says where it is one. So at every value
+        /// of <c>a</c> tried, each row whose condition holds solves both equations, and one row's
+        /// condition holds.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/212">#212</a>
         /// </summary>
-        [Fact]
-        public void ARowThatFailsForSomeValueDeclinesTheSystem()
-            => Assert.Null(Solve("sqrt(y) - x", "y - a"));
+        [Theory]
+        [InlineData("137/100")]
+        [InlineData("-2")]
+        [InlineData("3i")]
+        [InlineData("-1 - i")]
+        public void ARowThatHoldsForSomeValuesSaysWhere(string value)
+        {
+            var solutions = Solve("sqrt(y) - x", "y - a");
+            Assert.NotNull(solutions);
+            var applying = 0;
+            for (var row = 0; row < solutions!.RowCount; row++)
+            {
+                var x = solutions[row, 0].Substitute("a", value.ToEntity());
+                var y = solutions[row, 1].Substitute("a", value.ToEntity());
+                if (x is not Entity.Providedf(var xValue, var condition))
+                    (xValue, condition) = (x, Entity.Boolean.True);
+                if (condition.EvalBoolean() is not Entity.Boolean(true))
+                    continue;
+                applying++;
+                while (y is Entity.Providedf(var inner, _))
+                    y = inner;
+                var residual = "sqrt(y) - x".ToEntity().Substitute("y", y).Substitute("x", xValue).EvalNumerical();
+                Assert.True(Entity.Number.Abs(residual).EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromString("1e-30")) < 0,
+                    $"row {row} at a = {value}: sqrt(y) - x is {residual}");
+            }
+            Assert.True(applying > 0, $"no row applies at a = {value}");
+        }
 
         /// <summary>
         /// What was answered rightly still is: rows in a symbol of the system's own, and rows in

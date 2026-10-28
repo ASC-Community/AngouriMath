@@ -117,12 +117,45 @@ namespace AngouriMath
                         return Together(Number.GetAllRootsOf1(pow.Abs()).Select(root => Base.Invert(root * MathS.Pow(value, 1 / Exponent), x)));
                     }
                     else
-                        return Base.Invert(MathS.Pow(value, 1 / Exponent), x);
+                        return Base.Invert(MathS.Pow(value, 1 / Exponent), x)
+                            ?.Select(root => root.Provided(InTheRange(value)));
                 }  
                 // a ^ x = value => x = log(a, value)
                 // TODO: determine how we should return periodic roots as
                 // (e ^ x) ^ a != (e ^ a) ^ x for logs
                 return Exponent.Invert(MathS.Log(Base, value), x);
+            }
+
+            // The principal power z^p is e^(p ln z), so its argument is p arg(z): in (-p pi, p pi]
+            // for 0 < p < 1, and in [p pi, -p pi) for -1 < p < 0, where it is never 0. A value
+            // outside that sector is no power of anything, and v^(1/p) is then a number whose
+            // power is not v: sqrt(y) = x was answered { x ^ 2 }, and sqrt((-1) ^ 2) is 1. For
+            // |p| > 1 the sector is the whole plane, and v^(1/p) is a preimage of every v. A
+            // symbolic exponent has no sector to state.
+            // https://github.com/asc-community/AngouriMath/issues/212
+            private Entity InTheRange(Entity value)
+            {
+                if (Exponent.Evaled is not Real { EDecimal.IsFinite: true } p
+                    || p.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.One) >= 0)
+                    return Boolean.True;
+                // Where the value is known to be real -- by its codomain, or by what the equation
+                // it came from was provided -- arg(value) is 0 or pi, so the sector is the half-line
+                // value >= 0 for p > 0 and value > 0 for p < 0, and nothing is stated where that is
+                // known as well: sqrt(x) = a provided a > 0 is a ^ 2 provided a > 0.
+                Entity halfLine = p.IsPositive ? new GreaterOrEqualf(value, Integer.Zero) : new Greaterf(value, Integer.Zero);
+                Entity outside = p.IsPositive ? new Lessf(value, Integer.Zero) : new LessOrEqualf(value, Integer.Zero);
+                if (TreeAnalyzer.IsKnown(halfLine))
+                    return Boolean.True;
+                if (TreeAnalyzer.IsKnown(outside))
+                    return Boolean.False;
+                if (Conjugatef.IsKnownReal(value) || TreeAnalyzer.IsKnownToBeReal(value))
+                    return halfLine;
+                var bound = (Exponent * MathS.pi).InnerSimplified;
+                var opposite = ((-Exponent).InnerSimplified * MathS.pi).InnerSimplified;
+                var angle = MathS.Arg(value);
+                return p.IsPositive
+                    ? value.EqualTo(Integer.Zero) | (new Lessf(opposite, angle) & new LessOrEqualf(angle, bound))
+                    : !value.EqualTo(Integer.Zero) & new LessOrEqualf(bound, angle) & new Lessf(angle, opposite);
             }
         }
 

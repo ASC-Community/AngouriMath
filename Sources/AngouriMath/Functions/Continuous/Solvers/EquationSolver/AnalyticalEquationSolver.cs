@@ -199,8 +199,11 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 // reached at all. https://github.com/asc-community/AngouriMath/issues/744
                 case Function when expr.Nodes.Count(node => node == x) == 1:
                     return expr.Invert(0, x)?.Select(ent => TryDowncast(expr, x, ent)).ToSet();
+                // Solved knowing the condition, as a provided expression is differentiated: the
+                // roots are filtered by it anyway, and what holds under it can be stated by it.
+                // https://github.com/asc-community/AngouriMath/issues/212
                 case Providedf(var expression, var predicate):
-                    return Solve(expression, x, compensateSolving).Filter(predicate, x);
+                    return TreeAnalyzer.Assuming(predicate, () => Solve(expression, x, compensateSolving)).Filter(predicate, x);
                 case Piecewise p:
                     return EquationSolver.SolvePiecewise(p, x, (e, x) => Solve(e, x, compensateSolving));
                 // A product is zero exactly where one of its factors is. Without this the
