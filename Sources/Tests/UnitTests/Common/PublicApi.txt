@@ -978,6 +978,25 @@ AngouriMath.Entity+Dividesf.ToString() : System.String
 AngouriMath.Entity+Dividesf.ctor(AngouriMath.Entity, AngouriMath.Entity)
 AngouriMath.Entity+Dividesf.op_Equality(AngouriMath.Entity+Dividesf, AngouriMath.Entity+Dividesf) : System.Boolean
 AngouriMath.Entity+Dividesf.op_Inequality(AngouriMath.Entity+Dividesf, AngouriMath.Entity+Dividesf) : System.Boolean
+AngouriMath.Entity+DoubleFactorialf.<Clone>$() : AngouriMath.Entity+DoubleFactorialf
+AngouriMath.Entity+DoubleFactorialf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+DoubleFactorialf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+DoubleFactorialf.Deconstruct(AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+DoubleFactorialf.EqualityContract { } : System.Type
+AngouriMath.Entity+DoubleFactorialf.Equals(AngouriMath.Entity+DoubleFactorialf) : System.Boolean
+AngouriMath.Entity+DoubleFactorialf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+DoubleFactorialf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+DoubleFactorialf.GetHashCode() : System.Int32
+AngouriMath.Entity+DoubleFactorialf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+DoubleFactorialf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+DoubleFactorialf.NodeChild { } : AngouriMath.Entity
+AngouriMath.Entity+DoubleFactorialf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+DoubleFactorialf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+DoubleFactorialf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+DoubleFactorialf.ToString() : System.String
+AngouriMath.Entity+DoubleFactorialf.ctor(AngouriMath.Entity)
+AngouriMath.Entity+DoubleFactorialf.op_Equality(AngouriMath.Entity+DoubleFactorialf, AngouriMath.Entity+DoubleFactorialf) : System.Boolean
+AngouriMath.Entity+DoubleFactorialf.op_Inequality(AngouriMath.Entity+DoubleFactorialf, AngouriMath.Entity+DoubleFactorialf) : System.Boolean
 AngouriMath.Entity+Eif.<Clone>$() : AngouriMath.Entity+Eif
 AngouriMath.Entity+Eif.Argument { } : AngouriMath.Entity
 AngouriMath.Entity+Eif.Codomain { } : AngouriMath.Core.Domain
@@ -3310,6 +3329,7 @@ AngouriMath.MathS.Derivative(AngouriMath.Entity, AngouriMath.Entity, System.Int3
 AngouriMath.MathS.Det(AngouriMath.Entity+Matrix) : AngouriMath.Entity
 AngouriMath.MathS.Digamma(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Disjunction(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.DoubleFactorial(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Ei(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Equality(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Equations(AngouriMath.Entity[]) : AngouriMath.Core.EquationSystem
@@ -3510,6 +3530,7 @@ class AngouriMath.Entity+Cotanf
 class AngouriMath.Entity+Derivativef
 class AngouriMath.Entity+Divf
 class AngouriMath.Entity+Dividesf
+class AngouriMath.Entity+DoubleFactorialf
 class AngouriMath.Entity+Eif
 class AngouriMath.Entity+Equalsf
 class AngouriMath.Entity+Erfcf

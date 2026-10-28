@@ -214,6 +214,16 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Complex;
         }
 
+        partial record DoubleFactorialf
+        {
+            // An integer or 1/3 and the like below -1, all rational, but a node's codomain says what
+            // it may be, and Complex is what the factorial says too.
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
         partial record Factorialf
         {
             /// <inheritdoc/>

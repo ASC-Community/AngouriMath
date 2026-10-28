@@ -473,6 +473,52 @@ namespace AngouriMath
                     (@this, a, b) => ((Logf)@this).New(a, b), isExact);
         }
         
+        public partial record DoubleFactorialf
+        {
+            // Defined on the integers but the negative even ones.
+            private protected override Entity IntrinsicCondition =>
+                Argument.In(MathS.Sets.Z) & (Argument >= -1 | !new Dividesf(Integer.Create(2), Argument));
+
+            // The largest argument multiplied out exactly. Past it the node is kept, as a whole power
+            // with a huge exponent is: https://github.com/asc-community/AngouriMath/issues/1448
+            private const int MaxExactArgument = 10000;
+
+            // n (n - 2) ... down to 1 or 2, and 0!! = (-1)!! = 1. Below that n!! = (n + 2)!!/(n + 2), so
+            // (-3)!! is -1 and (-5)!! is 1/3; a negative even n has none. Off the integers there is no
+            // value: the gamma extension does not give 0!! = 1, so no extension is this function's.
+            private static Entity? OfANumber(Complex number)
+            {
+                PeterO.Numbers.EInteger whole;
+                if (number is Integer integer)
+                    whole = integer.EInteger;
+                else if (number is Real { EDecimal: var value } && value.IsFinite && value.IsInteger())
+                    whole = value.ToEInteger();
+                else
+                    return Real.NaN;
+                if (whole.Abs().CompareTo(PeterO.Numbers.EInteger.FromInt32(MaxExactArgument)) > 0)
+                    return null;
+                var n = whole.ToInt32Checked();
+                if (n >= 0)
+                {
+                    var product = PeterO.Numbers.EInteger.One;
+                    for (var k = n; k > 1; k -= 2)
+                        product *= k;
+                    return Integer.Create(product);
+                }
+                if (n % 2 == 0)
+                    return Real.NaN;
+                var denominator = PeterO.Numbers.EInteger.One;
+                for (var j = n + 2; j <= -1; j += 2)
+                    denominator *= j;
+                return Rational.Create(PeterO.Numbers.EInteger.One, denominator);
+            }
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument, a => a is Complex number ? OfANumber(number) : null,
+                    (@this, a) => ((DoubleFactorialf)@this).New(a), isExact);
+        }
+
         public partial record Factorialf
         {
             // Factorial is defined for non-negative integers in the traditional sense,

@@ -343,6 +343,14 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        public partial record DoubleFactorialf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => Argument.Stringize(Argument.Priority <= Priority) + "!!";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Factorialf
         {
             /// <inheritdoc/>

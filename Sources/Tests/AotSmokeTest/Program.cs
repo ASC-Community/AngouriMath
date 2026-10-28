@@ -114,6 +114,10 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("conj(z) z at z = 3 + 4i", At(conjugate, "z", new Complex(3, 4)), 25);
             var argument = MathS.FromString("arg(z)");
             CheckClose("arg at z = -1", At(argument, "z", -1), Math.PI);
+
+            // The double factorial is a postfix the parser builds. https://github.com/asc-community/AngouriMath/issues/2182
+            var doubleFactorial = MathS.FromString("x!! + 0");
+            CheckClose("x!! at x = 7", At(doubleFactorial, "x", 7), 105);
         }
 
         private static void Simplification()

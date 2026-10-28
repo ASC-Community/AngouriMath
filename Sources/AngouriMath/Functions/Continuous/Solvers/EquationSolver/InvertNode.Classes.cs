@@ -388,6 +388,13 @@ namespace AngouriMath
                 null;
         }
 
+        partial record DoubleFactorialf
+        {
+            // An integer argument found among finitely many by a value: not inverted. Left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
         partial record Argf
         {
             // Where the argument is a value is a ray, a set of points no list of values of x is.
