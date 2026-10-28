@@ -87,7 +87,8 @@ as before, and `|p| > 1` needs no condition, since every value is then a power. 
 while it is solved, as a provided expression is differentiated: a value known to be real, or declared real, has the
 half-line for its sector, one known to lie on it needs no condition, and one known to lie off it has no root. A conjunct of a condition that
 another conjunct already forces is not stated, so `a > -5 and a >= 0` is `a >= 0`, and a condition stated twice is
-stated once, as a system's rows carried theirs once a substitution
+stated once, as a system's rows carried theirs once a substitution, and as two operands carrying one condition
+carried it once combined: a second derivative of `1/sqrt(x^2 + 13)` stated `not x ^ 2 + 13 = 0` three times
 ([#212](https://github.com/asc-community/AngouriMath/issues/212)).
 
 | Input | Was (2.6.0) | Now |
@@ -101,6 +102,7 @@ stated once, as a system's rows carried theirs once a substitution
 | `"(sqrt(x) = a) provided a > -5".ToEntity().Solve("x")` | `{ a ^ 2 provided a > -5 }` | `{ a ^ 2 provided a >= 0 }` |
 | `"x provided a > 1 and a > 2".ToEntity().InnerSimplified` | `x provided a > 1 and a > 2` | `x provided a > 2` |
 | `"(x provided a > 0) provided a >= 0".ToEntity().InnerSimplified` | `x provided a >= 0 and a > 0` | `x provided a > 0` |
+| `"(a provided b > 0) + (c provided b > 0)".ToEntity().InnerSimplified` | `a + c provided b > 0 and b > 0` | `a + c provided b > 0` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
 
 ### A system with a product equation is solved branch by branch
