@@ -435,6 +435,14 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Complex;
         }
 
+        partial record LambertWf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
         partial record Polygammaf
         {
             /// <inheritdoc/>

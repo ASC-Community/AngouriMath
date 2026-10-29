@@ -644,6 +644,8 @@ atom returns[Entity value]
     | 'Ei(' args = function_arguments ')' { Assert("Ei", 1, $args.list.Count); $value = MathS.Ei($args.list[0]); }
     | 'li(' args = function_arguments ')' { Assert("li", 1, $args.list.Count); $value = MathS.Li($args.list[0]); }
     /* The polygamma functions, and the digamma function, which is the one of order 0. https://github.com/asc-community/AngouriMath/issues/171 */
+    | 'lambertw(' args = function_arguments ')' { if (Assert("lambertw", (2, 1), $args.list.Count)) $value = MathS.LambertW($args.list[0], $args.list[1]); else $value = MathS.LambertW($args.list[0]); }
+    | 'productlog(' args = function_arguments ')' { if (Assert("productlog", (2, 1), $args.list.Count)) $value = MathS.LambertW($args.list[0], $args.list[1]); else $value = MathS.LambertW($args.list[0]); }
     | 'polygamma(' args = function_arguments ')' { Assert("polygamma", 2, $args.list.Count); $value = MathS.Polygamma($args.list[0], $args.list[1]); }
     | 'digamma(' args = function_arguments ')' { Assert("digamma", 1, $args.list.Count); $value = MathS.Digamma($args.list[0]); }
     /* The trigonometric and hyperbolic integrals. https://github.com/asc-community/AngouriMath/issues/1501 */
@@ -695,8 +697,6 @@ atom returns[Entity value]
     | 'zeta(' args = function_arguments ')' { $value = NotImplementedFunction("zeta", "Riemann or Hurwitz zeta function yet"); }
     | 'riemannzeta(' args = function_arguments ')' { $value = NotImplementedFunction("riemannzeta", "Riemann zeta function yet"); }
     | 'hurwitzzeta(' args = function_arguments ')' { $value = NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); }
-    | 'lambertw(' args = function_arguments ')' { $value = NotImplementedFunction("lambertw", "Lambert W function yet"); }
-    | 'productlog(' args = function_arguments ')' { $value = NotImplementedFunction("productlog", "Lambert W function yet"); }
     /* Names that will not be functions, refused with the spelling to use: what they mean is
        ambiguous between sources, or is already written exactly another way. */
     | 'heaviside(' args = function_arguments ')' { $value = NotAFunctionHere("heaviside", "its value at 0 is 0, 1/2 or 1 by source; write iverson(x > 0), iverson(x >= 0) or (1 + sgn(x))/2"); }

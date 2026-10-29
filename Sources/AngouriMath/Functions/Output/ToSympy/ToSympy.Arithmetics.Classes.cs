@@ -150,6 +150,13 @@ namespace AngouriMath
                 => $@"sympy.li({Argument.ToSymPy()})";
         }
 
+        public partial record LambertWf
+        {
+            // SymPy's LambertW takes the argument first and the branch second.
+            internal override string ToSymPy()
+                => Branch == Integer.Zero ? $"sympy.LambertW({Argument.ToSymPy()})" : $"sympy.LambertW({Argument.ToSymPy()}, {Branch.ToSymPy()})";
+        }
+
         public partial record Polygammaf
         {
             internal override string ToSymPy()

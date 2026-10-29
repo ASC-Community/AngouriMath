@@ -255,6 +255,15 @@ namespace AngouriMath
                 => $@"\operatorname{{li}}\left({Argument.Latexize()}\right)";
         }
 
+        partial record LambertWf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => Branch == Integer.Zero
+                    ? $@"\operatorname{{W}}\left({Argument.Latexize()}\right)"
+                    : $@"\operatorname{{W}}_{{{Branch.Latexize()}}}\left({Argument.Latexize()}\right)";
+        }
+
         partial record Polygammaf
         {
             /// <inheritdoc/>

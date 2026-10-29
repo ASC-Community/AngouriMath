@@ -110,7 +110,7 @@ itself, and needs no `when:` to say so. It is also strictly more specific than `
 the ordering knows about — see below.
 
 **Matchable is not the same as buildable.** A pattern can be *matched* against any node type, but a
-pattern used as a **replacement** must be one the library can construct: there are **77** such types.
+pattern used as a **replacement** must be one the library can construct: there are **78** such types.
 Two families are deliberately absent, and neither is an oversight:
 
 - **binders** — `Lambda`, `Set.ConditionalSet`. They bind a variable, and `DirectChildren` renames it

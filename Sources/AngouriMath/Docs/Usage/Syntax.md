@@ -405,6 +405,14 @@ differentiated from its definition: the derivative of `Si(x)` is `sin(x) / x`, o
 `cos(x) / x`, and of `Shi(x)` and `Chi(x)` it is `sinh(x) / x` and `cosh(x) / x`. `Ci` and `Chi` are
 undefined at `0`; `Si(+oo)` is `pi / 2` and `Ci(+oo)` is `0`.
 
+**Lambert W function** — `lambertw(z)` and `lambertw(k, z)`, also `productlog`, the solution `w` of
+`w e^w = z`, on the principal branch and on the branch `k`, drawn `\operatorname{W}_{k}`. The branches
+are those of Corless et al. (1996), as Mathematica's `ProductLog` and mpmath's `lambertw` have them:
+`W_0` is real on `[-1/e, +oo)` and `W_(-1)` on `[-1/e, 0)`, and below `-1/e` the two are conjugates.
+`lambertw(e)` is `1`, `lambertw(-1/e)` is `-1`, a `c e^c` for a real `c` the branch takes is `c`, and
+anything else numeric is evaluated: `lambertw(1)` is `0.5671432904…`, the omega constant
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 **Polygamma functions** — `polygamma(n, z)` `digamma(z)`. The polygamma function `psi^(n)(z)`, the
 `(n + 1)`-th derivative of `ln Gamma(z)` for a whole `n >= 0`, and the digamma function
 `psi(z) = Gamma'(z)/Gamma(z)`, which is `polygamma(0, z)` and prints as `digamma(z)`. Each is evaluated
@@ -538,7 +546,7 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
 **Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
-`hurwitzzeta` `lambertw` `productlog`. Each is what some other
+`hurwitzzeta`. Each is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
 under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse
 error naming the function instead. What each will mean is fixed in

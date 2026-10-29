@@ -102,7 +102,7 @@ internal static class Resources
           `catalannumber(n)`, the Catalan numbers, `harmonicnumber(n)` and `harmonicnumber(n, m)`,
           and `mobius divisorsigma primenu primeomega primepi` (`moebiusmu` is `mobius`):
           `divisorsigma(k, n)` sums the `k`-th powers of the divisors of `n`
-        - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, and `gamma(a, z)`, the
+        - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, `lambertw(z)` and `lambertw(k, z)` (also `productlog`), and `gamma(a, z)`, the
           upper incomplete gamma function
         - sets: `card powerset union intersection complement image preimage domain aleph
           iverson`
@@ -121,7 +121,7 @@ internal static class Resources
         | You might write | Reality |
         |---|---|
         | `arcsinh(x)` | **refused.** The inverse hyperbolics are area functions: write `arsinh`, `asinh` or `arsh` |
-        | `trunc`, `zeta`, `lambertw` and other long names of functions to come | refused by name — not yet in the library |
+        | `trunc`, `zeta` and other long names of functions to come | refused by name — not yet in the library |
         | `heaviside`, `unitstep`, `isprime`, `fractionalpart`, `quotient`, `pochhammer` | refused, with what to write: `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2`; `n in PP`; `x mod 1`; `floor(a / b)` |
         | `elementin(x, A)`, `setsubtraction(A, B)`, `impl(a, b)` | **silently become products.** Use the infix `x in A`, `A \ B`, `a -> b` |
         | `union(A, B)`, `intersection(A, B)` | refused: both are indexed, `union(A_i, i in I)`. For two sets write `A \/ B` and `A /\ B` |

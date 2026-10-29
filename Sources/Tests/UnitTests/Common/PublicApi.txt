@@ -1451,6 +1451,28 @@ AngouriMath.Entity+Lambda.ToString() : System.String
 AngouriMath.Entity+Lambda.ctor(AngouriMath.Entity+Variable, AngouriMath.Entity)
 AngouriMath.Entity+Lambda.op_Equality(AngouriMath.Entity+Lambda, AngouriMath.Entity+Lambda) : System.Boolean
 AngouriMath.Entity+Lambda.op_Inequality(AngouriMath.Entity+Lambda, AngouriMath.Entity+Lambda) : System.Boolean
+AngouriMath.Entity+LambertWf.<Clone>$() : AngouriMath.Entity+LambertWf
+AngouriMath.Entity+LambertWf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.Branch { } : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+LambertWf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+LambertWf.EqualityContract { } : System.Type
+AngouriMath.Entity+LambertWf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+LambertWf.Equals(AngouriMath.Entity+LambertWf) : System.Boolean
+AngouriMath.Entity+LambertWf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+LambertWf.GetHashCode() : System.Int32
+AngouriMath.Entity+LambertWf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+LambertWf.InnerDifferentiate(AngouriMath.Entity+Variable) : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.NodeFirstChild { } : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.NodeSecondChild { } : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+LambertWf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+LambertWf.ToString() : System.String
+AngouriMath.Entity+LambertWf.ctor(AngouriMath.Entity, AngouriMath.Entity)
+AngouriMath.Entity+LambertWf.op_Equality(AngouriMath.Entity+LambertWf, AngouriMath.Entity+LambertWf) : System.Boolean
+AngouriMath.Entity+LambertWf.op_Inequality(AngouriMath.Entity+LambertWf, AngouriMath.Entity+LambertWf) : System.Boolean
 AngouriMath.Entity+Lcmf.<Clone>$() : AngouriMath.Entity+Lcmf
 AngouriMath.Entity+Lcmf.Codomain { } : AngouriMath.Core.Domain
 AngouriMath.Entity+Lcmf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
@@ -3554,6 +3576,8 @@ AngouriMath.MathS.Interval(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath
 AngouriMath.MathS.Interval(AngouriMath.Entity, System.Boolean, AngouriMath.Entity, System.Boolean) : AngouriMath.Entity+Set+Interval
 AngouriMath.MathS.Iverson(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Lambda(AngouriMath.Entity+Variable, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.LambertW(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.LambertW(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Latex(AngouriMath.Core.ILatexizeable) : System.String
 AngouriMath.MathS.Lcm(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.LessOrEqualThan(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
@@ -3744,6 +3768,7 @@ class AngouriMath.Entity+IncompleteGammaf
 class AngouriMath.Entity+Integralf
 class AngouriMath.Entity+Iversonf
 class AngouriMath.Entity+Lambda
+class AngouriMath.Entity+LambertWf
 class AngouriMath.Entity+Lcmf
 class AngouriMath.Entity+LessOrEqualf
 class AngouriMath.Entity+Lessf

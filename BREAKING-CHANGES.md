@@ -483,7 +483,7 @@ the right shape, written out or once its operations are carried out, throws `Inv
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
-is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw` and `productlog`. Names that will not be functions,
+is: `zeta`, `riemannzeta` and `hurwitzzeta`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
 Each name without a bracket is still a variable, and short names such as `beta` and `norm` are still read as products
@@ -554,6 +554,21 @@ through `digamma` and `polygamma` for a whole `m >= 1`. A negative integer `n` h
 |---|---|---|
 | `"harmonicnumber(4)".ToEntity().Simplify()` | `4 * harmonicnumber` | `25/12` |
 | `"harmonicnumber(n, 2)".ToEntity()` | throws `UnhandledParseException` | `harmonicnumber(n, 2)` |
+
+### The Lambert W function
+
+**Not silent: `lambertw(z)` and `lambertw(k, z)`, also `productlog`, are the Lambert W function, the solution `w` of
+`w e^w = z` on the branch `k`, where they were a product and a parse error.** The branches are those of Corless et
+al. (1996), as Mathematica's `ProductLog` and mpmath's `lambertw` have them: `W_0` is real on `[-1/e, +oo)` and `W_(-1)`
+on `[-1/e, 0)`. It is exact at `0` and where `z` is `c e^c` for a real `c` the branch takes, so `lambertw(e)` is `1`
+and `lambertw(-1/e)` is `-1`, and it is evaluated numerically elsewhere. Its derivative is `e^(-W(z))/(1 + W(z))`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"lambertw(e)".ToEntity().Simplify()` | `e * lambertw` | `1` |
+| `"productlog(e)".ToEntity().Simplify()` | `e * productlog` | `1` |
+| `"lambertw(-1, x)".ToEntity()` | throws `UnhandledParseException` | `lambertw(-1, x)` |
 
 ### The Catalan numbers
 
