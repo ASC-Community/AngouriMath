@@ -407,6 +407,7 @@ namespace AngouriMath
                     // https://github.com/asc-community/AngouriMath/issues/281
                     (Rational radicand, Rational exponent) when
                         RootExtraction.PullOutOfRadical(radicand, exponent) is { } pulled => pulled.InnerSimplified(isExact),
+                    (Powf(var z, var inner), var exponent) when Functions.Boolean.QuantifierFacts.PrincipalPowerOfAPower(z, inner, exponent) is { } root => root,
                     _ => null
                 },
                 (@this, a, b) => ((Powf)@this).New(a, b), isExact);
