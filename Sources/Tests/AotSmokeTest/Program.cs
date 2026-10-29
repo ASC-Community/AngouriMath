@@ -132,6 +132,10 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("mu + sigma + Omega at n = 12", At(mobius, "n", 12), 0 + 28 + 3);
             var primes = MathS.FromString("primepi(x)");
             CheckClose("primepi at x = 100", At(primes, "x", 100), 25);
+
+            // The factorial powers. https://github.com/asc-community/AngouriMath/issues/2182
+            var factorialPowers = MathS.FromString("fallingfactorial(x, 3) + risingfactorial(x, 2)");
+            CheckClose("x(x-1)(x-2) + x(x+1) at x = 5", At(factorialPowers, "x", 5), 60 + 30);
         }
 
         private static void Simplification()

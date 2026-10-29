@@ -339,7 +339,9 @@ were read as products or refused.** A name the parser does not know, followed by
 `Entity.Conjugatef`, carried through sums, differences, products, quotients and whole powers and not through a root or
 a logarithm; `arg(z)` is `Entity.Argf`, in `(-pi, pi]`, with no value at `0`
 ([#2136](https://github.com/asc-community/AngouriMath/issues/2136),
-[#2145](https://github.com/asc-community/AngouriMath/issues/2145)). `re` and `im` are still read as products.
+[#2145](https://github.com/asc-community/AngouriMath/issues/2145)). The conjugate is drawn as `\overline{z}`, and as
+the whole exponent of a power in brackets, `x^{\left(\overline{n}\right)}`, since `x^{\overline{n}}` is the rising
+factorial ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
@@ -452,8 +454,8 @@ the right shape, written out or once its operations are carried out, throws `Inv
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
-is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber`, `catalannumber`, `multinomial`, `fallingfactorial`, `factorialpower`,
-`risingfactorial` and `forwarddifference`. Names that will not be functions,
+is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber`, `catalannumber`, `multinomial` and
+`forwarddifference`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
 Each name without a bracket is still a variable, and short names such as `beta` and `norm` are still read as products
@@ -500,6 +502,20 @@ is ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 | `"jacobian([x y, x + y], [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[y, x], [1, 1]]` |
 | `"hessian(x^3 y^2, [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[6 * x * y ^ 2, 6 * x ^ 2 * y], [6 * x ^ 2 * y, 2 * x ^ 3]]` |
 | `"jacobian(x y, {x, y})".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: a set has no order for the columns |
+
+### The falling and the rising factorial
+
+**Not silent: `fallingfactorial(x, n)`, also `factorialpower(x, n)`, and `risingfactorial(x, n)` are functions, where
+they were a parse error.** For a whole `n >= 0` they are `x (x - 1) ... (x - n + 1)` and `x (x + 1) ... (x + n - 1)`. For a
+negative whole `n` they are reciprocals of products, and for any other `n` they are the gamma ratios `Γ(x + 1)/Γ(x - n + 1)`
+and `Γ(x + n)/Γ(x)`. LaTeX draws them with Knuth's bars, `x^{\underline{n}}` and `x^{\overline{n}}`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"fallingfactorial(5, 2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `20` |
+| `"risingfactorial(3, 2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `12` |
+| `"fallingfactorial(5, 1/2)".ToEntity().EvalNumerical()` | throws `UnhandledParseException` | `2.29257989505120015013822761269...` |
 
 ### A subscript may have a subscript
 

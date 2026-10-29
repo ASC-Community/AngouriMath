@@ -261,6 +261,16 @@ namespace AngouriMath
                 => $@"sympy.binomial({Upper.ToSymPy()}, {Lower.ToSymPy()})";
         }
 
+        public partial record FallingFactorialf
+        {
+            internal override string ToSymPy() => $"sympy.ff({Argument.ToSymPy()}, {Order.ToSymPy()})";
+        }
+
+        public partial record RisingFactorialf
+        {
+            internal override string ToSymPy() => $"sympy.rf({Argument.ToSymPy()}, {Order.ToSymPy()})";
+        }
+
         public partial record Phif
         {
             internal override string ToSymPy() => $"sympy.totient({Argument.ToSymPy()})";

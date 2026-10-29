@@ -374,6 +374,22 @@ namespace AngouriMath
                 null;
         }
 
+        partial record FallingFactorialf
+        {
+            // A factorial power takes a value at as many arguments as its order has factors, and at
+            // others for an order that is not whole. Left unsolved rather than answered with none.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
+        partial record RisingFactorialf
+        {
+            // A factorial power takes a value at as many arguments as its order has factors, and at
+            // others for an order that is not whole. Left unsolved rather than answered with none.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
         partial record Ref
         {
             // Where the real part is a value is a line, which no list of values of x is. Left unsolved.

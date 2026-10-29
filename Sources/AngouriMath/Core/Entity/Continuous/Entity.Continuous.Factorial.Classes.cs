@@ -86,5 +86,51 @@ namespace AngouriMath
             /// <inheritdoc/>
             protected override Entity[] InitDirectChildren() => new[] { Upper, Lower };
         }
+
+        /// <summary>
+        /// The falling factorial <c>fallingfactorial(x, n)</c>, <c>x</c> to the <c>n</c> falling: <c>x (x - 1) ... (x - n + 1)</c> for a whole <c>n &gt;= 0</c>, in the notation <c>x^{\underline{n}}</c> of Graham, Knuth and Patashnik's <i>Concrete Mathematics</i>.
+        /// </summary>
+        /// <remarks>
+        /// For a negative whole <c>n</c> it is <c>1 / ((x + 1) (x + 2) ... (x - n))</c>, the book's (2.52), and for any other <c>n</c> it is <c>Γ(x + 1) / Γ(x - n + 1)</c>, as Mathematica's <c>FactorialPower</c> is.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </remarks>
+        public sealed partial record FallingFactorialf(Entity Argument, Entity Order) : Function, IBinaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeFirstChild => Argument;
+
+            /// <inheritdoc/>
+            public Entity NodeSecondChild => Order;
+
+            internal FallingFactorialf New(Entity argument, Entity order) =>
+                ReferenceEquals(Argument, argument) && ReferenceEquals(Order, order) ? this : new(argument, order) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func), Order.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument, Order };
+        }
+
+        /// <summary>
+        /// The rising factorial <c>risingfactorial(x, n)</c>, <c>x</c> to the <c>n</c> rising: <c>x (x + 1) ... (x + n - 1)</c> for a whole <c>n &gt;= 0</c>, in the notation <c>x^{\overline{n}}</c> of Graham, Knuth and Patashnik's <i>Concrete Mathematics</i>.
+        /// </summary>
+        /// <remarks>
+        /// For a negative whole <c>n</c> it is <c>1 / ((x - 1) (x - 2) ... (x + n))</c>, and for any other <c>n</c> it is <c>Γ(x + n) / Γ(x)</c>, as Mathematica's <c>Pochhammer</c> is. The name <c>pochhammer</c> is refused, since the Pochhammer symbol is the falling factorial to some authors.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </remarks>
+        public sealed partial record RisingFactorialf(Entity Argument, Entity Order) : Function, IBinaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeFirstChild => Argument;
+
+            /// <inheritdoc/>
+            public Entity NodeSecondChild => Order;
+
+            internal RisingFactorialf New(Entity argument, Entity order) =>
+                ReferenceEquals(Argument, argument) && ReferenceEquals(Order, order) ? this : new(argument, order) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func), Order.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument, Order };
+        }
     }
 }

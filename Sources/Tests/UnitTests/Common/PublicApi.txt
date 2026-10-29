@@ -1163,6 +1163,27 @@ AngouriMath.Entity+Factorialf.ToString() : System.String
 AngouriMath.Entity+Factorialf.ctor(AngouriMath.Entity)
 AngouriMath.Entity+Factorialf.op_Equality(AngouriMath.Entity+Factorialf, AngouriMath.Entity+Factorialf) : System.Boolean
 AngouriMath.Entity+Factorialf.op_Inequality(AngouriMath.Entity+Factorialf, AngouriMath.Entity+Factorialf) : System.Boolean
+AngouriMath.Entity+FallingFactorialf.<Clone>$() : AngouriMath.Entity+FallingFactorialf
+AngouriMath.Entity+FallingFactorialf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+FallingFactorialf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+FallingFactorialf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+FallingFactorialf.EqualityContract { } : System.Type
+AngouriMath.Entity+FallingFactorialf.Equals(AngouriMath.Entity+FallingFactorialf) : System.Boolean
+AngouriMath.Entity+FallingFactorialf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+FallingFactorialf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+FallingFactorialf.GetHashCode() : System.Int32
+AngouriMath.Entity+FallingFactorialf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+FallingFactorialf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+FallingFactorialf.NodeFirstChild { } : AngouriMath.Entity
+AngouriMath.Entity+FallingFactorialf.NodeSecondChild { } : AngouriMath.Entity
+AngouriMath.Entity+FallingFactorialf.Order { } : AngouriMath.Entity
+AngouriMath.Entity+FallingFactorialf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+FallingFactorialf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+FallingFactorialf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+FallingFactorialf.ToString() : System.String
+AngouriMath.Entity+FallingFactorialf.ctor(AngouriMath.Entity, AngouriMath.Entity)
+AngouriMath.Entity+FallingFactorialf.op_Equality(AngouriMath.Entity+FallingFactorialf, AngouriMath.Entity+FallingFactorialf) : System.Boolean
+AngouriMath.Entity+FallingFactorialf.op_Inequality(AngouriMath.Entity+FallingFactorialf, AngouriMath.Entity+FallingFactorialf) : System.Boolean
 AngouriMath.Entity+Floorf.<Clone>$() : AngouriMath.Entity+Floorf
 AngouriMath.Entity+Floorf.Argument { } : AngouriMath.Entity
 AngouriMath.Entity+Floorf.Codomain { } : AngouriMath.Core.Domain
@@ -2329,6 +2350,27 @@ AngouriMath.Entity+Ref.ToString() : System.String
 AngouriMath.Entity+Ref.ctor(AngouriMath.Entity)
 AngouriMath.Entity+Ref.op_Equality(AngouriMath.Entity+Ref, AngouriMath.Entity+Ref) : System.Boolean
 AngouriMath.Entity+Ref.op_Inequality(AngouriMath.Entity+Ref, AngouriMath.Entity+Ref) : System.Boolean
+AngouriMath.Entity+RisingFactorialf.<Clone>$() : AngouriMath.Entity+RisingFactorialf
+AngouriMath.Entity+RisingFactorialf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+RisingFactorialf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+RisingFactorialf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+RisingFactorialf.EqualityContract { } : System.Type
+AngouriMath.Entity+RisingFactorialf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+RisingFactorialf.Equals(AngouriMath.Entity+RisingFactorialf) : System.Boolean
+AngouriMath.Entity+RisingFactorialf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+RisingFactorialf.GetHashCode() : System.Int32
+AngouriMath.Entity+RisingFactorialf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+RisingFactorialf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+RisingFactorialf.NodeFirstChild { } : AngouriMath.Entity
+AngouriMath.Entity+RisingFactorialf.NodeSecondChild { } : AngouriMath.Entity
+AngouriMath.Entity+RisingFactorialf.Order { } : AngouriMath.Entity
+AngouriMath.Entity+RisingFactorialf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+RisingFactorialf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+RisingFactorialf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+RisingFactorialf.ToString() : System.String
+AngouriMath.Entity+RisingFactorialf.ctor(AngouriMath.Entity, AngouriMath.Entity)
+AngouriMath.Entity+RisingFactorialf.op_Equality(AngouriMath.Entity+RisingFactorialf, AngouriMath.Entity+RisingFactorialf) : System.Boolean
+AngouriMath.Entity+RisingFactorialf.op_Inequality(AngouriMath.Entity+RisingFactorialf, AngouriMath.Entity+RisingFactorialf) : System.Boolean
 AngouriMath.Entity+Roundf.<Clone>$() : AngouriMath.Entity+Roundf
 AngouriMath.Entity+Roundf.Argument { } : AngouriMath.Entity
 AngouriMath.Entity+Roundf.Codomain { } : AngouriMath.Core.Domain
@@ -3443,6 +3485,7 @@ AngouriMath.MathS.ExclusiveDisjunction(AngouriMath.Entity, AngouriMath.Entity) :
 AngouriMath.MathS.Exists(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.ExistsUnique(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Factorial(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.FallingFactorial(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Floor(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.ForAll(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.FromBaseN(System.String, System.Int32) : AngouriMath.Entity+Number+Real
@@ -3500,6 +3543,7 @@ AngouriMath.MathS.Pow(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Enti
 AngouriMath.MathS.Product(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Provided(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Re(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.RisingFactorial(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Round(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Scalar(AngouriMath.Entity) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.Sec(AngouriMath.Entity) : AngouriMath.Entity
@@ -3642,6 +3686,7 @@ class AngouriMath.Entity+Erfif
 class AngouriMath.Entity+ExistsUniquef
 class AngouriMath.Entity+Existsf
 class AngouriMath.Entity+Factorialf
+class AngouriMath.Entity+FallingFactorialf
 class AngouriMath.Entity+Floorf
 class AngouriMath.Entity+Forallf
 class AngouriMath.Entity+Function
@@ -3688,6 +3733,7 @@ class AngouriMath.Entity+Productf
 class AngouriMath.Entity+Providedf
 class AngouriMath.Entity+Quantifier
 class AngouriMath.Entity+Ref
+class AngouriMath.Entity+RisingFactorialf
 class AngouriMath.Entity+Roundf
 class AngouriMath.Entity+Secantf
 class AngouriMath.Entity+Set
