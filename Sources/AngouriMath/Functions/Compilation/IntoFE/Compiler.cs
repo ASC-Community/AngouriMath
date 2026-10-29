@@ -432,6 +432,54 @@ namespace AngouriMath
             }
         }
 
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Conjugatef
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_CONJ));
+            }
+        }
+
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Argf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_ARG));
+            }
+        }
+
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Ref
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_RE));
+            }
+        }
+
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Imf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_IM));
+            }
+        }
+
         public partial record Phif
         {
             private protected override bool CompilesItself => true;

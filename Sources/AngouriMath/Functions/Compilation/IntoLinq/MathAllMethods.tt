@@ -12,6 +12,9 @@
     // Defined for Complex and double alone: an integer or a float is widened to double first, as
     // for the trigonometry.
     var special = new[]{ "Erf", "Erfc", "Erfi", "Ei", "Li", "Si", "Ci", "Shi", "Chi", "Factorial" };
+    // The conjugate, the argument and the parts, for Complex and double alone in the same way.
+    // https://github.com/asc-community/AngouriMath/issues/2195
+    var parts = new[]{ "Conj", "Arg", "Re", "Im" };
     var types = new[]{ "System.Numerics.Complex", "double", "float", "long", "int", "BigInteger" };
 #>
 //
@@ -207,6 +210,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static double <#= name #>(double a) => AngouriMath.Numerics.SpecialFunctions.<#= name #>(a);
 <# } #>
 
+        // The conjugate, the principal argument and the real and the imaginary parts.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+<# foreach (var name in parts) { #>
+        public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.<#= name #>(a);
+        public static double <#= name #>(double a) => AngouriMath.Numerics.ComplexParts.<#= name #>(a);
+<# } #>
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -242,6 +252,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 <# } #>
 <# } #>
 <# foreach (var name in special) { #>
+<# foreach (var type in new[]{ "System.Numerics.Complex", "double" }) { #>
+            { ("<#= name #>", 1, typeof(<#= type #>)), Def<<#= type #>>(a => <#= name #>(a)) },
+<# } #>
+<# } #>
+<# foreach (var name in parts) { #>
 <# foreach (var type in new[]{ "System.Numerics.Complex", "double" }) { #>
             { ("<#= name #>", 1, typeof(<#= type #>)), Def<<#= type #>>(a => <#= name #>(a)) },
 <# } #>

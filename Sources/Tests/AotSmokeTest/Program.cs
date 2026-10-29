@@ -230,6 +230,9 @@ namespace AngouriMath.AotSmokeTest
             ("x / (x + 1)", 4.0),
             ("x + 2 * x - 3 * x ^ 2", 1.5),
             ("sin(x) ^ 2 + cos(x) ^ 2", 0.9),
+            // https://github.com/asc-community/AngouriMath/issues/2195
+            ("conj(x) + arg(x)", new Complex(-1.5, 2)),
+            ("Re(x) * Im(x)", new Complex(3, -2)),
         };
 
         private static void Compilation()
@@ -260,6 +263,8 @@ namespace AngouriMath.AotSmokeTest
             // double, not Complex: a different set of MathAllMethods overloads.
             var d = "sin(x) + cos(x)".Compile<double, double>(x);
             CheckClose("compiled double sin(x) + cos(x) at 0.4", d(0.4), Math.Sin(0.4) + Math.Cos(0.4), 1e-12);
+            var iverson = "iverson(x > 0) * x".Compile<double, double>(x);
+            CheckClose("compiled iverson(x > 0) x at 2 and -2", iverson(2) + iverson(-2), 2, 1e-12);
 
             // Two arguments, and the floored remainder that takes the sign of the divisor.
             var mod = "x mod y".Compile<long, long, long>(x, y);
