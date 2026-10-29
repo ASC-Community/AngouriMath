@@ -88,6 +88,33 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// The harmonic number <c>harmonicnumber(n)</c>, <c>H_n = 1 + 1/2 + ... + 1/n</c>, and the
+        /// generalized one <c>harmonicnumber(n, m)</c>, <c>H_n^(m) = 1 + 1/2^m + ... + 1/n^m</c>.
+        /// </summary>
+        /// <remarks>
+        /// Off the whole numbers it is <c>ζ(m) - ζ(m, n + 1)</c>, as Mathematica's <c>HarmonicNumber</c>
+        /// is: <c>ψ(n + 1) - ψ(1)</c> for <c>m = 1</c>, which is <c>2 - 2 ln 2</c> at <c>n = 1/2</c>. It
+        /// has no value at a negative integer <c>n</c>, a pole of the Hurwitz zeta function, but for a
+        /// whole order <c>m &lt;= 0</c>, where it is a polynomial in <c>n</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </remarks>
+        public sealed partial record HarmonicNumberf(Entity Argument, Entity Order) : Function, IBinaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeFirstChild => Argument;
+
+            /// <inheritdoc/>
+            public Entity NodeSecondChild => Order;
+
+            internal HarmonicNumberf New(Entity argument, Entity order) =>
+                ReferenceEquals(Argument, argument) && ReferenceEquals(Order, order) ? this : new(argument, order) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func), Order.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument, Order };
+        }
+
+        /// <summary>
         /// The Catalan number <c>catalannumber(n)</c>, <c>C_n = binomial(2n, n) / (n + 1)</c>: 1, 1, 2, 5,
         /// 14 from <c>n = 0</c>, the number of ways to bracket a product of <c>n + 1</c> factors.
         /// </summary>

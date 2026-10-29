@@ -1310,6 +1310,27 @@ AngouriMath.Entity+Greaterf.ToString() : System.String
 AngouriMath.Entity+Greaterf.ctor(AngouriMath.Entity, AngouriMath.Entity)
 AngouriMath.Entity+Greaterf.op_Equality(AngouriMath.Entity+Greaterf, AngouriMath.Entity+Greaterf) : System.Boolean
 AngouriMath.Entity+Greaterf.op_Inequality(AngouriMath.Entity+Greaterf, AngouriMath.Entity+Greaterf) : System.Boolean
+AngouriMath.Entity+HarmonicNumberf.<Clone>$() : AngouriMath.Entity+HarmonicNumberf
+AngouriMath.Entity+HarmonicNumberf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+HarmonicNumberf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+HarmonicNumberf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+HarmonicNumberf.EqualityContract { } : System.Type
+AngouriMath.Entity+HarmonicNumberf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+HarmonicNumberf.Equals(AngouriMath.Entity+HarmonicNumberf) : System.Boolean
+AngouriMath.Entity+HarmonicNumberf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+HarmonicNumberf.GetHashCode() : System.Int32
+AngouriMath.Entity+HarmonicNumberf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+HarmonicNumberf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+HarmonicNumberf.NodeFirstChild { } : AngouriMath.Entity
+AngouriMath.Entity+HarmonicNumberf.NodeSecondChild { } : AngouriMath.Entity
+AngouriMath.Entity+HarmonicNumberf.Order { } : AngouriMath.Entity
+AngouriMath.Entity+HarmonicNumberf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+HarmonicNumberf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+HarmonicNumberf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+HarmonicNumberf.ToString() : System.String
+AngouriMath.Entity+HarmonicNumberf.ctor(AngouriMath.Entity, AngouriMath.Entity)
+AngouriMath.Entity+HarmonicNumberf.op_Equality(AngouriMath.Entity+HarmonicNumberf, AngouriMath.Entity+HarmonicNumberf) : System.Boolean
+AngouriMath.Entity+HarmonicNumberf.op_Inequality(AngouriMath.Entity+HarmonicNumberf, AngouriMath.Entity+HarmonicNumberf) : System.Boolean
 AngouriMath.Entity+Imf.<Clone>$() : AngouriMath.Entity+Imf
 AngouriMath.Entity+Imf.Argument { } : AngouriMath.Entity
 AngouriMath.Entity+Imf.Codomain { } : AngouriMath.Core.Domain
@@ -3515,6 +3536,8 @@ AngouriMath.MathS.Gamma(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Gcd(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.GreaterOrEqualThan(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.GreaterThan(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.HarmonicNumber(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.HarmonicNumber(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.I_1 : AngouriMath.Entity+Matrix
 AngouriMath.MathS.I_2 : AngouriMath.Entity+Matrix
 AngouriMath.MathS.I_3 : AngouriMath.Entity+Matrix
@@ -3714,6 +3737,7 @@ class AngouriMath.Entity+Function
 class AngouriMath.Entity+Gcdf
 class AngouriMath.Entity+GreaterOrEqualf
 class AngouriMath.Entity+Greaterf
+class AngouriMath.Entity+HarmonicNumberf
 class AngouriMath.Entity+Imf
 class AngouriMath.Entity+Impliesf
 class AngouriMath.Entity+IncompleteGammaf

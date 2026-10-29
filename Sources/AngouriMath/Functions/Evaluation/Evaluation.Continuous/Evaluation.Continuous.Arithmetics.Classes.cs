@@ -699,6 +699,47 @@ namespace AngouriMath
             private const int LargestIndex = 1000;
         }
 
+        public partial record HarmonicNumberf
+        {
+            // No value at a negative integer n, a pole of ζ(m, n + 1), but for a whole order m <= 0,
+            // where it is a polynomial in n.
+            private protected override Entity IntrinsicCondition =>
+                !(Argument.In(MathS.Sets.Z) & Argument < 0) | (Order.In(MathS.Sets.Z) & Order <= 0);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact) =>
+                ExpandOnTwoArguments(Argument, Order,
+                    (n, m) => (n, m) switch
+                    {
+                        // A whole n >= 0: the sum, exact for a rational order.
+                        (Integer { EInteger: var whole }, Number order) when whole.Sign >= 0 && whole.CompareTo(PeterO.Numbers.EInteger.FromInt32(LongestSum)) <= 0
+                            => Sum(whole.ToInt32Checked(), order).InnerSimplified(isExact),
+                        (Integer { EInteger.Sign: >= 0 }, Number) => null,
+                        (Integer { EInteger.Sign: < 0 }, Number order) when order is not Integer { EInteger.Sign: <= 0 } => MathS.NaN,
+                        // Elsewhere, numerically: ψ(n + 1) - ψ(1) for m = 1, and through the polygamma
+                        // function for a whole m >= 2, as ζ(m) - ζ(m, n + 1) is.
+                        (Complex value, Integer { EInteger: var order }) when !isExact && order.Sign > 0 && order.CompareTo(PeterO.Numbers.EInteger.FromInt32(LargestOrder)) <= 0
+                            => Numerically(value, order.ToInt32Checked()),
+                        _ => null
+                    },
+                    (@this, n, m) => ((HarmonicNumberf)@this).New(n, m), isExact);
+
+            private static Entity Sum(int n, Number order)
+                => n == 0 ? Integer.Zero
+                 : Enumerable.Range(1, n).Select(k => MathS.Pow(Integer.Create(k), -order)).Aggregate((sum, term) => sum + term);
+
+            // (-1)^m / (m - 1)! (ψ^(m - 1)(1) - ψ^(m - 1)(n + 1)), which is ψ(n + 1) - ψ(1) at m = 1.
+            private static Entity Numerically(Complex n, int m)
+                => (MathS.Pow(-1, m) / MathS.Factorial(m - 1)
+                    * (MathS.Polygamma(m - 1, Integer.One) - MathS.Polygamma(m - 1, n + 1))).Evaled;
+
+            /// <summary>How long a sum is built before the node is left as written.</summary>
+            private const int LongestSum = 10000;
+
+            /// <summary>The largest order evaluated through the polygamma function.</summary>
+            private const int LargestOrder = 64;
+        }
+
         public partial record Ref
         {
             // Defined everywhere on the complex plane.

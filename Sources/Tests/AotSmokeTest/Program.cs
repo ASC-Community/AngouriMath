@@ -140,6 +140,8 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("multinomial(x, 3, 4) at x = 2", At(multinomial, "x", 2), 1260);
             var catalan = MathS.FromString("catalannumber(x)");
             CheckClose("catalannumber at x = 5", At(catalan, "x", 5), 42);
+            var harmonic = MathS.FromString("harmonicnumber(x, 2)");
+            CheckClose("harmonicnumber(x, 2) at x = 4", At(harmonic, "x", 4), 205.0 / 144);
         }
 
         private static void Simplification()

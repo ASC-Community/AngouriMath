@@ -97,6 +97,15 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        partial record HarmonicNumberf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode()
+                => Order == Integer.One ? $@"harmonicnumber({Argument.Stringize()})" : $@"harmonicnumber({Argument.Stringize()}, {Order.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>

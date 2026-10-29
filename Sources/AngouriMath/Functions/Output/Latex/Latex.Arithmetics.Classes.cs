@@ -434,6 +434,13 @@ namespace AngouriMath
             private protected override string LatexizeNode() => $@"\operatorname{{C}}_{{{Argument.Latexize()}}}";
         }
 
+        partial record HarmonicNumberf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => Order == Integer.One ? $@"\operatorname{{H}}_{{{Argument.Latexize()}}}" : $@"\operatorname{{H}}_{{{Argument.Latexize()}}}^{{\left({Order.Latexize()}\right)}}";
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>

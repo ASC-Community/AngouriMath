@@ -833,6 +833,14 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Complex;
         }
 
+        partial record HarmonicNumberf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>
