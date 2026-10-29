@@ -330,6 +330,12 @@ or the odd indices (`sum(binomial(n, 2 l), l, 0, floor(n/2))` is `2^(n - 1)` for
 identities of chapter 8 of Sullivan and Mackey's *An Introduction to Proofs*, so that
 `forall n in ZZ+ : sum(k binomial(n, k), k, 0, n) = n 2^(n - 1)` is `True`.
 
+**Multinomial coefficients** — `multinomial(k_1, ..., k_m)` is `(k_1 + ... + k_m)! / (k_1! ... k_m!)`,
+written so when it is parsed: `multinomial(2, 3, 4)` is `1260`, and it is the coefficient of
+`a^2 b^3 c^4` in `(a + b + c)^9`. Off the whole numbers it is the gamma ratio the factorial gives, so
+`multinomial(1/2, 1/2)` is `4 / pi`, and it has no value where an argument or their sum is a negative
+integer ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 **Factorial powers** — `fallingfactorial(x, n)` (or `factorialpower`, Mathematica's name) and
 `risingfactorial(x, n)`, `x` to the `n` falling and rising: `x (x - 1) ... (x - n + 1)` and
 `x (x + 1) ... (x + n - 1)` for a whole `n >= 0`, drawn with Knuth's bars as `x^{\underline{n}}` and
@@ -514,7 +520,7 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
 **Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
-`hurwitzzeta` `lambertw` `productlog` `harmonicnumber` `catalannumber` `multinomial`
+`hurwitzzeta` `lambertw` `productlog` `harmonicnumber` `catalannumber`
 `forwarddifference`. Each is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
 under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse

@@ -467,7 +467,7 @@ the right shape, written out or once its operations are carried out, throws `Inv
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
-is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber`, `catalannumber`, `multinomial` and
+is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber`, `catalannumber` and
 `forwarddifference`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
@@ -480,7 +480,7 @@ Each name without a bracket is still a variable, and short names such as `beta` 
 | `"zeta(2)".ToEntity().Simplify()` | `2 * zeta` | throws `UnrecognizedFunctionParseException` |
 | `"isprime(7)".ToEntity()` | `isprime * 7` | throws `UnrecognizedFunctionParseException`: write `n in PP` |
 | `"heaviside(x)".ToEntity()` | `heaviside * x` | throws `UnrecognizedFunctionParseException`: write `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2` |
-| `"multinomial(a, b, c)".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
+| `"harmonicnumber(n, m)".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
 ### The Möbius, divisor and prime-counting functions
 
@@ -529,6 +529,19 @@ and `Γ(x + n)/Γ(x)`. LaTeX draws them with Knuth's bars, `x^{\underline{n}}` a
 | `"fallingfactorial(5, 2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `20` |
 | `"risingfactorial(3, 2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `12` |
 | `"fallingfactorial(5, 1/2)".ToEntity().EvalNumerical()` | throws `UnhandledParseException` | `2.29257989505120015013822761269...` |
+
+### The multinomial coefficient
+
+**Not silent: `multinomial(k_1, ..., k_m)` is `(k_1 + ... + k_m)! / (k_1! ... k_m!)`, where with two or more arguments it
+was a parse error and with one it was a product.** It is written in the factorial, which is the gamma function off the
+whole numbers, so it is symmetric in its arguments and has no value where an argument or their sum is a negative
+integer ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"multinomial(2, 3, 4)".ToEntity().Simplify()` | throws `UnhandledParseException` | `1260` |
+| `"multinomial(1/2, 1/2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `4 / pi` |
+| `"multinomial(n)".ToEntity()` | `multinomial * n` | `n! / n!` |
 
 ### A subscript may have a subscript
 
