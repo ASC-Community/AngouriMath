@@ -83,6 +83,22 @@ namespace AngouriMath.Tests.Convenience
             Assert.True(value.EDecimal.Subtract(PeterO.Numbers.EDecimal.FromString(expected)).Abs().CompareTo(PeterO.Numbers.EDecimal.FromString("1e-25")) < 0, $"{input} evaluated to {value}");
         }
 
+        /// <summary>
+        /// Where <c>n - k</c> is a negative whole number, <c>Γ(n - k + 1)</c> in the denominator has a pole
+        /// and the binomial is 0, as mpmath has it: the reciprocal gamma vanishes there. It was left
+        /// unevaluated.
+        /// </summary>
+        [Theory]
+        [InlineData("binomial(1/2, 3/2)")]
+        [InlineData("binomial(5/2, 7/2)")]
+        [InlineData("binomial(1/2, 5/2)")]
+        [InlineData("binomial(3/2 + i, 5/2 + i)")]
+        public void AtAPoleOfTheDenominatorItIsZero(string input)
+        {
+            Assert.Equal(Entity.Number.Integer.Zero, input.ToEntity().InnerSimplified);
+            Assert.Equal(Entity.Number.Integer.Zero, input.ToEntity().EvalNumerical());
+        }
+
         [Fact]
         public void ANegativeWholeUpperArgumentWithAFractionalLowerOneHasNoValue()
             => Assert.Equal(MathS.NaN, "binomial(-3, 1/2)".ToEntity().EvalNumerical());
