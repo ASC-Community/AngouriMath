@@ -81,6 +81,7 @@ namespace AngouriMath.Core
             CALL_BINOMIAL,
             CALL_FALLING_FACTORIAL,
             CALL_RISING_FACTORIAL,
+            CALL_LAMBERTW,
 
             // 3-arg: a value where its predicate holds, and the one below it elsewhere.
             CALL_SELECT = 150,
@@ -354,6 +355,9 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_RISING_FACTORIAL:
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_LAMBERTW:
+                        stack.Push(AngouriMath.Numerics.LambertWFunction.LambertW(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_DOUBLE_FACTORIAL:
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(stack.Pop()));

@@ -309,6 +309,8 @@ namespace AngouriMath.AotSmokeTest
             var linqBinomial = "binomial(x, 2) + fallingfactorial(x, 3) + risingfactorial(x, 2) + x!!".Compile<Complex, Complex>(x);
             Check("compiled binomial(x, 2) + x(x-1)(x-2) + x(x+1) + x!! at x = 5", fastBinomial.Call(5) == 10 + 60 + 30 + 15 && linqBinomial(5) == 10 + 60 + 30 + 15,
                 $"{fastBinomial.Call(5)}, {linqBinomial(5)}");
+            var compiledW = "lambertw(-1, x)".Compile<double, double>(x);
+            CheckClose("compiled lambertw(-1, x) at x = -0.3", compiledW(-0.3), -1.7813370234216276);
             // FastExpression: a statement is its truth value, and a piecewise the case that holds.
             var fastPiecewise = "piecewise(x provided x > 0, -x)".Compile(x);
             var fastStatement = "x > 1 or x < 0".Compile(x);

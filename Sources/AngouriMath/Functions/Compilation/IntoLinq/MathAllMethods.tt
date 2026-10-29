@@ -232,6 +232,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static double <#= name #>(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.<#= name #>(a, b);
 <# } #>
 
+        // The Lambert W function on the branch the first argument names.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public static System.Numerics.Complex LambertW(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
+        public static double LambertW(double a, double b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -285,6 +290,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 <# foreach (var type in new[]{ "System.Numerics.Complex", "double" }) { #>
             { ("<#= name #>", 2, typeof(<#= type #>)), Def<<#= type #>>((a, b) => <#= name #>(a, b)) },
 <# } #>
+<# } #>
+<# foreach (var type in new[]{ "System.Numerics.Complex", "double" }) { #>
+            { ("LambertW", 2, typeof(<#= type #>)), Def<<#= type #>>((a, b) => LambertW(a, b)) },
 <# } #>
         };
 

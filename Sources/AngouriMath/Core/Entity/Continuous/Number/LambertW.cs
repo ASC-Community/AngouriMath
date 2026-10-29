@@ -29,10 +29,11 @@ namespace AngouriMath
             /// on <c>[-1/e, 0)</c>, and a value on a branch cut is the one approached from above.
             /// </para>
             /// <para>
-            /// The branch is found in double precision, where it is cheap: from the series in
-            /// <c>p = sqrt(2 (e z + 1))</c> about the branch point <c>-1/e</c>, from <c>ln(1 + z)</c> elsewhere on
-            /// the principal branch short of <c>|z| = 3</c>, and from <c>ln z + 2 pi i k - ln(ln z + 2 pi i k)</c> otherwise,
-            /// each then taken to a root by Halley's iteration. That root is refined by the same iteration
+            /// The branch is found in double precision, where it is cheap, by the kernel the compilers use,
+            /// <see cref="AngouriMath.Numerics.LambertWFunction"/>: from the series in <c>p = sqrt(2 (e z + 1))</c>
+            /// about the branch point <c>-1/e</c>, from <c>ln(1 + z)</c> elsewhere on the principal branch short of
+            /// <c>|z| = 3</c>, and from <c>ln z + 2 pi i k - ln(ln z + 2 pi i k)</c> otherwise, each then taken to a
+            /// root by Halley's iteration. That root is refined by the same iteration
             /// at the working precision, which triples the digits with each step and does not leave the
             /// branch. Near the branch point, where double precision cannot resolve <c>z + 1/e</c>, the
             /// series is evaluated at the working precision instead, and refined from there.
@@ -78,7 +79,7 @@ namespace AngouriMath
                 }
                 else
                 {
-                    var start = InDoublePrecision(k, new NumericsComplex(re.ToDouble(), im.ToDouble()));
+                    var start = AngouriMath.Numerics.LambertWFunction.LambertW(new NumericsComplex(k, 0), new NumericsComplex(re.ToDouble(), im.ToDouble()));
                     if (double.IsNaN(start.Real) || double.IsNaN(start.Imaginary) || double.IsInfinity(start.Real) || double.IsInfinity(start.Imaginary))
                         return null;
                     w = (EDecimal.FromDouble(start.Real), EDecimal.FromDouble(start.Imaginary));
@@ -105,40 +106,6 @@ namespace AngouriMath
                         break;
                 }
                 return Complex.Create(w.Re.RoundToPrecision(context), w.Im.RoundToPrecision(context));
-            }
-
-            /// <summary>
-            /// W_k(z) in double precision, from a start on the branch and Halley's iteration: the
-            /// branch is chosen here, and the working precision only refines the root.
-            /// </summary>
-            internal static NumericsComplex InDoublePrecision(int k, NumericsComplex z)
-            {
-                NumericsComplex w;
-                var p = NumericsComplex.Sqrt(2 * (Math.E * z + 1));
-                // The series about the branch point, within 1/e of it, on the principal branch; ln(1 + z)
-                // short of the asymptotic reach, which W_0 is close to there and the asymptotic start is
-                // not: from that one, 0.5i went to another branch. Between -1 and -1/e on the axis
-                // ln(1 + z) is real where W_0 is not, and only the series reaches the root.
-                if (k == 0 && NumericsComplex.Abs(Math.E * z + 1) < 1)
-                    w = -1 + p - p * p / 3 + 11 * p * p * p / 72;
-                else if (k == 0 && NumericsComplex.Abs(z) < 3)
-                    w = NumericsComplex.Log(1 + z);
-                else
-                {
-                    var l1 = NumericsComplex.Log(z) + new NumericsComplex(0, 2 * Math.PI * k);
-                    var l2 = NumericsComplex.Log(l1);
-                    w = l1 - l2 + l2 / l1;
-                }
-                for (var step = 0; step < 64; step++)
-                {
-                    var ew = NumericsComplex.Exp(w);
-                    var f = w * ew - z;
-                    var change = f / (ew * (w + 1) - (w + 2) * f / (2 * w + 2));
-                    w -= change;
-                    if (NumericsComplex.Abs(change) <= 1e-15 * Math.Max(NumericsComplex.Abs(w), 1))
-                        break;
-                }
-                return w;
             }
 
             private static (EDecimal Re, EDecimal Im) Exp((EDecimal Re, EDecimal Im) w, EContext work)

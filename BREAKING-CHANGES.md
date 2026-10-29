@@ -684,7 +684,8 @@ and below `-1/e` there is none ([#2182](https://github.com/asc-community/Angouri
 al. (1996), as Mathematica's `ProductLog` and mpmath's `lambertw` have them: `W_0` is real on `[-1/e, +oo)` and `W_(-1)`
 on `[-1/e, 0)`. It is exact at `0` and where `z` is `c e^c` for a real `c` the branch takes, so `lambertw(e)` is `1`
 and `lambertw(-1/e)` is `-1`, and it is evaluated numerically elsewhere. Its derivative is `e^(-W(z))/(1 + W(z))`
-([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)). It compiles, in double precision on the same
+branches, in both compilers ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
