@@ -7,6 +7,7 @@
 
 using System.Runtime.CompilerServices;
 using AngouriMath.Core.Exceptions;
+using Logic = AngouriMath.Core.Compilation.IntoLinq.ThreeValuedLogic;
 
 
 namespace AngouriMath.Core
@@ -53,6 +54,7 @@ namespace AngouriMath.Core
             CALL_ARG,
             CALL_RE,
             CALL_IM,
+            CALL_NOT,
 
             // 2-arg functions
             CALL_SUM = 100,
@@ -64,6 +66,20 @@ namespace AngouriMath.Core
             CALL_LOG,
             CALL_MAX,
             CALL_MIN,
+            CALL_LESS,
+            CALL_LESS_OR_EQUAL,
+            CALL_GREATER,
+            CALL_GREATER_OR_EQUAL,
+            CALL_EQUAL,
+            CALL_AND,
+            CALL_OR,
+            CALL_XOR,
+            CALL_IMPLIES,
+            // A value where its predicate holds, and NaN elsewhere.
+            CALL_PROVIDED,
+
+            // 3-arg: a value where its predicate holds, and the one below it elsewhere.
+            CALL_SELECT = 150,
         }
         internal sealed partial record Instruction(InstructionType Type, int Reference = -1, System.Numerics.Complex Value = default)
         {
@@ -285,11 +301,64 @@ namespace AngouriMath.Core
                     case InstructionType.CALL_IM:
                         stack.Push(AngouriMath.Numerics.ComplexParts.Im(stack.Pop()));
                         break;
+                    // A truth value is 1, 0, or NaN where there is none, as evaluation leaves one;
+                    // the comparisons and the connectives are the LINQ compiler's.
+                    // https://github.com/asc-community/AngouriMath/issues/2195
+                    case InstructionType.CALL_LESS:
+                        stack.Push(Truth(Logic.Less(stack.Pop(), stack.Pop())));
+                        break;
+                    case InstructionType.CALL_LESS_OR_EQUAL:
+                        stack.Push(Truth(Logic.LessOrEqual(stack.Pop(), stack.Pop())));
+                        break;
+                    case InstructionType.CALL_GREATER:
+                        stack.Push(Truth(Logic.Greater(stack.Pop(), stack.Pop())));
+                        break;
+                    case InstructionType.CALL_GREATER_OR_EQUAL:
+                        stack.Push(Truth(Logic.GreaterOrEqual(stack.Pop(), stack.Pop())));
+                        break;
+                    case InstructionType.CALL_EQUAL:
+                        stack.Push(Truth(Logic.Equal(stack.Pop(), stack.Pop())));
+                        break;
+                    case InstructionType.CALL_NOT:
+                        stack.Push(Truth(Logic.Not(Truth(stack.Pop()))));
+                        break;
+                    case InstructionType.CALL_AND:
+                        stack.Push(Truth(Logic.And(Truth(stack.Pop()), Truth(stack.Pop()))));
+                        break;
+                    case InstructionType.CALL_OR:
+                        stack.Push(Truth(Logic.Or(Truth(stack.Pop()), Truth(stack.Pop()))));
+                        break;
+                    case InstructionType.CALL_XOR:
+                        stack.Push(Truth(Logic.Xor(Truth(stack.Pop()), Truth(stack.Pop()))));
+                        break;
+                    case InstructionType.CALL_IMPLIES:
+                        stack.Push(Truth(Logic.Implies(Truth(stack.Pop()), Truth(stack.Pop()))));
+                        break;
+                    case InstructionType.CALL_PROVIDED:
+                    {
+                        var value = stack.Pop();
+                        stack.Push(Truth(stack.Pop()) == true ? value : double.NaN);
+                        break;
+                    }
+                    case InstructionType.CALL_SELECT:
+                    {
+                        var value = stack.Pop();
+                        var holds = Truth(stack.Pop()) == true;
+                        var otherwise = stack.Pop();
+                        stack.Push(holds ? value : otherwise);
+                        break;
+                    }
                 }
             if (stack.Count != 1)
                 throw new AngouriBugException($"Unused values remain in the stack: {stack.Count} instead of 1");
             return stack.Pop();
         }
+
+        /// <summary>A truth value on the stack: 1 where it holds, 0 where it does not, NaN where it has none.</summary>
+        private static System.Numerics.Complex Truth(bool? value) => value is { } holds ? (holds ? 1 : 0) : double.NaN;
+
+        /// <summary>The truth value a number on the stack stands for: none but for exactly 1 or 0.</summary>
+        private static bool? Truth(System.Numerics.Complex value) => value == 1 ? true : value == 0 ? false : null;
 
         /// <summary>Might be useful for debug if a function works too slowly</summary>
         public override string ToString() => string.Join(" \n| ", instructions);

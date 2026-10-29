@@ -343,6 +343,23 @@ compiled to `bool`, it is `false`, as one that does not hold
 | `"x provided x > 1".ToEntity().Compile<Complex, Complex>("x")(2)` | `UncompilableNodeException` | `(2, 0)` |
 | `"x provided x > 1".ToEntity().Compile<Complex, Complex>("x")(Complex.ImaginaryOne)` | `UncompilableNodeException` | `(NaN, 0)` |
 
+### `Compile` compiles statements, `provided` and `piecewise`
+
+**Not silent: what was refused is compiled.** `Entity.Compile(...)`, which returns a `FastExpression`, refused a
+comparison, a connective, a Boolean, a `provided`, a `piecewise` and an Iverson bracket with `UncompilableNodeException`.
+A statement now compiles to its truth value, `1` where it holds, `0` where it does not, and `NaN` where it has none, as
+`i > 1` has none. Comparisons and connectives are those of the LINQ compiler. A `provided` is `NaN` where its predicate
+does not hold, and a `piecewise` is the first case whose predicate holds, or `NaN`. Every case is computed, since the
+instructions have no jump ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x > 1".ToEntity().Compile("x").Call(2)` | `UncompilableNodeException` | `(1, 0)` |
+| `"x > 1".ToEntity().Compile("x").Call(Complex.ImaginaryOne)` | `UncompilableNodeException` | `(NaN, 0)` |
+| `"x provided x > 0".ToEntity().Compile("x").Call(-1)` | `UncompilableNodeException` | `(NaN, 0)` |
+| `"piecewise(x provided x > 0, -x)".ToEntity().Compile("x").Call(-3)` | `UncompilableNodeException` | `(3, 0)` |
+| `"iverson(x > 0)".ToEntity().Compile("x").Call(2)` | `UncompilableNodeException` | `(1, 0)` |
+
 ### The conjugate, the argument, the parts and the Iverson bracket compile
 
 **Not silent: these compile where they threw `UncompilableNodeException`.** `conj`, `arg`, `Re` and `Im` compile

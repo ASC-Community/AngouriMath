@@ -386,6 +386,175 @@ namespace AngouriMath
             }
         }
 
+        // A statement compiles to its truth value: 1 where it holds, 0 where it does not, and NaN
+        // where it has none, as evaluation leaves one. A provided and a piecewise compile every
+        // case and keep the one whose predicate holds, which needs no jump in the instructions.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Boolean
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+                => compiler.Instructions.Add(new(InstructionType.PUSH_CONST, Value: Value ? 1 : 0));
+        }
+
+        public partial record Notf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_NOT));
+            }
+        }
+
+        // The Iverson bracket of a statement is its truth value.
+        public partial record Iversonf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler) => Argument.InnerCompile(compiler);
+        }
+
+        public partial record Andf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_AND));
+            }
+        }
+
+        public partial record Orf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_OR));
+            }
+        }
+
+        public partial record Xorf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_XOR));
+            }
+        }
+
+        public partial record Impliesf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Conclusion.InnerCompile(compiler);
+                Assumption.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_IMPLIES));
+            }
+        }
+
+        public partial record Equalsf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_EQUAL));
+            }
+        }
+
+        public partial record Lessf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_LESS));
+            }
+        }
+
+        public partial record LessOrEqualf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_LESS_OR_EQUAL));
+            }
+        }
+
+        public partial record Greaterf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_GREATER));
+            }
+        }
+
+        public partial record GreaterOrEqualf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_GREATER_OR_EQUAL));
+            }
+        }
+
+        public partial record Providedf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Predicate.InnerCompile(compiler);
+                Expression.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_PROVIDED));
+            }
+        }
+
+        // The first case whose predicate holds, and NaN where none does: from the last case up,
+        // each is kept where its predicate holds and the cases below it are kept elsewhere.
+        public partial record Piecewise
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                compiler.Instructions.Add(new(InstructionType.PUSH_CONST, Value: double.NaN));
+                foreach (var @case in Cases.Reverse())
+                {
+                    @case.Predicate.InnerCompile(compiler);
+                    @case.Expression.InnerCompile(compiler);
+                    compiler.Instructions.Add(new(InstructionType.CALL_SELECT));
+                }
+            }
+        }
+
         public partial record Maxf
         {
             private protected override bool CompilesItself => true;

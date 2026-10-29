@@ -303,6 +303,12 @@ namespace AngouriMath.AotSmokeTest
                 $"{undecided(Complex.ImaginaryOne, true)}, {undecided(Complex.ImaginaryOne, false)?.ToString() ?? "null"}");
             var underIt = "x provided x > 1".Compile<Complex, Complex>(x);
             Check("compiled x provided x > 1 at 2 and at i", underIt(2) == 2 && double.IsNaN(underIt(Complex.ImaginaryOne).Real), $"{underIt(2)}, {underIt(Complex.ImaginaryOne)}");
+            // FastExpression: a statement is its truth value, and a piecewise the case that holds.
+            var fastPiecewise = "piecewise(x provided x > 0, -x)".Compile(x);
+            var fastStatement = "x > 1 or x < 0".Compile(x);
+            Check("FastExpression piecewise at -3 and 2, x > 1 or x < 0 at 2 and at i",
+                fastPiecewise.Call(-3) == 3 && fastPiecewise.Call(2) == 2 && fastStatement.Call(2) == 1 && double.IsNaN(fastStatement.Call(Complex.ImaginaryOne).Real),
+                $"{fastPiecewise.Call(-3)}, {fastPiecewise.Call(2)}, {fastStatement.Call(2)}, {fastStatement.Call(Complex.ImaginaryOne)}");
 
             // A matrix, which compiles to a tensor: the arithmetic on it must stay ahead-of-time
             // compilable, which GenericTensor's own expression-compiled loops are not.
