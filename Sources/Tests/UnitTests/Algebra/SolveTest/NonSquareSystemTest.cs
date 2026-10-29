@@ -116,14 +116,36 @@ namespace AngouriMath.Tests.Algebra
         }
 
         /// <summary>
-        /// What the elimination finds and cannot show to hold. <c>sqrt(y) = x</c> is solved for
-        /// <c>y</c> as <c>x^2</c>, no solution where <c>x</c> is negative. The coefficient of
-        /// <c>y</c> in the second is zero without being written so, and dividing by it gives a
-        /// family that <c>Simplify</c> calls zero provided it is not zero. The third has solutions
-        /// only where <c>a + b = 2c</c>.
+        /// A family that says where it holds is checked there. <c>sqrt(y) = x</c> is solved for
+        /// <c>y</c> as <c>x^2</c> where <c>x</c> is <c>0</c> or in the half-plane <c>sqrt</c> takes
+        /// its values in, so the family is <c>(t_1, t_1^2)</c> under that condition. It holds at
+        /// each <c>t_1</c> in the sector, <c>i/2</c> on its edge among them, and is not claimed
+        /// at a negative one, where <c>sqrt(t_1^2)</c> is <c>-t_1</c>.
+        /// </summary>
+        [Fact]
+        public void AFamilyThatSaysWhereItHoldsIsCheckedThere()
+        {
+            var solutions = Solve(new[] { "sqrt(y) - x" }, new[] { "x", "y" });
+            Assert.NotNull(solutions);
+            Assert.Equal(1, solutions!.RowCount);
+            var y = Assert.IsType<Entity.Providedf>(solutions[0, 1]);
+            var t = Assert.IsType<Entity.Variable>(solutions[0, 0]);
+            foreach (var at in new Entity[] { 2, "1.3 + 0.7i", "i/2", 0 })
+            {
+                Assert.Equal(Entity.Boolean.True, y.Predicate.Substitute(t, at).Evaled);
+                var residual = ("sqrt(y) - x".ToEntity().Substitute("y", y.Expression).Substitute("x", t)).Substitute(t, at);
+                Assert.True(((Entity.Number.Real)((Entity.Number.Complex)residual.Evaled).Abs()).EDecimal.ToDouble() < 1e-12, $"{residual}");
+            }
+            Assert.Equal(Entity.Boolean.False, y.Predicate.Substitute(t, -2).Evaled);
+        }
+
+        /// <summary>
+        /// What the elimination finds and cannot show to hold. The coefficient of <c>y</c> in the
+        /// first is zero without being written so, and dividing by it gives a family that
+        /// <c>Simplify</c> calls zero provided it is not zero. The second has solutions only where
+        /// <c>a + b = 2c</c>.
         /// </summary>
         [Theory]
-        [InlineData(new[] { "sqrt(y) - x" }, new[] { "x", "y" })]
         [InlineData(new[] { "x^2 - ((a + 1)^2 - a^2 - 2*a - 1)*y" }, new[] { "x", "y" })]
         [InlineData(new[] { "x + y - a", "x - y - b", "x - c" }, new[] { "x", "y" })]
         public void WhatCannotBeShownToHoldIsDeclined(string[] equations, string[] variables)

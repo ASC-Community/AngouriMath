@@ -242,6 +242,8 @@ namespace AngouriMath.Functions.Boolean
             Dividesf(not Number, _) or Congruentf(_, _, not Number) => true,
             Equalsf(Modf(_, var modulus), Modf(_, var other)) => modulus is not Number && modulus == other,
             Floorf(not Number) or Ceilf(not Number) => true,
+            // A principal root of a whole power, which PrincipalPowerOfAPower reads.
+            Powf(Powf(not Number, Integer), Rational) => true,
             _ => false
         };
 
@@ -485,6 +487,61 @@ namespace AngouriMath.Functions.Boolean
                 return null;
             var rest = kept.Count == 0 ? Integer.Zero : kept.Aggregate((left, right) => left + right);
             return Recorded(function(argument), function(rest), $"{periods} is a whole number of periods", lemma);
+        }
+
+        /// <summary>
+        /// <c>z</c> for the principal root <c>(z^n)^(1/n)</c> of a whole <c>n &gt;= 2</c>, where the facts in
+        /// scope put <c>z</c> where that root takes its values, or <see langword="null"/>: at <c>0</c> or in
+        /// the sector <c>-pi/n &lt; arg(z) &lt;= pi/n</c>, which is how the power's inversion states it, or on
+        /// the half-line <c>z &gt;= 0</c>, as <c>Complex.pow_cpow_nat_inv</c> has it. So <c>sqrt(t^2)</c> is
+        /// <c>t</c> where <c>t = 0 or -pi/2 &lt; arg(t) &lt;= pi/2</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/212
+        /// </summary>
+        internal static Entity? PrincipalPowerOfAPower(Entity z, Entity inner, Entity exponent)
+        {
+            if (top is null || !MentionsARenamedName(z)
+                || inner is not Integer { EInteger: var n } || n.CompareTo(2) < 0
+                || exponent is not Rational { ERational: var p } || p.CompareTo(ERational.Create(EInteger.One, n)) != 0)
+                return null;
+            foreach (var fact in InScope())
+                if (IsOnTheHalfLine(fact, z) || IsInTheSector(fact, z, exponent))
+                    return Recorded(MathS.Pow(MathS.Pow(z, inner), exponent), z,
+                        $"{z} is where the principal {inner}-th root takes its values", "Complex.pow_cpow_nat_inv");
+            return null;
+
+            static bool IsOnTheHalfLine(Entity fact, Entity z)
+                => fact switch
+                {
+                    GreaterOrEqualf(var left, Integer { IsZero: true }) => left == z,
+                    Greaterf(var left, Integer { IsZero: true }) => left == z,
+                    LessOrEqualf(Integer { IsZero: true }, var right) => right == z,
+                    Lessf(Integer { IsZero: true }, var right) => right == z,
+                    _ => false
+                };
+
+            // z = 0 or (-p pi < arg(z) and arg(z) <= p pi), the two sides of each in either order.
+            static bool IsInTheSector(Entity fact, Entity z, Entity p)
+            {
+                if (fact is not Orf(var either, var other))
+                    return false;
+                var (zero, sector) = IsZero(either, z) ? (either, other) : (other, either);
+                if (!IsZero(zero, z) || sector is not Andf(var first, var second))
+                    return false;
+                var bound = p * MathS.pi;
+                return Below(first, -bound) && Above(second, bound) || Below(second, -bound) && Above(first, bound);
+
+                bool Below(Entity side, Entity lower)
+                    => side is Lessf(var low, Argf(var of)) && of == z && Same(low, lower)
+                       || side is Greaterf(Argf(var on), var low2) && on == z && Same(low2, lower);
+                bool Above(Entity side, Entity upper)
+                    => side is LessOrEqualf(Argf(var of), var high) && of == z && Same(high, upper)
+                       || side is GreaterOrEqualf(var high2, Argf(var on)) && on == z && Same(high2, upper);
+            }
+            static bool IsZero(Entity statement, Entity z)
+                => statement is Equalsf(var left, var right) && (left == z && right == 0 || right == z && left == 0);
+            // The bounds are multiples of pi, so they are compared by value.
+            static bool Same(Entity a, Entity b)
+                => !a.Vars.Any() && (a - b).Evaled is Complex difference && ((Real)difference.Abs()).EDecimal.ToDouble() < 1e-12;
         }
 
         /// <summary>A function <see cref="WithoutWholePeriods"/> takes whole periods out of, of anything but a number.</summary>

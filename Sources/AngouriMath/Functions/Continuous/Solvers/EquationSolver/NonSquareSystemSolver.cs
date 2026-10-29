@@ -25,10 +25,11 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
     /// <remarks>
     /// <para>
     /// <b>An answer is given only where it is shown to hold.</b> The elimination trusts each solve
-    /// it makes, and a solve can answer for a case its equation does not cover: <c>sqrt(y) = x</c>
-    /// is solved for <c>y</c> as <c>x^2</c>, which is no solution where <c>x</c> is negative. So
-    /// each family is kept only where every equation, with the family substituted, simplifies to
-    /// <c>0</c>. <c>sqrt(t^2) - t</c> does not, and that system is declined.
+    /// it makes, and a solve can answer for a case its equation does not cover. So each family is
+    /// kept only where every equation, with the family substituted, simplifies to <c>0</c>. A family
+    /// that says where it holds is checked there: <c>sqrt(y) = x</c> is solved for <c>y</c> as
+    /// <c>x^2</c> provided <c>x</c> is where <c>sqrt</c> takes its values, and <c>sqrt(t^2) - t</c>
+    /// is zero wherever that holds.
     /// </para>
     /// <para>
     /// <b>A decline declines the whole system.</b> An equation left with no unknown in it is zero,
@@ -68,16 +69,22 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 return null;
             var own = new HashSet<Variable>(equations.SelectMany(equation => equation.Vars));
             foreach (var family in families)
+            {
+                // A family that says where it holds, as y = t^2 provided t is where sqrt takes its
+                // values, is checked there and nowhere else.
+                var condition = family.OfType<Providedf>().Select(entry => entry.Predicate).Aggregate((Entity?)null, (all, one) => all is null ? one : all & one);
+                var bare = family.Select(entry => entry is Providedf(var value, _) ? value : entry).ToList();
                 foreach (var equation in equations)
                 {
                     var substituted = equation;
                     for (var index = 0; index < variables.Length; index++)
-                        substituted = substituted.Substitute(variables[index], family[index]);
+                        substituted = substituted.Substitute(variables[index], (condition is null ? family : bare)[index]);
                     // An n_1 a family brings from a periodic root stands for every whole number.
                     var whole = substituted.Vars.Where(name => !own.Contains(name) && name.Name.StartsWith("n_")).Distinct().ToList();
-                    if (!Vanishes(substituted, whole))
+                    if (!Vanishes(substituted, whole) && (condition is null || !VanishesWhere(substituted, condition, whole)))
                         return null;
                 }
+            }
             return families;
         }
 
@@ -233,6 +240,22 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     simplified.Evaled is Complex { IsZero: true } && Pinned(condition, whole).Evaled is Entity.Boolean { Value: true },
                 var simplified => simplified.Evaled is Complex { IsZero: true },
             };
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expression"/> is zero wherever <paramref name="condition"/> holds,
+        /// decided as a statement for every value of its symbols, a whole one for a symbol in
+        /// <paramref name="whole"/>: <c>sqrt(t^2) - t</c> is zero where
+        /// <c>t = 0 or -pi/2 &lt; arg(t) &lt;= pi/2</c>, which is
+        /// <c>forall t in CC : (t = 0 or -pi/2 &lt; arg(t) &lt;= pi/2) implies sqrt(t^2) - t = 0</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/212
+        /// </summary>
+        private static bool VanishesWhere(Entity expression, Entity condition, IReadOnlyList<Variable> whole)
+        {
+            Entity statement = new Impliesf(condition, expression.EqualTo(Integer.Zero));
+            foreach (var name in statement.Vars.Distinct().ToList())
+                statement = MathS.ForAll(name, whole.Contains(name) ? MathS.Sets.Z : MathS.Sets.C, statement);
+            return statement.Simplify() == Entity.Boolean.True;
         }
 
         /// <summary>
