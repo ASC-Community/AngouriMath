@@ -590,8 +590,26 @@ namespace AngouriMath
                 // for u afterwards made a matrix of vectors where the product is [-q, p].
                 // https://github.com/asc-community/AngouriMath/issues/2132
                 => Expression is Lambda(var parameter, var body) && Arguments is (var first, var rest)
-                    ? ApplyOthersIfNeeded(body.Substitute(parameter, first.InnerSimplified(isExact)), rest).InnerSimplified(isExact)
+                    ? IsAFunctionOf(body, parameter)
+                        ? TakenThenApplied(parameter, body, first, rest, isExact)
+                        : ApplyOthersIfNeeded(body.Substitute(parameter, first.InnerSimplified(isExact)), rest).InnerSimplified(isExact)
                     : ApplyingTheSimplified(isExact);
+
+            // A derivative or an indefinite integral in the parameter is a function of it, and is
+            // taken before the argument is put in: put in first, the argument would be what it is
+            // taken in. One that cannot be taken is kept, applied, rather than answered wrongly.
+            // https://github.com/asc-community/AngouriMath/issues/2189
+            private static bool IsAFunctionOf(Entity body, Variable parameter)
+                => body is Derivativef { Var: var variable } && variable == parameter
+                   || body is Integralf { Var: var integrated, Range: null } && integrated == parameter;
+
+            private Entity TakenThenApplied(Variable parameter, Entity body, Entity first, LList<Entity> rest, bool isExact)
+            {
+                var taken = body.InnerSimplified(isExact);
+                if (taken.Nodes.Any(node => IsAFunctionOf(node, parameter)))
+                    return New(new Lambda(parameter, taken), Arguments.Map(argument => argument.InnerSimplified(isExact)));
+                return ApplyOthersIfNeeded(taken.Substitute(parameter, first.InnerSimplified(isExact)), rest).InnerSimplified(isExact);
+            }
 
             private Entity ApplyingTheSimplified(bool isExact)
                 => ((Expression.InnerSimplified(isExact), Arguments.Map(arg => arg.InnerSimplified(isExact))) switch

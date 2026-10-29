@@ -729,6 +729,10 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
+                // An indefinite integral is a function of its variable, as a derivative is; a definite
+                // one binds it.
+                if (Range is null && EvaluatedAtAPoint(this, Expression, Var, (body, variable) => New(body, variable, null), x, value) is { } atAPoint)
+                    return atAPoint;
                 var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
 
                 return New(postSubs, boundName, Range is var (from, to) ? (from.Substitute(x, value), to.Substitute(x, value)) : null);
@@ -826,6 +830,43 @@ namespace AngouriMath
             }
         }
 
+        /// <summary>
+        /// A derivative or an indefinite integral, <paramref name="operation"/>, of <paramref name="body"/>
+        /// in <paramref name="bound"/>, with <paramref name="x"/> replaced by <paramref name="value"/>
+        /// where its variable is not only bound; <see langword="null"/> where it is, and an ordinary
+        /// substitution under a binder does.
+        /// </summary>
+        /// <remarks>
+        /// <c>derivative(x^3, x)</c> is <c>3 x^2</c>, a function of <c>x</c>, whose variable
+        /// <see cref="FreeVariables"/> counts as free for that reason
+        /// (https://github.com/asc-community/AngouriMath/issues/1045). Treated as bound, a value put
+        /// in for it was dropped: <c>3 x^2</c> came back where <c>3</c> was owed at <c>x = 1</c>. So
+        /// a value for the variable makes the derivative evaluated there,
+        /// <c>apply(lambda(x, derivative(x^3, x)), 1)</c>, and a value that holds the variable, as
+        /// <c>a := x</c> in <c>derivative(a x^2, x)</c>, goes in under a fresh variable that the
+        /// derivative is then evaluated at, <c>apply(lambda(t, derivative(x t^2, t)), x)</c>, which is
+        /// <c>2 x^2</c>. Renamed and left at the fresh variable, it was <c>2 x t</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2189
+        /// </remarks>
+        private static Entity? EvaluatedAtAPoint(Entity operation, Entity body, Entity bound, System.Func<Entity, Variable, Entity> rebuild, Entity x, Entity value)
+        {
+            if (bound is not Variable variable)
+                return null;
+            if (x == variable)
+                return value == variable ? operation
+                    // A variable the body does not hold is the derivative's own variable renamed, which
+                    // is exact, and is what renaming a lambda's parameter puts in: wrapped instead, the
+                    // lambda over the old name would be renamed again, without end.
+                    : value is Variable renamed && !body.ContainsNode(renamed) ? rebuild(body.Substitute(variable, renamed), renamed)
+                    : new Lambda(variable, operation).Apply(value);
+            if (value.ContainsNode(variable) && body.ContainsNode(x))
+            {
+                var fresh = Variable.CreateUnique(body + variable + x + value, variable.Name);
+                return new Lambda(fresh, rebuild(body.Substitute(variable, fresh).Substitute(x, value), fresh)).Apply(variable);
+            }
+            return null;
+        }
+
         partial record Derivativef
         {
             /// <inheritdoc/>
@@ -833,6 +874,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
+                if (EvaluatedAtAPoint(this, Expression, Var, (body, variable) => New(body, variable), x, value) is { } atAPoint)
+                    return atAPoint;
                 var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
 
                 return New(postSubs, boundName);

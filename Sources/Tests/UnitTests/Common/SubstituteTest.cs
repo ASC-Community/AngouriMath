@@ -21,8 +21,11 @@ namespace AngouriMath.Tests.Common
         [InlineData("sin(x)", "sin(1)")]
         [InlineData("{ x : x > 3 }", "{ x : x > 3 }")]
         [InlineData("x + { x : x > 3 }", "1 + { x : x > 3 }")]
-        [InlineData("x * derivative(x + 2, x, 1)", "1 * derivative(x + 2, x, 1)")]
-        [InlineData("x * integral(x + 2, x)", "1 * integral(x + 2, x)")]
+        // The variable of a derivative and of an indefinite integral is free in it, so the value is
+        // where it is evaluated; it was dropped, and derivative(x^3, x) at x = 1 was 3 x^2.
+        // https://github.com/asc-community/AngouriMath/issues/2189
+        [InlineData("x * derivative(x + 2, x, 1)", "1 * apply(lambda(x, derivative(x + 2, x)), 1)")]
+        [InlineData("x * integral(x + 2, x)", "1 * apply(lambda(x, integral(x + 2, x)), 1)")]
         [InlineData("x * integral(x + 2, x, x, x)", "1 * integral(x + 2, x, 1, 1)")]
         [InlineData("x * limit(x + 2, x, 1)", "1 * limit(x + 2, x, 1)")]
         [InlineData("sin(cos(sec(csc(x))))", "sin(cos(sec(csc(1))))")]
