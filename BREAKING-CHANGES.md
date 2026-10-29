@@ -307,6 +307,19 @@ negative even integer or off the integers, since the extension through the gamma
 | `"n!!".ToEntity()` | throws `UnhandledParseException` | `n!!` |
 | `"n!!!".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
+### The conjugate, the argument, the parts and the Iverson bracket compile
+
+**Not silent: these compile where they threw `UncompilableNodeException`.** `conj`, `arg`, `Re` and `Im` compile
+through `Compile` and `Compile<TIn, TOut>` alike, to the values the interpreter gives: `arg` is the principal argument
+in `(-pi, pi]` with no value at `0`, and `-1 - 0i` is at `pi`. `iverson` compiles under `Compile<TIn, TOut>` over the
+reals, to `1` and `0` ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"iverson(x > 0)".ToEntity().Compile<double, double>("x")(2)` | throws `UncompilableNodeException` | `1` |
+| `"arg(x)".ToEntity().Compile("x").Call(-2)` | throws `UncompilableNodeException`, `arg` being a variable | `pi` |
+| `"conj(x)".ToEntity().Compile<Complex, Complex>("x")(3 + 4i)` | throws `UncompilableNodeException`, `conj` being a variable | `3 - 4i` |
+
 ### `re` and `im` are the real and the imaginary part
 
 **Not silent: `re(…)` and `im(…)`, and `real(…)` and `imag(…)`, are now the real and the imaginary part, where they were

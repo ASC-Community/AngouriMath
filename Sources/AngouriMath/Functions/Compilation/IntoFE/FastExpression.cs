@@ -49,6 +49,10 @@ namespace AngouriMath.Core
             CALL_CI,
             CALL_SHI,
             CALL_CHI,
+            CALL_CONJ,
+            CALL_ARG,
+            CALL_RE,
+            CALL_IM,
 
             // 2-arg functions
             CALL_SUM = 100,
@@ -268,6 +272,18 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_PHI:
                         stack.Push(AngouriMath.Numerics.SpecialFunctions.Phi(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_CONJ:
+                        stack.Push(AngouriMath.Numerics.ComplexParts.Conj(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_ARG:
+                        stack.Push(AngouriMath.Numerics.ComplexParts.Arg(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_RE:
+                        stack.Push(AngouriMath.Numerics.ComplexParts.Re(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_IM:
+                        stack.Push(AngouriMath.Numerics.ComplexParts.Im(stack.Pop()));
                         break;
                 }
             if (stack.Count != 1)

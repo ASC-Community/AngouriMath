@@ -320,6 +320,17 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex Factorial(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Factorial(a);
         public static double Factorial(double a) => AngouriMath.Numerics.SpecialFunctions.Factorial(a);
 
+        // The conjugate, the principal argument and the real and the imaginary parts.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public static System.Numerics.Complex Conj(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Conj(a);
+        public static double Conj(double a) => AngouriMath.Numerics.ComplexParts.Conj(a);
+        public static System.Numerics.Complex Arg(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Arg(a);
+        public static double Arg(double a) => AngouriMath.Numerics.ComplexParts.Arg(a);
+        public static System.Numerics.Complex Re(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Re(a);
+        public static double Re(double a) => AngouriMath.Numerics.ComplexParts.Re(a);
+        public static System.Numerics.Complex Im(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Im(a);
+        public static double Im(double a) => AngouriMath.Numerics.ComplexParts.Im(a);
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -496,6 +507,14 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("Chi", 1, typeof(double)), Def<double>(a => Chi(a)) },
             { ("Factorial", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Factorial(a)) },
             { ("Factorial", 1, typeof(double)), Def<double>(a => Factorial(a)) },
+            { ("Conj", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Conj(a)) },
+            { ("Conj", 1, typeof(double)), Def<double>(a => Conj(a)) },
+            { ("Arg", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Arg(a)) },
+            { ("Arg", 1, typeof(double)), Def<double>(a => Arg(a)) },
+            { ("Re", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Re(a)) },
+            { ("Re", 1, typeof(double)), Def<double>(a => Re(a)) },
+            { ("Im", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Im(a)) },
+            { ("Im", 1, typeof(double)), Def<double>(a => Im(a)) },
         };
 
         // An expression tree is how C# spells "the MethodInfo of this method" without a string:

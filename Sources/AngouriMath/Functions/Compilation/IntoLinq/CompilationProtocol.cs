@@ -151,6 +151,15 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Chif  when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Chi", 1, newE.Type), newE),
                 Factorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Factorial", 1, newE.Type), newE),
                 Phif =>         Expression.Call(GetDef("Phi", 1, e.Type), e),
+
+                // The conjugate, the argument and the parts, widened to double as the special
+                // functions are; an Iverson bracket is 1 where its statement holds and 0 where it
+                // does not. https://github.com/asc-community/AngouriMath/issues/2195
+                Conjugatef when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Conj", 1, newE.Type), newE),
+                Argf       when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Arg", 1, newE.Type), newE),
+                Ref        when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Re", 1, newE.Type), newE),
+                Imf        when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Im", 1, newE.Type), newE),
+                Iversonf when e.Type == typeof(bool) => Expression.Condition(e, Expression.Constant(1), Expression.Constant(0)),
                 
                 Notf =>         Expression.Not(e),
                 
