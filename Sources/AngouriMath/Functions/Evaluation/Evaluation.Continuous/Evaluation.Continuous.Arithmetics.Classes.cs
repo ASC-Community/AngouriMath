@@ -568,6 +568,9 @@ namespace AngouriMath
                         (_, Integer { IsZero: true }) => Integer.Create(1),
                         // A k that is not whole has no value with a negative whole n, a pole of Γ(n + 1).
                         (Integer { EInteger.Sign: < 0 }, Complex bottom) when bottom is not Integer => MathS.NaN,
+                        // And is 0 where n - k is a negative whole number, a pole of Γ(n - k + 1), where the
+                        // reciprocal gamma is 0: binomial(1/2, 3/2) is 0.
+                        (Number top, Number bottom) when bottom is not Integer && (top - bottom).Evaled is Integer { EInteger.Sign: < 0 } => Integer.Zero,
                         // Through the gamma function only numerically: there is no exact form. A whole n
                         // takes it too: binomial(3, 1/2) is 32/(5 pi).
                         (Complex top, Complex bottom) when !isExact

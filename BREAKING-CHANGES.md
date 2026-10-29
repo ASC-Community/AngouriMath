@@ -623,13 +623,15 @@ It is the forward difference with a step of 1, as Mathematica's `DifferenceDelta
 
 **Not silent: what threw is a number.** `binomial(n, k)` with a whole `n` and a `k` that is not whole was left as
 written, so `EvalNumerical` threw `CannotEvalException`. It is the gamma ratio `Γ(n + 1)/(Γ(k + 1) Γ(n - k + 1))`, as
-for any other `n`, and for a negative whole `n` it has no value: `Γ(n + 1)` has a pole there
-([#1411](https://github.com/asc-community/AngouriMath/issues/1411)).
+for any other `n`, and for a negative whole `n` it has no value: `Γ(n + 1)` has a pole there. Where `n - k` is a
+negative whole number, a pole of `Γ(n - k + 1)` in the denominator, it is `0`, the reciprocal gamma vanishing there;
+it was left as written ([#1411](https://github.com/asc-community/AngouriMath/issues/1411)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"binomial(3, 1/2)".ToEntity().EvalNumerical()` | `CannotEvalException` | `2.0371832715762602978…`, `32/(5 pi)` |
 | `"binomial(-3, 1/2)".ToEntity().EvalNumerical()` | `CannotEvalException` | `NaN` |
+| `"binomial(1/2, 3/2)".ToEntity().Simplify()` | `binomial(1/2, 3/2)` | `0` |
 
 ### The harmonic numbers
 
