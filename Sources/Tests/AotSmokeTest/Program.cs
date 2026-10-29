@@ -140,6 +140,8 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("multinomial(x, 3, 4) at x = 2", At(multinomial, "x", 2), 1260);
             var catalan = MathS.FromString("catalannumber(x)");
             CheckClose("catalannumber at x = 5", At(catalan, "x", 5), 42);
+            var lambertW = MathS.FromString("lambertw(x)");
+            CheckClose("lambertw at x = 1", At(lambertW, "x", 1), 0.56714329040978387);
             var harmonic = MathS.FromString("harmonicnumber(x, 2)");
             CheckClose("harmonicnumber(x, 2) at x = 4", At(harmonic, "x", 4), 205.0 / 144);
             var difference = MathS.FromString("forwarddifference(x^3, x)");

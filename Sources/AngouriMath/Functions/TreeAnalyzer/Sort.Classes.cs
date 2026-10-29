@@ -329,6 +329,11 @@ namespace AngouriMath
                 => Choice(level, "ei_", "li_", "li_");
         }
 
+        public partial record LambertWf
+        {
+            private protected override string SortHashName(SortLevel level) => "lambertwf_";
+        }
+
         public partial record Polygammaf
         {
             private protected override string SortHashName(SortLevel level)

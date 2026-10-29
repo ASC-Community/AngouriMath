@@ -1631,6 +1631,14 @@ namespace AngouriMath
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity Digamma(Entity argument) => new Polygammaf(Integer.Zero, argument);
 
+        /// <summary>The principal branch of the Lambert W function, the solution <c>w</c> of <c>w e^w = z</c></summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity LambertW(Entity z) => new LambertWf(Integer.Zero, z);
+
+        /// <summary>The branch <paramref name="k"/> of the Lambert W function</summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity LambertW(Entity k, Entity z) => new LambertWf(k, z);
+
         /// <summary>The upper incomplete gamma function, <c>Gamma(a, z) = int_z^oo t^(a - 1) e^(-t) dt</c></summary>
         /// <param name="parameter">The parameter <c>a</c>, any complex number</param>
         /// <param name="lowerLimit">The lower limit <c>z</c>, any complex number; <c>0</c> only where <c>Re a > 0</c></param>

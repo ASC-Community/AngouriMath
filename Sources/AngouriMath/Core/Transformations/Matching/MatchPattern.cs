@@ -484,6 +484,7 @@ namespace AngouriMath.Core.Transformations.Matching
             [typeof(Entity.Eif)] = (1, static c => new Entity.Eif(c[0])),
             [typeof(Entity.Lif)] = (1, static c => new Entity.Lif(c[0])),
             [typeof(Entity.Polygammaf)] = (2, static c => new Entity.Polygammaf(c[0], c[1])),
+            [typeof(Entity.LambertWf)] = (2, static c => new Entity.LambertWf(c[0], c[1])),
             [typeof(Entity.IncompleteGammaf)] = (2, static c => new Entity.IncompleteGammaf(c[0], c[1])),
             [typeof(Entity.Sif)] = (1, static c => new Entity.Sif(c[0])),
             [typeof(Entity.Cif)] = (1, static c => new Entity.Cif(c[0])),

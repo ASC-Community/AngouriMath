@@ -740,6 +740,45 @@ namespace AngouriMath
             private const int LargestOrder = 64;
         }
 
+        public partial record LambertWf
+        {
+            // Every whole branch, and every z but 0 off the principal branch, where W_k(z) goes to -oo as ln z does.
+            private protected override Entity IntrinsicCondition =>
+                Branch.In(MathS.Sets.Z) & (Branch.Equalizes(Integer.Zero) | !Argument.Equalizes(Integer.Zero));
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact) =>
+                ExpandOnTwoArguments(Branch, Argument,
+                    (k, z) => (k, z) switch
+                    {
+                        (Integer { IsZero: true }, Integer { IsZero: true }) => Integer.Zero,
+                        (Integer, Integer { IsZero: true }) => Real.NegativeInfinity,
+                        // c e^c on the branch whose real values c is among: W_0 for c >= -1, W_(-1) for c <= -1,
+                        // so -1/e is -1 on both and e is 1.
+                        (Integer { EInteger: var branch }, _) when TheExponentOfAProductWithItsExponential(z) is { } c
+                            && (branch.IsZero && c.EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromInt32(-1)) >= 0
+                                || branch.Equals(PeterO.Numbers.EInteger.FromInt32(-1)) && c.EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromInt32(-1)) <= 0)
+                            => c,
+                        (Integer { EInteger: var branch }, Complex value) when !isExact => Number.LambertW(branch, value),
+                        (Number, Number) when k is not Integer => MathS.NaN,
+                        _ => null
+                    },
+                    (@this, k, z) => ((LambertWf)@this).New(k, z), isExact);
+
+            // c where z is c e^c for a real number c, as -e^(-1), 2 e^2 and e are written.
+            private static Real? TheExponentOfAProductWithItsExponential(Entity z)
+                => z switch
+                {
+                    Variable { Name: "e" } => Integer.One,
+                    Powf(Variable { Name: "e" }, Real exponent) when exponent == Integer.One => exponent,
+                    Mulf(Real c, Powf(Variable { Name: "e" }, Real exponent)) when c == exponent => c,
+                    Mulf(Powf(Variable { Name: "e" }, Real exponent), Real c) when c == exponent => c,
+                    Divf(Real c, Variable { Name: "e" }) when c == Integer.MinusOne => c,
+                    Divf(Real c, Powf(Variable { Name: "e" }, Real exponent)) when c == -exponent => c,
+                    _ => null
+                };
+        }
+
         public partial record Ref
         {
             // Defined everywhere on the complex plane.

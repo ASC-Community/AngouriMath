@@ -327,6 +327,18 @@ namespace AngouriMath
                 Argument.DerivativeOver(variable) / MathS.Ln(Argument);
         }
 
+        partial record LambertWf
+        {
+            // W'(u) = e^(-W(u)) / (1 + W(u)) u', the same as W(u) / (u (1 + W(u))) u' and 1 at u = 0 on the
+            // principal branch, where that one is 0/0. A branch that varies has no derivative in it.
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable) =>
+                Branch.ContainsNode(variable)
+                ? base.InnerDifferentiate(variable)
+                : MathS.Pow(MathS.e, -this) / (1 + this) * Argument.DerivativeOver(variable);
+        }
+
         partial record Polygammaf
         {
             // psi^(n)(a)' = psi^(n + 1)(a) a'. The order is whole, so an order that varies has no derivative

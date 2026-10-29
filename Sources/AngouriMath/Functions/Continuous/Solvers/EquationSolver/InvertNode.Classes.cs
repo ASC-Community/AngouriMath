@@ -324,6 +324,14 @@ namespace AngouriMath
 
         // The polygamma functions have no inverse among the library's nodes.
         // https://github.com/asc-community/AngouriMath/issues/171
+        partial record LambertWf
+        {
+            // W_k(f) = v is f = v e^v, where v is a value of that branch; which values a branch takes is
+            // not decided here, so it is left unsolved rather than answered wrongly.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
         partial record Polygammaf
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>

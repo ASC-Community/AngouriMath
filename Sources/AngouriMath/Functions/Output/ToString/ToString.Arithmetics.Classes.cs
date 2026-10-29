@@ -277,6 +277,15 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        partial record LambertWf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode()
+                => Branch == Integer.Zero ? $"lambertw({Argument.Stringize()})" : $"lambertw({Branch.Stringize()}, {Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Polygammaf
         {
             /// <inheritdoc/>
