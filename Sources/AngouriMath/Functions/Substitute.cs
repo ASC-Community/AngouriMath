@@ -846,7 +846,12 @@ namespace AngouriMath
             if (bound is not Variable variable)
                 return null;
             if (x == variable)
-                return value == variable ? operation : new Lambda(variable, operation).Apply(value);
+                return value == variable ? operation
+                    // A variable the body does not hold is the derivative's own variable renamed, which
+                    // is exact, and is what renaming a lambda's parameter puts in: wrapped instead, the
+                    // lambda over the old name would be renamed again, without end.
+                    : value is Variable renamed && !body.ContainsNode(renamed) ? rebuild(body.Substitute(variable, renamed), renamed)
+                    : new Lambda(variable, operation).Apply(value);
             if (value.ContainsNode(variable) && body.ContainsNode(x))
             {
                 var fresh = Variable.CreateUnique(body + variable + x + value, variable.Name);

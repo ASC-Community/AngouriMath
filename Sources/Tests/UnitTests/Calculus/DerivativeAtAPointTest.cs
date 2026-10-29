@@ -73,6 +73,25 @@ namespace AngouriMath.Tests.Calculus
             Assert.IsType<Application>(atAPoint.Evaled);
         }
 
+        /// <summary>A variable the body does not hold renames the derivative's variable.</summary>
+        [Fact]
+        public void AFreshVariableRenamesIt()
+            => Assert.Equal("derivative(y^3, y)".ToEntity(), "derivative(x^3, x)".ToEntity().Substitute("x", "y"));
+
+        /// <summary>
+        /// A lambda renaming its parameter puts a fresh variable in for it, which renames the
+        /// derivative rather than wrapping it in a lambda over the old name to be renamed again, so
+        /// factorizing derivative(apply(f, x), x, -2) finishes with the double integral.
+        /// </summary>
+        [Fact]
+        public void RenamingTerminates()
+        {
+            var task = System.Threading.Tasks.Task.Factory.StartNew(
+                () => "derivative(apply(f, x), x, -2)".ToEntity().Factorize(), System.Threading.Tasks.TaskCreationOptions.LongRunning);
+            Assert.True(task.Wait(System.TimeSpan.FromSeconds(60)), "did not finish");
+            Assert.Equal("integral(integral(apply(f, x), x), x)".ToEntity(), task.Result);
+        }
+
         /// <summary>A definite integral binds its variable, and a value for it changes nothing.</summary>
         [Fact]
         public void ADefiniteIntegralStillBindsItsVariable()
