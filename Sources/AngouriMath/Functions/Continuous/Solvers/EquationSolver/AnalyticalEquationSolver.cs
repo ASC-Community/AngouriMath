@@ -271,6 +271,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (isIdentity)
                 return MathS.Sets.C;
 
+            // A linear function times an exponential of another, by the Lambert W function: x e^x = 2
+            // is lambertw(2), on every branch over the complex numbers. Answered with no roots only
+            // where none is real. Ahead of the spellings and the exponential solvers, which reach
+            // x 2^x = 5 through a decimal; it needs an exponential, so no polynomial is answered here,
+            // and a factor linear in x, so a sum of exponentials is still theirs. https://github.com/asc-community/AngouriMath/issues/2182
+            if (LambertWSolver.Solve(expr, x) is FiniteSet lambert)
+                return (Set)lambert.Select(ent => TryDowncast(expr, x, ent)).ToSet().InnerSimplified;
+
             // If the replacement isn't one-variable one,
             // then solving over replacements is already useless,
             // so we skip this part and go to other solvers
