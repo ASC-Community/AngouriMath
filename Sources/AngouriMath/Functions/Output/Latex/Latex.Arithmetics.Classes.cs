@@ -428,6 +428,12 @@ namespace AngouriMath
             private protected override string LatexizeNode() => $@"v_{{{Prime.Latexize()}}}\left({Argument.Latexize()}\right)";
         }
 
+        partial record CatalanNumberf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\operatorname{{C}}_{{{Argument.Latexize()}}}";
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>

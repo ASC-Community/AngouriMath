@@ -467,7 +467,7 @@ the right shape, written out or once its operations are carried out, throws `Inv
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
-is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber`, `catalannumber` and
+is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber` and
 `forwarddifference`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
@@ -515,6 +515,18 @@ is ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 | `"jacobian([x y, x + y], [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[y, x], [1, 1]]` |
 | `"hessian(x^3 y^2, [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[6 * x * y ^ 2, 6 * x ^ 2 * y], [6 * x ^ 2 * y, 2 * x ^ 3]]` |
 | `"jacobian(x y, {x, y})".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: a set has no order for the columns |
+
+### The Catalan numbers
+
+**Not silent: `catalannumber(n)` is the Catalan number, where it was a product.** It is `binomial(2n, n) / (n + 1)` for
+a whole `n >= 0`, and `4^n Γ(n + 1/2) / (√π Γ(n + 2))` elsewhere, as SymPy's `catalan` is: `-1/2` at `-1`, `0` at
+every whole number below it, and no value at a negative half-integer
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"catalannumber(4)".ToEntity().Simplify()` | `4 * catalannumber` | `14` |
+| `"catalannumber(-1)".ToEntity().Simplify()` | `-catalannumber` | `-1/2` |
 
 ### The falling and the rising factorial
 

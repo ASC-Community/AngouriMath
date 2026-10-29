@@ -271,6 +271,11 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.rf({Argument.ToSymPy()}, {Order.ToSymPy()})";
         }
 
+        public partial record CatalanNumberf
+        {
+            internal override string ToSymPy() => $"sympy.catalan({Argument.ToSymPy()})";
+        }
+
         public partial record Phif
         {
             internal override string ToSymPy() => $"sympy.totient({Argument.ToSymPy()})";
