@@ -74,6 +74,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             
             if (expr.Type == type)
                 return expr;
+            // A statement with no truth value is null as a bool?, and as a bool is not one that
+            // holds. https://github.com/asc-community/AngouriMath/issues/2195
+            if (expr.Type == typeof(bool?) && type == typeof(bool))
+                return Expression.Call(ThreeValuedLogic.HoldsMethod, expr);
+            if (expr.Type == typeof(bool) && type == typeof(bool?))
+                return Expression.Convert(expr, type);
             // A tensor converts to nothing but itself: a matrix over one element type is not
             // a matrix over another, and it is not a number.
             if (TensorCompilation.IsTensor(expr.Type) || TensorCompilation.IsTensor(type))
@@ -160,7 +166,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Ref        when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Re", 1, newE.Type), newE),
                 Imf        when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Im", 1, newE.Type), newE),
                 Iversonf when e.Type == typeof(bool) => Expression.Condition(e, Expression.Constant(1), Expression.Constant(0)),
+                Iversonf when e.Type == typeof(bool?) => Expression.Call(ThreeValuedLogic.IversonMethod, e),
                 
+                Notf when e.Type == typeof(bool?) => Expression.Call(ThreeValuedLogic.NotMethod, e),
                 Notf =>         Expression.Not(e),
                 
                 // A node this converter has no case for has no compiled form, and that is a gap
@@ -222,16 +230,23 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Maxf => Expression.Call(GetDef("Max", 2, left.Type), left, right),
                 Minf => Expression.Call(GetDef("Min", 2, left.Type), left, right),
 
+                // A connective of a statement that may have no truth value follows Kleene's tables.
+                // https://github.com/asc-community/AngouriMath/issues/2195
+                Andf when IsUndecidable(left, right) => Expression.Call(ThreeValuedLogic.AndMethod, Undecidable(left), Undecidable(right)),
+                Orf when IsUndecidable(left, right) => Expression.Call(ThreeValuedLogic.OrMethod, Undecidable(left), Undecidable(right)),
+                Xorf when IsUndecidable(left, right) => Expression.Call(ThreeValuedLogic.XorMethod, Undecidable(left), Undecidable(right)),
+                Impliesf when IsUndecidable(left, right) => Expression.Call(ThreeValuedLogic.ImpliesMethod, Undecidable(left), Undecidable(right)),
+                Equalsf when IsUndecidable(left, right) => Expression.Equal(Undecidable(left), Undecidable(right), liftToNull: true, method: null),
                 Andf => Expression.And(left, right),
                 Orf => Expression.Or(left, right),
                 Xorf => Expression.ExclusiveOr(left, right),
                 Impliesf => Expression.Or(Expression.Not(left), right),
 
-                Lessf => Operator(ExpressionType.LessThan, left, right),
-                LessOrEqualf => Operator(ExpressionType.LessThanOrEqual, left, right),
-                Greaterf => Operator(ExpressionType.GreaterThan, left, right),
-                GreaterOrEqualf => Operator(ExpressionType.GreaterThanOrEqual, left, right),
-                Equalsf => Operator(ExpressionType.Equal, left, right),
+                Lessf => Compared(ExpressionType.LessThan, left, right),
+                LessOrEqualf => Compared(ExpressionType.LessThanOrEqual, left, right),
+                Greaterf => Compared(ExpressionType.GreaterThan, left, right),
+                GreaterOrEqualf => Compared(ExpressionType.GreaterThanOrEqual, left, right),
+                Equalsf => Compared(ExpressionType.Equal, left, right),
                 
                 Providedf => HandleProvidedf(left, right),
 
@@ -243,7 +258,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             {
                 var nan = ConvertNaN(expr.Type);
                 (expr, nan) = EqualizeTypesIfAble(expr, nan);
-                return Expression.Condition(cond, expr, nan);
+                return Expression.Condition(Holds(cond), expr, nan);
             }
         }
 
@@ -301,7 +316,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             
             (expression, nan) = EqualizeTypesIfAble(expression, nan);
             
-            Expression piecewiseExpr = Expression.Condition(predicate, expression, nan); // could be ConstantExpression in certain cases if values of children could be known
+            Expression piecewiseExpr = Expression.Condition(Holds(predicate), expression, nan); // could be ConstantExpression in certain cases if values of children could be known
             
             // additional cases
             for (int i = children.Length - 3; i >= 1; i -= 2)
@@ -311,7 +326,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 
                 (expression, piecewiseExpr) = EqualizeTypesIfAble(expression, piecewiseExpr);
                 
-                piecewiseExpr = Expression.Condition(predicate, expression, piecewiseExpr);
+                piecewiseExpr = Expression.Condition(Holds(predicate), expression, piecewiseExpr);
             }
             
             return piecewiseExpr;
@@ -444,6 +459,28 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         private static MethodInfo Cmp<T>(Expression<Func<T, T, bool>> e)
             => ((BinaryExpression)e.Body).Method
                ?? throw new AngouriBugException($"{typeof(T)} defines this operator as an instruction, not a method");
+
+        /// <summary>
+        /// A comparison, which has no truth value where an operand is NaN or the two are not both
+        /// real, for the types that have a NaN: <c>i &gt; 1</c> is <see langword="null"/> over
+        /// <see cref="System.Numerics.Complex"/>, where it was refused, and <c>NaN &gt; 1</c> over
+        /// <see cref="double"/>, where it was false, so that its negation was true. Other types
+        /// compare as they did. https://github.com/asc-community/AngouriMath/issues/2195
+        /// </summary>
+        private static Expression Compared(ExpressionType kind, Expression left, Expression right)
+            => left.Type == right.Type && ThreeValuedLogic.Comparison(kind, left.Type) is { } method
+                ? Expression.Call(method, left, right)
+                : Operator(kind, left, right);
+
+        private static bool IsUndecidable(Expression left, Expression right)
+            => left.Type == typeof(bool?) || right.Type == typeof(bool?);
+
+        private static Expression Undecidable(Expression statement)
+            => statement.Type == typeof(bool) ? Expression.Convert(statement, typeof(bool?)) : statement;
+
+        /// <summary>A predicate as a <see cref="bool"/>: one with no truth value does not hold.</summary>
+        private static Expression Holds(Expression predicate)
+            => predicate.Type == typeof(bool?) ? Expression.Call(ThreeValuedLogic.HoldsMethod, predicate) : predicate;
 
         // MakeBinary with a null method is exactly what Expression.Add and its neighbours do, so a
         // type that is not in the table is built the way it always was. liftToNull: false is their

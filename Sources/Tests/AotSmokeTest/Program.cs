@@ -295,6 +295,15 @@ namespace AngouriMath.AotSmokeTest
             var piecewise = "piecewise(x provided x > 0, 0 provided x <= 0)".Compile<double, double>(x);
             Check("compiled piecewise at -3 and 3", piecewise(-3) == 0 && piecewise(3) == 3, $"{piecewise(-3)}, {piecewise(3)}");
 
+            // A comparison of numbers that are not ordered has no truth value, and the connectives
+            // follow Kleene's tables, in the interpreter a native build compiles to.
+            // https://github.com/asc-community/AngouriMath/issues/2195
+            var undecided = "x > 1 or y".Compile<Complex, bool, bool?>(x, y);
+            Check("compiled (i > 1) or true, and or false", undecided(Complex.ImaginaryOne, true) == true && undecided(Complex.ImaginaryOne, false) is null,
+                $"{undecided(Complex.ImaginaryOne, true)}, {undecided(Complex.ImaginaryOne, false)?.ToString() ?? "null"}");
+            var underIt = "x provided x > 1".Compile<Complex, Complex>(x);
+            Check("compiled x provided x > 1 at 2 and at i", underIt(2) == 2 && double.IsNaN(underIt(Complex.ImaginaryOne).Real), $"{underIt(2)}, {underIt(Complex.ImaginaryOne)}");
+
             // A matrix, which compiles to a tensor: the arithmetic on it must stay ahead-of-time
             // compilable, which GenericTensor's own expression-compiled loops are not.
             // https://github.com/asc-community/AngouriMath/issues/526

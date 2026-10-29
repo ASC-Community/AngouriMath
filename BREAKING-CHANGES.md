@@ -323,6 +323,26 @@ negative even integer or off the integers, since the extension through the gamma
 | `"n!!".ToEntity()` | throws `UnhandledParseException` | `n!!` |
 | `"n!!!".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
+### A compiled statement with no truth value has none
+
+**Silent in part: a compiled comparison has the truth value evaluation gives it.** A comparison over `Complex` was refused
+with `UncompilableNodeException`, and now compiles: it holds or fails where both sides are real, and has no truth value
+where one is not, as `i > 1` has none when evaluated. Over `double` and `float` a comparison with `NaN` was false,
+so that its negation was true. It has no truth value now either. The connectives follow Kleene's tables, as evaluation's
+do: `(i > 1) or true` is true and `not (i > 1)` has none. A `provided` whose predicate has no truth value has no
+value, and neither does an Iverson bracket, and a `piecewise` passes over such a case, as evaluation does: at `i`,
+`piecewise(1 provided x > 0, 3)` is `3`. Compiled to `bool?`, a statement with no truth value is `null`;
+compiled to `bool`, it is `false`, as one that does not hold
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"not (x > 1)".ToEntity().Compile<double, bool>("x")(double.NaN)` | `True` | `False` |
+| `"x > 1".ToEntity().Compile<Complex, bool>("x")(Complex.ImaginaryOne)` | `UncompilableNodeException` | `False` |
+| `"x > 1 or true".ToEntity().Compile<Complex, bool>("x")(Complex.ImaginaryOne)` | `UncompilableNodeException` | `True` |
+| `"x provided x > 1".ToEntity().Compile<Complex, Complex>("x")(2)` | `UncompilableNodeException` | `(2, 0)` |
+| `"x provided x > 1".ToEntity().Compile<Complex, Complex>("x")(Complex.ImaginaryOne)` | `UncompilableNodeException` | `(NaN, 0)` |
+
 ### The conjugate, the argument, the parts and the Iverson bracket compile
 
 **Not silent: these compile where they threw `UncompilableNodeException`.** `conj`, `arg`, `Re` and `Im` compile
