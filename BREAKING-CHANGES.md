@@ -57,6 +57,22 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A value put in for a derivative's variable is where it is evaluated
+
+**Silent: substituting for the variable of a derivative or an indefinite integral evaluates it there, where the value was
+dropped.** That variable is free in the derivative, which is a function of it, and treating it as bound gave
+`3 x^2` for `derivative(x^3, x)` at `x = 1`. The value now makes `apply(lambda(x, derivative(f, x)), v)`, the
+derivative evaluated at `v`, and a value holding the variable goes in under a fresh one rather than being captured. A
+definite integral, a sum, a product and a limit bind their variable, and are unchanged
+([#2189](https://github.com/asc-community/AngouriMath/issues/2189)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"derivative(x^3, x)".ToEntity().Substitute("x", 1).Evaled` | `3 * x ^ 2` | `3` |
+| `"integral(x^2, x)".ToEntity().Substitute("x", 1).Evaled` | `x ^ 3 / 3 + C` | `1/3 + C` |
+| `"derivative(a x^2, x)".ToEntity().Substitute("a", "x").Evaled` | `2 * x_1 * x` | `2 * x * x` |
+| `"derivative(x^3, x)".ToEntity().Substitute("x", 1)` | `derivative(x ^ 3, x)` | `apply(lambda(x, derivative(x ^ 3, x)), 1)` |
+
 ### A quadratic whose discriminant is a square is answered without the root
 
 **Silent: the same roots, written as what they are.** The quadratic formula wrote `sqrt(b^2 - 4ac)` whatever the
