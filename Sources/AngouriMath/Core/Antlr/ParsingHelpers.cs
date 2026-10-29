@@ -181,6 +181,23 @@ namespace AngouriMath.Core.Antlr
         }
 
         /// <summary>
+        /// <c>multinomial(k_1, ..., k_m)</c>: <c>(k_1 + ... + k_m)! / (k_1! ... k_m!)</c>, the number of
+        /// ways to put <c>k_1 + ... + k_m</c> things into groups of those sizes. It is written in the
+        /// factorial, which is the gamma function away from the whole numbers, so it is symmetric in its
+        /// arguments everywhere and has no value where an argument or their sum is a negative integer.
+        /// It is not the product of binomial coefficients the multinomial theorem factors it into:
+        /// <c>binomial</c> is 0 at a negative whole lower index, and that product depends on the order
+        /// of the arguments there.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </summary>
+        internal static Entity Multinomial(List<Entity> arguments)
+        {
+            var sum = arguments.Skip(1).Aggregate(arguments[0], (total, next) => total + next);
+            var denominator = arguments.Skip(1).Aggregate((Entity)MathS.Factorial(arguments[0]), (product, next) => product * MathS.Factorial(next));
+            return MathS.Factorial(sum) / denominator;
+        }
+
+        /// <summary>
         /// The <see cref="Number.Rational"/> that a quotient of two integer literals denotes, or
         /// the node unchanged where it denotes none.
         /// </summary>

@@ -136,6 +136,8 @@ namespace AngouriMath.AotSmokeTest
             // The factorial powers. https://github.com/asc-community/AngouriMath/issues/2182
             var factorialPowers = MathS.FromString("fallingfactorial(x, 3) + risingfactorial(x, 2)");
             CheckClose("x(x-1)(x-2) + x(x+1) at x = 5", At(factorialPowers, "x", 5), 60 + 30);
+            var multinomial = MathS.FromString("multinomial(x, 3, 4)");
+            CheckClose("multinomial(x, 3, 4) at x = 2", At(multinomial, "x", 2), 1260);
         }
 
         private static void Simplification()
