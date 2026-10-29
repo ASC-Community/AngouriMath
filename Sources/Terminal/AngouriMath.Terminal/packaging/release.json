@@ -1,0 +1,8 @@
+{
+  "version": "2.6.0",
+  "sha256": {
+    "linux-x64": "61998c4f322f1f8adfed8fa4324dd382c822ca6c30c2c49165bcbae95d36f9da",
+    "linux-arm64": "b8e5ffe84d011c41f1c89002855c40f593d0f7f0cd7ba945fbf7ff215aea1a26",
+    "linux-arm": "d4fcf4bb69df3f5f531046ca4fddaf9285f2b22a0efe412d8a498747a456087b"
+  }
+}

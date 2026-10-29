@@ -27,6 +27,14 @@ To uninstall it, run
 dotnet tool uninstall --global AngouriMath.Terminal
 ```
 
+### With Nix
+
+The repository is a flake that installs the latest release's build, on x86-64, ARM64 and ARMv7 Linux:
+```
+nix run github:asc-community/AngouriMath -- simp "x + x"
+nix profile install github:asc-community/AngouriMath
+```
+
 ## One command, from a script
 
 With a command after it, `amcli` answers once and exits, without opening the terminal or starting

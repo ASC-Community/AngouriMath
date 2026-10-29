@@ -4,9 +4,11 @@ name: 'Terminal release'
 # attached to each release of the packages, whose version they carry, read from the release's
 # tag as Nuget.yml reads it. Run by hand, it builds and packs without attaching anything unless
 # asked to, and a pull request that touches the workflow or its scripts builds and packs the
-# same way. Only the job that attaches the builds can write to the repository, and it runs no
-# code from it.
+# same way. Only the jobs that attach the builds and publish the packages can write, and they run
+# no code from the repository.
 # https://github.com/asc-community/AngouriMath/issues/539
+# The AUR's amcli-bin and the Nix flake's release.json are rendered from the same archives, and
+# published with the release. https://github.com/asc-community/AngouriMath/issues/1660
 on:
   release:
     types: [published]
@@ -17,6 +19,7 @@ on:
       - 'Sources/Terminal/AngouriMath.Terminal/pack-deb-linux.sh'
       - 'Sources/Terminal/AngouriMath.Terminal/amcli.1'
       - 'Sources/Terminal/AngouriMath.Terminal/amcli.bash'
+      - 'Sources/Terminal/AngouriMath.Terminal/packaging/**'
   workflow_dispatch:
     inputs:
       version:
@@ -34,6 +37,7 @@ jobs:
     permissions:
       contents: read
     outputs:
+      version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
 
     steps:
@@ -129,3 +133,113 @@ jobs:
         'angourimath-terminal-arm64.deb' \
         -R "$GITHUB_REPOSITORY" \
         --clobber
+
+  # The PKGBUILD for the AUR's amcli-bin, its .SRCINFO, and the release.json the Nix flake reads,
+  # from the archives the build made. Rendered on every run, so that a pull request that touches
+  # them shows they still render, and published only with a release.
+  TerminalPackagesRender:
+    needs: TerminalBuild
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: angourimath-terminal
+        path: archives
+
+    # The tag's own files where there is a tag; for a pull request or a run by hand, the commit
+    # being built.
+    - name: 'Render'
+      env:
+        VERSION: ${{ needs.TerminalBuild.outputs.version }}
+        TAG: ${{ needs.TerminalBuild.outputs.tag }}
+      run: |
+        sum() { sha256sum "archives/angourimath-terminal-$1.zip" | cut -d' ' -f1; }
+        if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then ref="$TAG"; else ref=HEAD; fi
+        mkdir -p packages
+        PACKAGING_REF="$ref" Sources/Terminal/AngouriMath.Terminal/packaging/render-pkgbuild.sh \
+            "$VERSION" "$(sum linux-x64)" "$(sum linux-arm64)" "$(sum linux-arm)" > packages/PKGBUILD
+        printf '{\n  "version": "%s",\n  "sha256": {\n    "linux-x64": "%s",\n    "linux-arm64": "%s",\n    "linux-arm": "%s"\n  }\n}\n' \
+            "$VERSION" "$(sum linux-x64)" "$(sum linux-arm64)" "$(sum linux-arm)" > packages/release.json
+        cat packages/PKGBUILD packages/release.json
+
+    # makepkg will not run as root, and an Arch container is the only place it is.
+    - name: '.SRCINFO'
+      run: |
+        docker run --rm -v "$PWD/packages:/packages" archlinux:base-devel bash -c \
+            'useradd -m builder && cp /packages/PKGBUILD /home/builder/ && cd /home/builder && su builder -c "makepkg --printsrcinfo" > /packages/.SRCINFO'
+        cat packages/.SRCINFO
+
+    - name: 'Keep the packages'
+      uses: actions/upload-artifact@v4
+      with:
+        name: amcli-packages
+        retention-days: 7
+        include-hidden-files: true
+        path: packages
+
+  # The PKGBUILD is pushed to the AUR where the repository has the AUR_SSH_KEY secret, the private
+  # key of the AUR account that owns amcli-bin; without it nothing is pushed. release.json goes to
+  # master by a pull request, which is what moves the flake to the release.
+  TerminalPackagesPublish:
+    needs: [TerminalBuild, TerminalRelease, TerminalPackagesRender]
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.repository.default_branch }}
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: amcli-packages
+        path: packages
+
+    - name: 'The flake follows the release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ needs.TerminalBuild.outputs.version }}
+      run: |
+        branch="amcli-release-$VERSION"
+        cp packages/release.json Sources/Terminal/AngouriMath.Terminal/packaging/release.json
+        if git diff --quiet; then echo "release.json already names $VERSION"; exit 0; fi
+        git config user.name 'github-actions[bot]'
+        git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        git switch -c "$branch"
+        git commit -am "The Nix flake installs amcli $VERSION"
+        git push --force origin "$branch"
+        gh pr create --base "${{ github.event.repository.default_branch }}" --head "$branch" \
+            --title "The Nix flake installs amcli $VERSION" \
+            --body "release.json for the $VERSION archives, rendered by the Terminal release workflow (#1660)."
+
+    - name: 'The AUR follows the release'
+      env:
+        AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        VERSION: ${{ needs.TerminalBuild.outputs.version }}
+      run: |
+        if [ -z "$AUR_SSH_KEY" ]; then echo 'No AUR_SSH_KEY secret: amcli-bin is not pushed.'; exit 0; fi
+        install -d -m 700 ~/.ssh
+        printf '%s\n' "$AUR_SSH_KEY" > ~/.ssh/aur && chmod 600 ~/.ssh/aur
+        # The host key the AUR publishes on https://aur.archlinux.org, and no other.
+        ssh-keyscan -t ed25519 aur.archlinux.org > aur.key 2> /dev/null
+        [ "$(ssh-keygen -lf aur.key | cut -d' ' -f2)" = 'SHA256:RFzBCUItH9LZS0cKB5UE6ceAYhBD5C8GeOBip8Z11+4' ] \
+            || { echo 'aur.archlinux.org did not present its published Ed25519 key'; exit 1; }
+        cat aur.key >> ~/.ssh/known_hosts
+        export GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o IdentitiesOnly=yes'
+        git clone ssh://aur@aur.archlinux.org/amcli-bin.git aur
+        cp packages/PKGBUILD packages/.SRCINFO aur/
+        cd aur
+        git config user.name 'github-actions[bot]'
+        git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        git add PKGBUILD .SRCINFO
+        git diff --cached --quiet || { git commit -m "amcli $VERSION"; git push origin HEAD:master; }
