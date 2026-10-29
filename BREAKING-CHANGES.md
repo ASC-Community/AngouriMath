@@ -329,8 +329,9 @@ negative even integer or off the integers, since the extension through the gamma
 with `UncompilableNodeException`, and now compiles: it holds or fails where both sides are real, and has no truth value
 where one is not, as `i > 1` has none when evaluated. Over `double` and `float` a comparison with `NaN` was false,
 so that its negation was true. It has no truth value now either. The connectives follow Kleene's tables, as evaluation's
-do: `(i > 1) or true` is true and `not (i > 1)` has none. A `provided` or `piecewise` whose predicate has no truth
-value has no value, and neither does an Iverson bracket. Compiled to `bool?`, a statement with no truth value is `null`;
+do: `(i > 1) or true` is true and `not (i > 1)` has none. A `provided` whose predicate has no truth value has no
+value, and neither does an Iverson bracket, and a `piecewise` passes over such a case, as evaluation does: at `i`,
+`piecewise(1 provided x > 0, 3)` is `3`. Compiled to `bool?`, a statement with no truth value is `null`;
 compiled to `bool`, it is `false`, as one that does not hold
 ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
 

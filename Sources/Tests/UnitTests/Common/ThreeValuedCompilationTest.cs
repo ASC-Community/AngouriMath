@@ -68,7 +68,10 @@ namespace AngouriMath.Tests.Common
             Assert.True("not (x > 1)".ToEntity().Compile<double, bool>("x")(0));
         }
 
-        /// <summary>A value provided a statement with no truth value has none, nor has its Iverson bracket.</summary>
+        /// <summary>
+        /// A value provided a statement with no truth value has none, nor has its Iverson bracket, and a
+        /// piecewise passes over such a case.
+        /// </summary>
         [Fact]
         public void AValueUnderAStatementWithNoTruthValueHasNone()
         {
@@ -78,6 +81,10 @@ namespace AngouriMath.Tests.Common
             var piecewise = "piecewise(1 provided x > 0, -1 provided x < 0)".ToEntity().Compile<Complex, Complex>("x");
             Assert.Equal(new Complex(-1, 0), piecewise(-3));
             Assert.True(double.IsNaN(piecewise(Complex.ImaginaryOne).Real));
+            // A case whose predicate has no truth value is passed over, as evaluation passes it over.
+            var fallingThrough = "piecewise(1 provided x > 0, 3)".ToEntity();
+            Assert.Equal(Entity.Number.Integer.Create(3), fallingThrough.Substitute("x", "i").Evaled);
+            Assert.Equal(new Complex(3, 0), fallingThrough.Compile<Complex, Complex>("x")(Complex.ImaginaryOne));
             var iverson = "iverson(x > 1)".ToEntity().Compile<Complex, Complex>("x");
             Assert.Equal(new Complex(1, 0), iverson(2));
             Assert.True(double.IsNaN(iverson(Complex.ImaginaryOne).Real));
