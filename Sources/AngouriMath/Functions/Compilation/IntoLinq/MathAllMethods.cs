@@ -331,6 +331,17 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex Im(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Im(a);
         public static double Im(double a) => AngouriMath.Numerics.ComplexParts.Im(a);
 
+        // The binomial coefficient, the factorial powers and the double factorial, on the interpreter's
+        // terms. https://github.com/asc-community/AngouriMath/issues/2195
+        public static System.Numerics.Complex DoubleFactorial(System.Numerics.Complex a) => AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(a);
+        public static double DoubleFactorial(double a) => AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(a);
+        public static System.Numerics.Complex Binomial(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.Binomial(a, b);
+        public static double Binomial(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.Binomial(a, b);
+        public static System.Numerics.Complex FallingFactorial(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.FallingFactorial(a, b);
+        public static double FallingFactorial(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.FallingFactorial(a, b);
+        public static System.Numerics.Complex RisingFactorial(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(a, b);
+        public static double RisingFactorial(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(a, b);
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -515,6 +526,14 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("Re", 1, typeof(double)), Def<double>(a => Re(a)) },
             { ("Im", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Im(a)) },
             { ("Im", 1, typeof(double)), Def<double>(a => Im(a)) },
+            { ("DoubleFactorial", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => DoubleFactorial(a)) },
+            { ("DoubleFactorial", 1, typeof(double)), Def<double>(a => DoubleFactorial(a)) },
+            { ("Binomial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Binomial(a, b)) },
+            { ("Binomial", 2, typeof(double)), Def<double>((a, b) => Binomial(a, b)) },
+            { ("FallingFactorial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => FallingFactorial(a, b)) },
+            { ("FallingFactorial", 2, typeof(double)), Def<double>((a, b) => FallingFactorial(a, b)) },
+            { ("RisingFactorial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => RisingFactorial(a, b)) },
+            { ("RisingFactorial", 2, typeof(double)), Def<double>((a, b) => RisingFactorial(a, b)) },
         };
 
         // An expression tree is how C# spells "the MethodInfo of this method" without a string:

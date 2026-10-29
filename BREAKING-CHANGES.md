@@ -323,6 +323,20 @@ negative even integer or off the integers, since the extension through the gamma
 | `"n!!".ToEntity()` | throws `UnhandledParseException` | `n!!` |
 | `"n!!!".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
+### The binomial coefficient, the factorial powers and the double factorial compile
+
+**Not silent: what was refused is compiled.** `binomial` was refused by both compilers with
+`UncompilableNodeException`, and `fallingfactorial`, `risingfactorial` and `n!!`, new since 2.6.0, compile from the
+start. Each compiles in double precision and on the interpreter's terms: a whole order is a product, and any other goes
+through the gamma function, with `NaN` at a pole of the numerator and `0` at one of the denominator. The double
+factorial has no value off the whole numbers or at a negative even one
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"binomial(x, 2)".ToEntity().Compile("x").Call(5)` | `UncompilableNodeException` | `(10, 0)` |
+| `"binomial(x, 1/2)".ToEntity().Compile<double, double>("x")(3)` | `UncompilableNodeException` | `2.037183271576257` |
+
 ### `mod` compiles over `Complex`
 
 **Not silent: what was refused is compiled.** `Compile<Complex, ...>` refused `mod` with `UncompilableNodeException`,

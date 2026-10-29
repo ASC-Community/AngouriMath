@@ -55,10 +55,11 @@ namespace AngouriMath.Tests.Core
         // A node the Linq converter has no case for threw AngouriBugException, which asks the
         // caller to report a bug -- for a gap in coverage the library already knows about. Four
         // of these were nodes 2.0 added and never taught the compiler; floor, ceil and round have
-        // been taught since (https://github.com/asc-community/AngouriMath/issues/1603), and phi,
-        // gamma and the factorial (https://github.com/asc-community/AngouriMath/issues/1607).
+        // been taught since (https://github.com/asc-community/AngouriMath/issues/1603), phi,
+        // gamma and the factorial (https://github.com/asc-community/AngouriMath/issues/1607), and
+        // the binomial coefficient (https://github.com/asc-community/AngouriMath/issues/2195).
         [Theory]
-        [InlineData("binomial(x, 2)")]
+        [InlineData("polygamma(1, x)")]
         [InlineData("gcd(x, 6)")]
         [InlineData("lcm(x, 6)")]
         [InlineData("prime(x)")]

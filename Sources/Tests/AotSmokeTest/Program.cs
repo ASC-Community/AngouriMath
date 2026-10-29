@@ -303,6 +303,12 @@ namespace AngouriMath.AotSmokeTest
                 $"{undecided(Complex.ImaginaryOne, true)}, {undecided(Complex.ImaginaryOne, false)?.ToString() ?? "null"}");
             var underIt = "x provided x > 1".Compile<Complex, Complex>(x);
             Check("compiled x provided x > 1 at 2 and at i", underIt(2) == 2 && double.IsNaN(underIt(Complex.ImaginaryOne).Real), $"{underIt(2)}, {underIt(Complex.ImaginaryOne)}");
+            // The combinatorial functions compile in both compilers.
+            // https://github.com/asc-community/AngouriMath/issues/2195
+            var fastBinomial = "binomial(x, 2) + fallingfactorial(x, 3) + risingfactorial(x, 2) + x!!".Compile(x);
+            var linqBinomial = "binomial(x, 2) + fallingfactorial(x, 3) + risingfactorial(x, 2) + x!!".Compile<Complex, Complex>(x);
+            Check("compiled binomial(x, 2) + x(x-1)(x-2) + x(x+1) + x!! at x = 5", fastBinomial.Call(5) == 10 + 60 + 30 + 15 && linqBinomial(5) == 10 + 60 + 30 + 15,
+                $"{fastBinomial.Call(5)}, {linqBinomial(5)}");
             // FastExpression: a statement is its truth value, and a piecewise the case that holds.
             var fastPiecewise = "piecewise(x provided x > 0, -x)".Compile(x);
             var fastStatement = "x > 1 or x < 0".Compile(x);
