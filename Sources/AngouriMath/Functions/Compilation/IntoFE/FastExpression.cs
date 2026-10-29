@@ -55,6 +55,7 @@ namespace AngouriMath.Core
             CALL_RE,
             CALL_IM,
             CALL_NOT,
+            CALL_DOUBLE_FACTORIAL,
 
             // 2-arg functions
             CALL_SUM = 100,
@@ -77,6 +78,9 @@ namespace AngouriMath.Core
             CALL_IMPLIES,
             // A value where its predicate holds, and NaN elsewhere.
             CALL_PROVIDED,
+            CALL_BINOMIAL,
+            CALL_FALLING_FACTORIAL,
+            CALL_RISING_FACTORIAL,
 
             // 3-arg: a value where its predicate holds, and the one below it elsewhere.
             CALL_SELECT = 150,
@@ -340,6 +344,20 @@ namespace AngouriMath.Core
                         stack.Push(Truth(stack.Pop()) == true ? value : double.NaN);
                         break;
                     }
+                    // The binomial coefficient, the factorial powers and the double factorial.
+                    // https://github.com/asc-community/AngouriMath/issues/2195
+                    case InstructionType.CALL_BINOMIAL:
+                        stack.Push(AngouriMath.Numerics.CombinatorialFunctions.Binomial(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_FALLING_FACTORIAL:
+                        stack.Push(AngouriMath.Numerics.CombinatorialFunctions.FallingFactorial(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_RISING_FACTORIAL:
+                        stack.Push(AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_DOUBLE_FACTORIAL:
+                        stack.Push(AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(stack.Pop()));
+                        break;
                     case InstructionType.CALL_SELECT:
                     {
                         var value = stack.Pop();

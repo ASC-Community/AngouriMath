@@ -555,6 +555,55 @@ namespace AngouriMath
             }
         }
 
+        // The binomial coefficient, the factorial powers and the double factorial, on the
+        // interpreter's terms. https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record DoubleFactorialf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_DOUBLE_FACTORIAL));
+            }
+        }
+
+        public partial record Binomialf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Lower.InnerCompile(compiler);
+                Upper.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_BINOMIAL));
+            }
+        }
+
+        public partial record FallingFactorialf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Order.InnerCompile(compiler);
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_FALLING_FACTORIAL));
+            }
+        }
+
+        public partial record RisingFactorialf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Order.InnerCompile(compiler);
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_RISING_FACTORIAL));
+            }
+        }
+
         public partial record Maxf
         {
             private protected override bool CompilesItself => true;

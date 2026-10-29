@@ -156,6 +156,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Shif  when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Shi", 1, newE.Type), newE),
                 Chif  when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Chi", 1, newE.Type), newE),
                 Factorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Factorial", 1, newE.Type), newE),
+                DoubleFactorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("DoubleFactorial", 1, newE.Type), newE),
                 Phif =>         Expression.Call(GetDef("Phi", 1, e.Type), e),
 
                 // The conjugate, the argument and the parts, widened to double as the special
@@ -233,6 +234,14 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     ShouldBeAtLeastDouble(left) is var newLeft
                     && ShouldBeAtLeastDouble(right) is var newRight
                     => Expression.Call(GetDef("Log", 2, newRight.Type), newLeft, newRight),
+                // The binomial coefficient and the factorial powers, widened to double first as the
+                // special functions are. https://github.com/asc-community/AngouriMath/issues/2195
+                Binomialf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("Binomial", 2, newLeft.Type), newLeft, newRight),
+                FallingFactorialf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("FallingFactorial", 2, newLeft.Type), newLeft, newRight),
+                RisingFactorialf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("RisingFactorial", 2, newLeft.Type), newLeft, newRight),
                 Maxf => Expression.Call(GetDef("Max", 2, left.Type), left, right),
                 Minf => Expression.Call(GetDef("Min", 2, left.Type), left, right),
 

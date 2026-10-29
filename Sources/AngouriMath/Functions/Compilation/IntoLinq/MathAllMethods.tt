@@ -15,6 +15,10 @@
     // The conjugate, the argument and the parts, for Complex and double alone in the same way.
     // https://github.com/asc-community/AngouriMath/issues/2195
     var parts = new[]{ "Conj", "Arg", "Re", "Im" };
+    // The combinatorial functions, for Complex and double alone in the same way: one argument, and two.
+    // https://github.com/asc-community/AngouriMath/issues/2195
+    var combinatorial = new[]{ "DoubleFactorial" };
+    var combinatorialBinary = new[]{ "Binomial", "FallingFactorial", "RisingFactorial" };
     var types = new[]{ "System.Numerics.Complex", "double", "float", "long", "int", "BigInteger" };
 #>
 //
@@ -217,6 +221,17 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static double <#= name #>(double a) => AngouriMath.Numerics.ComplexParts.<#= name #>(a);
 <# } #>
 
+        // The binomial coefficient, the factorial powers and the double factorial, on the interpreter's
+        // terms. https://github.com/asc-community/AngouriMath/issues/2195
+<# foreach (var name in combinatorial) { #>
+        public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a) => AngouriMath.Numerics.CombinatorialFunctions.<#= name #>(a);
+        public static double <#= name #>(double a) => AngouriMath.Numerics.CombinatorialFunctions.<#= name #>(a);
+<# } #>
+<# foreach (var name in combinatorialBinary) { #>
+        public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.<#= name #>(a, b);
+        public static double <#= name #>(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.<#= name #>(a, b);
+<# } #>
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -259,6 +274,16 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 <# foreach (var name in parts) { #>
 <# foreach (var type in new[]{ "System.Numerics.Complex", "double" }) { #>
             { ("<#= name #>", 1, typeof(<#= type #>)), Def<<#= type #>>(a => <#= name #>(a)) },
+<# } #>
+<# } #>
+<# foreach (var name in combinatorial) { #>
+<# foreach (var type in new[]{ "System.Numerics.Complex", "double" }) { #>
+            { ("<#= name #>", 1, typeof(<#= type #>)), Def<<#= type #>>(a => <#= name #>(a)) },
+<# } #>
+<# } #>
+<# foreach (var name in combinatorialBinary) { #>
+<# foreach (var type in new[]{ "System.Numerics.Complex", "double" }) { #>
+            { ("<#= name #>", 2, typeof(<#= type #>)), Def<<#= type #>>((a, b) => <#= name #>(a, b)) },
 <# } #>
 <# } #>
         };
