@@ -173,7 +173,7 @@ namespace AngouriMath
             /// digits' <c>ln 10</c>. The terms stay positive past <c>k = n</c>, where they are largest,
             /// and ten guard digits cover what the first ones cancel.
             /// </summary>
-            private static EDecimal EulerGamma(EContext work)
+            internal static EDecimal EulerGamma(EContext work)
             {
                 var digits = work.Precision.ToInt32Checked();
                 return eulerGamma.GetOrAdd(digits, static digits =>

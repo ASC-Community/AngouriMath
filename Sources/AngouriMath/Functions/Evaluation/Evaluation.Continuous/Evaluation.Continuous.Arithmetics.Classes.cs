@@ -716,6 +716,9 @@ namespace AngouriMath
                             => Sum(whole.ToInt32Checked(), order).InnerSimplified(isExact),
                         (Integer { EInteger.Sign: >= 0 }, Number) => null,
                         (Integer { EInteger.Sign: < 0 }, Number order) when order is not Integer { EInteger.Sign: <= 0 } => MathS.NaN,
+                        // A half-whole n, exactly where both polygamma values are: H(1/2) is 2 - 2 ln 2.
+                        (Rational value, Integer { EInteger: var order }) when isExact && order.Sign > 0 && order.CompareTo(PeterO.Numbers.EInteger.FromInt32(LargestOrder)) <= 0
+                            && Number.ExactHarmonicNumber(order.ToInt32Checked(), value.ERational) is { } exact => exact,
                         // Elsewhere, numerically: ψ(n + 1) - ψ(1) for m = 1, and through the polygamma
                         // function for a whole m >= 2, as ζ(m) - ζ(m, n + 1) is.
                         (Complex value, Integer { EInteger: var order }) when !isExact && order.Sign > 0 && order.CompareTo(PeterO.Numbers.EInteger.FromInt32(LargestOrder)) <= 0

@@ -398,6 +398,13 @@ namespace AngouriMath.Numerics
             return new(e.RoundToPrecision(down), e.RoundToPrecision(up));
         }
 
+        private PreciseInterval EulerGamma()
+        {
+            var gamma = EDecimal.FromString(
+                "0.57721566490153286060651209008240243104215933593992359880576723488486772677766467093694706329174674951463144724980708248096050401448654283622417399764492353625350033374293733773767394279259525824709491");
+            return new(gamma.RoundToPrecision(down), gamma.RoundToPrecision(up));
+        }
+
         private PreciseComplexInterval Evaluate(Entity expr)
         {
             // Ahead of the values remembered by node: a name bound to one root now is bound to
@@ -455,6 +462,8 @@ namespace AngouriMath.Numerics
                     return Real(Pi());
                 case Variable variable when variable == MathS.e:
                     return Real(E());
+                case Variable variable when variable == MathS.eulergamma:
+                    return Real(EulerGamma());
                 case Powf(var @base, var exponent):
                 {
                     if (@base == MathS.e)

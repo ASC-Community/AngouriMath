@@ -115,7 +115,7 @@ first of those was a parse error.
 
 ## Numbers and constants
 
-`1`, `1.5`, `.5`, `1.`, `1/2`, `1e-9`, `i`, `e`, `pi`, `+oo`, `-oo`, `NaN`, `true`, `false`.
+`1`, `1.5`, `.5`, `1.`, `1/2`, `1e-9`, `i`, `e`, `pi`, `eulergamma`, `+oo`, `-oo`, `NaN`, `true`, `false`.
 
 A trailing `i` makes the literal imaginary, exponent and all: `3i`, `1.5e3i`. `i` on its own is the
 imaginary unit, and it is a **number** rather than a name — which is why `x i` is `x ^ i` and not a
@@ -141,6 +141,10 @@ is `pi` and the script `ℯ` is `e`, so `sin(π)` is `0` and `ln(ℯ)` is `1`. T
 (U+0435) is a letter, not the constant, and so is the Cyrillic `х` (U+0445) beside the Latin `x`:
 they are variables that print like `e` and `x`, and `х + x` has two
 ([#1260](https://github.com/asc-community/AngouriMath/issues/1260)).
+
+`eulergamma` is Euler's constant, the Euler–Mascheroni constant `γ = 0.5772156649…`, also read as
+`EulerGamma` and drawn `\mathrm{\gamma}`. It is spelled out because `gamma` is the Γ function, and `γ`
+is a variable ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
 A subscript may have one of its own: `X_a_beta` is one name, `X` with the subscript `a_beta`, and in
 LaTeX it is `X_{a_{\beta}}` ([#524](https://github.com/asc-community/AngouriMath/issues/524)).
@@ -363,7 +367,8 @@ which is `6^3 - 1`. It is taken in a variable
 **Harmonic numbers** — `harmonicnumber(n)`, `1 + 1/2 + ... + 1/n`, and `harmonicnumber(n, m)`,
 `1 + 1/2^m + ... + 1/n^m`, drawn `\operatorname{H}_{n}` and `\operatorname{H}_{n}^{(m)}`:
 `harmonicnumber(4)` is `25/12`. Off the whole numbers they are `ζ(m) - ζ(m, n + 1)`, as Mathematica's
-`HarmonicNumber` is, evaluated numerically for a whole `m >= 1`: `harmonicnumber(1/2)` is `2 - 2 ln 2`.
+`HarmonicNumber` is, evaluated numerically for a whole `m >= 1`, and exactly at a half-whole `n` for
+`m = 1` or an even `m`: `harmonicnumber(1/2)` is `2 - 2 * ln(2)`.
 A negative integer `n` has no value but for a whole `m <= 0`
 ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
@@ -422,8 +427,10 @@ order is the derivative of the one before: the derivative of `polygamma(n, x)` i
 `(x - 1)! * digamma(x)`. Integrating goes the other way: `polygamma(n, x)` integrates to
 `polygamma(n - 1, x)`, and `digamma(x)` to `ln((x - 1)!)`. An odd order at a whole or half-whole
 argument is exact, a rational times a power of `pi` plus a rational: `polygamma(1, 1)` is
-`1/6 * pi ^ 2` and `polygamma(1, 3)` is `1/6 * pi ^ 2 - 5/4`. Other special values, such as
-`digamma(1) = -gamma`, stay as written, since the library has no symbol for Euler's constant.
+`1/6 * pi ^ 2` and `polygamma(1, 3)` is `1/6 * pi ^ 2 - 5/4`. So is the digamma function there,
+through Euler's constant: `digamma(1)` is `-eulergamma`, `digamma(3)` is `3/2 - eulergamma` and
+`digamma(1/2)` is `(-2) * ln(2) - eulergamma`. An even order from `2` stays as written, since it wants
+`zeta` at an odd number.
 
 **Incomplete gamma function** — `gamma(a, z)`. With a second argument, `gamma` is the upper incomplete
 gamma function `Gamma(a, z) = int_z^oo t^(a - 1) e^(-t) dt`, as Mathematica's `Gamma[a, z]` and

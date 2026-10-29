@@ -76,6 +76,13 @@ namespace AngouriMath
         {
             /// <inheritdoc/>
             private protected override bool IsOwnNameUpright => true;
+
+            /// <inheritdoc/>
+            /// <remarks>Euler's constant is drawn as its symbol, upright as every constant is, so that
+            /// it reads back as the constant and not as a variable called <c>gamma</c>.
+            /// <a href="https://github.com/asc-community/AngouriMath/issues/2182">#2182</a></remarks>
+            private protected override string LatexizeNode()
+                => Name == nameof(eulergamma) ? @"\mathrm{\gamma}" : base.LatexizeNode();
         }
     }
 }

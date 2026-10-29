@@ -22,6 +22,7 @@ namespace AngouriMath
                 => Name switch
                 {
                     "e" => "sympy.E",
+                    nameof(eulergamma) => "sympy.EulerGamma",
                     _ => "sympy." + Name
                 };
         }

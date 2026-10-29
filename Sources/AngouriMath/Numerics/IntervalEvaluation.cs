@@ -412,6 +412,8 @@ namespace AngouriMath.Numerics
                     return ComplexInterval.Real(Interval.Around(Math.PI));
                 case Variable variable when variable == MathS.e:
                     return ComplexInterval.Real(Interval.Around(Math.E));
+                case Variable variable when variable == MathS.eulergamma:
+                    return ComplexInterval.Real(Interval.Around(0.5772156649015329));
                 case Variable variable when boundVariable is not null && variable == boundVariable:
                     return ComplexInterval.Real(boundRange);
                 case Powf(var @base, var exponent):

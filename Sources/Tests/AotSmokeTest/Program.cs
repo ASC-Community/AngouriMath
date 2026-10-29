@@ -146,6 +146,8 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("harmonicnumber(x, 2) at x = 4", At(harmonic, "x", 4), 205.0 / 144);
             var difference = MathS.FromString("forwarddifference(x^3, x)");
             CheckClose("forwarddifference(x^3, x) at x = 2", At(difference, "x", 2), 27 - 8);
+            var eulerGamma = MathS.FromString("x + eulergamma + digamma(1)");
+            CheckClose("x + eulergamma + digamma(1) at x = 2", At(eulerGamma, "x", 2), 2);
         }
 
         private static void Simplification()

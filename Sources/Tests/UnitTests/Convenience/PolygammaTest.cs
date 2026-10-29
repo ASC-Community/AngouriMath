@@ -96,9 +96,10 @@ namespace AngouriMath.Tests.Convenience
             AssertClose(expression.EvalNumerical().Stringize(), Assert.IsType<Real>(simplified.EvalNumerical()).EDecimal);
         }
 
-        /// <summary>An even order wants zeta at an odd number, or Euler's constant: it stays as written.</summary>
+        /// <summary>An even order from 2 wants zeta at an odd number, and an argument neither whole nor half-whole
+        /// has no closed form here: it stays as written.</summary>
         [Theory]
-        [InlineData("digamma(1)")]
+        [InlineData("digamma(1/3)")]
         [InlineData("polygamma(2, 1)")]
         [InlineData("polygamma(1, 1/3)")]
         public void OtherwiseItStaysAsWritten(string expression)

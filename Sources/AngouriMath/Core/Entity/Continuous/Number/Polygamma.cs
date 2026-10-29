@@ -60,19 +60,47 @@ namespace AngouriMath
             }
 
             /// <summary>
-            /// <c>psi^(n)(q)</c> exactly, for an odd order <c>n</c> and a whole or half-whole <c>q</c> other than a pole,
-            /// or <see langword="null"/>: a rational times <c>pi^(n + 1)</c>, plus a rational.
+            /// <c>psi^(n)(q)</c> exactly, for <c>n = 0</c> or an odd order <c>n</c> and a whole or half-whole
+            /// <c>q</c> other than a pole, or <see langword="null"/>: a rational times <c>pi^(n + 1)</c>, plus a
+            /// rational, or for the digamma function a rational less Euler's constant and, at a half-whole
+            /// <c>q</c>, <c>2 ln 2</c>.
             /// </summary>
             /// <remarks>
+            /// <c>psi(1) = -gamma</c> and <c>psi(1/2) = -gamma - 2 ln 2</c> (DLMF 5.4.12, 5.4.13), and
             /// <c>psi^(n)(1) = n! zeta(n + 1)</c> and <c>psi^(n)(1/2) = (2^(n + 1) - 1) n! zeta(n + 1)</c> for an odd
             /// <c>n</c> (DLMF 5.15.2, 5.15.3), where <c>zeta(2m) = (-1)^(m + 1) B_(2m) (2 pi)^(2m)/(2 (2m)!)</c> is a
-            /// rational times <c>pi^(2m)</c>; the recurrence <c>psi^(n)(z + 1) = psi^(n)(z) - n!/z^(n + 1)</c> moves
-            /// the argument to either. An even order wants <c>zeta</c> at an odd number, or Euler's constant, which
-            /// have no closed form here. https://github.com/asc-community/AngouriMath/issues/171
+            /// rational times <c>pi^(2m)</c>; the recurrence <c>psi^(n)(z + 1) = psi^(n)(z) + (-1)^n n!/z^(n + 1)</c>
+            /// moves the argument to either. An even order from 2 wants <c>zeta</c> at an odd number, which has no
+            /// closed form here. https://github.com/asc-community/AngouriMath/issues/171
             /// </remarks>
             internal static Entity? ExactPolygamma(EInteger order, ERational argument)
+                => ExactPolygammaParts(order, argument) is var (n, coefficient, rest)
+                    ? Exact(withGamma: n == 0, multipleFirst: n != 0, n, coefficient, rest)
+                    : null;
+
+            /// <summary>
+            /// The harmonic number <c>H_n^(m) = (-1)^m/(m - 1)! (psi^(m - 1)(1) - psi^(m - 1)(n + 1))</c> exactly, where
+            /// <see cref="ExactPolygamma"/> has both values: <c>m = 1</c> or an even <c>m</c>, at a half-whole <c>n</c>.
+            /// Euler's constant, which both carry for <c>m = 1</c>, is left out rather than cancelled.
+            /// </summary>
+            internal static Entity? ExactHarmonicNumber(int m, ERational n)
             {
-                if (order.Sign <= 0 || order.IsEven || order.CompareTo(100) > 0)
+                if (m < 1 || ExactPolygammaParts(m - 1, ERational.One) is not var (order, coefficientAtOne, restAtOne)
+                    || ExactPolygammaParts(m - 1, n.Add(ERational.One)) is not var (_, coefficient, rest))
+                    return null;
+                var scale = ERational.FromEInteger(m % 2 == 0 ? EInteger.One : EInteger.FromInt32(-1))
+                    .Divide(ERational.FromEInteger(Factorial(m - 1)));
+                return Exact(withGamma: false, multipleFirst: false, order,
+                    coefficientAtOne.Subtract(coefficient).Multiply(scale), restAtOne.Subtract(rest).Multiply(scale));
+            }
+
+            /// <summary>
+            /// <c>psi^(n)(q)</c> but for Euler's constant, as a rational times <c>pi^(n + 1)</c> for an odd
+            /// <c>n</c> or times <c>ln 2</c> for <c>n = 0</c>, and a rational.
+            /// </summary>
+            private static (int Order, ERational Coefficient, ERational Remainder)? ExactPolygammaParts(EInteger order, ERational argument)
+            {
+                if (order.Sign < 0 || order.Sign > 0 && order.IsEven || order.CompareTo(100) > 0)
                     return null;
                 var half = ERational.Create(EInteger.One, EInteger.FromInt32(2));
                 var start = argument.Denominator.Equals(EInteger.One) ? ERational.One
@@ -83,8 +111,21 @@ namespace AngouriMath
                 if (steps.Abs().CompareTo(1000) > 0)
                     return null;
                 var n = order.ToInt32Checked();
-                var m = (n + 1) / 2;
                 var factorial = Factorial(n);
+                // The recurrence, up from the start or down to the argument; (-1)^n n!/z^(n + 1) a step.
+                var rest = ERational.Zero;
+                var power = n + 1;
+                var step = ERational.FromEInteger(n % 2 == 0 ? factorial : factorial.Negate());
+                if (steps.Sign > 0)
+                    for (var j = EInteger.Zero; j.CompareTo(steps) < 0; j = j.Add(EInteger.One))
+                        rest = rest.Add(step.Divide(Pow(start.Add(ERational.FromEInteger(j)), power)));
+                else
+                    for (var j = EInteger.One; j.CompareTo(steps.Negate()) <= 0; j = j.Add(EInteger.One))
+                        rest = rest.Subtract(step.Divide(Pow(start.Subtract(ERational.FromEInteger(j)), power)));
+                if (n == 0)
+                    // psi(1) = -gamma, and psi(1/2) = -gamma - 2 ln 2.
+                    return (n, start.Equals(half) ? ERational.FromInt32(-2) : ERational.Zero, rest);
+                var m = (n + 1) / 2;
                 // zeta(2m) / pi^(2m) = (-1)^(m + 1) B_(2m) 2^(2m) / (2 (2m)!)
                 var zetaOverPiPower = Bernoulli(m).Multiply(ERational.FromEInteger(EInteger.One.ShiftLeft(2 * m)))
                     .Divide(ERational.FromEInteger(Factorial(2 * m).Multiply(2)));
@@ -93,20 +134,40 @@ namespace AngouriMath
                 var piCoefficient = zetaOverPiPower.Multiply(ERational.FromEInteger(factorial));
                 if (start.Equals(half))
                     piCoefficient = piCoefficient.Multiply(ERational.FromEInteger(EInteger.One.ShiftLeft(n + 1).Subtract(EInteger.One)));
-                // The recurrence, up from the start or down to the argument.
-                var rest = ERational.Zero;
-                var power = n + 1;
-                if (steps.Sign > 0)
-                    for (var j = EInteger.Zero; j.CompareTo(steps) < 0; j = j.Add(EInteger.One))
-                        rest = rest.Subtract(ERational.FromEInteger(factorial).Divide(Pow(start.Add(ERational.FromEInteger(j)), power)));
-                else
-                    for (var j = EInteger.One; j.CompareTo(steps.Negate()) <= 0; j = j.Add(EInteger.One))
-                        rest = rest.Add(ERational.FromEInteger(factorial).Divide(Pow(start.Subtract(ERational.FromEInteger(j)), power)));
-                var piTerm = Rational.Create(piCoefficient) * MathS.Pow(MathS.pi, Integer.Create(power));
-                return (rest.Sign < 0 ? piTerm - Rational.Create(rest.Negate()) : piTerm + Rational.Create(rest)).InnerSimplified;
+                return (n, piCoefficient, rest);
 
                 static ERational Pow(ERational x, int exponent)
                     => ERational.Create(x.Numerator.Pow(exponent), x.Denominator.Pow(exponent));
+            }
+
+            // c ln 2 for n = 0 and c pi^(n + 1) otherwise, and r, less Euler's constant where it is asked for, without
+            // the terms that are zero and with a negative one subtracted. An odd order leads with the multiple of
+            // pi^(n + 1), as it always has; the digamma function and a difference lead with the rational.
+            private static Entity Exact(bool withGamma, bool multipleFirst, int n, ERational coefficient, ERational rest)
+            {
+                Entity? sum = null;
+                var unit = n == 0 ? MathS.Ln(Integer.Create(2)) : MathS.Pow(MathS.pi, Integer.Create(n + 1));
+                if (multipleFirst)
+                {
+                    Add(coefficient, unit);
+                    Add(rest, null);
+                }
+                else
+                {
+                    Add(rest, null);
+                    Add(coefficient, unit);
+                }
+                if (withGamma)
+                    sum = sum is null ? -MathS.eulergamma : sum - MathS.eulergamma;
+                return (sum ?? Integer.Zero).InnerSimplified;
+
+                void Add(ERational c, Entity? of)
+                {
+                    if (c.IsZero)
+                        return;
+                    var term = of is null ? Rational.Create(c.Abs()) : Rational.Create(c.Abs()) * of;
+                    sum = sum is null ? (c.Sign < 0 ? -term : term) : c.Sign < 0 ? sum - term : sum + term;
+                }
             }
 
             private static (EDecimal Re, EDecimal Im) Polygamma(int n, EDecimal re, EDecimal im, EContext work)
