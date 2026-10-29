@@ -483,8 +483,7 @@ the right shape, written out or once its operations are carried out, throws `Inv
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
-is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog` and
-`forwarddifference`. Names that will not be functions,
+is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw` and `productlog`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
 Each name without a bracket is still a variable, and short names such as `beta` and `norm` are still read as products
@@ -531,6 +530,17 @@ is ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 | `"jacobian([x y, x + y], [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[y, x], [1, 1]]` |
 | `"hessian(x^3 y^2, [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[6 * x * y ^ 2, 6 * x ^ 2 * y], [6 * x ^ 2 * y, 2 * x ^ 3]]` |
 | `"jacobian(x y, {x, y})".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: a set has no order for the columns |
+
+### The forward difference
+
+**Not silent: `forwarddifference(f, k)` is `f(k + 1) - f(k)`, written so when it is parsed, where it was a parse error.**
+It is the forward difference with a step of 1, as Mathematica's `DifferenceDelta[f, k]` is, taken in a variable
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"forwarddifference(k^2, k)".ToEntity().Simplify()` | throws `UnhandledParseException` | `1 + 2 * k` |
+| `"forwarddifference(2^k, k)".ToEntity()` | throws `UnhandledParseException` | `2 ^ (k + 1) - 2 ^ k` |
 
 ### The harmonic numbers
 

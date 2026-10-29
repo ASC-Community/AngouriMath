@@ -354,6 +354,12 @@ drawn `\operatorname{C}_{n}`. Off the whole numbers it is `4^n Γ(n + 1/2) / (�
 `catalan` is, so `catalannumber(-1)` is `-1/2`, it is `0` at every whole number below that, and a
 negative half-integer is a pole ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
+**Forward difference** — `forwarddifference(f, k)` is `f(k + 1) - f(k)`, Mathematica's
+`DifferenceDelta[f, k]`, written so when it is parsed: `forwarddifference(k^2, k)` simplifies to
+`1 + 2 * k`, and a sum of them telescopes: `sum(forwarddifference(k^3, k), k, 1, 5)` is `215`,
+which is `6^3 - 1`. It is taken in a variable
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 **Harmonic numbers** — `harmonicnumber(n)`, `1 + 1/2 + ... + 1/n`, and `harmonicnumber(n, m)`,
 `1 + 1/2^m + ... + 1/n^m`, drawn `\operatorname{H}_{n}` and `\operatorname{H}_{n}^{(m)}`:
 `harmonicnumber(4)` is `25/12`. Off the whole numbers they are `ζ(m) - ζ(m, n + 1)`, as Mathematica's
@@ -532,8 +538,7 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
 **Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
-`hurwitzzeta` `lambertw` `productlog`
-`forwarddifference`. Each is what some other
+`hurwitzzeta` `lambertw` `productlog`. Each is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
 under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse
 error naming the function instead. What each will mean is fixed in

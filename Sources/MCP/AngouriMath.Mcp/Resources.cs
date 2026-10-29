@@ -112,6 +112,7 @@ internal static class Resources
           a vector written out, `[1, 2]` being a column and `[[1, 2], [3, 4]]` a matrix:
           `det(A)` of a symbol is refused. `cross(a, b)` is the vector product in space and
           `cross([x, y])` is `[-y, x]`; `resultant(p, q, x)` eliminates `x`
+        - `forwarddifference(f, k)`, which is `f(k + 1) - f(k)` once parsed
         - `laplacian(f, [x, y])`, `jacobian(F, [x, y])` and `hessian(f, [x, y])`, made of
           `derivative` nodes when parsed; the variables are a vector, or one name
 
