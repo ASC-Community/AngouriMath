@@ -555,6 +555,21 @@ through `digamma` and `polygamma` for a whole `m >= 1`. A negative integer `n` h
 | `"harmonicnumber(4)".ToEntity().Simplify()` | `4 * harmonicnumber` | `25/12` |
 | `"harmonicnumber(n, 2)".ToEntity()` | throws `UnhandledParseException` | `harmonicnumber(n, 2)` |
 
+### A linear function times an exponential is solved by the Lambert W function
+
+**Not silent: `K (a x + b) c^(g x + d) = k` is solved exactly, where it was answered with roots Newton's method found.** The
+roots are `x = W(A)/(g ln c) - b/a` for the `A` the equation gives. Over the complex numbers every branch is a root,
+`lambertw(n_1, A)` for a whole `n_1`, as a periodic equation's roots are written with `n_1`. Over the reals `W_0` is
+one where `A >= -1/e` and `W_(-1)` another where `-1/e <= A < 0`, with those conditions carried where `A` is symbolic,
+and below `-1/e` there is none ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x e^x = 2".ToEntity().Solve("x")` | Newton's roots, `{ -2.1569… + 17.1537…i, -1.7023… + … }` | `{ lambertw(n_1, 2) }` |
+| `"x e^x = 2".ToEntity().Solve("x")`, over the reals | the same complex numbers | `{ lambertw(2) }` |
+| `"x e^x = -1/4".ToEntity().Solve("x")`, over the reals | Newton's complex roots | `{ lambertw(-1/4), lambertw(-1, -1/4) }` |
+| `"x e^x = -1".ToEntity().Solve("x")`, over the reals | Newton's complex roots | `{ }` |
+
 ### The Lambert W function
 
 **Not silent: `lambertw(z)` and `lambertw(k, z)`, also `productlog`, are the Lambert W function, the solution `w` of
