@@ -216,6 +216,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 // the shortest expression that turns the one into the other for every pair of
                 // signs. Not widened to double the way division is -- the remainder of two
                 // integers is an integer, and widening would only lose that.
+                // Over the complex numbers the remainder FastExpression takes, the floored one where
+                // both are real and NaN where either is not, as the interpreter leaves it unevaluated:
+                // the operator is not defined for System.Numerics.Complex, and this was refused.
+                // https://github.com/asc-community/AngouriMath/issues/2195
+                Modf when left.Type == typeof(System.Numerics.Complex) && right.Type == typeof(System.Numerics.Complex)
+                    => Expression.Call(complexRemainder, left, right),
                 Modf => Operator(ExpressionType.Modulo,
                                  Operator(ExpressionType.Add, Operator(ExpressionType.Modulo, left, right), right),
                                  right),
@@ -451,6 +457,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 { (ExpressionType.GreaterThan, typeof(BigInteger)), Cmp<BigInteger>((a, b) => a > b) },
                 { (ExpressionType.GreaterThanOrEqual, typeof(BigInteger)), Cmp<BigInteger>((a, b) => a >= b) },
             };
+
+        [ConstantField] private static readonly MethodInfo complexRemainder =
+            ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, System.Numerics.Complex>>)((a, b) => RealOnly.Mod(a, b))).Body).Method;
 
         private static MethodInfo Op<T>(Expression<Func<T, T, T>> e)
             => ((BinaryExpression)e.Body).Method

@@ -323,6 +323,17 @@ negative even integer or off the integers, since the extension through the gamma
 | `"n!!".ToEntity()` | throws `UnhandledParseException` | `n!!` |
 | `"n!!!".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
+### `mod` compiles over `Complex`
+
+**Not silent: what was refused is compiled.** `Compile<Complex, ...>` refused `mod` with `UncompilableNodeException`,
+the operator not being defined for `System.Numerics.Complex`. It now takes the remainder `Compile` takes: the floored
+one where both sides are real, and `NaN` where either is not
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x mod 3".ToEntity().Compile<Complex, Complex>("x")(7)` | `UncompilableNodeException` | `(1, 0)` |
+
 ### A compiled statement with no truth value has none
 
 **Silent in part: a compiled comparison has the truth value evaluation gives it.** A comparison over `Complex` was refused

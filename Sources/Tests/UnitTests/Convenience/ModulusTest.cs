@@ -190,6 +190,20 @@ namespace AngouriMath.Tests.Convenience
         public void TheLinqCompilerAgreesWithTheInterpreter(int at, int expected) =>
             Assert.Equal(expected, "x mod 3".ToEntity().Compile<int, int>("x")(at));
 
+        /// <summary>
+        /// Over <see cref="Complex"/>, where the operator is not defined and this was refused, the
+        /// LINQ compiler takes the remainder the stack machine does.
+        /// https://github.com/asc-community/AngouriMath/issues/2195
+        /// </summary>
+        [Fact]
+        public void TheLinqCompilerTakesTheStackMachinesRemainderOverTheComplexNumbers()
+        {
+            var compiled = "x mod 3".ToEntity().Compile<Complex, Complex>("x");
+            Assert.Equal(new Complex(1, 0), compiled(7));
+            Assert.Equal(new Complex(2, 0), compiled(-7));
+            Assert.True(double.IsNaN(compiled(new Complex(2, 1)).Real));
+        }
+
         [Fact]
         public void TheLinqCompilerKeepsTheFractionalPart() =>
             Assert.Equal(1.5, "x mod y".ToEntity().Compile<double, double, double>("x", "y")(7.5, 2), 9);
