@@ -89,6 +89,14 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        partial record CatalanNumberf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $@"catalannumber({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>

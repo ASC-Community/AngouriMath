@@ -349,6 +349,11 @@ others, and a conjugate as a whole exponent is drawn in brackets, `x^{\left(\ove
 so that it does not read as a rising factorial
 ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
+**Catalan numbers** — `catalannumber(n)`, `binomial(2n, n) / (n + 1)`: `1, 1, 2, 5, 14` from `n = 0`,
+drawn `\operatorname{C}_{n}`. Off the whole numbers it is `4^n Γ(n + 1/2) / (√π Γ(n + 2))`, as SymPy's
+`catalan` is, so `catalannumber(-1)` is `-1/2`, it is `0` at every whole number below that, and a
+negative half-integer is a pole ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 **Iverson bracket** — `iverson(P)`. `1` where the statement `P` holds and `0` where it does not,
 which is how a count is written as a sum: `sum(iverson(k divides 12), k, 1, 12)` is `6`, the number
 of divisors of `12`. A statement that is not decided keeps the node, which prints as `[\![P]\!]` in
@@ -520,7 +525,7 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
 **Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
-`hurwitzzeta` `lambertw` `productlog` `harmonicnumber` `catalannumber`
+`hurwitzzeta` `lambertw` `productlog` `harmonicnumber`
 `forwarddifference`. Each is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
 under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse

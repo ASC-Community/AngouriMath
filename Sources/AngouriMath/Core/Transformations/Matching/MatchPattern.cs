@@ -495,6 +495,7 @@ namespace AngouriMath.Core.Transformations.Matching
             [typeof(Entity.Factorialf)] = (1, static c => new Entity.Factorialf(c[0])),
             [typeof(Entity.Phif)] = (1, static c => new Entity.Phif(c[0])),
             [typeof(Entity.Mobiusf)] = (1, static c => new Entity.Mobiusf(c[0])),
+            [typeof(Entity.CatalanNumberf)] = (1, static c => new Entity.CatalanNumberf(c[0])),
             [typeof(Entity.PrimeNuf)] = (1, static c => new Entity.PrimeNuf(c[0])),
             [typeof(Entity.PrimeOmegaf)] = (1, static c => new Entity.PrimeOmegaf(c[0])),
             [typeof(Entity.PrimePif)] = (1, static c => new Entity.PrimePif(c[0])),

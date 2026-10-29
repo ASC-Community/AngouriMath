@@ -88,6 +88,31 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// The Catalan number <c>catalannumber(n)</c>, <c>C_n = binomial(2n, n) / (n + 1)</c>: 1, 1, 2, 5,
+        /// 14 from <c>n = 0</c>, the number of ways to bracket a product of <c>n + 1</c> factors.
+        /// </summary>
+        /// <remarks>
+        /// Off the whole numbers it is <c>4^n Γ(n + 1/2) / (√π Γ(n + 2))</c>, as Mathematica's
+        /// <c>CatalanNumber</c> and SymPy's <c>catalan</c> are: <c>-1/2</c> at <c>-1</c>, <c>0</c> at
+        /// every whole number below it, and no value at a negative half-integer, a pole of Γ(n + 1/2).
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </remarks>
+        public sealed partial record CatalanNumberf(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            internal CatalanNumberf New(Entity argument)
+                   => ReferenceEquals(argument, Argument) ? this : new(argument) { Codomain = Codomain };
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
         /// The falling factorial <c>fallingfactorial(x, n)</c>, <c>x</c> to the <c>n</c> falling: <c>x (x - 1) ... (x - n + 1)</c> for a whole <c>n &gt;= 0</c>, in the notation <c>x^{\underline{n}}</c> of Graham, Knuth and Patashnik's <i>Concrete Mathematics</i>.
         /// </summary>
         /// <remarks>

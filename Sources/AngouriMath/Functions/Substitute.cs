@@ -540,6 +540,13 @@ namespace AngouriMath
             }
         }
 
+        partial record CatalanNumberf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>

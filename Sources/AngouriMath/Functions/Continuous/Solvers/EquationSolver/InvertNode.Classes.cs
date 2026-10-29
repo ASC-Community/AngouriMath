@@ -956,6 +956,14 @@ namespace AngouriMath
                 => null;
         }
 
+        partial record CatalanNumberf
+        {
+            // The Catalan numbers are not one to one off the whole numbers, and a value is taken at
+            // arguments no list here gives. Left unsolved rather than answered with none.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
         partial record Phif
         {
             // We can't easily calculate (compute) all solutions there are for this function
