@@ -30,11 +30,13 @@ namespace AngouriMath.Tests.Algebra
         /// Each row, substituted into each equation, is zero at several values of the parameters
         /// and symbols left in it, negative ones among them. That is checked numerically rather
         /// than by simplifying, which is how the solver checks it: <c>sqrt(t^2) - t</c> is zero at
-        /// every positive <c>t</c> and at no negative one.
+        /// every positive <c>t</c> and at no negative one. An <c>n_1</c>, which a periodic root
+        /// brings and which stands for a whole number, is sampled at whole numbers.
         /// </summary>
         private static void HoldsAtSampledValues(string[] equations, string[] variables, Entity.Matrix solutions)
         {
             var samples = new[] { 1.37, -1.7, 2.3, -0.61 };
+            var wholeSamples = new[] { 2, -1, 3, 0 };
             for (var row = 0; row < solutions.RowCount; row++)
                 foreach (var text in equations)
                 {
@@ -46,7 +48,9 @@ namespace AngouriMath.Tests.Algebra
                     {
                         var pinned = residual;
                         for (var i = 0; i < symbols.Count; i++)
-                            pinned = pinned.Substitute(symbols[i], samples[(shift + i) % samples.Length]);
+                            pinned = symbols[i].Name.StartsWith("n_") && !equations.Any(equation => equation.ToEntity().Vars.Contains(symbols[i]))
+                                ? pinned.Substitute(symbols[i], wholeSamples[(shift + i) % wholeSamples.Length])
+                                : pinned.Substitute(symbols[i], samples[(shift + i) % samples.Length]);
                         var value = Assert.IsAssignableFrom<Entity.Number.Complex>(pinned.Evaled);
                         Assert.False(value.IsNaN, $"{residual} at {pinned}");
                         Assert.True(((Entity.Number.Real)value.Abs()).EDecimal.ToDouble() < 1e-9, $"{residual} at {pinned} is {value}");
@@ -71,6 +75,25 @@ namespace AngouriMath.Tests.Algebra
             Assert.NotNull(solutions);
             Assert.Equal(rows, solutions!.RowCount);
             Assert.Equal(variables.Length, solutions.ColumnCount);
+            HoldsAtSampledValues(equations, variables, solutions);
+        }
+
+        /// <summary>
+        /// A family a periodic root brings a whole-number parameter to, <c>n_1</c>, which holds for
+        /// every whole <c>n_1</c> and is answered: <c>sin(x) = 1/2</c> in <c>x</c> and <c>y</c> is
+        /// the two families <c>(pi/6 + 2 pi n_1, t_1)</c> and <c>(pi - pi/6 + 2 pi n_1, t_1)</c>.
+        /// </summary>
+        [Theory]
+        [InlineData(new[] { "sin(x) - 1/2" }, new[] { "x", "y" }, 2)]
+        [InlineData(new[] { "cos(x) - 1" }, new[] { "x", "y" }, 1)]
+        [InlineData(new[] { "tan(x) - 1" }, new[] { "x", "y" }, 1)]
+        [InlineData(new[] { "sin(x) - 1/2", "y - x" }, new[] { "x", "y", "z" }, 2)]
+        public void AFamilyWithAWholeNumberParameterIsAnswered(string[] equations, string[] variables, int rows)
+        {
+            var solutions = Solve(equations, variables);
+            Assert.NotNull(solutions);
+            Assert.Equal(rows, solutions!.RowCount);
+            Assert.Contains(solutions.Vars, name => name.Name.StartsWith("n_"));
             HoldsAtSampledValues(equations, variables, solutions);
         }
 

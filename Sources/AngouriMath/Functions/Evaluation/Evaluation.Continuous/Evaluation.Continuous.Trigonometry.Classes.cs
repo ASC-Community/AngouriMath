@@ -48,6 +48,7 @@ namespace AngouriMath
                     {
                         Complex n when !isExact => Number.Sin(n),
                         { Evaled: Complex n } arg when isExact && TrigonometryTableValues.PullSin(n, out var res) => res,
+                        _ when Functions.Boolean.QuantifierFacts.WithoutWholePeriods(a, 2, static x => new Sinf(x), "Complex.sin_add_int_mul_two_pi") is { } reduced => reduced.InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a) => ((Sinf)@this).New(a), isExact);
@@ -63,6 +64,7 @@ namespace AngouriMath
                     {
                         Complex n when !isExact => Number.Cos(n),
                         { Evaled: Complex n } when isExact && TrigonometryTableValues.PullCos(n, out var res) => res,
+                        _ when Functions.Boolean.QuantifierFacts.WithoutWholePeriods(a, 2, static x => new Cosf(x), "Complex.cos_add_int_mul_two_pi") is { } reduced => reduced.InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a) => ((Cosf)@this).New(a), isExact);
@@ -83,6 +85,7 @@ namespace AngouriMath
                               ? (1 / res).InnerSimplified
                               : null
                             : Secant(n),
+                        _ when Functions.Boolean.QuantifierFacts.WithoutWholePeriods(a, 2, static x => new Secantf(x), "Complex.cos_add_int_mul_two_pi") is { } reduced => reduced.InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a) => ((Secantf)@this).New(a), isExact);
@@ -103,6 +106,7 @@ namespace AngouriMath
                               ? (1 / res).InnerSimplified
                               : null
                             : Cosecant(n),
+                        _ when Functions.Boolean.QuantifierFacts.WithoutWholePeriods(a, 2, static x => new Cosecantf(x), "Complex.sin_add_int_mul_two_pi") is { } reduced => reduced.InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a) => ((Cosecantf)@this).New(a), isExact);
@@ -157,6 +161,7 @@ namespace AngouriMath
                             isExact
                             ? TrigonometryTableValues.PullTan(n, out var res) ? res : null
                             : Number.Tan(n),
+                        _ when Functions.Boolean.QuantifierFacts.WithoutWholePeriods(a, 1, static x => new Tanf(x), "Complex.tan_add_int_mul_pi") is { } reduced => reduced.InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a) => ((Tanf)@this).New(a), isExact);
@@ -175,6 +180,7 @@ namespace AngouriMath
                             isExact
                             ? TrigonometryTableValues.PullTan(n, out var res) ? (1 / res).InnerSimplified : null
                             : Number.Cotan(n),
+                        _ when Functions.Boolean.QuantifierFacts.WithoutWholePeriods(a, 1, static x => new Cotanf(x), "Complex.tan_add_int_mul_pi") is { } reduced => reduced.InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a) => ((Cotanf)@this).New(a), isExact);
