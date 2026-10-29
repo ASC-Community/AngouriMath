@@ -660,6 +660,7 @@ atom returns[Entity value]
     | 'dot(' args = function_arguments ')' { Assert("dot", 2, $args.list.Count); $value = ParsingHelpers.Dot($args.list[0], $args.list[1]); }
     | 'cross(' args = function_arguments ')' { Assert("cross", (1, 2), $args.list.Count); $value = ParsingHelpers.Cross($args.list); }
     | 'laplacian(' args = function_arguments ')' { Assert("laplacian", 2, $args.list.Count); $value = ParsingHelpers.Laplacian($args.list[0], $args.list[1]); }
+    | 'forwarddifference(' args = function_arguments ')' { Assert("forwarddifference", 2, $args.list.Count); $value = ParsingHelpers.ForwardDifference($args.list[0], $args.list[1]); }
     | 'jacobian(' args = function_arguments ')' { Assert("jacobian", 2, $args.list.Count); $value = ParsingHelpers.Jacobian($args.list[0], $args.list[1]); }
     | 'hessian(' args = function_arguments ')' { Assert("hessian", 2, $args.list.Count); $value = ParsingHelpers.Hessian($args.list[0], $args.list[1]); }
     | 'resultant(' args = function_arguments ')' { Assert("resultant", 3, $args.list.Count); $value = ParsingHelpers.Resultant($args.list[0], $args.list[1], $args.list[2]); }
@@ -696,7 +697,6 @@ atom returns[Entity value]
     | 'hurwitzzeta(' args = function_arguments ')' { $value = NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); }
     | 'lambertw(' args = function_arguments ')' { $value = NotImplementedFunction("lambertw", "Lambert W function yet"); }
     | 'productlog(' args = function_arguments ')' { $value = NotImplementedFunction("productlog", "Lambert W function yet"); }
-    | 'forwarddifference(' args = function_arguments ')' { $value = NotImplementedFunction("forwarddifference", "forward difference yet"); }
     /* Names that will not be functions, refused with the spelling to use: what they mean is
        ambiguous between sources, or is already written exactly another way. */
     | 'heaviside(' args = function_arguments ')' { $value = NotAFunctionHere("heaviside", "its value at 0 is 0, 1/2 or 1 by source; write iverson(x > 0), iverson(x >= 0) or (1 + sgn(x))/2"); }

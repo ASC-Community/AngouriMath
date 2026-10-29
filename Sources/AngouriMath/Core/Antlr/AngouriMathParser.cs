@@ -134,11 +134,11 @@ internal partial class AngouriMathParser : Parser {
 		"'factorialpower('", "'risingfactorial('", "'iverson('", "'aleph('", "'erf('", 
 		"'erfc('", "'erfi('", "'Ei('", "'li('", "'polygamma('", "'digamma('", 
 		"'Si('", "'Ci('", "'Shi('", "'Chi('", "'det('", "'transpose('", "'dot('", 
-		"'cross('", "'laplacian('", "'jacobian('", "'hessian('", "'resultant('", 
-		"'conjugate('", "'conj('", "'arg('", "'Re('", "'Im('", "'re('", "'real('", 
-		"'im('", "'imag('", "'trunc('", "'zeta('", "'riemannzeta('", "'hurwitzzeta('", 
-		"'lambertw('", "'productlog('", "'forwarddifference('", "'heaviside('", 
-		"'unitstep('", "'isprime('", "'pochhammer('", "'doublefactorial('", "'factorial2('", 
+		"'cross('", "'laplacian('", "'forwarddifference('", "'jacobian('", "'hessian('", 
+		"'resultant('", "'conjugate('", "'conj('", "'arg('", "'Re('", "'Im('", 
+		"'re('", "'real('", "'im('", "'imag('", "'trunc('", "'zeta('", "'riemannzeta('", 
+		"'hurwitzzeta('", "'lambertw('", "'productlog('", "'heaviside('", "'unitstep('", 
+		"'isprime('", "'pochhammer('", "'doublefactorial('", "'factorial2('", 
 		"'fractionalpart('", "'quotient('", "'domain('", "'piecewise('", "'apply('", 
 		"'lambda('", null, null, null, null, "'NaN'"
 	};
@@ -5402,7 +5402,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1209;
 				Match(T__32);
-				 Assert("jacobian", 2, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Jacobian(_localctx.args.list[0], _localctx.args.list[1]); 
+				 Assert("forwarddifference", 2, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.ForwardDifference(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 157:
@@ -5414,7 +5414,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1214;
 				Match(T__32);
-				 Assert("hessian", 2, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Hessian(_localctx.args.list[0], _localctx.args.list[1]); 
+				 Assert("jacobian", 2, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Jacobian(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 158:
@@ -5426,7 +5426,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1219;
 				Match(T__32);
-				 Assert("resultant", 3, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Resultant(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2]); 
+				 Assert("hessian", 2, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Hessian(_localctx.args.list[0], _localctx.args.list[1]); 
 				}
 				break;
 			case 159:
@@ -5438,7 +5438,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1224;
 				Match(T__32);
-				 Assert("conjugate", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
+				 Assert("resultant", 3, _localctx.args.list.Count); _localctx.value =  ParsingHelpers.Resultant(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2]); 
 				}
 				break;
 			case 160:
@@ -5450,7 +5450,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1229;
 				Match(T__32);
-				 Assert("conj", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
+				 Assert("conjugate", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
 				}
 				break;
 			case 161:
@@ -5462,7 +5462,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1234;
 				Match(T__32);
-				 Assert("arg", 1, _localctx.args.list.Count); _localctx.value =  MathS.Arg(_localctx.args.list[0]); 
+				 Assert("conj", 1, _localctx.args.list.Count); _localctx.value =  MathS.Conjugate(_localctx.args.list[0]); 
 				}
 				break;
 			case 162:
@@ -5474,7 +5474,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1239;
 				Match(T__32);
-				 Assert("Re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
+				 Assert("arg", 1, _localctx.args.list.Count); _localctx.value =  MathS.Arg(_localctx.args.list[0]); 
 				}
 				break;
 			case 163:
@@ -5486,7 +5486,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1244;
 				Match(T__32);
-				 Assert("Im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
+				 Assert("Re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
 				}
 				break;
 			case 164:
@@ -5498,7 +5498,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1249;
 				Match(T__32);
-				 Assert("re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
+				 Assert("Im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
 				}
 				break;
 			case 165:
@@ -5510,7 +5510,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1254;
 				Match(T__32);
-				 Assert("real", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
+				 Assert("re", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
 				}
 				break;
 			case 166:
@@ -5522,7 +5522,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1259;
 				Match(T__32);
-				 Assert("im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
+				 Assert("real", 1, _localctx.args.list.Count); _localctx.value =  MathS.Re(_localctx.args.list[0]); 
 				}
 				break;
 			case 167:
@@ -5534,7 +5534,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1264;
 				Match(T__32);
-				 Assert("imag", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
+				 Assert("im", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
 				}
 				break;
 			case 168:
@@ -5546,7 +5546,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1269;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("trunc", "rounding functions"); 
+				 Assert("imag", 1, _localctx.args.list.Count); _localctx.value =  MathS.Im(_localctx.args.list[0]); 
 				}
 				break;
 			case 169:
@@ -5558,7 +5558,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1274;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("zeta", "Riemann or Hurwitz zeta function yet"); 
+				 _localctx.value =  NotImplementedFunction("trunc", "rounding functions"); 
 				}
 				break;
 			case 170:
@@ -5570,7 +5570,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1279;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("riemannzeta", "Riemann zeta function yet"); 
+				 _localctx.value =  NotImplementedFunction("zeta", "Riemann or Hurwitz zeta function yet"); 
 				}
 				break;
 			case 171:
@@ -5582,7 +5582,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1284;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); 
+				 _localctx.value =  NotImplementedFunction("riemannzeta", "Riemann zeta function yet"); 
 				}
 				break;
 			case 172:
@@ -5594,7 +5594,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1289;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("lambertw", "Lambert W function yet"); 
+				 _localctx.value =  NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); 
 				}
 				break;
 			case 173:
@@ -5606,7 +5606,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1294;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("productlog", "Lambert W function yet"); 
+				 _localctx.value =  NotImplementedFunction("lambertw", "Lambert W function yet"); 
 				}
 				break;
 			case 174:
@@ -5618,7 +5618,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 1299;
 				Match(T__32);
-				 _localctx.value =  NotImplementedFunction("forwarddifference", "forward difference yet"); 
+				 _localctx.value =  NotImplementedFunction("productlog", "Lambert W function yet"); 
 				}
 				break;
 			case 175:

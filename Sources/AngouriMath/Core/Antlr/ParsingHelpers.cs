@@ -198,6 +198,18 @@ namespace AngouriMath.Core.Antlr
         }
 
         /// <summary>
+        /// <c>forwarddifference(f, k)</c>: <c>f(k + 1) - f(k)</c>, the forward difference of
+        /// <c>f</c> in <c>k</c> with a step of 1, as Mathematica's <c>DifferenceDelta[f, k]</c>. It is
+        /// written so when it is parsed: <c>forwarddifference(k^2, k)</c> is <c>(k + 1)^2 - k^2</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </summary>
+        internal static Entity ForwardDifference(Entity function, Entity variable)
+            => variable is Variable { IsConstant: false } k
+                ? function.Substitute(k, k + 1) - function
+                : throw new InvalidArgumentParseException(
+                    $"forwarddifference is taken in a variable, as in forwarddifference(k^2, k), and {variable} is not one");
+
+        /// <summary>
         /// The <see cref="Number.Rational"/> that a quotient of two integer literals denotes, or
         /// the node unchanged where it denotes none.
         /// </summary>
