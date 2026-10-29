@@ -1387,6 +1387,10 @@ namespace AngouriMath
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity Binomial(Entity n, Entity k) => new Binomialf(n, k);
 
+        /// <summary>The Catalan number <c>C_n = binomial(2n, n) / (n + 1)</c></summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity CatalanNumber(Entity n) => new CatalanNumberf(n);
+
         /// <summary>The falling factorial <c>x (x - 1) ... (x - n + 1)</c>, <c>x^{\underline{n}}</c></summary>
         /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
         public static Entity FallingFactorial(Entity x, Entity n) => new FallingFactorialf(x, n);

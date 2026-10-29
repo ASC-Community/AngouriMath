@@ -138,6 +138,8 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("x(x-1)(x-2) + x(x+1) at x = 5", At(factorialPowers, "x", 5), 60 + 30);
             var multinomial = MathS.FromString("multinomial(x, 3, 4)");
             CheckClose("multinomial(x, 3, 4) at x = 2", At(multinomial, "x", 2), 1260);
+            var catalan = MathS.FromString("catalannumber(x)");
+            CheckClose("catalannumber at x = 5", At(catalan, "x", 5), 42);
         }
 
         private static void Simplification()

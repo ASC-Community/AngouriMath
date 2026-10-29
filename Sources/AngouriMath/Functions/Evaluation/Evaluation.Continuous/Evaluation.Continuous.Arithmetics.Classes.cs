@@ -668,6 +668,37 @@ namespace AngouriMath
             }
         }
 
+        public partial record CatalanNumberf
+        {
+            // Defined everywhere but at a negative half-integer, a pole of Γ(n + 1/2).
+            private protected override Entity IntrinsicCondition =>
+                !((Argument + Rational.Create(1, 2)).In(MathS.Sets.Z) & Argument < 0);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact) =>
+                ExpandOnOneArgument(Argument,
+                    a => a switch
+                    {
+                        Integer { EInteger: var n } when n.Sign >= 0 && n.CompareTo(PeterO.Numbers.EInteger.FromInt32(LargestIndex)) <= 0
+                            => Integer.Create(n.Multiply(2).Factorial() / (n.Factorial() * (n + 1).Factorial())),
+                        Integer { EInteger: var n } when n.Sign >= 0 => null,
+                        // 4^n Γ(n + 1/2) / (√π Γ(n + 2)): Γ(n + 2) has a pole at every whole number
+                        // below -1, where its reciprocal vanishes, and at -1 the two poles cancel to -1/2.
+                        Integer { EInteger: var n } when n.Equals(PeterO.Numbers.EInteger.FromInt32(-1)) => Rational.Create(-1, 2),
+                        Integer => Integer.Zero,
+                        Number value when (value + Rational.Create(1, 2)).Evaled is Integer { EInteger.Sign: <= 0 } => MathS.NaN,
+                        Complex value when !isExact
+                            && Number.Factorial((Complex)(value - Rational.Create(1, 2)).Evaled) is var top && Number.Factorial((Complex)(value + 1).Evaled) is var bottom
+                            && !top.IsNaN && !bottom.IsNaN
+                            => (MathS.Pow(4, value) * top / (MathS.Sqrt(MathS.pi) * bottom)).Evaled,
+                        _ => null
+                    },
+                    (@this, a) => ((CatalanNumberf)@this).New(a), isExact);
+
+            /// <summary>How far a Catalan number is computed exactly before the node is left as written.</summary>
+            private const int LargestIndex = 1000;
+        }
+
         public partial record Ref
         {
             // Defined everywhere on the complex plane.

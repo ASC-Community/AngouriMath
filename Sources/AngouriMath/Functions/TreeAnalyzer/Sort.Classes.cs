@@ -176,6 +176,11 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "factorialf_";
         }
 
+        public partial record CatalanNumberf
+        {
+            private protected override string SortHashName(SortLevel level) => "catalannumberf_";
+        }
+
         public partial record Binomialf
         {
             private protected override string SortHashName(SortLevel level) => "binomialf_";
