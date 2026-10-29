@@ -68,6 +68,26 @@ namespace AngouriMath.Tests.Convenience
         }
 
         /// <summary>
+        /// A whole upper argument with a lower one that is not whole goes through the gamma function
+        /// as well, against mpmath to 25 digits: <c>binomial(3, 1/2)</c> is <c>32/(5 pi)</c>. It was
+        /// left unevaluated. With a negative whole upper argument there is no value.
+        /// </summary>
+        [Theory]
+        [InlineData("binomial(3, 1/2)", "2.03718327157626029784171217117")]
+        [InlineData("binomial(0, 1/2)", "0.63661977236758134307553505349")]
+        [InlineData("binomial(4, 3/2)", "5.43248872420336079424456578978")]
+        [InlineData("binomial(3, -1/2)", "0.291026181653751471120244595881")]
+        public void AWholeUpperArgumentWithAFractionalLowerOneEvaluatesThroughTheGammaFunction(string input, string expected)
+        {
+            var value = Assert.IsAssignableFrom<Entity.Number.Real>(input.ToEntity().EvalNumerical());
+            Assert.True(value.EDecimal.Subtract(PeterO.Numbers.EDecimal.FromString(expected)).Abs().CompareTo(PeterO.Numbers.EDecimal.FromString("1e-25")) < 0, $"{input} evaluated to {value}");
+        }
+
+        [Fact]
+        public void ANegativeWholeUpperArgumentWithAFractionalLowerOneHasNoValue()
+            => Assert.Equal(MathS.NaN, "binomial(-3, 1/2)".ToEntity().EvalNumerical());
+
+        /// <summary>
         /// Every whole k has a value, whatever n is; a k that is not whole has one unless n is
         /// a negative whole number, where <c>Γ(n + 1)</c> has a pole.
         /// </summary>

@@ -619,6 +619,18 @@ It is the forward difference with a step of 1, as Mathematica's `DifferenceDelta
 | `"forwarddifference(k^2, k)".ToEntity().Simplify()` | throws `UnhandledParseException` | `1 + 2 * k` |
 | `"forwarddifference(2^k, k)".ToEntity()` | throws `UnhandledParseException` | `2 ^ (k + 1) - 2 ^ k` |
 
+### A binomial with a whole upper argument and a lower one that is not whole is evaluated
+
+**Not silent: what threw is a number.** `binomial(n, k)` with a whole `n` and a `k` that is not whole was left as
+written, so `EvalNumerical` threw `CannotEvalException`. It is the gamma ratio `Γ(n + 1)/(Γ(k + 1) Γ(n - k + 1))`, as
+for any other `n`, and for a negative whole `n` it has no value: `Γ(n + 1)` has a pole there
+([#1411](https://github.com/asc-community/AngouriMath/issues/1411)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"binomial(3, 1/2)".ToEntity().EvalNumerical()` | `CannotEvalException` | `2.0371832715762602978…`, `32/(5 pi)` |
+| `"binomial(-3, 1/2)".ToEntity().EvalNumerical()` | `CannotEvalException` | `NaN` |
+
 ### The harmonic numbers
 
 **Not silent: `harmonicnumber(n)` and `harmonicnumber(n, m)` are the harmonic numbers, where the one was a product and the

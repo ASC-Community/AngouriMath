@@ -566,9 +566,12 @@ namespace AngouriMath
                         // negative n included: binomial(-1, 3) = (-1)(-2)(-3)/3! = -1.
                         (Number top, Integer bottom) when bottom.EInteger.CanFitInInt32() => FallingFactorialOver(top, bottom.EInteger.ToInt32Unchecked()),
                         (_, Integer { IsZero: true }) => Integer.Create(1),
-                        // Through the gamma function only numerically: there is no exact form.
+                        // A k that is not whole has no value with a negative whole n, a pole of Γ(n + 1).
+                        (Integer { EInteger.Sign: < 0 }, Complex bottom) when bottom is not Integer => MathS.NaN,
+                        // Through the gamma function only numerically: there is no exact form. A whole n
+                        // takes it too: binomial(3, 1/2) is 32/(5 pi).
                         (Complex top, Complex bottom) when !isExact
-                            && top is not Integer && Number.Factorial(top) is var topF && Number.Factorial(bottom) is var bottomF
+                            && Number.Factorial(top) is var topF && Number.Factorial(bottom) is var bottomF
                             && Number.Factorial(top - bottom) is var restF && !topF.IsNaN && !bottomF.IsNaN && !restF.IsNaN
                             => topF / (bottomF * restF),
                         _ => null
