@@ -276,6 +276,12 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.catalan({Argument.ToSymPy()})";
         }
 
+        public partial record HarmonicNumberf
+        {
+            internal override string ToSymPy()
+                => Order == Integer.One ? $"sympy.harmonic({Argument.ToSymPy()})" : $"sympy.harmonic({Argument.ToSymPy()}, {Order.ToSymPy()})";
+        }
+
         public partial record Phif
         {
             internal override string ToSymPy() => $"sympy.totient({Argument.ToSymPy()})";

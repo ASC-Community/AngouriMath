@@ -547,6 +547,13 @@ namespace AngouriMath
                 => this == x ? value : New(Argument.Substitute(x, value));
         }
 
+        partial record HarmonicNumberf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value), Order.Substitute(x, value));
+        }
+
         partial record Phif
         {
             /// <inheritdoc/>

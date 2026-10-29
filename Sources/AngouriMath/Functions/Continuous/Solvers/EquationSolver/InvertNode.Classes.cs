@@ -964,6 +964,14 @@ namespace AngouriMath
                 => null;
         }
 
+        partial record HarmonicNumberf
+        {
+            // A harmonic number takes a value at arguments no list here gives. Left unsolved rather
+            // than answered with none.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
         partial record Phif
         {
             // We can't easily calculate (compute) all solutions there are for this function

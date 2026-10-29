@@ -37,8 +37,8 @@ namespace AngouriMath.Tests.Convenience
         // names that will not be functions, refused with the spelling to use:
         // https://github.com/asc-community/AngouriMath/issues/2182. zeta(s) was zeta * s. mobius,
         // moebiusmu, divisorsigma, primenu, primeomega and primepi, laplacian, jacobian and hessian,
-        // fallingfactorial, factorialpower and risingfactorial, multinomial and catalannumber were
-        // among them until they were implemented, in the same issue.
+        // fallingfactorial, factorialpower and risingfactorial, multinomial, catalannumber and
+        // harmonicnumber were among them until they were implemented, in the same issue.
         [Theory]
         [InlineData("trunc(x)")]
         [InlineData("zeta(s)")]
@@ -47,7 +47,6 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("hurwitzzeta(s, a)")]
         [InlineData("lambertw(x)")]
         [InlineData("productlog(x)")]
-        [InlineData("harmonicnumber(n)")]
         [InlineData("forwarddifference(f, k)")]
         [InlineData("heaviside(x)")]
         [InlineData("unitstep(x)")]

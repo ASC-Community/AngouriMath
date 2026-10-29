@@ -1387,6 +1387,14 @@ namespace AngouriMath
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity Binomial(Entity n, Entity k) => new Binomialf(n, k);
 
+        /// <summary>The harmonic number <c>H_n = 1 + 1/2 + ... + 1/n</c></summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity HarmonicNumber(Entity n) => new HarmonicNumberf(n, Integer.One);
+
+        /// <summary>The generalized harmonic number <c>H_n^(m) = 1 + 1/2^m + ... + 1/n^m</c></summary>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity HarmonicNumber(Entity n, Entity m) => new HarmonicNumberf(n, m);
+
         /// <summary>The Catalan number <c>C_n = binomial(2n, n) / (n + 1)</c></summary>
         /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
         public static Entity CatalanNumber(Entity n) => new CatalanNumberf(n);

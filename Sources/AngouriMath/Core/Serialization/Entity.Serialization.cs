@@ -79,6 +79,7 @@ namespace AngouriMath
         }
         [EntityJsonConverter] partial record Orf;
         [EntityJsonConverter] partial record Phif;
+        [EntityJsonConverter] partial record HarmonicNumberf;
         [EntityJsonConverter] partial record CatalanNumberf;
         [EntityJsonConverter] partial record Mobiusf;
         [EntityJsonConverter] partial record DivisorSigmaf;

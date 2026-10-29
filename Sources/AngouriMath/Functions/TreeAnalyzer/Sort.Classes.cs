@@ -181,6 +181,11 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "catalannumberf_";
         }
 
+        public partial record HarmonicNumberf
+        {
+            private protected override string SortHashName(SortLevel level) => "harmonicnumberf_";
+        }
+
         public partial record Binomialf
         {
             private protected override string SortHashName(SortLevel level) => "binomialf_";

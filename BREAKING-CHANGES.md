@@ -483,7 +483,7 @@ the right shape, written out or once its operations are carried out, throws `Inv
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
 products.** An unknown name followed by a bracket is a product, so `zeta(2)` was `zeta * 2` and simplified to
 `2 * zeta`. The long names of the functions the library is to have are refused until each is implemented, as `trunc`
-is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog`, `harmonicnumber` and
+is: `zeta`, `riemannzeta`, `hurwitzzeta`, `lambertw`, `productlog` and
 `forwarddifference`. Names that will not be functions,
 because what they mean differs between sources or is already written exactly, are refused with the spelling to use:
 `heaviside`, `unitstep`, `isprime`, `pochhammer`, `doublefactorial`, `factorial2`, `fractionalpart` and `quotient`.
@@ -496,7 +496,7 @@ Each name without a bracket is still a variable, and short names such as `beta` 
 | `"zeta(2)".ToEntity().Simplify()` | `2 * zeta` | throws `UnrecognizedFunctionParseException` |
 | `"isprime(7)".ToEntity()` | `isprime * 7` | throws `UnrecognizedFunctionParseException`: write `n in PP` |
 | `"heaviside(x)".ToEntity()` | `heaviside * x` | throws `UnrecognizedFunctionParseException`: write `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2` |
-| `"harmonicnumber(n, m)".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
+| `"hurwitzzeta(s, a)".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
 ### The Möbius, divisor and prime-counting functions
 
@@ -531,6 +531,19 @@ is ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 | `"jacobian([x y, x + y], [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[y, x], [1, 1]]` |
 | `"hessian(x^3 y^2, [x, y])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[[6 * x * y ^ 2, 6 * x ^ 2 * y], [6 * x ^ 2 * y, 2 * x ^ 3]]` |
 | `"jacobian(x y, {x, y})".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: a set has no order for the columns |
+
+### The harmonic numbers
+
+**Not silent: `harmonicnumber(n)` and `harmonicnumber(n, m)` are the harmonic numbers, where the one was a product and the
+other a parse error.** They are `1 + 1/2^m + ... + 1/n^m` for a whole `n >= 0`, exact for a rational `m`, and
+`ζ(m) - ζ(m, n + 1)` elsewhere, as Mathematica's `HarmonicNumber` is: `ψ(n + 1) - ψ(1)` for `m = 1`, evaluated numerically
+through `digamma` and `polygamma` for a whole `m >= 1`. A negative integer `n` has no value but for a whole `m <= 0`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"harmonicnumber(4)".ToEntity().Simplify()` | `4 * harmonicnumber` | `25/12` |
+| `"harmonicnumber(n, 2)".ToEntity()` | throws `UnhandledParseException` | `harmonicnumber(n, 2)` |
 
 ### The Catalan numbers
 
