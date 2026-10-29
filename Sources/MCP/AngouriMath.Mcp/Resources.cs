@@ -129,6 +129,7 @@ internal static class Resources
         | `7 % 3` | a parse error. `%` stays free to mean percent |
         | `mod` as a variable name | a parse error: `mod` is a keyword. Rename it |
         | `log(2, 8)` | `3` — base first, then argument |
+        | `gamma` for Euler's constant | `gamma` is the Γ function. Euler's constant γ is `eulergamma`, also `EulerGamma` |
 
         The "silently become" cases are the dangerous ones: they parse, and they mean
         something else. Anything else followed by `(` gets a warning.

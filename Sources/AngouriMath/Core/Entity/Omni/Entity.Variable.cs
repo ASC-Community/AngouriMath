@@ -60,7 +60,8 @@ namespace AngouriMath
                 new Dictionary<string, Func<Complex>>
                 {
                     { nameof(pi), static () => Real.Create(MathS.DecimalConst.pi) },
-                    { nameof(e), static () => Real.Create(MathS.DecimalConst.e) }
+                    { nameof(e), static () => Real.Create(MathS.DecimalConst.e) },
+                    { nameof(eulergamma), static () => Real.Create(MathS.DecimalConst.eulergamma) }
                 };
 
             /// <summary>Each constant as the name a writer types, which is the form a binder can take.</summary>
@@ -69,6 +70,7 @@ namespace AngouriMath
 
             [ConstantField] internal static readonly Constant pi = NamedConstants[nameof(pi)];
             [ConstantField] internal static readonly Constant e = NamedConstants[nameof(e)];
+            [ConstantField] internal static readonly Constant eulergamma = NamedConstants[nameof(eulergamma)];
 
             /// <summary>
             /// The other spellings of a constant's name, each read as the constant itself: <c>π</c>
@@ -76,9 +78,12 @@ namespace AngouriMath
             /// writes them. The Cyrillic <c>е</c> is not among them: it is a letter of an alphabet the
             /// grammar admits on purpose, and reading it as a constant would be the same surprise the
             /// other way round. https://github.com/asc-community/AngouriMath/issues/1260
+            /// Euler's constant is also read as <c>EulerGamma</c>, Mathematica's and SymPy's name for it,
+            /// and not as <c>γ</c>, which is as often a variable.
+            /// https://github.com/asc-community/AngouriMath/issues/2182
             /// </summary>
             [ConstantField] private static readonly IReadOnlyDictionary<string, string> ConstantSpellings =
-                new Dictionary<string, string> { { "\u03C0", nameof(pi) }, { "\u212F", nameof(e) } };
+                new Dictionary<string, string> { { "\u03C0", nameof(pi) }, { "\u212F", nameof(e) }, { "EulerGamma", nameof(eulergamma) } };
 
             /// <summary>The name a spelling stands for: <c>π</c> is <c>pi</c>, and any other name is itself.</summary>
             private static string Spelled(string name) => ConstantSpellings.TryGetValue(name, out var constant) ? constant : name;

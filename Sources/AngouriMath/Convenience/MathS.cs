@@ -4126,6 +4126,15 @@ namespace AngouriMath
         /// </example>
         [ConstantField] public static readonly Variable pi = Variable.pi;
 
+        /// <summary>
+        /// Euler's constant, the Euler–Mascheroni constant <c>γ = lim (1 + 1/2 + ... + 1/n - ln n)</c>,
+        /// <c>0.5772156649…</c>. It is written <c>eulergamma</c>, since <c>gamma</c> is the Γ function, and
+        /// <c>EulerGamma</c> is read as it too. <c>digamma(1)</c> is <c>-eulergamma</c>.
+        /// <a href="https://en.wikipedia.org/wiki/Euler%27s_constant"/>
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2182">#2182</a>
+        /// </summary>
+        [ConstantField] public static readonly Variable eulergamma = Variable.eulergamma;
+
         // Undefined
         /// <summary>
         /// NaN represents both "undefined" and "indeterminate".
@@ -7816,6 +7825,11 @@ namespace AngouriMath
             /// </example>
             public static EDecimal e =>
                 InternalAMExtensions.ConstantCache.Lookup(Settings.DecimalPrecisionContext).E;
+
+            /// <summary>Euler's constant, <see cref="MathS.eulergamma"/>, to the current precision.
+            /// <a href="https://en.wikipedia.org/wiki/Euler%27s_constant"/></summary>
+            public static EDecimal eulergamma =>
+                Entity.Number.EulerGamma(Settings.DecimalPrecisionContext);
         }
 
         /// <summary>

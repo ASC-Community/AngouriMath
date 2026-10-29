@@ -547,12 +547,14 @@ It is the forward difference with a step of 1, as Mathematica's `DifferenceDelta
 **Not silent: `harmonicnumber(n)` and `harmonicnumber(n, m)` are the harmonic numbers, where the one was a product and the
 other a parse error.** They are `1 + 1/2^m + ... + 1/n^m` for a whole `n >= 0`, exact for a rational `m`, and
 `ζ(m) - ζ(m, n + 1)` elsewhere, as Mathematica's `HarmonicNumber` is: `ψ(n + 1) - ψ(1)` for `m = 1`, evaluated numerically
-through `digamma` and `polygamma` for a whole `m >= 1`. A negative integer `n` has no value but for a whole `m <= 0`
+through `digamma` and `polygamma` for a whole `m >= 1`, and exactly at a half-whole `n` for `m = 1` or an even `m`. A
+negative integer `n` has no value but for a whole `m <= 0`
 ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"harmonicnumber(4)".ToEntity().Simplify()` | `4 * harmonicnumber` | `25/12` |
+| `"harmonicnumber(1/2)".ToEntity().Simplify()` | `harmonicnumber / 2` | `2 - 2 * ln(2)` |
 | `"harmonicnumber(n, 2)".ToEntity()` | throws `UnhandledParseException` | `harmonicnumber(n, 2)` |
 
 ### A linear function times an exponential is solved by the Lambert W function
@@ -584,6 +586,21 @@ and `lambertw(-1/e)` is `-1`, and it is evaluated numerically elsewhere. Its der
 | `"lambertw(e)".ToEntity().Simplify()` | `e * lambertw` | `1` |
 | `"productlog(e)".ToEntity().Simplify()` | `e * productlog` | `1` |
 | `"lambertw(-1, x)".ToEntity()` | throws `UnhandledParseException` | `lambertw(-1, x)` |
+
+### `eulergamma` is Euler's constant
+
+**Silent: `eulergamma` is the Euler–Mascheroni constant `γ = 0.5772156649…`, where it was a variable.** So is
+`EulerGamma`, Mathematica's and SymPy's name for it; `γ` is still a variable and `gamma` the Γ function. It is evaluated to
+the working precision, drawn `\mathrm{\gamma}` and exported as `sympy.EulerGamma`, and a name an operator declares is still
+the name, so `sum(eulergamma, eulergamma, 1, 3)` is `6`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"eulergamma".ToEntity().EvalNumerical()` | `eulergamma` | `0.5772156649015328…` |
+| `"EulerGamma".ToEntity().EvalNumerical()` | `EulerGamma` | `0.5772156649015328…` |
+| `"eulergamma > 1/2".ToEntity().Simplify()` | `eulergamma > 1/2` | `True` |
+| `"eulergamma".ToEntity().Latexize()` | `\mathrm{eulergamma}` | `\mathrm{\gamma}` |
 
 ### The Catalan numbers
 
@@ -742,7 +759,7 @@ no others. Where that proof does not go through, or a bound is symbolic, the int
 - **Evaluation.** Each is evaluated to the working precision anywhere in the complex plane but at `0, -1, -2, ...`, its poles, where it is `NaN`.
 - **Derivatives.** Each order differentiates to the next. The derivative of `x!`, which was left unevaluated, is `x! * digamma(x + 1)` ([#171](https://github.com/asc-community/AngouriMath/issues/171)).
 - **Integrals.** Each order integrates to the one before, and `digamma(x)` to `ln((x - 1)!)`.
-- **Exact values.** An odd order at a whole or half-whole argument is a rational times a power of `pi` plus a rational: `polygamma(1, 1)` is `1/6 * pi ^ 2`.
+- **Exact values.** An odd order at a whole or half-whole argument is a rational times a power of `pi` plus a rational: `polygamma(1, 1)` is `1/6 * pi ^ 2`. The digamma function there is a rational less Euler's constant, and at a half-whole argument less `2 ln 2` as well: `digamma(1)` is `-eulergamma`.
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
@@ -753,6 +770,7 @@ no others. Where that proof does not go through, or a bound is symbolic, the int
 | `"gamma(x)".ToEntity().Differentiate("x")` | `derivative((x - 1)!, x)` | `(x - 1)! * digamma(x - 1 + 1)` |
 | `"polygamma(1, 3)".ToEntity().InnerSimplified` | an `UnhandledParseException` | `1/6 * pi ^ 2 - 5/4` |
 | `"digamma(x)".ToEntity().Integrate("x")` | `digamma * x ^ 2 / 2 + C`, of the product | `ln((x - 1)!) + C` |
+| `"digamma(1/2)".ToEntity().Simplify()` | `digamma / 2` | `(-2) * ln(2) - eulergamma` |
 
 ### `gamma(a, z)` is the upper incomplete gamma function
 

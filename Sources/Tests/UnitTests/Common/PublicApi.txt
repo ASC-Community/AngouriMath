@@ -3380,6 +3380,7 @@ AngouriMath.MathS+Compute.Phi(AngouriMath.Entity+Number+Integer) : AngouriMath.E
 AngouriMath.MathS+Compute.SymbolicFormOfCosine(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+Compute.SymbolicFormOfSine(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+DecimalConst.e { } : PeterO.Numbers.EDecimal
+AngouriMath.MathS+DecimalConst.eulergamma { } : PeterO.Numbers.EDecimal
 AngouriMath.MathS+DecimalConst.pi { } : PeterO.Numbers.EDecimal
 AngouriMath.MathS+Diagnostic.CatchOnSimplify { } : AngouriMath.Convenience.Setting<System.Func<AngouriMath.Entity,System.Boolean>>
 AngouriMath.MathS+Diagnostic.OutputExplicit { } : AngouriMath.Convenience.Setting<System.Boolean>
@@ -3643,6 +3644,7 @@ AngouriMath.MathS.ZeroMatrix(System.Int32) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.ZeroMatrix(System.Int32, System.Int32) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.ZeroVector(System.Int32) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.e : AngouriMath.Entity+Variable
+AngouriMath.MathS.eulergamma : AngouriMath.Entity+Variable
 AngouriMath.MathS.i : AngouriMath.Entity+Number+Complex
 AngouriMath.MathS.oo : AngouriMath.Entity+Number+Real
 AngouriMath.MathS.pi : AngouriMath.Entity+Variable
