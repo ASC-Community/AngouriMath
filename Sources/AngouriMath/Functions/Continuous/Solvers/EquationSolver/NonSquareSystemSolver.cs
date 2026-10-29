@@ -66,13 +66,16 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 
             if (Eliminate(equations, variables, variables.Length, ParameterFor, ledger) is not { Count: > 0 } families)
                 return null;
+            var own = new HashSet<Variable>(equations.SelectMany(equation => equation.Vars));
             foreach (var family in families)
                 foreach (var equation in equations)
                 {
                     var substituted = equation;
                     for (var index = 0; index < variables.Length; index++)
                         substituted = substituted.Substitute(variables[index], family[index]);
-                    if (!Vanishes(substituted))
+                    // An n_1 a family brings from a periodic root stands for every whole number.
+                    var whole = substituted.Vars.Where(name => !own.Contains(name) && name.Name.StartsWith("n_")).Distinct().ToList();
+                    if (!Vanishes(substituted, whole))
                         return null;
                 }
             return families;
@@ -183,7 +186,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// </summary>
         private static bool? Holds(Entity equation)
         {
-            if (Vanishes(equation))
+            if (Vanishes(equation, System.Array.Empty<Variable>()))
                 return true;
             if (equation.Vars.Any() || equation.Evaled is not Complex value || value.IsNaN)
                 return null;
@@ -201,30 +204,50 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// <c>0 provided not c = 0</c> for a <c>c</c> that is zero without being written
         /// <c>0</c>, such as <c>(a + 1)^2 - a^2 - 2a - 1</c>.
         /// </summary>
-        private static bool Vanishes(Entity expression)
+        /// <remarks>
+        /// A symbol in <paramref name="whole"/> stands for every whole number, so it is pinned at
+        /// one, and the expression is zero where it is zero for each: <c>sin(pi/6 + 2 pi n_1) - 1/2</c>
+        /// is decided as <c>forall n_1 in ZZ : sin(pi/6 + 2 pi n_1) - 1/2 = 0</c>, which takes the
+        /// whole periods out. https://github.com/asc-community/AngouriMath/issues/212
+        /// </remarks>
+        private static bool Vanishes(Entity expression, IReadOnlyList<Variable> whole)
         {
             if (expression.InnerSimplified.Evaled is Complex { IsZero: true })
                 return true;
             // Away from zero at a point is not zero everywhere, which settles most without
             // simplifying.
-            if (Pinned(expression).Evaled is Complex { IsNaN: false } atAPoint
+            if (Pinned(expression, whole).Evaled is Complex { IsNaN: false } atAPoint
                 && ((Real)atAPoint.Abs()).EDecimal.ToDouble() > 1e-9)
                 return false;
+            if (whole.Count > 0)
+            {
+                Entity statement = expression.EqualTo(Integer.Zero);
+                foreach (var name in whole)
+                    statement = MathS.ForAll(name, MathS.Sets.Z, statement);
+                if (statement.Simplify() == Entity.Boolean.True)
+                    return true;
+            }
             return expression.Simplify() switch
             {
                 Providedf(var simplified, var condition) =>
-                    simplified.Evaled is Complex { IsZero: true } && Pinned(condition).Evaled is Entity.Boolean { Value: true },
+                    simplified.Evaled is Complex { IsZero: true } && Pinned(condition, whole).Evaled is Entity.Boolean { Value: true },
                 var simplified => simplified.Evaled is Complex { IsZero: true },
             };
         }
 
-        /// <summary><paramref name="expression"/> with each of its symbols at a fixed value.</summary>
-        private static Entity Pinned(Entity expression)
+        /// <summary>
+        /// <paramref name="expression"/> with each of its symbols at a fixed value, a whole one for
+        /// a symbol in <paramref name="whole"/>.
+        /// </summary>
+        private static Entity Pinned(Entity expression, IReadOnlyList<Variable> whole)
         {
             var values = new[] { 1.37, 0.61, 2.23, 1.91, 0.83, 1.13 };
-            var index = 0;
+            var wholeValues = new[] { 2, -1, 3 };
+            var (index, wholeIndex) = (0, 0);
             foreach (var symbol in expression.Vars.ToList())
-                expression = expression.Substitute(symbol, values[index++ % values.Length]);
+                expression = whole.Contains(symbol)
+                    ? expression.Substitute(symbol, wholeValues[wholeIndex++ % wholeValues.Length])
+                    : expression.Substitute(symbol, values[index++ % values.Length]);
             return expression;
         }
     }

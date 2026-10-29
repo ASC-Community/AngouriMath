@@ -76,7 +76,8 @@ namespace AngouriMath.Functions.Boolean
         /// </summary>
         internal static (Entity? Verdict, Entity Body)? Decide(Quantifiers.Kind kind, Entity var, Entity over, Entity body, bool isExact)
         {
-            if (var is not Variable x || over is not Set set || !body.Nodes.Any(Reads))
+            if (var is not Variable x || over is not Set set
+                || !body.Nodes.Any(node => Reads(node) || set is SpecialSet whole && Quantifiers.IsIntegerSet(whole) && IsPeriodic(node)))
                 return null;
             var renamed = Variable.CreateVariableUnchecked($"{x.Name}'{Interlocked.Increment(ref lastRenamed)}");
             var mark = ProofRecording.Mark();
@@ -449,6 +450,46 @@ namespace AngouriMath.Functions.Boolean
                     "Int.ceil_eq_floor_add_one_iff_notMem").InnerSimplified(isExact);
             return null;
         }
+
+        /// <summary>
+        /// The function of <paramref name="argument"/> with each term of it that is a whole number of
+        /// periods by the facts in scope taken out, or <see langword="null"/>: <c>sin(x + 2 pi n)</c> is
+        /// <c>sin(x)</c> for a whole <c>n</c>, as <c>Complex.sin_add_int_mul_two_pi</c> has it. The period is
+        /// <paramref name="halfTurns"/> times <c>pi</c>: two for the sine, the cosine, the secant and the
+        /// cosecant, and one for the tangent and the cotangent, as <c>Complex.tan_add_int_mul_pi</c> has it.
+        /// https://github.com/asc-community/AngouriMath/issues/212
+        /// </summary>
+        internal static Entity? WithoutWholePeriods(Entity argument, int halfTurns, System.Func<Entity, Entity> function, string lemma)
+        {
+            if (top is null || argument is Number || !MentionsARenamedName(argument))
+                return null;
+            // A term of the argument, or of its multiple of pi where it is gathered into one,
+            // such as pi * (2 n + 1/6).
+            var kept = new List<Entity>();
+            Entity? periods = null;
+            foreach (var term in Sumf.LinearChildren(argument))
+            {
+                if (!MentionsARenamedName(term) || MathS.UnsafeAndInternal.DivideByEntityStrict(term, MathS.pi) is not { } multiple)
+                {
+                    kept.Add(term);
+                    continue;
+                }
+                var parts = Sumf.LinearChildren(multiple);
+                foreach (var part in parts)
+                    if (MentionsARenamedName(part) && IsWholeNumber(Rational.Create(1, halfTurns) * part))
+                        periods = periods is null ? part * MathS.pi : periods + part * MathS.pi;
+                    else
+                        kept.Add(parts.Count == 1 ? term : part * MathS.pi);
+            }
+            if (periods is null)
+                return null;
+            var rest = kept.Count == 0 ? Integer.Zero : kept.Aggregate((left, right) => left + right);
+            return Recorded(function(argument), function(rest), $"{periods} is a whole number of periods", lemma);
+        }
+
+        /// <summary>A function <see cref="WithoutWholePeriods"/> takes whole periods out of, of anything but a number.</summary>
+        private static bool IsPeriodic(Entity node)
+            => node is Sinf(not Number) or Cosf(not Number) or Tanf(not Number) or Cotanf(not Number) or Secantf(not Number) or Cosecantf(not Number);
 
         /// <summary><paramref name="to"/>, with the step from <paramref name="from"/> recorded where a proof is.</summary>
         private static Entity Recorded(Entity from, Entity to, string rule, string lemma)

@@ -401,17 +401,33 @@ over the rationals with rational solutions or had fewer equations and was linear
 system is now eliminated one unknown at a time, and an unknown that nothing is left to constrain becomes a parameter,
 `t_1`, as in the linear case. Every row is substituted back into every equation and kept only where each simplifies to
 zero. Where one does not, or where a branch cannot be decided, the system is declined as `null`, which `Solve`
-documents as no solution found ([#212](https://github.com/asc-community/AngouriMath/issues/212)). Code that caught the
-exception around `Solve` to detect a non-square system no longer sees it.
+documents as no solution found ([#212](https://github.com/asc-community/AngouriMath/issues/212)). A family with an
+`n_1` from a periodic root, which stands for every whole number, is kept where it is zero for each, as
+`forall n_1 in ZZ` decides it. Code that caught the exception around `Solve` to detect a non-square system no longer
+sees it.
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `MathS.Equations("x^2 + y^2 - 1").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `[[t_1, sqrt(-(t_1 ^ 2 + -1))], [t_1, -sqrt(-(t_1 ^ 2 + -1))]]` |
 | `MathS.Equations("a*x + y - 1").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `[[t_1, -(a * t_1 + -1)]]` |
 | `MathS.Equations("sin(x)", "x").Solve("x")` | `WrongNumberOfArgumentsException` | `[0]` |
+| `MathS.Equations("sin(x) - 1/2").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `[[pi / 6 + 2 * pi * n_1, t_1], [pi - pi / 6 + 2 * pi * n_1, t_1]]` |
 | `MathS.Equations("sin(x) - y", "cos(x) - y", "x - pi/4").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `[[pi / 4, 1/2 * sqrt(2)]]` |
 | `MathS.Equations("sqrt(y) - x").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `null`: `y = x^2` is no solution where `x` is negative |
 | `MathS.Equations("x + y - a", "x - y - b", "x - c").Solve("x", "y")` | `WrongNumberOfArgumentsException` | `null`: there are solutions only where `a + b = 2c` |
+
+### A whole number of periods comes out of a trigonometric function under a quantifier
+
+**Silent: a statement quantified over whole numbers is decided where it was left as written.** Where the quantifiers
+around a sine, a cosine, a secant or a cosecant establish that a term of its argument is a whole multiple of `2 pi`,
+or of `pi` for a tangent or a cotangent, the term is taken out, as `Complex.sin_add_int_mul_two_pi` and
+`Complex.tan_add_int_mul_pi` have it. Nothing changes outside a quantifier, and `sin(x + pi n)` keeps its `pi n`
+([#212](https://github.com/asc-community/AngouriMath/issues/212)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"forall n in ZZ : sin(x + 2 pi n) = sin(x)".ToEntity().Simplify()` | `forall n in ZZ : sin(2 * n * pi + x) = sin(x)` | `True` |
+| `"forall n in ZZ : tan(pi/4 + pi n) = 1".ToEntity().Simplify()` | `forall n in ZZ : tan(pi * (1/4 + n)) = 1` | `True` |
 
 ### A system is not answered with a copy of one of its rows
 
