@@ -415,6 +415,23 @@ compiled to `bool`, it is `false`, as one that does not hold
 | `"x provided x > 1".ToEntity().Compile<Complex, Complex>("x")(2)` | `UncompilableNodeException` | `(2, 0)` |
 | `"x provided x > 1".ToEntity().Compile<Complex, Complex>("x")(Complex.ImaginaryOne)` | `UncompilableNodeException` | `(NaN, 0)` |
 
+### A compiled statement asked for as a number is its truth value
+
+**Not silent: what threw is compiled.** In the LINQ compiler, a statement compiled to a number, as
+`Compile<double, double>` or `Compile<Complex, Complex>`, threw `InvalidProtocolProvided`, there being no `NaN` of a
+`bool`. It is now its truth value, `1` where it holds, `0` where it does not and `NaN` where it has none, as
+FastExpression and an Iverson bracket give it. A `provided` statement and a `piecewise` one compile too, with no truth
+value where no case holds. A `piecewise` mixing statements and numbers, and a statement that may have no truth value
+asked for as an integer type, which has no `NaN`, are refused with `UncompilableNodeException`. A `piecewise` of
+statements threw `KeyNotFoundException`, outside the library's own exceptions
+([#2224](https://github.com/asc-community/AngouriMath/issues/2224)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x > 1".ToEntity().Compile<double, double>("x")(2)` | throws `InvalidProtocolProvided` | `1` |
+| `"x > 1 provided x > 0".ToEntity().Compile<double, bool?>("x")(-1)` | throws `InvalidProtocolProvided` | `null` |
+| `"piecewise(x > 1 provided x > 0, x < -1)".ToEntity().Compile<double, bool?>("x")(-2)` | throws `KeyNotFoundException` | `true` |
+
 ### `Compile` compiles statements, `provided` and `piecewise`
 
 **Not silent: what was refused is compiled.** `Entity.Compile(...)`, which returns a `FastExpression`, refused a

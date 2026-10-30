@@ -49,6 +49,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             
             type = Nullable.GetUnderlyingType(type) ?? type;
             
+            // A statement with no truth value is null, as Kleene's logic has it: the NaN of a provided
+            // statement where its predicate fails. https://github.com/asc-community/AngouriMath/issues/2224
+            if (type == typeof(bool))
+                return Expression.Constant(null, typeof(bool?));
             if (type == typeof(System.Numerics.Complex))
                 return Expression.Constant(new System.Numerics.Complex(double.NaN, 0));
             if (type == typeof(double))
@@ -80,6 +84,15 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 return Expression.Call(ThreeValuedLogic.HoldsMethod, expr);
             if (expr.Type == typeof(bool) && type == typeof(bool?))
                 return Expression.Convert(expr, type);
+            // A statement as a number is its truth value: 1 where it holds, 0 where it does not and NaN where
+            // it has none, as FastExpression and an Iverson bracket give it. It threw InvalidProtocolProvided,
+            // there being no NaN of a bool. https://github.com/asc-community/AngouriMath/issues/2224
+            if ((expr.Type == typeof(bool) || expr.Type == typeof(bool?)) && typeLevelInHierarchy.ContainsKey(Nullable.GetUnderlyingType(type) ?? type))
+            {
+                if (expr.Type == typeof(bool?) && Nullable.GetUnderlyingType(type) is null && ((ConstantExpression)ConvertNaN(type)).Value is null && type != typeof(object))
+                    throw new UncompilableNodeException($"A statement that may have no truth value cannot be compiled as {type}, which has no NaN");
+                return ConvertType(Expression.Call(ThreeValuedLogic.IversonMethod, ConvertType(expr, typeof(bool?))), type);
+            }
             // A tensor converts to nothing but itself: a matrix over one element type is not
             // a matrix over another, and it is not a number.
             if (TensorCompilation.IsTensor(expr.Type) || TensorCompilation.IsTensor(type))
@@ -293,6 +306,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             
             Expression HandleProvidedf(Expression expr, Expression cond)
             {
+                // A provided statement has no truth value where its predicate fails.
+                if (expr.Type == typeof(bool))
+                    expr = Expression.Convert(expr, typeof(bool?));
                 var nan = ConvertNaN(expr.Type);
                 (expr, nan) = EqualizeTypesIfAble(expr, nan);
                 return Expression.Condition(Holds(cond), expr, nan);
@@ -340,11 +356,25 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             if (children.Length == 0)
                 return Expression.Constant(null, typeof(object));
             
-            Type maxType = typeof(int);
+            // A piecewise statement is one of its cases' truth values, and none where no case holds; one that
+            // mixes statements and numbers has no type to compile to.
+            // https://github.com/asc-community/AngouriMath/issues/2224
+            var statements = 0;
             for (int i = 0; i < children.Length; i += 2)
-            {
-                maxType = MaxType(maxType, children[i].Type);
-            }
+                if (children[i].Type == typeof(bool) || children[i].Type == typeof(bool?))
+                {
+                    children[i] = ConvertType(children[i], typeof(bool?));
+                    statements++;
+                }
+            if (statements > 0 && statements * 2 != children.Length)
+                throw new UncompilableNodeException("A piecewise whose cases are statements and numbers at once has no compiled form");
+
+            Type maxType = statements > 0 ? typeof(bool?) : typeof(int);
+            if (statements == 0)
+                for (int i = 0; i < children.Length; i += 2)
+                {
+                    maxType = MaxType(maxType, children[i].Type);
+                }
             
             // last case
             var expression = children[^2];
