@@ -194,6 +194,18 @@ and `Simplify` passed that on as `not x = 0`, though at `x = 0` the input is `-y
 | `"sgn(NaN)".ToEntity().Evaled` | `1` | `NaN` |
 | `"sgn(-1 provided false)".ToEntity().Evaled` | `1` | `NaN` |
 
+### A negation of a signed term is printed in brackets
+
+**Silent: `-(-2/3)` prints as `-(-2/3)`, where it printed as `--2/3`.** A negation prints as a bare `-` in front of what
+it negates, and a negative integer was bracketed by its priority, but a negative rational, a negation, and `+oo` were
+not. `--5/4` reads back as `-(-5) / 4`, which has the same value as a different expression, and is easy to misread
+([#2264](https://github.com/asc-community/AngouriMath/issues/2264)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sinh(-5/4)".ToEntity().ToString()` | `(e ^ (-5/4) - e ^ (--5/4)) / 2` | `(e ^ (-5/4) - e ^ (-(-5/4))) / 2` |
+| `new Entity.Mulf(-1, new Entity.Mulf(-1, x)).ToString()` | `--x` | `-(-x)` |
+
 ### A matrix is divided, raised to a power and compared as a matrix
 
 **Silent: wrong answers about matrices become right, or stay written.** Where an operation had no answer of its own
