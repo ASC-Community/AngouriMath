@@ -381,6 +381,20 @@ one where both sides are real, and `NaN` where either is not
 |---|---|---|
 | `"x mod 3".ToEntity().Compile<Complex, Complex>("x")(7)` | `UncompilableNodeException` | `(1, 0)` |
 
+### A compiled product of real numbers is real at an infinity
+
+**Silent: a compiled product or quotient with a real infinity is that infinity, where it had a `NaN` imaginary part.**
+Over `System.Numerics.Complex`, in FastExpression and in the LINQ compiler, the product's imaginary part was
+`∞ · 0`, which is `NaN`, so `-x` at `+oo` was `(-∞, NaN)`: a value with no imaginary part at all, which a comparison
+then had no truth value for. A product or a quotient of two real numbers is now taken as one of reals. A division by
+`0` is unchanged, and has no value, as evaluation has none
+([#2222](https://github.com/asc-community/AngouriMath/issues/2222)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"-x".ToEntity().Compile("x").Call(double.PositiveInfinity)` | `(-Infinity, NaN)` | `(-Infinity, 0)` |
+| `"x / 2".ToEntity().Compile<Complex, Complex>("x")(double.PositiveInfinity)` | `(Infinity, NaN)` | `(Infinity, 0)` |
+
 ### A compiled statement with no truth value has none
 
 **Silent in part: a compiled comparison has the truth value evaluation gives it.** A comparison over `Complex` was refused
