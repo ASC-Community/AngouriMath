@@ -39,9 +39,35 @@ namespace AngouriMath.Core.Compilation
         /// see https://github.com/asc-community/AngouriMath/issues/115.
         /// </remarks>
         public static NumericsComplex Arcsin(NumericsComplex a)
-            => a.Imaginary == 0 && Math.Abs(a.Real) > 1
+            => (a = Unsigned(a)).Imaginary == 0 && Math.Abs(a.Real) > 1
                 ? NumericsComplex.Conjugate(NumericsComplex.Asin(a))
                 : NumericsComplex.Asin(a);
+
+        /// <summary>
+        /// <paramref name="z"/> with each zero part read as <c>+0</c>. The library has no signed zero, so a real
+        /// number is on the upper side of every branch cut it lies on; <see cref="System.Numerics.Complex"/>
+        /// computes <c>-0</c> as a part of many real values, <c>cos(2)</c> and <c>conj(-2)</c> among them, and reads
+        /// it as the lower side, which made <c>ln(cos(x))</c> at 2 the conjugate of the logarithm. Adding <c>+0</c>
+        /// turns <c>-0</c> into <c>+0</c> and changes no other number. Taken at the entry of every function with a cut.
+        /// https://github.com/asc-community/AngouriMath/issues/2236
+        /// </summary>
+        public static NumericsComplex Unsigned(NumericsComplex z) => new(z.Real + 0.0, z.Imaginary + 0.0);
+
+        /// <summary>
+        /// The logarithm of <paramref name="value"/> to <paramref name="base"/>, <c>ln(value) / ln(base)</c> for any
+        /// base, where FastExpression's <c>Complex.Log(value, base.Real)</c> dropped a complex base's imaginary part.
+        /// https://github.com/asc-community/AngouriMath/issues/2239
+        /// </summary>
+        public static NumericsComplex Log(NumericsComplex @base, NumericsComplex value)
+            => RealProducts.Quotient(NumericsComplex.Log(Unsigned(value)), NumericsComplex.Log(Unsigned(@base)));
+
+        public static NumericsComplex Arccos(NumericsComplex a) => NumericsComplex.Acos(Unsigned(a));
+
+        public static NumericsComplex Arctan(NumericsComplex a) => NumericsComplex.Atan(Unsigned(a));
+
+        public static NumericsComplex Arccotan(NumericsComplex a) => NumericsComplex.Atan(Unsigned(1 / a));
+
+        public static NumericsComplex Arcsecant(NumericsComplex a) => NumericsComplex.Acos(Unsigned(1 / a));
 
         /// <summary>
         /// The arccosecant the library evaluates to, which is <see cref="Arcsin"/> of the

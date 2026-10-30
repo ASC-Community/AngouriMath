@@ -23,7 +23,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /* POWERS */
 
         public static System.Numerics.Complex Log(System.Numerics.Complex a, System.Numerics.Complex b)
-            => System.Numerics.Complex.Log(b) / System.Numerics.Complex.Log(a);
+            => AngouriMath.Core.Compilation.ComplexBranches.Log(a, b);
         public static double Log(double a, double b)
             => Math.Log(b, a);
         public static float Log(float a, float b)
@@ -109,7 +109,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
 
         public static System.Numerics.Complex Acos(System.Numerics.Complex a)
-            => System.Numerics.Complex.Acos(a);
+            => AngouriMath.Core.Compilation.ComplexBranches.Arccos(a);
         public static double Acos(double a)
             => Math.Acos(a);
         public static float Acos(float a)
@@ -123,7 +123,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
 
         public static System.Numerics.Complex Atan(System.Numerics.Complex a)
-            => System.Numerics.Complex.Atan(a);
+            => AngouriMath.Core.Compilation.ComplexBranches.Arctan(a);
         public static double Atan(double a)
             => Math.Atan(a);
         public static float Atan(float a)
@@ -185,7 +185,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
 
         public static System.Numerics.Complex Acot(System.Numerics.Complex a)
-            => System.Numerics.Complex.Atan(1 / a);
+            => AngouriMath.Core.Compilation.ComplexBranches.Arccotan(a);
         public static double Acot(double a)
             => Math.Atan(1 / a);
         public static float Acot(float a)
@@ -199,7 +199,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
 
         public static System.Numerics.Complex Asec(System.Numerics.Complex a)
-            => System.Numerics.Complex.Acos(1 / a);
+            => AngouriMath.Core.Compilation.ComplexBranches.Arcsecant(a);
         public static double Asec(double a)
             => Math.Acos(1 / a);
         public static float Asec(float a)
@@ -299,36 +299,36 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
         // The special functions, in double precision as the kernels define them, and the factorial,
         // the gamma function one along. https://github.com/asc-community/AngouriMath/issues/1607
-        public static System.Numerics.Complex Erf(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erf(a);
+        public static System.Numerics.Complex Erf(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erf(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Erf(double a) => AngouriMath.Numerics.SpecialFunctions.Erf(a);
-        public static System.Numerics.Complex Erfc(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erfc(a);
+        public static System.Numerics.Complex Erfc(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erfc(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Erfc(double a) => AngouriMath.Numerics.SpecialFunctions.Erfc(a);
-        public static System.Numerics.Complex Erfi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erfi(a);
+        public static System.Numerics.Complex Erfi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Erfi(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Erfi(double a) => AngouriMath.Numerics.SpecialFunctions.Erfi(a);
-        public static System.Numerics.Complex Ei(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Ei(a);
+        public static System.Numerics.Complex Ei(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Ei(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Ei(double a) => AngouriMath.Numerics.SpecialFunctions.Ei(a);
-        public static System.Numerics.Complex Li(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Li(a);
+        public static System.Numerics.Complex Li(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Li(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Li(double a) => AngouriMath.Numerics.SpecialFunctions.Li(a);
-        public static System.Numerics.Complex Si(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Si(a);
+        public static System.Numerics.Complex Si(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Si(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Si(double a) => AngouriMath.Numerics.SpecialFunctions.Si(a);
-        public static System.Numerics.Complex Ci(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Ci(a);
+        public static System.Numerics.Complex Ci(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Ci(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Ci(double a) => AngouriMath.Numerics.SpecialFunctions.Ci(a);
-        public static System.Numerics.Complex Shi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Shi(a);
+        public static System.Numerics.Complex Shi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Shi(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Shi(double a) => AngouriMath.Numerics.SpecialFunctions.Shi(a);
-        public static System.Numerics.Complex Chi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Chi(a);
+        public static System.Numerics.Complex Chi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Chi(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Chi(double a) => AngouriMath.Numerics.SpecialFunctions.Chi(a);
-        public static System.Numerics.Complex Factorial(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Factorial(a);
+        public static System.Numerics.Complex Factorial(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Factorial(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Factorial(double a) => AngouriMath.Numerics.SpecialFunctions.Factorial(a);
 
         // The conjugate, the principal argument and the real and the imaginary parts.
         // https://github.com/asc-community/AngouriMath/issues/2195
-        public static System.Numerics.Complex Conj(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Conj(a);
+        public static System.Numerics.Complex Conj(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Conj(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Conj(double a) => AngouriMath.Numerics.ComplexParts.Conj(a);
-        public static System.Numerics.Complex Arg(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Arg(a);
+        public static System.Numerics.Complex Arg(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Arg(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Arg(double a) => AngouriMath.Numerics.ComplexParts.Arg(a);
-        public static System.Numerics.Complex Re(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Re(a);
+        public static System.Numerics.Complex Re(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Re(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Re(double a) => AngouriMath.Numerics.ComplexParts.Re(a);
-        public static System.Numerics.Complex Im(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Im(a);
+        public static System.Numerics.Complex Im(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.Im(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double Im(double a) => AngouriMath.Numerics.ComplexParts.Im(a);
 
         // The binomial coefficient, the factorial powers and the double factorial, on the interpreter's
@@ -346,7 +346,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
         // The Lambert W function on the branch the first argument names.
         // https://github.com/asc-community/AngouriMath/issues/2195
-        public static System.Numerics.Complex LambertW(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
+        public static System.Numerics.Complex LambertW(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, AngouriMath.Core.Compilation.ComplexBranches.Unsigned(b));
         public static double LambertW(double a, double b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
 
         // The polygamma functions of a whole order, and the harmonic numbers.
