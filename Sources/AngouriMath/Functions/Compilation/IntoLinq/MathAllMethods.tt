@@ -63,10 +63,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
         public static System.Numerics.Complex Pow(System.Numerics.Complex a, System.Numerics.Complex b)
             => AngouriMath.Core.Compilation.RealProducts.Power(a, b);
+        // A power of a number that does not exist, or to such a power, has no value, as in evaluation and the other
+        // compilers: Math.Pow takes NaN^0 and 1^NaN as 1. https://github.com/asc-community/AngouriMath/issues/2250
         public static double Pow(double a, double b)
-            => Math.Pow(a, b);
+            => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : Math.Pow(a, b);
         public static float Pow(float a, float b)
-            => (float)Math.Pow(a, b);
+            => float.IsNaN(a) || float.IsNaN(b) ? float.NaN : (float)Math.Pow(a, b);
         public static long Pow(long a, long b)
             => (long)Math.Pow(a, b);
         public static int Pow(int a, int b)
