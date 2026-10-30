@@ -78,6 +78,13 @@ namespace AngouriMath.Functions.Algebra
         {
             if (depth > 0)
                 return null;                       // already inside; the caller is the entry
+            // The algorithm is for real functions, and its series takes the logarithm of a
+            // negative leading coefficient as the principal one, which is the limit from above
+            // the cut. ln(x^x) at -1 from the right is ln((1/x - 1)^(1/x - 1)) here, whose
+            // argument comes to -1 from below, and it answered i pi where the limit is -i pi.
+            // https://github.com/asc-community/AngouriMath/issues/2266
+            if (expr.Nodes.Any(node => LimitFunctional.TakesItsValueOnACut(node, x, Real.PositiveInfinity)))
+                return null;
             expr = AsExponentials(expr, x);
             return LimitInf(expr, x);
         }

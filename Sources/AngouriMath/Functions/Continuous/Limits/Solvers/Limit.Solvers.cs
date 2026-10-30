@@ -54,6 +54,10 @@ namespace AngouriMath.Functions.Algebra
             {
                 MultithreadingFunctional.ExitIfCancelled();
                 if (limit == Real.NaN) return null;
+                // Nor where a logarithm's argument, or a power's base, arrives on the cut off the
+                // real line, where the value there is the limit from above and not from below.
+                // https://github.com/asc-community/AngouriMath/issues/2266
+                if (expr.Nodes.Any(node => LimitFunctional.TakesItsValueOnACut(node, x, Infinity))) return null;
                 // Reading the value at the destination is the limit only where the expression
                 // is continuous there, and an indeterminate form is exactly where it is not.
                 // Every other one of them already declines on the line above, because this
@@ -160,6 +164,7 @@ namespace AngouriMath.Functions.Algebra
                     MultithreadingFunctional.ExitIfCancelled();
                     var innerLimit = LimitFunctional.ComputeLimit(logArgument, x, Real.PositiveInfinity);
                     if (innerLimit is null) return null;
+                    if (LimitFunctional.ArrivesOnTheCutOffTheRealLine(logArgument, innerLimit, x, Real.PositiveInfinity)) return null;
                     // do same as wolframalpha: https://www.wolframalpha.com/input/?i=ln%28-inf%29
                     if (innerLimit == Real.NegativeInfinity) return Real.PositiveInfinity;
                     if (innerLimit == Real.PositiveInfinity) return Real.PositiveInfinity;
@@ -327,6 +332,9 @@ namespace AngouriMath.Functions.Algebra
                 else
 
                 {
+                    if (LimitFunctional.ArrivesOnTheCutOffTheRealLine(upperLogArgument, upperLogLimit, x, Real.PositiveInfinity)
+                        || LimitFunctional.ArrivesOnTheCutOffTheRealLine(lowerLogArgument, lowerLogLimit, x, Real.PositiveInfinity))
+                        return null;
                     var div = (MathS.Ln(upperLogLimit) / MathS.Ln(lowerLogLimit));
                     var divEvaled = div.Evaled;
                     return divEvaled switch

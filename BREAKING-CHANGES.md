@@ -226,6 +226,24 @@ mentions answers it as a parameter, as a short system does, where it was `null`
 | `MathS.Equations("x - 1", "x^2 - 1").Solve("x", "y")` | `null` | `[[1, t_1]]` |
 | `MathS.Equations("a - 1", "b * 0").Solve("a", "b")` | `null` | `[[1, t_1]]` |
 
+### A limit on a logarithm's cut is not read off the principal value
+
+**Silent: a limit of a logarithm, or of a power to an exponent that is not whole, whose argument arrives on the negative
+real line other than along it is left unevaluated.** The principal logarithm is continuous on its cut from above only, and
+its value there was given as the limit from any side: `x^x` comes to -1 from below as x comes down to -1, so
+`limitright(ln(x^x), x, -1)` is `-i pi`, and it was `ln(-1)`, which is `i pi`. Which side an argument off the real line comes
+from is not decided, so a limit from above, whose answer was right, is left unevaluated too. Along the real line the value
+on the cut is the limit, and `limit(ln(x), x, -1)` is still `ln(-1)`
+([#2266](https://github.com/asc-community/AngouriMath/issues/2266)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limitright(ln(x^x), x, -1)".ToEntity().Simplify()` | `ln(-1)`, which is `i pi` | unevaluated; the limit is `-i pi` |
+| `"limit(ln(x^x), x, -1)".ToEntity().Simplify()` | `ln(-1)` | unevaluated; there is no limit |
+| `"limitleft(ln(-1 + i*x), x, 0)".ToEntity().Simplify()` | `ln(-1)` | unevaluated; the limit is `-i pi` |
+| `"limitright(sqrt(x^x), x, -1)".ToEntity().Simplify()` | `i` | unevaluated; the limit is `-i` |
+| `"limitleft(ln(x^x), x, -1)".ToEntity().Simplify()` | `ln(-1)`, which is right | unevaluated |
+
 ### `Simplify` does not add a condition the input does not have
 
 **Silent: an answer defined at fewer points is defined at all of the input's.** A polynomial division in a

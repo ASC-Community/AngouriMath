@@ -856,6 +856,76 @@ namespace AngouriMath.Functions.Algebra
                                       && IsIndeterminatePowerForm(@base, exponent));
 
         /// <summary>
+        /// Whether <paramref name="argument"/>, a logarithm's or the base of a power, tends to
+        /// <paramref name="limit"/> on the negative real line, where the logarithm has its cut, and
+        /// is not known to arrive there along the real line.
+        /// </summary>
+        /// <remarks>
+        /// The principal logarithm is continuous on its cut from above only. Its value there,
+        /// <c>ln(-1) = i pi</c>, is the limit along the line and from above, and from below the limit
+        /// is <c>-i pi</c>. So a limit read off a logarithm of an argument's limit is that limit only
+        /// where the argument does not come from below: <c>x^x</c> tends to -1 from below as x comes
+        /// down to -1, and <c>limitright(ln(x^x), x, -1)</c> answered <c>i pi</c>. A power to an
+        /// exponent that is not whole is <c>e^(exponent * ln(base))</c> and has the same cut. Which
+        /// side an argument off the real line comes from is not decided here, so a limit there is
+        /// declined, including one from above, whose answer was right.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2266">#2266</a>
+        /// </remarks>
+        internal static bool ArrivesOnTheCutOffTheRealLine(Entity argument, Entity? limit, Variable x, Entity dest)
+            => argument.ContainsNode(x)
+               && limit?.Evaled is Real { IsFinite: true, IsNegative: true }
+               && !IsRealOnTheApproach(argument, x, dest);
+
+        /// <summary>
+        /// Whether a node of an expression that is about to be read at <paramref name="dest"/> is a
+        /// logarithm or a power whose argument arrives on the cut off the real line, by
+        /// <see cref="ArrivesOnTheCutOffTheRealLine"/>, with the argument's value at the destination
+        /// as its limit. A power to an exponent whose value there is whole is continuous across the
+        /// cut, where each of its values is reached from both sides.
+        /// </summary>
+        internal static bool TakesItsValueOnACut(Entity node, Variable x, Entity dest)
+        {
+            return node switch
+            {
+                Logf(var @base, var antilogarithm) => OnTheCut(@base) || OnTheCut(antilogarithm),
+                Powf(var @base, var exponent) => exponent.Substitute(x, dest).Evaled is not Integer && OnTheCut(@base),
+                _ => false
+            };
+            bool OnTheCut(Entity argument) => ArrivesOnTheCutOffTheRealLine(argument, argument.Substitute(x, dest), x, dest);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is real as <paramref name="x"/> runs along the real line to
+        /// <paramref name="dest"/>, decided structurally, as <see cref="IsRealAlong"/> is. A power's
+        /// base and a logarithm's argument count as positive where their values at the destination
+        /// are, which they then are near it. Anything else is
+        /// <see cref="TreeAnalyzer.IsRealValued"/>'s, and unlisted is not real, which costs
+        /// coverage and never correctness.
+        /// </summary>
+        private static bool IsRealOnTheApproach(Entity expr, Variable x, Entity dest)
+        {
+            if (dest.Evaled is not Real)
+                return false;
+            if (!expr.ContainsNode(x))
+                return expr.Evaled is Real { IsFinite: true };
+            return expr switch
+            {
+                Variable variable => variable == x,
+                Sumf(var augend, var addend) => Along(augend) && Along(addend),
+                Minusf(var minuend, var subtrahend) => Along(minuend) && Along(subtrahend),
+                Mulf(var multiplier, var multiplicand) => Along(multiplier) && Along(multiplicand),
+                Divf(var dividend, var divisor) => Along(dividend) && Along(divisor),
+                Powf(var @base, Integer) => Along(@base),
+                Powf(var @base, var exponent) => Along(@base) && Along(exponent) && PositiveThere(@base),
+                Logf(var @base, var antilogarithm) => Along(@base) && Along(antilogarithm)
+                                                      && PositiveThere(@base) && PositiveThere(antilogarithm),
+                _ => TreeAnalyzer.IsRealValued(expr, x)
+            };
+            bool Along(Entity part) => IsRealOnTheApproach(part, x, dest);
+            bool PositiveThere(Entity part) => part.Substitute(x, dest).Evaled is Real { IsPositive: true };
+        }
+
+        /// <summary>
         /// Whether the exponent grows without bound, which is all the second remarkable
         /// limit needs.
         /// </summary>
