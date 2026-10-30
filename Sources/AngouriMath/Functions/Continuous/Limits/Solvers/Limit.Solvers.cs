@@ -285,7 +285,10 @@ namespace AngouriMath.Functions.Algebra
                         { Evaled.IsNaN: true } => null,
                         { } res when res.ContainsNode("+oo") || res.ContainsNode("-oo") => div.InnerSimplified,
                         { Evaled: Complex } limit => limit,
-                        _ => upperLogLimit / lowerLogLimit,
+                        // The logarithm is continuous, so the quotient tends to the quotient of the
+                        // limits' logarithms, not of the limits: ln(y + x) / ln(z + x) at 0 answered
+                        // y / z -- https://github.com/asc-community/AngouriMath/issues/2271.
+                        _ => div.InnerSimplified,
                     };
                 }
             }

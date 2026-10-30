@@ -73,6 +73,19 @@ definite integral, a sum, a product and a limit bind their variable, and are unc
 | `"derivative(a x^2, x)".ToEntity().Substitute("a", "x").Evaled` | `2 * x_1 * x` | `2 * x * x` |
 | `"derivative(x^3, x)".ToEntity().Substitute("x", 1)` | `derivative(x ^ 3, x)` | `apply(lambda(x, derivative(x ^ 3, x)), 1)` |
 
+### A quotient of logarithms tends to the logarithms of its arguments' limits
+
+**Silent: a limit of a quotient of logarithms whose arguments tend to symbolic values answered the quotient of those
+values.** The logarithm is continuous, so the quotient tends to the quotient of the values' logarithms. With numbers it
+did, and `ln(x + 2) / ln(x + 3)` at 0 was `ln(2) / ln(3)`. With symbols it was not:
+`ln(y + x) / ln(z + x)` at 0 was `y / z` ([#2271](https://github.com/asc-community/AngouriMath/issues/2271)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limit(ln(y + x) / ln(z + x), x, 0)".ToEntity().Simplify()` | `y / z` | `ln(y) / ln(z)` |
+| `"limit(ln(a + 1/x) / ln(b + 1/x), x, +oo)".ToEntity().Simplify()` | `a / b` | `ln(a) / ln(b)` |
+| `"limit(ln(1 + x) / ln(y + x), x, 0)".ToEntity().Simplify()` | `1 / y` | `0 provided not ln(y) = 0` |
+
 ### A quadratic whose discriminant is a square is answered without the root
 
 **Silent: the same roots, written as what they are.** The quadratic formula wrote `sqrt(b^2 - 4ac)` whatever the
