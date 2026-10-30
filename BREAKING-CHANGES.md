@@ -373,13 +373,16 @@ start. Each compiles in double precision and on the interpreter's terms: a whole
 through the gamma function, with `NaN` at a pole of the numerator and `0` at one of the denominator. Where every argument
 is whole, the product is computed exactly and rounded once, so it is evaluation's exact value, as a double. The double
 factorial has no value off the whole numbers or at a negative even one
-([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)). A gamma ratio whose factorials are past the doubles,
+as `216!` is, is taken in logarithms, the Catalan number's too, so `binomial(216, pi)` is about `2954596.68` where a
+ratio of infinities had no value ([#2248](https://github.com/asc-community/AngouriMath/issues/2248)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"binomial(x, 2)".ToEntity().Compile("x").Call(5)` | `UncompilableNodeException` | `(10, 0)` |
 | `"binomial(x, 45)".ToEntity().Compile<double, double>("x")(54)` | `UncompilableNodeException` | `5317936260` |
 | `"binomial(x, 1/2)".ToEntity().Compile<double, double>("x")(3)` | `UncompilableNodeException` | `2.037183271576257` |
+| `"binomial(x, pi)".ToEntity().Compile<double, double>("x")(216)` | `UncompilableNodeException` | `2954596.6790617765` |
 
 ### The number-theoretic functions compile
 
