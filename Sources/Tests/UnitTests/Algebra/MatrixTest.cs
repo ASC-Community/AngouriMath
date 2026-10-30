@@ -556,6 +556,50 @@ namespace AngouriMath.Tests.Algebra
             Assert.Equal(6, MathS.IdentityMatrix(6).Rank);
         }
 
+        // The elimination kept each entry as an unreduced numerator and denominator, the
+        // denominator of row 0 reached 1e-246, and 0 over it was NaN: the form reduced to NaN and
+        // Rank threw InvalidCastException. https://github.com/asc-community/AngouriMath/issues/2270
+        [Theory]
+        [InlineData("[[1/2, -2/3, 0, -2/3], [3, -2, 0, -2/3], [2, 2, 1, -3], [-2/3, 0, -2/3, 1]]")]
+        [InlineData("[[-2/3, 1, 1, -2], [1/2, -2/3, -2/3, -2/3], [-2/3, -2/3, 1, -1], [1/2, -2, -3, -2/3]]")]
+        [InlineData("[[-2/3, 1/2, -2/3, 1/2], [1, -2/3, -2/3, -2], [1, -2/3, 1, -3], [-2, -2/3, -1, -2/3]]")]
+        public void AnInvertibleMatrixReducesToTheIdentity(string matrix)
+        {
+            var m = (Matrix)matrix.ToEntity();
+            Assert.Equal(MathS.IdentityMatrix(4), m.ReducedRowEchelonForm);
+            Assert.Equal(4, m.Rank);
+        }
+
+        // Unreduced, the back substitution squared the pairs' sizes at every row, and this did not
+        // return in two minutes; bounded, so that it fails rather than hangs the run.
+        // https://github.com/asc-community/AngouriMath/issues/2270
+        [Fact] public void AnEightByEightReduces()
+        {
+            var reduced = System.Threading.Tasks.Task.Factory.StartNew(Reduce,
+                System.Threading.CancellationToken.None, System.Threading.Tasks.TaskCreationOptions.LongRunning,
+                System.Threading.Tasks.TaskScheduler.Default);
+            Assert.True(reduced.Wait(System.TimeSpan.FromSeconds(60)), "the reduced row echelon form of an 8x8 did not return");
+            Assert.Equal(MathS.IdentityMatrix(8), reduced.Result.Reduced);
+            Assert.Equal(8, reduced.Result.Rank);
+        }
+
+        private static (Matrix Reduced, int Rank) Reduce()
+        {
+            var m = MathS.Matrix(new Entity[,]
+            {
+                { 2, -1, 3, 1, -2, 1, 3, -3 },
+                { 1, 2, -1, 3, 1, -2, 1, 2 },
+                { -3, 1, 2, -1, 3, 2, -2, 1 },
+                { 1, -2, 1, 2, -1, 3, 2, -1 },
+                { 2, 3, -2, 1, 2, -1, -3, 1 },
+                { -1, 1, 3, -2, 1, 2, 1, 3 },
+                { 3, -1, 1, 2, -3, 1, 2, -2 },
+                { 1, 2, 2, -1, 1, -3, 1, 1 },
+            });
+            Assert.NotEqual(Number.Integer.Zero, m.Determinant);
+            return (m.ReducedRowEchelonForm, m.Rank);
+        }
+
         [Theory]
         [InlineData("[a, b]", "[c, d]", "[a c, a d, b c, b d]")]
         [InlineData("[[a, b], [c, d]]", "[[e, f], [g, h]]", "[ [a e, a f, b e, b f], [a g, a h, b g, b h], [c e, c f, d e, d f], [c g, c h, d g, d h] ]")]
