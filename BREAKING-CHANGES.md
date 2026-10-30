@@ -439,7 +439,9 @@ comparison, a connective, a Boolean, a `provided`, a `piecewise` and an Iverson 
 A statement now compiles to its truth value, `1` where it holds, `0` where it does not, and `NaN` where it has none, as
 `i > 1` has none. Comparisons and connectives are those of the LINQ compiler. A `provided` is `NaN` where its predicate
 does not hold, and a `piecewise` is the first case whose predicate holds, or `NaN`. Every case is computed, since the
-instructions have no jump ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+instructions have no jump ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)). A statement where a
+number is expected is refused, as in the LINQ compiler: `sin(x > 1)` has no value, as evaluation leaves `sin(True)`,
+and `iverson` takes a statement as a number ([#2227](https://github.com/asc-community/AngouriMath/issues/2227)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
@@ -448,6 +450,19 @@ instructions have no jump ([#2195](https://github.com/asc-community/AngouriMath/
 | `"x provided x > 0".ToEntity().Compile("x").Call(-1)` | `UncompilableNodeException` | `(NaN, 0)` |
 | `"piecewise(x provided x > 0, -x)".ToEntity().Compile("x").Call(-3)` | `UncompilableNodeException` | `(3, 0)` |
 | `"iverson(x > 0)".ToEntity().Compile("x").Call(2)` | `UncompilableNodeException` | `(1, 0)` |
+
+### A statement where a number is expected is refused with `UncompilableNodeException`
+
+**Not silent: an exception from outside the library is the library's own.** The LINQ compiler threw
+`KeyNotFoundException` for a statement as the argument of a function, as `sin(x > 1)` or `(x > 1)^2`, and
+`AngouriBugException`, which asks for a bug report, for one in `max` or `min`. Both compilers refuse a statement where
+a number is expected with `UncompilableNodeException`, `iverson` being the way to take one as a number
+([#2227](https://github.com/asc-community/AngouriMath/issues/2227)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(x > 1)".ToEntity().Compile<double, double>("x")` | throws `KeyNotFoundException` | throws `UncompilableNodeException` |
+| `"max(x > 1, 0)".ToEntity().Compile<double, double>("x")` | throws `AngouriBugException` | throws `UncompilableNodeException` |
 
 ### The conjugate, the argument, the parts and the Iverson bracket compile
 
