@@ -147,7 +147,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static int Abs(int a) => Math.Abs(a);
         public static BigInteger Abs(BigInteger a) => BigInteger.Abs(a);
 
-        public static System.Numerics.Complex Sgn(System.Numerics.Complex a) => a / System.Numerics.Complex.Abs(a);
+        // 0 at 0, where a / |a| is 0/0: https://github.com/asc-community/AngouriMath/issues/2238
+        public static System.Numerics.Complex Sgn(System.Numerics.Complex a) => AngouriMath.InternalAMExtensions.Signum(a);
         public static double Sgn(double a) => a switch { > 0 or double.PositiveInfinity => 1, 0 => 0, < 0 or double.NegativeInfinity => -1, _ => double.NaN };
         public static float Sgn(float a) => a switch { > 0 or float.PositiveInfinity => 1, 0 => 0, < 0 or float.NegativeInfinity => -1, _ => float.NaN };
         public static long Sgn(long a) => a switch { > 0 => 1, 0 => 0, < 0 => -1 };

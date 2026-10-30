@@ -130,6 +130,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// </summary>
         public virtual Expression ConvertUnaryNode(Expression e, Entity typeHolder)
         {
+            e = NumericOperand(e);
             // A function of a matrix has no compiled form here: the tensor operations are the
             // arithmetic ones, and sin(A) is not an element-by-element sine of a matrix.
             if (TensorCompilation.IsTensor(e.Type))
@@ -207,6 +208,15 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             };
         }
 
+        // A number that may have no value, an Iverson bracket's int? or a provided integer's long?, as a double, which
+        // has NaN for none: no function takes the nullable integer, and widening one threw KeyNotFoundException or
+        // AngouriBugException. A statement's bool? stays itself. https://github.com/asc-community/AngouriMath/issues/2237
+        private Expression NumericOperand(Expression expr)
+            => Nullable.GetUnderlyingType(expr.Type) is { } underlying && underlying != typeof(bool)
+                && underlying != typeof(System.Numerics.Complex) && underlying != typeof(double)
+                ? ConvertType(expr, typeof(double))
+                : expr;
+
         private Expression ShouldBeAtLeastDouble(Expression expr)
         {
             if (typeLevelInHierarchy[expr.Type] < typeLevelInHierarchy[typeof(double)])
@@ -226,7 +236,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     ?? throw new UncompilableNodeException(
                         $"The node of type {typeHolder.GetType()} has no compiled form over a matrix.");
 
-            (left, right) = EqualizeTypesIfAble(left, right);
+            (left, right) = EqualizeTypesIfAble(NumericOperand(left), NumericOperand(right));
             return typeHolder switch
             {
                 Sumf => Operator(ExpressionType.Add, left, right),

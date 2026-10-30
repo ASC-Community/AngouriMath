@@ -431,6 +431,24 @@ one where both sides are real, and `NaN` where either is not
 |---|---|---|
 | `"x mod 3".ToEntity().Compile<Complex, Complex>("x")(7)` | `UncompilableNodeException` | `(1, 0)` |
 
+### The LINQ compiler gives a constant, a nullable operand and `sgn(0)` the value evaluation gives
+
+**Silent: three compiled values over `Complex` are evaluation's, and one compile that threw compiles.**
+- A constant is taken over `Complex` where the expression is compiled over it. As a `long`, a constant widened only
+  to `double`, so `sqrt(-1)`, `ln(-1)` and `arcsin(2)` were `NaN` and `1/0` was `+oo`
+  ([#2235](https://github.com/asc-community/AngouriMath/issues/2235)).
+- An Iverson bracket, an `int?`, and a `provided` integer, a `long?`, are widened to `double` before a function takes
+  them. They threw `KeyNotFoundException` or `AngouriBugException`
+  ([#2237](https://github.com/asc-community/AngouriMath/issues/2237)).
+- `sgn(0)` is `0`, where `z / |z|` made it `NaN` ([#2238](https://github.com/asc-community/AngouriMath/issues/2238)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x + sqrt(-1)".ToEntity().Compile<Complex, Complex>("x")(0)` | `(NaN, 0)` | `(6.123233995736766E-17, 1)` |
+| `"x + 1/0".ToEntity().Compile<Complex, Complex>("x")(0)` | `(Infinity, 0)` | `(NaN, NaN)` |
+| `"x + sgn(-1 provided pi > 3)".ToEntity().Compile<Complex, Complex>("x")(1)` | throws `AngouriBugException` | `(0, 0)` |
+| `"sgn(x)".ToEntity().Compile<Complex, Complex>("x")(0)` | `(NaN, NaN)` | `(0, 0)` |
+
 ### A compiled product of real numbers is real at an infinity
 
 **Silent: a compiled product or quotient with a real infinity is that infinity, where it had a `NaN` imaginary part.**
