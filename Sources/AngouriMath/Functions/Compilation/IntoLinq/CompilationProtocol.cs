@@ -242,6 +242,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Sumf => Operator(ExpressionType.Add, left, right),
                 Minusf => Operator(ExpressionType.Subtract, left, right),
                 Mulf => Operator(ExpressionType.Multiply, left, right),
+                // Over the reals by MathAllMethods.Divide, which gives a division by zero no value, as
+                // evaluation does. https://github.com/asc-community/AngouriMath/issues/2286
+                Divf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                          && (newLeft.Type == typeof(double) || newLeft.Type == typeof(float)) && newLeft.Type == newRight.Type
+                    => Expression.Call(GetDef("Divide", 2, newLeft.Type), newLeft, newRight),
                 Divf => Operator(ExpressionType.Divide, ShouldBeAtLeastDouble(left), ShouldBeAtLeastDouble(right)),
                 // ((a % b) + b) % b, and not the bare a % b: the runtime truncates, where the
                 // node is the floored remainder that takes the sign of the divisor, and this is
