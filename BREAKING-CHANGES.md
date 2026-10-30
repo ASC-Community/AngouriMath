@@ -121,6 +121,24 @@ carried it once combined: a second derivative of `1/sqrt(x^2 + 13)` stated `not 
 | `"(a provided b > 0) + (c provided b > 0)".ToEntity().InnerSimplified` | `a + c provided b > 0 and b > 0` | `a + c provided b > 0` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
 
+### Primality is decided by Miller–Rabin and Lucas–Lehmer, and finishes
+
+**Silent: a membership in `PP` left open past the machine word is decided where a test proves it, and one that did
+not finish does.** Primality was trial division, exact only below `2^63`. For a prime past `3037000499^2`, just below
+`2^63`, the square of the divisor overflowed and the division never finished, and a prime near `2^63` took about
+`1.5e9` divisions. It is now Miller–Rabin to the first thirteen primes as bases, exact below
+`3317044064679887385961981` (Sorenson and Webster, "Strong pseudoprimes to twelve prime bases", Math. Comp. 86
+(2017)), and Lucas–Lehmer for a Mersenne number `2^p - 1`. Past those a failed round still proves a number composite,
+and a number that passes every round is left open, since passing is not a proof
+([#2230](https://github.com/asc-community/AngouriMath/issues/2230)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"9223372036854775783 in PP".ToEntity().Evaled` | does not finish; stopped after 60 s | `True`, in 81 ms |
+| `"(2^89 - 1) in PP".ToEntity().Evaled` | `618970019642690137449562111 in PP` | `True` |
+| `"(10^30 + 1) in PP".ToEntity().Evaled` | `1000000000000000000000000000001 in PP` | `False` |
+| `"(10^30 + 57) in PP".ToEntity().Evaled` | `1000000000000000000000000000057 in PP` | `1000000000000000000000000000057 in PP` |
+
 ### A system with a product equation is solved branch by branch
 
 **Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,
@@ -603,16 +621,16 @@ around a principal `n`-th root of an `n`-th power, for a whole `n >= 2`, establi
 
 **Silent: a membership answered `False` is left open, where it was wrong; and some left open are decided.** Membership
 in a union, an intersection and a set difference is decided from each side's by Kleene's connectives. A union was
-`False` where one side left membership open and the other excluded the element: `2^89 - 1` is a Mersenne prime past
-the machine word, `PP` leaves its membership open, and it was outside `PP \/ [0; 1]`. An intersection and a difference
+`False` where one side left membership open and the other excluded the element: `10^30 + 57` is a prime past what the
+prime test proves, `PP` leaves its membership open, and it was outside `PP \/ [0; 1]`. An intersection and a difference
 were decided only where both sides were, and are now decided where one side settles it
 ([#2219](https://github.com/asc-community/AngouriMath/issues/2219)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
-| `"(2^89 - 1) in (PP \/ [0; 1])".ToEntity().Evaled` | `False` | `618970019642690137449562111 in PP \/ [0; 1]` |
-| `"(2^89 - 1) in ([0; 1] \ PP)".ToEntity().Evaled` | `618970019642690137449562111 in [0; 1] \ PP` | `False` |
-| `"(2^89 - 1) in (PP \ [0; 10^30])".ToEntity().Evaled` | `618970019642690137449562111 in PP \ [0; 1000000000000000000000000000000]` | `False` |
+| `"(10^30 + 57) in (PP \/ [0; 1])".ToEntity().Evaled` | `False` | `1000000000000000000000000000057 in PP \/ [0; 1]` |
+| `"(10^30 + 57) in ([0; 1] \ PP)".ToEntity().Evaled` | `1000000000000000000000000000057 in [0; 1] \ PP` | `False` |
+| `"(10^30 + 57) in (PP \ [0; 10^31])".ToEntity().Evaled` | `1000000000000000000000000000057 in PP \ [0; 10000000000000000000000000000000]` | `False` |
 
 ### A system is not answered with a copy of one of its rows
 

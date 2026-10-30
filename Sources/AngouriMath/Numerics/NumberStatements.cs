@@ -15,8 +15,7 @@ namespace AngouriMath.Numerics
     /// <summary>
     /// Membership in the sets of numbers and divisibility, for the compilers, on the terms evaluation decides
     /// them: no truth value at <c>NaN</c>, an infinity in <c>RR</c> and <c>CC</c> as evaluation has it and in
-    /// none of the sets of whole numbers, and primality left open past the machine word, where the interpreter
-    /// leaves it. Divisibility is a statement about whole numbers, and has no truth value at any other.
+    /// none of the sets of whole numbers, and primality by the interpreter's own test. Divisibility is a statement about whole numbers, and has no truth value at any other.
     /// https://github.com/asc-community/AngouriMath/issues/2195
     /// </summary>
     internal static class NumberStatements
@@ -40,10 +39,6 @@ namespace AngouriMath.Numerics
             _ => null
         };
 
-        // 2^63: a whole double below it is a long, and the trial division the interpreter decides primality by
-        // takes it.
-        private const double PastTheWord = 9223372036854775808.0;
-
         /// <summary>Whether <paramref name="z"/> is in the set of numbers <paramref name="set"/>, a <see cref="NumberSet"/>.</summary>
         public static bool? In(NumericsComplex z, int set)
         {
@@ -65,7 +60,7 @@ namespace AngouriMath.Numerics
                 NumberSet.Integers => true,
                 NumberSet.PositiveIntegers => z.Real > 0,
                 NumberSet.NonNegativeIntegers => z.Real >= 0,
-                _ => z.Real < 2 ? false : z.Real >= PastTheWord ? null : Primes.IsPrime(EInteger.FromInt64((long)z.Real))
+                _ => z.Real < 2 ? false : Primes.IsPrime(EFloat.FromDouble(z.Real).ToEInteger())
             };
         }
 

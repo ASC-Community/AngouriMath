@@ -761,8 +761,8 @@ namespace AngouriMath
                     }
 
                     /// <summary>
-                    /// Whether the whole number is prime, or <see langword="null"/> where it does
-                    /// not fit a machine word and trial division is not attempted.
+                    /// Whether the whole number is prime, or <see langword="null"/> where it is not
+                    /// decided: see <see cref="Functions.Primes.IsPrime"/>.
                     /// </summary>
                     internal static bool? IsDecidablyPrime(Integer whole)
                         => Functions.Primes.IsPrime(whole.EInteger);
