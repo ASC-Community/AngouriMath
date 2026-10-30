@@ -337,6 +337,21 @@ factorial has no value off the whole numbers or at a negative even one
 | `"binomial(x, 2)".ToEntity().Compile("x").Call(5)` | `UncompilableNodeException` | `(10, 0)` |
 | `"binomial(x, 1/2)".ToEntity().Compile<double, double>("x")(3)` | `UncompilableNodeException` | `2.037183271576257` |
 
+### The number-theoretic functions compile
+
+**Not silent: what was refused is compiled.** `prime` and `valuation` were refused by both compilers with
+`UncompilableNodeException`, and `mobius`, `divisorsigma`, `primenu`, `primeomega` and `primepi`, new since 2.6.0,
+compile from the start. Each compiles by the routines the interpreter uses, exactly at a whole argument and to `NaN` at
+any other, as evaluation gives. A number too large to factorise, and a prime past the millionth, are `NaN` where the
+interpreter leaves them as written ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"prime(x)".ToEntity().Compile("x").Call(10)` | `UncompilableNodeException` | `(29, 0)` |
+| `"prime(x)".ToEntity().Compile<double, double>("x")(2.5)` | `UncompilableNodeException` | `NaN` |
+| `"valuation(x, 2)".ToEntity().Compile("x").Call(12)` | `UncompilableNodeException` | `(2, 0)` |
+| `"valuation(x, 2)".ToEntity().Compile<double, double>("x")(0)` | `UncompilableNodeException` | `Infinity` |
+
 ### `mod` compiles over `Complex`
 
 **Not silent: what was refused is compiled.** `Compile<Complex, ...>` refused `mod` with `UncompilableNodeException`,

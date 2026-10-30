@@ -57,6 +57,11 @@ namespace AngouriMath.Core
             CALL_NOT,
             CALL_DOUBLE_FACTORIAL,
             CALL_CATALAN_NUMBER,
+            CALL_MOBIUS,
+            CALL_PRIME_NU,
+            CALL_PRIME_OMEGA,
+            CALL_PRIME,
+            CALL_PRIME_PI,
 
             // 2-arg functions
             CALL_SUM = 100,
@@ -85,6 +90,8 @@ namespace AngouriMath.Core
             CALL_LAMBERTW,
             CALL_POLYGAMMA,
             CALL_HARMONIC_NUMBER,
+            CALL_DIVISOR_SIGMA,
+            CALL_VALUATION,
 
             // 3-arg: a value where its predicate holds, and the one below it elsewhere.
             CALL_SELECT = 150,
@@ -367,6 +374,27 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_HARMONIC_NUMBER:
                         stack.Push(AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_MOBIUS:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.Mobius(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_PRIME_NU:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.PrimeNu(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_PRIME_OMEGA:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.PrimeOmega(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_PRIME:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.Prime(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_PRIME_PI:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.PrimePi(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_DIVISOR_SIGMA:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.DivisorSigma(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_VALUATION:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.Valuation(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_CATALAN_NUMBER:
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.CatalanNumber(stack.Pop()));

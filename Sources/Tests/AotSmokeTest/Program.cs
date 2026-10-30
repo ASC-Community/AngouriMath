@@ -315,6 +315,11 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("compiled polygamma(1, x) + harmonicnumber(x, 2) at x = 1/2", compiledPolygamma(0.5), 4.934802200544679 + 0.7101318663035472);
             var compiledCatalan = "catalannumber(x)".Compile(x);
             Check("compiled catalannumber at 5 and -1", compiledCatalan.Call(5) == 42 && compiledCatalan.Call(-1) == -0.5, $"{compiledCatalan.Call(5)}, {compiledCatalan.Call(-1)}");
+            // mobius(30) = -1, prime(30) = 113, primepi(30) = 10; divisorsigma(1, 12) = 28, valuation(12, 2) = 2.
+            var fastNumberTheory = "mobius(x) + prime(x) + primepi(x)".Compile(x);
+            var linqNumberTheory = "divisorsigma(1, x) + valuation(x, 2)".Compile<double, double>(x);
+            Check("compiled mobius(x) + prime(x) + primepi(x) at 30, divisorsigma(1, x) + valuation(x, 2) at 12",
+                fastNumberTheory.Call(30) == 122 && linqNumberTheory(12) == 30, $"{fastNumberTheory.Call(30)}, {linqNumberTheory(12)}");
             // FastExpression: a statement is its truth value, and a piecewise the case that holds.
             var fastPiecewise = "piecewise(x provided x > 0, -x)".Compile(x);
             var fastStatement = "x > 1 or x < 0".Compile(x);

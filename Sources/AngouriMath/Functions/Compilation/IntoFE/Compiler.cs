@@ -653,6 +653,87 @@ namespace AngouriMath
             }
         }
 
+        // The number-theoretic functions, exact at a whole argument and NaN at any other.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Mobiusf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_MOBIUS));
+            }
+        }
+
+        public partial record PrimeNuf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_PRIME_NU));
+            }
+        }
+
+        public partial record PrimeOmegaf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_PRIME_OMEGA));
+            }
+        }
+
+        public partial record Primef
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_PRIME));
+            }
+        }
+
+        public partial record PrimePif
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_PRIME_PI));
+            }
+        }
+
+        public partial record DivisorSigmaf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                Order.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_DIVISOR_SIGMA));
+            }
+        }
+
+        public partial record Valuationf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Prime.InnerCompile(compiler);
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_VALUATION));
+            }
+        }
+
         public partial record Maxf
         {
             private protected override bool CompilesItself => true;

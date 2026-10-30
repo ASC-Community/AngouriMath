@@ -57,13 +57,12 @@ namespace AngouriMath.Tests.Core
         // of these were nodes 2.0 added and never taught the compiler; floor, ceil and round have
         // been taught since (https://github.com/asc-community/AngouriMath/issues/1603), phi,
         // gamma and the factorial (https://github.com/asc-community/AngouriMath/issues/1607), and
-        // the binomial coefficient and the polygamma functions
+        // the binomial coefficient, the polygamma functions and the n-th prime
         // (https://github.com/asc-community/AngouriMath/issues/2195).
         [Theory]
         [InlineData("gamma(2, x)")]
         [InlineData("gcd(x, 6)")]
         [InlineData("lcm(x, 6)")]
-        [InlineData("prime(x)")]
         public void ANodeWithNoCompiledFormSaysSoRatherThanAskingForABugReport(string expression) =>
             Assert.Throws<UncompilableNodeException>(() =>
                 expression.ToEntity().Compile<double, double>("x"));
