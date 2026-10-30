@@ -190,6 +190,19 @@ AngouriMath.Core.FiniteSetBuilder.Remove(AngouriMath.Entity) : System.Void
 AngouriMath.Core.FiniteSetBuilder.ToFiniteSet() : AngouriMath.Entity+Set+FiniteSet
 AngouriMath.Core.FiniteSetBuilder.ctor()
 AngouriMath.Core.FiniteSetBuilder.ctor(System.Collections.Generic.IEnumerable<AngouriMath.Entity>)
+AngouriMath.Core.GeneratedSource.<Clone>$() : AngouriMath.Core.GeneratedSource
+AngouriMath.Core.GeneratedSource.At { } : AngouriMath.Entity
+AngouriMath.Core.GeneratedSource.Code { } : System.String
+AngouriMath.Core.GeneratedSource.Deconstruct(System.String&, AngouriMath.Entity&, System.String&) : System.Void
+AngouriMath.Core.GeneratedSource.Equals(AngouriMath.Core.GeneratedSource) : System.Boolean
+AngouriMath.Core.GeneratedSource.Equals(System.Object) : System.Boolean
+AngouriMath.Core.GeneratedSource.GetHashCode() : System.Int32
+AngouriMath.Core.GeneratedSource.Reason { } : System.String
+AngouriMath.Core.GeneratedSource.Succeeded { } : System.Boolean
+AngouriMath.Core.GeneratedSource.ToString() : System.String
+AngouriMath.Core.GeneratedSource.ctor(System.String, AngouriMath.Entity, System.String)
+AngouriMath.Core.GeneratedSource.op_Equality(AngouriMath.Core.GeneratedSource, AngouriMath.Core.GeneratedSource) : System.Boolean
+AngouriMath.Core.GeneratedSource.op_Inequality(AngouriMath.Core.GeneratedSource, AngouriMath.Core.GeneratedSource) : System.Boolean
 AngouriMath.Core.IBinaryNode.NodeFirstChild { } : AngouriMath.Entity
 AngouriMath.Core.IBinaryNode.NodeSecondChild { } : AngouriMath.Entity
 AngouriMath.Core.IHasAbsoluteValue<TSelf,TOut>.Abs(TSelf) : TOut
@@ -3499,6 +3512,8 @@ AngouriMath.MathS+Settings.NewtonSolver { } : AngouriMath.Convenience.Setting<An
 AngouriMath.MathS+Settings.PrecisionErrorCommon { } : AngouriMath.Convenience.Setting<PeterO.Numbers.EDecimal>
 AngouriMath.MathS+Settings.PrecisionErrorZeroRange { } : AngouriMath.Convenience.Setting<PeterO.Numbers.EDecimal>
 AngouriMath.MathS+Settings.RefuseNonRealCompilation { } : AngouriMath.Convenience.Setting<System.Boolean>
+AngouriMath.MathS+Shaders.Glsl(System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<System.String,AngouriMath.Entity>>, System.Collections.Generic.IReadOnlyDictionary<AngouriMath.Entity+Variable,System.String>) : AngouriMath.Core.GeneratedSource
+AngouriMath.MathS+Shaders.Hlsl(System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<System.String,AngouriMath.Entity>>, System.Collections.Generic.IReadOnlyDictionary<AngouriMath.Entity+Variable,System.String>) : AngouriMath.Core.GeneratedSource
 AngouriMath.MathS+UnsafeAndInternal.AreEqualNumerically(AngouriMath.Entity, AngouriMath.Entity) : System.Boolean
 AngouriMath.MathS+UnsafeAndInternal.AreEqualNumerically(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity[]) : System.Boolean
 AngouriMath.MathS+UnsafeAndInternal.CheckPoints { } : AngouriMath.Convenience.Setting<AngouriMath.Entity[]>
@@ -3702,6 +3717,7 @@ class AngouriMath.Core.Exceptions.UnrecognizedFunctionParseException
 class AngouriMath.Core.Exceptions.WrongNumberOfArgumentsException
 class AngouriMath.Core.FastExpression
 class AngouriMath.Core.FiniteSetBuilder
+class AngouriMath.Core.GeneratedSource
 class AngouriMath.Core.MatrixBuilder
 class AngouriMath.Core.ReasonOfFailureWhileParsing
 class AngouriMath.Core.ReasonOfFailureWhileParsing+InternalError
@@ -3863,6 +3879,7 @@ class AngouriMath.MathS+Series
 class AngouriMath.MathS+Sets
 class AngouriMath.MathS+Settings
 class AngouriMath.MathS+Settings+NewtonSetting
+class AngouriMath.MathS+Shaders
 class AngouriMath.MathS+UnsafeAndInternal
 class AngouriMath.MathS+Utils
 class AngouriMath.ProofRecording
