@@ -474,6 +474,28 @@ then had no truth value for. A product or a quotient of two real numbers is now 
 | `"-x".ToEntity().Compile("x").Call(double.PositiveInfinity)` | `(-Infinity, NaN)` | `(-Infinity, 0)` |
 | `"x / 2".ToEntity().Compile<Complex, Complex>("x")(double.PositiveInfinity)` | `(Infinity, NaN)` | `(Infinity, 0)` |
 
+### Compiled arithmetic of a complex number is evaluation's at a whole power and at an infinity
+
+**Silent: a compiled whole power of a number that is not real, and a compiled product, quotient or signum at an
+infinity, are the values evaluation gives.** In FastExpression and in the LINQ compiler over `Complex`:
+- A whole power of a number that is not real is a product of its factors, as evaluation takes it. `Complex.Pow` takes
+  `e^(n ln z)`, which left a rounded part: `i^2` was `(-1, 1.2e-16)`, which is not real.
+- A part that is 0 times a part that is infinite is 0, and a number that is 0 times an infinite one has no value, as
+  in evaluation. `Complex` took `0 · ∞` as `NaN` in every part, so `i * x` at `+oo` was `(NaN, ∞)`.
+- A quotient by a real number other than 0 is taken part by part.
+- `sgn` of a real infinity is its sign, where `z / |z|` was `∞ / ∞`.
+
+([#2247](https://github.com/asc-community/AngouriMath/issues/2247))
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^2".ToEntity().Compile("x").Call(Complex.ImaginaryOne)` | `(-1, 1.2246467991473532E-16)` | `(-1, 0)` |
+| `"x^3".ToEntity().Compile("x").Call(new Complex(1, 1))` | `(-2.0000000000000004, 2.0000000000000004)` | `(-2, 2)` |
+| `"i * x".ToEntity().Compile("x").Call(double.PositiveInfinity)` | `(NaN, Infinity)` | `(0, Infinity)` |
+| `"(x + i) * 2".ToEntity().Compile<Complex, Complex>("x")(double.NegativeInfinity)` | `(-Infinity, NaN)` | `(-Infinity, 2)` |
+| `"ln(x) / 2".ToEntity().Compile("x").Call(double.NegativeInfinity)` | `(NaN, NaN)` | `(Infinity, 1.5707963267948966)` |
+| `"sgn(x)".ToEntity().Compile("x").Call(double.PositiveInfinity)` | `(NaN, NaN)` | `(1, 0)` |
+
 ### A compiled function takes the side of its branch cut evaluation takes
 
 **Silent: a compiled logarithm, root or inverse function of a number on its cut is evaluation's value, where it was
