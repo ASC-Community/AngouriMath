@@ -463,11 +463,13 @@ namespace AngouriMath
                             => Real.PositiveInfinity.Provided(condition),
 
                         // log_b(1) is 0/ln(b), which is 0 for every base but 1, where it is
-                        // 0/0 -- and every division by zero here is NaN. The condition belongs
-                        // on the answer rather than gating the rule, because at b = 1 the
-                        // expression is genuinely undefined and not merely something else.
+                        // 0/0 -- and every division by zero here is NaN -- and 0, which is not a
+                        // base (https://github.com/asc-community/AngouriMath/issues/2255). The
+                        // condition belongs on the answer rather than gating the rule, because at
+                        // those bases the expression is genuinely undefined and not merely
+                        // something else.
                         ({ DomainCondition: var condition }, Integer(1))
-                            => Integer.Zero.Provided(condition).Provided(!a.EqualTo(1)),
+                            => Integer.Zero.Provided(condition).Provided(!a.EqualTo(0) & !a.EqualTo(1)),
 
                         _ => null
                     },
