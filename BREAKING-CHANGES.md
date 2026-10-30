@@ -654,7 +654,8 @@ other a parse error.** They are `1 + 1/2^m + ... + 1/n^m` for a whole `n >= 0`, 
 `ζ(m) - ζ(m, n + 1)` elsewhere, as Mathematica's `HarmonicNumber` is: `ψ(n + 1) - ψ(1)` for `m = 1`, evaluated numerically
 through `digamma` and `polygamma` for a whole `m >= 1`, and exactly at a half-whole `n` for `m = 1` or an even `m`. A
 negative integer `n` has no value but for a whole `m <= 0`
-([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)). They compile, on the same terms, in both compilers
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
@@ -866,6 +867,7 @@ no others. Where that proof does not go through, or a bound is symbolic, the int
 - **Derivatives.** Each order differentiates to the next. The derivative of `x!`, which was left unevaluated, is `x! * digamma(x + 1)` ([#171](https://github.com/asc-community/AngouriMath/issues/171)).
 - **Integrals.** Each order integrates to the one before, and `digamma(x)` to `ln((x - 1)!)`.
 - **Exact values.** An odd order at a whole or half-whole argument is a rational times a power of `pi` plus a rational: `polygamma(1, 1)` is `1/6 * pi ^ 2`. The digamma function there is a rational less Euler's constant, and at a half-whole argument less `2 ln 2` as well: `digamma(1)` is `-eulergamma`.
+- **Compiled forms.** Each compiles, in double precision and by the same reflection, recurrence and asymptotic series, in both compilers ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|

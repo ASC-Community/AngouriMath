@@ -617,6 +617,31 @@ namespace AngouriMath
             }
         }
 
+        // The polygamma functions and the harmonic numbers. https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Polygammaf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                Order.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_POLYGAMMA));
+            }
+        }
+
+        public partial record HarmonicNumberf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Order.InnerCompile(compiler);
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_HARMONIC_NUMBER));
+            }
+        }
+
         public partial record Maxf
         {
             private protected override bool CompilesItself => true;
