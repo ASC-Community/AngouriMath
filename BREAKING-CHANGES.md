@@ -507,6 +507,21 @@ anything else is `Complex.Pow` as before. At finite positive points the two agre
 | `"x^(-1)".ToEntity().Compile("x").Call(0)` | `(0, 0)` | `(NaN, 0)` |
 | `"x^0".ToEntity().Compile("x").Call(0)` | `(1, 0)` | `(NaN, 0)` |
 
+### A compiled power over `double` of a value that does not exist has none
+
+**Silent: a power over `double` whose base or exponent is `NaN` is `NaN`, where a zero exponent or a base of `1` made
+it `1`.** `Compile<double, ...>` and `Compile<float, ...>` took a power by `Math.Pow`, for which `NaN^0` and `1^NaN` are
+`1`, so a power of a value that does not exist had one. FastExpression and the compilers over `Complex` have it as
+`NaN`, as evaluation does ([#2250](https://github.com/asc-community/AngouriMath/issues/2250)). Over `double` a `NaN`
+also stands for a value that is not real, so `(sqrt(x - 2))^0` at `0.7`, which is `1`, is `NaN` there now, as
+`sqrt(x - 2) + 1 - sqrt(x - 2)` already was.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(x provided x > 1)^0".ToEntity().Compile<double, double>("x")(0.7)` | `1` | `NaN` |
+| `"1^(x provided x > 1)".ToEntity().Compile<double, double>("x")(0.7)` | `1` | `NaN` |
+| `"x^0".ToEntity().Compile<double, double>("x")(double.NaN)` | `1` | `NaN` |
+
 ### A compiled statement with no truth value has none
 
 **Silent in part: a compiled comparison has the truth value evaluation gives it.** A comparison over `Complex` was refused
