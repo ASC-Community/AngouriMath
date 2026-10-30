@@ -521,6 +521,21 @@ around a principal `n`-th root of an `n`-th power, for a whole `n >= 2`, establi
 |---|---|---|
 | `"forall t in RR : t >= 0 implies sqrt(t^2) = t".ToEntity().Simplify()` | `forall t in RR : t >= 0 implies sqrt(t ^ 2) = t` | `True` |
 
+### Membership in a union is not decided by one side alone
+
+**Silent: a membership answered `False` is left open, where it was wrong; and some left open are decided.** Membership
+in a union, an intersection and a set difference is decided from each side's by Kleene's connectives. A union was
+`False` where one side left membership open and the other excluded the element: `2^89 - 1` is a Mersenne prime past
+the machine word, `PP` leaves its membership open, and it was outside `PP \/ [0; 1]`. An intersection and a difference
+were decided only where both sides were, and are now decided where one side settles it
+([#2219](https://github.com/asc-community/AngouriMath/issues/2219)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(2^89 - 1) in (PP \/ [0; 1])".ToEntity().Evaled` | `False` | `618970019642690137449562111 in PP \/ [0; 1]` |
+| `"(2^89 - 1) in ([0; 1] \ PP)".ToEntity().Evaled` | `618970019642690137449562111 in [0; 1] \ PP` | `False` |
+| `"(2^89 - 1) in (PP \ [0; 10^30])".ToEntity().Evaled` | `618970019642690137449562111 in PP \ [0; 1000000000000000000000000000000]` | `False` |
+
 ### A system is not answered with a copy of one of its rows
 
 **Silent: a repeated row goes.** Two branches of an elimination can reach one solution, and each was answered: two

@@ -86,7 +86,9 @@ namespace AngouriMath.Tests.Core.Sets
         [InlineData("{x} \\ {x}", "x", false)]
         [InlineData("{x} \\ {y}", "1", false, false)]
         [InlineData("{x} \\ {y}", "z", false, false)]
-        [InlineData("{x} \\ {1}", "1", false, false)]
+        // 1 is in {1}, and so outside the difference whatever x is: decided, by Kleene's and.
+        // https://github.com/asc-community/AngouriMath/issues/2219
+        [InlineData("{x} \\ {1}", "1", false)]
         [InlineData("{x} \\ {1}", "x", false, false)]
 
         // A closed non-leaf is not a number and not a boolean, so it is a member of

@@ -827,9 +827,23 @@ namespace AngouriMath
                 {
                     contains = false;
                     if (Left is not Set left || Right is not Set right) return false;
-                    if (left.TryContains(entity, out contains) && contains) return true;
-                    if (right.TryContains(entity, out contains)) return true;
-                    return false;
+                    // Kleene's or: a member of either side is a member, and an element is outside only
+                    // where both sides decide it is. One side undecided and the other excluding it leaves
+                    // it undecided: 2^89 - 1 in PP \/ [0; 1] is not False, the number being prime.
+                    // https://github.com/asc-community/AngouriMath/issues/2219
+                    var leftDecided = left.TryContains(entity, out var inLeft);
+                    if (leftDecided && inLeft)
+                    {
+                        contains = true;
+                        return true;
+                    }
+                    var rightDecided = right.TryContains(entity, out var inRight);
+                    if (rightDecided && inRight)
+                    {
+                        contains = true;
+                        return true;
+                    }
+                    return leftDecided && rightDecided;
                 }
 
                 internal override Priority Priority => Priority.Union;
@@ -876,12 +890,17 @@ namespace AngouriMath
                     contains = false;
                     if (Left is not Set left || Right is not Set right)
                         return false;
-                    if (left.TryContains(entity, out var leftContains) && right.TryContains(entity, out var rightContains))
-                    {
-                        contains = leftContains && rightContains;
+                    // Kleene's and: an element either side decides is outside is outside, whatever the
+                    // other says, and a member only where both decide it is.
+                    // https://github.com/asc-community/AngouriMath/issues/2219
+                    var leftDecided = left.TryContains(entity, out var inLeft);
+                    if (leftDecided && !inLeft)
                         return true;
-                    }
-                    return false;
+                    var rightDecided = right.TryContains(entity, out var inRight);
+                    if (rightDecided && !inRight)
+                        return true;
+                    contains = leftDecided && rightDecided;
+                    return contains;
                 }
 
                 internal override Priority Priority => Priority.Intersection;
@@ -930,12 +949,17 @@ namespace AngouriMath
                     contains = false;
                     if (Left is not Set left || Right is not Set right)
                         return false;
-                    if (left.TryContains(entity, out var leftContains) && right.TryContains(entity, out var rightContains))
-                    {
-                        contains = leftContains && !rightContains;
+                    // In the left and not in the right, by Kleene's and: outside where the left decides it
+                    // is not a member or the right decides it is, whatever the other says.
+                    // https://github.com/asc-community/AngouriMath/issues/2219
+                    var leftDecided = left.TryContains(entity, out var inLeft);
+                    if (leftDecided && !inLeft)
                         return true;
-                    }
-                    return false;
+                    var rightDecided = right.TryContains(entity, out var inRight);
+                    if (rightDecided && inRight)
+                        return true;
+                    contains = leftDecided && rightDecided;
+                    return contains;
                 }
 
                 internal override Priority Priority => Priority.SetMinus;
