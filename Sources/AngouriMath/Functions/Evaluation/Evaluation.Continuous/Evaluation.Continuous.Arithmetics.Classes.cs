@@ -1327,7 +1327,10 @@ namespace AngouriMath
 
         public partial record Minf
         {
-            private protected override Entity IntrinsicCondition => Boolean.True;
+            // Defined where both arguments are real: the complex numbers are not ordered, and the node is
+            // read over the reals, so min(i, i) is NaN. The condition said True, and min(x, x) simplified
+            // to x, which has a value at x = i. https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition => Left.In(MathS.Sets.R) & Right.In(MathS.Sets.R);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
@@ -1337,7 +1340,8 @@ namespace AngouriMath
                         // Only ordered arguments compare. A complex one is left alone rather
                         // than guessed at, which is what SymPy's Min does too.
                         (Real l, Real r) => l.EDecimal.CompareTo(r.EDecimal) <= 0 ? l : r,
-                        var (l, r) when l == r => l,
+                        // min(a, a) is a where a is real, and has no value where it is not.
+                        var (l, r) when l == r => l.Provided(l.In(MathS.Sets.R)).InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a, b) => ((Minf)@this).New(a, b), isExact);
@@ -1345,7 +1349,8 @@ namespace AngouriMath
 
         public partial record Maxf
         {
-            private protected override Entity IntrinsicCondition => Boolean.True;
+            // As Minf's: defined where both arguments are real. https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition => Left.In(MathS.Sets.R) & Right.In(MathS.Sets.R);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
@@ -1353,7 +1358,7 @@ namespace AngouriMath
                     (a, b) => (a, b) switch
                     {
                         (Real l, Real r) => l.EDecimal.CompareTo(r.EDecimal) >= 0 ? l : r,
-                        var (l, r) when l == r => l,
+                        var (l, r) when l == r => l.Provided(l.In(MathS.Sets.R)).InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a, b) => ((Maxf)@this).New(a, b), isExact);
