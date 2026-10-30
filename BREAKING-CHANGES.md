@@ -245,6 +245,22 @@ is the canonical one: square-free, and without what the answer's own denominator
 | `"(a - 1)/(1 - b) - (1 - a)/(b - 1)".Simplify()` | `0 provided not (b - 1) * (1 - b) = 0` | `0 provided not b - 1 = 0` |
 | `"(x*y*a*b*c)/(c*b*a*x*x)".Simplify()` | `y / x provided not a * b * c * x = 0` | `y / x provided not a * b * c = 0` |
 
+### A step function at a jump takes the side its argument arrives from
+
+**Silent: a limit of `floor`, `ceil` or `sgn` whose argument arrives on a jump is answered, where it was left
+unevaluated.** A one-sided limit is the value on the side the argument arrives from, which is the sign the argument less
+the jump keeps near the destination, and not always the side x comes from: `floor(2 - x^2)` comes to 2 from below as x comes
+to 0 from the right, and its limit there is 1. A two-sided limit at a jump has two sides that differ, and is `NaN`, which
+says that there is none ([#2266](https://github.com/asc-community/AngouriMath/issues/2266)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limitleft(floor(x), x, 0)".ToEntity().Simplify()` | `limitleft(floor(x), x, 0)` | `-1` |
+| `"limitright(floor(2 - x^2), x, 0)".ToEntity().Simplify()` | `limitright(floor(2 - x ^ 2), x, 0)` | `1` |
+| `"limitright(sgn(x^3 - x), x, 0)".ToEntity().Simplify()` | `limitright(sgn(x ^ 3 - x), x, 0)` | `-1` |
+| `"limit(floor(x), x, 1)".ToEntity().Simplify()` | `limit(floor(x), x, 1)` | `NaN` |
+| `"limit(sgn(x), x, 0)".ToEntity().Simplify()` | `limit(sgn(x), x, 0)` | `NaN` |
+
 ### A polynomial system is not answered with some of its solutions missing
 
 **Silent: a polynomial system that lost solutions has all of them.** `EquationSystem.Solve` triangularises a
