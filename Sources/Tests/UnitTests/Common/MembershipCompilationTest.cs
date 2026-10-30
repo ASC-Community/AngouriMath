@@ -5,7 +5,6 @@
 // Website: https://am.angouri.org.
 //
 
-using System.Linq;
 using System.Numerics;
 using AngouriMath;
 using AngouriMath.Core.Exceptions;
@@ -99,9 +98,7 @@ namespace AngouriMath.Tests.Common
         public void AMembershipInAnExpressionIsWhatEvaluationSays(string expression)
         {
             var fast = expression.ToEntity().Compile("x", "y");
-            // Not at an infinity, where a compiled -x has a NaN imaginary part:
-            // https://github.com/asc-community/AngouriMath/issues/2222
-            foreach (var a in points.Where(point => !point.Contains("oo")))
+            foreach (var a in points)
             {
                 var evaluated = expression.ToEntity().Substitute("x", a).Substitute("y", 0).Evaled;
                 var value = fast.Call(Numeric(a), 0);

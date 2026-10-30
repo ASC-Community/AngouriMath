@@ -188,11 +188,13 @@ namespace AngouriMath.Core
                     case InstructionType.CALL_MINUS:
                         stack.Push(stack.Pop() - stack.Pop());
                         break;
+                    // Real where both sides are, so that an infinity keeps an imaginary part of 0:
+                    // https://github.com/asc-community/AngouriMath/issues/2222
                     case InstructionType.CALL_MUL:
-                        stack.Push(stack.Pop() * stack.Pop());
+                        stack.Push(AngouriMath.Core.Compilation.RealProducts.Product(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_DIV:
-                        stack.Push(stack.Pop() / stack.Pop());
+                        stack.Push(AngouriMath.Core.Compilation.RealProducts.Quotient(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_MOD:
                         stack.Push(Core.Compilation.RealOnly.Mod(stack.Pop(), stack.Pop()));

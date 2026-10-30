@@ -473,8 +473,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             {
                 { (ExpressionType.Add, typeof(System.Numerics.Complex)), Op<System.Numerics.Complex>((a, b) => a + b) },
                 { (ExpressionType.Subtract, typeof(System.Numerics.Complex)), Op<System.Numerics.Complex>((a, b) => a - b) },
-                { (ExpressionType.Multiply, typeof(System.Numerics.Complex)), Op<System.Numerics.Complex>((a, b) => a * b) },
-                { (ExpressionType.Divide, typeof(System.Numerics.Complex)), Op<System.Numerics.Complex>((a, b) => a / b) },
+                // Real where both sides are, so that an infinity keeps an imaginary part of 0:
+                // https://github.com/asc-community/AngouriMath/issues/2222
+                { (ExpressionType.Multiply, typeof(System.Numerics.Complex)), Call<System.Numerics.Complex>((a, b) => RealProducts.Product(a, b)) },
+                { (ExpressionType.Divide, typeof(System.Numerics.Complex)), Call<System.Numerics.Complex>((a, b) => RealProducts.Quotient(a, b)) },
                 { (ExpressionType.Equal, typeof(System.Numerics.Complex)), Cmp<System.Numerics.Complex>((a, b) => a == b) },
 
                 { (ExpressionType.Add, typeof(BigInteger)), Op<BigInteger>((a, b) => a + b) },
@@ -514,6 +516,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
         [ConstantField] private static readonly MethodInfo complexRemainder =
             ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, System.Numerics.Complex>>)((a, b) => RealOnly.Mod(a, b))).Body).Method;
+
+        private static MethodInfo Call<T>(Expression<Func<T, T, T>> e) => ((MethodCallExpression)e.Body).Method;
 
         private static MethodInfo Op<T>(Expression<Func<T, T, T>> e)
             => ((BinaryExpression)e.Body).Method
