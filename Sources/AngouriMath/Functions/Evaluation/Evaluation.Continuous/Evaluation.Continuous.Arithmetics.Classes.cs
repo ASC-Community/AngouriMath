@@ -1291,6 +1291,19 @@ namespace AngouriMath
                       : (value.Numerator.Sign < 0 ? quotient - PeterO.Numbers.EInteger.One : quotient);
         }
 
+        /// <summary>
+        /// The integer nearest to a rational, exactly, and the even one of the two at a tie: its floor, or
+        /// the integer above where the rational is more than a half above it, or a half above it and the
+        /// floor is odd.
+        /// </summary>
+        private static PeterO.Numbers.EInteger RoundedHalfEven(PeterO.Numbers.ERational value)
+        {
+            var floor = RoundedQuotient(value, up: false);
+            var aboveTheFloor = value.Subtract(PeterO.Numbers.ERational.FromEInteger(floor))
+                .CompareTo(PeterO.Numbers.ERational.Create(1, 2));
+            return aboveTheFloor > 0 || aboveTheFloor == 0 && !floor.IsEven ? floor + PeterO.Numbers.EInteger.One : floor;
+        }
+
         public partial record Ceilf
         {
             // Defined everywhere in the complex plane, taken componentwise.
@@ -1325,7 +1338,13 @@ namespace AngouriMath
                     a => a switch
                     {
                         Integer n => n,
-                        Rational n => Integer.Create(n.EDecimal.RoundHalfEven().ToEInteger()),
+                        // As in Floorf: an infinity is its own nearest integer and NaN propagates,
+                        // where EInteger refused both and round(+oo) threw, and a rational is
+                        // rounded from its numerator and denominator, where through EDecimal
+                        // round(10^120 + 2/3) came out 10^120.
+                        // https://github.com/asc-community/AngouriMath/issues/2282
+                        Real { IsFinite: false } n => n,
+                        Rational n => Integer.Create(RoundedHalfEven(n.ERational)),
                         Real n when !isExact => Integer.Create(n.EDecimal.RoundHalfEven().ToEInteger()),
                         Complex n when !isExact => Complex.Create(
                             n.RealPart.EDecimal.RoundHalfEven(), n.ImaginaryPart.EDecimal.RoundHalfEven()),

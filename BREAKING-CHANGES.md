@@ -262,6 +262,19 @@ its rows in the order it finds them, which can differ from the eliminator's
 | `MathS.Equations("x*y", "x + y^2 - 1").Solve("x", "y")` | `[[1, 0]]` | `[[1, 0], [0, 1], [0, -1]]` |
 | `MathS.Equations("x*y + 3*x - 5*y - 15", "x^2 - 3*x - 4*y - 10").Solve("x", "y")` | `[[1, -3], [2, -3]]` | `[[5, 0], [1, -3], [2, -3]]` |
 
+### `round` is exact, and an infinity is its own nearest integer
+
+**Silent for a long rational, not silent for an infinity.** `round` of a rational with more digits than the precision was
+taken through its decimal, which had already rounded it onto the integer beside it, and `round` of an infinity threw
+`OverflowException`. `floor` and `ceil` were fixed for both before; `round` now does as they do
+([#2282](https://github.com/asc-community/AngouriMath/issues/2282)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"round(10^120 + 2/3)".ToEntity().Evaled` | `10^120` | `10^120 + 1` |
+| `"round(10^120 + 3/2)".ToEntity().Evaled` | `10^120` | `10^120 + 2` |
+| `"round(+oo)".ToEntity().Evaled` | throws `OverflowException` | `+oo` |
+
 ### A squared sine and cosine with one coefficient are found anywhere in a sum
 
 **Silent: an identity reaches its value however the sum is written.** `k sin(x)^2 + k cos(x)^2` was reduced to `k`
