@@ -119,6 +119,39 @@ namespace AngouriMath.Numerics
 
         public static double DoubleFactorial(double n) => Real(DoubleFactorial(new NumericsComplex(n, 0)));
 
+        /// <summary>
+        /// The Catalan number: <c>(2n)!/(n! (n + 1)!)</c> for a whole <c>n &gt;= 0</c>, <c>-1/2</c> at <c>-1</c>, <c>0</c> at
+        /// a whole number below it, no value at a negative half-integer, and <c>4^n Γ(n + 1/2)/(√π Γ(n + 2))</c>
+        /// elsewhere.
+        /// </summary>
+        public static NumericsComplex CatalanNumber(NumericsComplex n)
+        {
+            if (IsWhole(n, out var whole))
+            {
+                if (whole == -1)
+                    return -0.5;
+                if (whole < -1)
+                    return 0;
+                // Exactly, by C_(k + 1) = C_k 2 (2k + 1)/(k + 2), whose division leaves no remainder, and rounded
+                // once, since a product of the ratios in doubles rounds at each step and C_5 would be
+                // 41.99999999999999. Past the index the interpreter computes exactly, the gamma ratio.
+                if (whole <= 1000)
+                {
+                    var catalan = System.Numerics.BigInteger.One;
+                    for (var k = 0; k < whole; k++)
+                        catalan = catalan * (2 * (2 * k + 1)) / (k + 2);
+                    return (double)catalan;
+                }
+            }
+            if (IsWhole(n + 0.5, out var half) && half <= 0)
+                return NaN;
+            var top = SpecialFunctions.Factorial(n - 0.5);
+            var bottom = SpecialFunctions.Factorial(n + 1);
+            return NumericsComplex.Pow(4, n) * top / (Math.Sqrt(Math.PI) * bottom);
+        }
+
+        public static double CatalanNumber(double n) => Real(CatalanNumber(new NumericsComplex(n, 0)));
+
         // x (x - 1) ... (x - n + 1) falling and x (x + 1) ... (x + n - 1) rising for n > 0, and for
         // n < 0 the reciprocal of (x + 1) ... (x - n) falling and of (x - 1) ... (x + n) rising.
         private static NumericsComplex OfAWholeOrder(NumericsComplex x, long n, bool falling)

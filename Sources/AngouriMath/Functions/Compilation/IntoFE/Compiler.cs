@@ -557,6 +557,17 @@ namespace AngouriMath
 
         // The binomial coefficient, the factorial powers and the double factorial, on the
         // interpreter's terms. https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record CatalanNumberf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_CATALAN_NUMBER));
+            }
+        }
+
         public partial record DoubleFactorialf
         {
             private protected override bool CompilesItself => true;

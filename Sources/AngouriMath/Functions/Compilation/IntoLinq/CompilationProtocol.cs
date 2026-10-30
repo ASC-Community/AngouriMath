@@ -157,6 +157,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Chif  when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Chi", 1, newE.Type), newE),
                 Factorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Factorial", 1, newE.Type), newE),
                 DoubleFactorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("DoubleFactorial", 1, newE.Type), newE),
+                CatalanNumberf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("CatalanNumber", 1, newE.Type), newE),
                 Phif =>         Expression.Call(GetDef("Phi", 1, e.Type), e),
 
                 // The conjugate, the argument and the parts, widened to double as the special

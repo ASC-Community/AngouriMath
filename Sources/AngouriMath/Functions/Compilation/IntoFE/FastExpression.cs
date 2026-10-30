@@ -56,6 +56,7 @@ namespace AngouriMath.Core
             CALL_IM,
             CALL_NOT,
             CALL_DOUBLE_FACTORIAL,
+            CALL_CATALAN_NUMBER,
 
             // 2-arg functions
             CALL_SUM = 100,
@@ -366,6 +367,9 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_HARMONIC_NUMBER:
                         stack.Push(AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_CATALAN_NUMBER:
+                        stack.Push(AngouriMath.Numerics.CombinatorialFunctions.CatalanNumber(stack.Pop()));
                         break;
                     case InstructionType.CALL_DOUBLE_FACTORIAL:
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(stack.Pop()));

@@ -313,6 +313,8 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("compiled lambertw(-1, x) at x = -0.3", compiledW(-0.3), -1.7813370234216276);
             var compiledPolygamma = "polygamma(1, x) + harmonicnumber(x, 2)".Compile<double, double>(x);
             CheckClose("compiled polygamma(1, x) + harmonicnumber(x, 2) at x = 1/2", compiledPolygamma(0.5), 4.934802200544679 + 0.7101318663035472);
+            var compiledCatalan = "catalannumber(x)".Compile(x);
+            Check("compiled catalannumber at 5 and -1", compiledCatalan.Call(5) == 42 && compiledCatalan.Call(-1) == -0.5, $"{compiledCatalan.Call(5)}, {compiledCatalan.Call(-1)}");
             // FastExpression: a statement is its truth value, and a piecewise the case that holds.
             var fastPiecewise = "piecewise(x provided x > 0, -x)".Compile(x);
             var fastStatement = "x > 1 or x < 0".Compile(x);

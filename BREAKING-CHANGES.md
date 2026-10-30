@@ -714,7 +714,8 @@ the name, so `sum(eulergamma, eulergamma, 1, 3)` is `6`
 **Not silent: `catalannumber(n)` is the Catalan number, where it was a product.** It is `binomial(2n, n) / (n + 1)` for
 a whole `n >= 0`, and `4^n Γ(n + 1/2) / (√π Γ(n + 2))` elsewhere, as SymPy's `catalan` is: `-1/2` at `-1`, `0` at
 every whole number below it, and no value at a negative half-integer
-([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)). It compiles, on the same terms, in both compilers
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
