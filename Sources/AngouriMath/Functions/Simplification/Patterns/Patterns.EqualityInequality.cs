@@ -280,7 +280,7 @@ namespace AngouriMath.Functions
             // a! = 0
             // A factorial is never zero *where it is defined*, and at a negative integer it is
             // not: `(-1)!` is a pole, so `(-1)! = 0` is NaN rather than False. The condition owed
-            // is therefore the factorial's own -- `x in RR and (x >= 0 or not x in ZZ)`.
+            // is therefore the factorial's own -- `x in ZZ implies x >= 0`.
             //
             // What was written was `Factorialf({ DomainCondition: var condition })`, a property
             // pattern on the factorial's *argument*. For a bare variable that condition is True,

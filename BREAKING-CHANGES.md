@@ -672,6 +672,19 @@ Both are real, `im(3 + 4i)` being `4`, real-linear, and turned by the conjugate 
 | `"im(3 + 4i)".ToEntity().Simplify()` | `(3 + 4i) * im` | `4` |
 | `"re * x".ToEntity()` | `re * x` | `re * x` |
 
+### The factorial and the gamma function are defined off the real line
+
+**Silent: the condition a simplified factorial carries is `x in ZZ implies x >= 0`, where it was `x in RR and (x >= 0
+or not x in ZZ)`.** A factorial, and the gamma function with it, has poles at the negative integers and nowhere else.
+Its condition also asked for a real argument, though `i!` is `0.498 - 0.155i`. So `x!/x!` simplified to an answer with
+no value at `i`, where it is 1 ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x!/x!".ToEntity().Simplify()` | `1 provided x in RR and (x >= 0 or not x in ZZ)` | `1 provided x in ZZ implies x >= 0` |
+| `"x! = 0".ToEntity().Simplify()` | `False provided x in RR and (x >= 0 or not x in ZZ)` | `False provided x in ZZ implies x >= 0` |
+| `"x!".ToEntity().DomainCondition` | `x in RR and (x >= 0 or not x in ZZ)` | `x in ZZ implies x >= 0` |
+
 ### A number's conjugate is made under the setting in force
 
 **Silent: `Complex.Conjugate` is made under the downcasting setting of the caller, where the first caller's setting was

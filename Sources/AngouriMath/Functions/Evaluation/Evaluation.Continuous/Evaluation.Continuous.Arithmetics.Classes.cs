@@ -526,9 +526,15 @@ namespace AngouriMath
         {
             // Factorial is defined for non-negative integers in the traditional sense,
             // but extends to complex numbers via the gamma function: n! = Γ(n+1)
-            // The gamma function has poles at negative integers, so factorial is undefined there
-            private protected override Entity IntrinsicCondition => 
-                Argument.In(MathS.Sets.R) & (Argument >= 0 | !Argument.In(MathS.Sets.Z));
+            // The gamma function has poles at negative integers, so factorial is undefined there,
+            // and only there. The condition asked for a real argument as well, though i! is
+            // 0.498 - 0.155i, so x!/x! simplified to 1 provided x in RR, which has no value at i.
+            // Off the integers x >= 0 may have no truth value and x in ZZ is false, so the implication
+            // is true. It is written as Simplify writes it, so that a quotient's x! = 0, which Simplify
+            // reads as False under this same condition, folds into it.
+            // https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition =>
+                new Impliesf(Argument.In(MathS.Sets.Z), Argument >= 0);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
