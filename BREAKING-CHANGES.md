@@ -300,6 +300,18 @@ are now also found wherever the `1` and the square sit in a sum, under the condi
 | `"1 + tan(x)^2 - sec(x)^2".Simplify()` | `1 + tan(x) ^ 2 - sec(x) ^ 2` | `0 provided not cos(x) = 0` |
 | `"a + 1 + tan(y)^2 - sec(y)^2".Simplify()` | `a + 1 + tan(y) ^ 2 - sec(y) ^ 2` | `a provided not cos(y) = 0` |
 
+### A scalar over a matrix argument is not compiled
+
+**Not silent: what compiled to a wrong value now throws `UncompilableNodeException`.** A scalar over a matrix that is an
+argument of the compiled function was compiled as the scalar over every element, where evaluation takes it as the scalar
+times the inverse. The inverse is not compiled, as a negative matrix power is not, so the quotient is refused. A matrix
+written into the expression is inverted before it is compiled, as before
+([#2287](https://github.com/asc-community/AngouriMath/issues/2287)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x / A"`, compiled over `GenTensor<double>` and called at `A = [[1, 2], [3, 4]]`, `x = 2` | `[[2, 1], [0.667, 0.5]]` | throws `UncompilableNodeException` |
+
 ### A square system is not answered with rows that are no solution
 
 **Silent: a row that is no solution is gone, and a system with a row that fails for some values is `null`.**
