@@ -695,6 +695,18 @@ conjugate as `0 - 1i`, in decimals, on the one instance that every `i` is, in ev
 |---|---|---|
 | `Complex.ImaginaryOne.Conjugate`, after `(1 / Complex.ImaginaryOne).Evaled` with `DowncastingEnabled` off | `0 - 1i` | `-i` |
 
+### `max` and `min` are defined where their arguments are real
+
+**Silent: `max(x, x)` and `min(x, x)` simplify to `x provided x in RR`, where they were `x`.** The complex numbers are
+not ordered, and both nodes are read over the reals, so `max(i, i)` has no value. Their condition said they were
+defined everywhere, and `max(x, x)` simplified to `x`, which has a value at `i`. A comparison of two real arguments is
+unchanged ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"max(x, x)".ToEntity().Simplify()` | `x` | `x provided x in RR` |
+| `"max(x, 2)".ToEntity().DomainCondition` | `True` | `x in RR` |
+
 ### `conjugate`, `conj` and `arg` are functions
 
 **Not silent: these names followed by a bracket are now the complex conjugate and the principal argument, where they
