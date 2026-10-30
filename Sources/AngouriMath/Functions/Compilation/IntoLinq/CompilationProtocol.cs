@@ -386,6 +386,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     children[i] = ConvertType(children[i], typeof(bool?));
                     statements++;
                 }
+                // A case that is an Iverson bracket or a provided integer is widened to a double, as a function's
+                // operand is: MaxType has no int? or long?. https://github.com/asc-community/AngouriMath/issues/2237
+                else
+                    children[i] = NumericOperand(children[i]);
             if (statements > 0 && statements * 2 != children.Length)
                 throw new UncompilableNodeException("A piecewise whose cases are statements and numbers at once has no compiled form");
 
