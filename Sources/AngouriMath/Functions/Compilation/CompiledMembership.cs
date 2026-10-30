@@ -25,9 +25,63 @@ namespace AngouriMath.Core.Compilation
     internal static class CompiledMembership
     {
         internal static Entity Rewritten(Entity expression)
-            => expression.Nodes.Any(node => node is Inf)
-                ? expression.Replace(node => node is Inf(var element, var set) && Statement(element, set) is { } statement ? statement : node)
+            => expression.Nodes.Any(node => node is Inf or Subsetf or Cardf or Quantifier)
+                ? expression.Replace(Rewrite)
                 : expression;
+
+        // Past this many members a statement over a finite set is left as written: the cardinality and the
+        // unique existence grow with the square of the count.
+        private const int LargestExpanded = 64;
+
+        // A subset, a cardinality and a quantifier over a finite set are statements about its members, as evaluation
+        // decides them, and any other is left as written, which neither compiler compiles.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        private static Entity Rewrite(Entity node) => node switch
+        {
+            Inf(var element, var set) => Statement(element, set) ?? node,
+            Subsetf(FiniteSet sub, var super) when sub.Count <= LargestExpanded
+                => sub.Select(member => Statement(member, super)).ToList() is var each && each.All(statement => statement is not null)
+                    ? each.Aggregate(Boolean.True as Entity, (all, statement) => all & statement!)
+                    : node,
+            Cardf(FiniteSet set) when set.Count <= LargestExpanded => Cardinality(set.ToList()),
+            Forallf(var variable, FiniteSet over, var body) when over.Count <= LargestExpanded
+                => over.Aggregate(Boolean.True as Entity, (all, member) => all & body.Substitute(variable, member)),
+            Existsf(var variable, FiniteSet over, var body) when over.Count <= LargestExpanded
+                => over.Aggregate(Boolean.False as Entity, (any, member) => any | body.Substitute(variable, member)),
+            ExistsUniquef(var variable, FiniteSet over, var body) when over.Count <= LargestExpanded
+                => ExactlyOne(over.Select(member => body.Substitute(variable, member)).ToList()),
+            _ => node
+        };
+
+        // The number of distinct values among the members: each counts where it equals none before it, and the
+        // count has no value where an equality has none.
+        private static Entity Cardinality(System.Collections.Generic.List<Entity> members)
+        {
+            Entity count = Number.Integer.Zero;
+            for (var i = 0; i < members.Count; i++)
+            {
+                Entity unseen = Boolean.True;
+                for (var j = 0; j < i; j++)
+                    unseen &= !members[i].Equalizes(members[j]);
+                count += new Iversonf(unseen);
+            }
+            return count;
+        }
+
+        // Exactly one of the statements holds, by Kleene's connectives.
+        private static Entity ExactlyOne(System.Collections.Generic.List<Entity> statements)
+        {
+            Entity any = Boolean.False;
+            for (var i = 0; i < statements.Count; i++)
+            {
+                var alone = statements[i];
+                for (var j = 0; j < statements.Count; j++)
+                    if (j != i)
+                        alone &= !statements[j];
+                any |= alone;
+            }
+            return any;
+        }
 
         private static Entity? Statement(Entity element, Entity set) => set switch
         {

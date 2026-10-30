@@ -388,6 +388,26 @@ truth value at any other ([#2195](https://github.com/asc-community/AngouriMath/i
 | `"x in [0; 1]".ToEntity().Compile("x").Call(0.5)` | `UncompilableNodeException` | `(1, 0)` |
 | `"3 divides x".ToEntity().Compile("x").Call(6)` | `UncompilableNodeException` | `(1, 0)` |
 
+### A quantifier, a subset and a cardinality over a finite set compile
+
+**Not silent: what was refused is compiled.** A quantifier, a subset and a cardinality were refused by both
+compilers with `UncompilableNodeException`. Over a finite set, of at most 64 members, each now compiles to what
+evaluation gives:
+- `forall` and `exists` are the conjunction and the disjunction of the body at each member, and `exists!` is
+  exactly one of them, by Kleene's connectives;
+- a finite set is a subset where each of its members is a member of the other set;
+- a cardinality is the number of distinct values among the members.
+
+Over any other set each is refused as before. At a `NaN` argument the compiled value is undecided, or the vacuous
+truth of a quantifier over the empty set, where evaluation drops a `NaN` member from a finite set
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"forall t in { 1, 2, 3 } : t < x".ToEntity().Compile("x").Call(4)` | `UncompilableNodeException` | `(1, 0)` |
+| `"{ x } subset [0; 3]".ToEntity().Compile<double, bool>("x")(0.5)` | `UncompilableNodeException` | `True` |
+| `"card({ 1, x })".ToEntity().Compile("x").Call(1)` | `UncompilableNodeException` | `(1, 0)` |
+
 ### A congruence compiles
 
 **Not silent: what was refused is compiled.** `a = b (mod n)` was refused by both compilers with
