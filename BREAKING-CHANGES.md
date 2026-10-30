@@ -139,6 +139,19 @@ and a number that passes every round is left open, since passing is not a proof
 | `"(10^30 + 1) in PP".ToEntity().Evaled` | `1000000000000000000000000000001 in PP` | `False` |
 | `"(10^30 + 57) in PP".ToEntity().Evaled` | `1000000000000000000000000000057 in PP` | `1000000000000000000000000000057 in PP` |
 
+### `arcsin` and `arccos` of a real number past 1 have their value
+
+**Silent: `arcsin(x)` and `arccos(x)` of a real `x` past 1 are `sign(x) pi/2 - i arccosh|x|` and `pi/2 - arcsin(x)`,
+where for about one argument in ten they were `NaN`.** The two share `(|w + 1| - |w - 1|) / 2`, which is in `[-1, 1]` by
+the triangle inequality and exactly 1 for such an `x`. Rounded, it came out a little past 1 for some `x`, and the decimal
+arcsine of that is `NaN`. Of `arcsin(k + c)` for `k` from 1 to 40 and `c` in `pi`, `e`, `sqrt(2)`, `sqrt(3)` and `ln(3)`,
+20 were `NaN` ([#2244](https://github.com/asc-community/AngouriMath/issues/2244)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"arcsin(6 + pi)".ToEntity().Evaled` | `NaN` | `1.5707963267948966 - 2.902976737696685i`, to 15 digits |
+| `"arccos(6 + pi)".ToEntity().Evaled` | `NaN` | `2.902976737696685i`, to 15 digits |
+
 ### A system with a product equation is solved branch by branch
 
 **Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,

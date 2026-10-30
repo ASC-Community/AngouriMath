@@ -947,7 +947,15 @@ namespace AngouriMath
                 var rho = xp1.MultiplyAndAdd(xp1, y.Multiply(y, context), context).SqrtByIntegerRoot(context);
                 var sigma = xm1.MultiplyAndAdd(xm1, y.Multiply(y, context), context).SqrtByIntegerRoot(context);
                 var alpha = rho.Add(sigma, context).Divide(2, context);
-                return (rho.Subtract(sigma, context).Divide(2, context),
+                // beta is (|w + 1| - |w - 1|) / 2, in [-1, 1] by the triangle inequality and exactly 1 for a real w past
+                // 1; the two roots are rounded, and a beta of 1 + ε made arcsin(beta) NaN, as arcsin(6 + pi) was.
+                // https://github.com/asc-community/AngouriMath/issues/2244
+                var beta = rho.Subtract(sigma, context).Divide(2, context);
+                if (beta.GreaterThan(EDecimal.One))
+                    beta = EDecimal.One;
+                else if (beta.LessThan(-EDecimal.One))
+                    beta = -EDecimal.One;
+                return (beta,
                     alpha.MultiplyAndSubtract(alpha, EDecimal.One, context).SqrtByIntegerRoot(context).Add(alpha, context).NaturalLogarithm(context).Multiply((y.IsNegative || y.IsZero) ? -1 : 1, context));
             }
 
