@@ -227,7 +227,7 @@ namespace AngouriMath.Core
                         break;
                     }
                     case InstructionType.CALL_POW:
-                        stack.Push(System.Numerics.Complex.Pow(stack.Pop(), stack.Pop()));
+                        stack.Push(AngouriMath.Core.Compilation.RealProducts.Power(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_SIN:
                         stack.Push(System.Numerics.Complex.Sin(stack.Pop()));
