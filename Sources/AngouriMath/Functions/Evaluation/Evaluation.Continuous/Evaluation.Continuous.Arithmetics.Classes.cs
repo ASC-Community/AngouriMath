@@ -1206,6 +1206,9 @@ namespace AngouriMath
                 => ExpandOnOneArgument(Argument,
                     a => a switch
                     {
+                        // NaN has no sign, and its signum no value: EDecimal's Sign of NaN is 1, which made
+                        // sgn(-1 provided false) 1. https://github.com/asc-community/AngouriMath/issues/2241
+                        Real nan when nan.EDecimal.IsNaN() => nan,
                         Real n => n.EDecimal.Sign,
                         Complex n when !isExact => Number.Signum(n),
                         // sgn(|z|) is 1 wherever z is nonzero and 0 where it is not: |z| is never
