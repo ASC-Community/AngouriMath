@@ -11,6 +11,14 @@ AngouriMath.Core.ApproachFrom.BothSides : AngouriMath.Core.ApproachFrom
 AngouriMath.Core.ApproachFrom.Left : AngouriMath.Core.ApproachFrom
 AngouriMath.Core.ApproachFrom.Right : AngouriMath.Core.ApproachFrom
 AngouriMath.Core.ApproachFrom.value__ : System.Int32
+AngouriMath.Core.BaseDimension.Amount : AngouriMath.Core.BaseDimension
+AngouriMath.Core.BaseDimension.Current : AngouriMath.Core.BaseDimension
+AngouriMath.Core.BaseDimension.Length : AngouriMath.Core.BaseDimension
+AngouriMath.Core.BaseDimension.LuminousIntensity : AngouriMath.Core.BaseDimension
+AngouriMath.Core.BaseDimension.Mass : AngouriMath.Core.BaseDimension
+AngouriMath.Core.BaseDimension.Temperature : AngouriMath.Core.BaseDimension
+AngouriMath.Core.BaseDimension.Time : AngouriMath.Core.BaseDimension
+AngouriMath.Core.BaseDimension.value__ : System.Int32
 AngouriMath.Core.Budgets.BudgetOutcome.<Clone>$() : AngouriMath.Core.Budgets.BudgetOutcome
 AngouriMath.Core.Budgets.BudgetOutcome.Completed { } : System.Boolean
 AngouriMath.Core.Budgets.BudgetOutcome.Deconstruct(System.String&, System.String&, System.Int64&, System.TimeSpan&, System.Boolean&) : System.Void
@@ -166,6 +174,45 @@ AngouriMath.Core.CostModel.ToString() : System.String
 AngouriMath.Core.CostModel.ctor(System.String, System.String, System.Func<AngouriMath.Entity,System.Double>)
 AngouriMath.Core.CostModel.op_Equality(AngouriMath.Core.CostModel, AngouriMath.Core.CostModel) : System.Boolean
 AngouriMath.Core.CostModel.op_Inequality(AngouriMath.Core.CostModel, AngouriMath.Core.CostModel) : System.Boolean
+AngouriMath.Core.Dimension.Amount : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Create(System.Int32[]) : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Current : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Dimensionless : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Equals(AngouriMath.Core.Dimension) : System.Boolean
+AngouriMath.Core.Dimension.Equals(System.Object) : System.Boolean
+AngouriMath.Core.Dimension.GetHashCode() : System.Int32
+AngouriMath.Core.Dimension.IsDimensionless { } : System.Boolean
+AngouriMath.Core.Dimension.IsIntegral { } : System.Boolean
+AngouriMath.Core.Dimension.Item { } : AngouriMath.Entity+Number+Rational
+AngouriMath.Core.Dimension.Length : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.LuminousIntensity : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Mass : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Pow(AngouriMath.Entity+Number+Rational) : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Temperature : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.Time : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.ToString() : System.String
+AngouriMath.Core.Dimension.op_Division(AngouriMath.Core.Dimension, AngouriMath.Core.Dimension) : AngouriMath.Core.Dimension
+AngouriMath.Core.Dimension.op_Equality(AngouriMath.Core.Dimension, AngouriMath.Core.Dimension) : System.Boolean
+AngouriMath.Core.Dimension.op_Inequality(AngouriMath.Core.Dimension, AngouriMath.Core.Dimension) : System.Boolean
+AngouriMath.Core.Dimension.op_Multiply(AngouriMath.Core.Dimension, AngouriMath.Core.Dimension) : AngouriMath.Core.Dimension
+AngouriMath.Core.DimensionCheck.<Clone>$() : AngouriMath.Core.DimensionCheck
+AngouriMath.Core.DimensionCheck.At { } : AngouriMath.Entity
+AngouriMath.Core.DimensionCheck.Deconstruct(AngouriMath.Core.DimensionStatus&, AngouriMath.Core.Dimension&, AngouriMath.Entity&, System.String&) : System.Void
+AngouriMath.Core.DimensionCheck.Dimension { } : AngouriMath.Core.Dimension
+AngouriMath.Core.DimensionCheck.Equals(AngouriMath.Core.DimensionCheck) : System.Boolean
+AngouriMath.Core.DimensionCheck.Equals(System.Object) : System.Boolean
+AngouriMath.Core.DimensionCheck.GetHashCode() : System.Int32
+AngouriMath.Core.DimensionCheck.IsConsistent { } : System.Boolean
+AngouriMath.Core.DimensionCheck.Reason { } : System.String
+AngouriMath.Core.DimensionCheck.Status { } : AngouriMath.Core.DimensionStatus
+AngouriMath.Core.DimensionCheck.ToString() : System.String
+AngouriMath.Core.DimensionCheck.ctor(AngouriMath.Core.DimensionStatus, AngouriMath.Core.Dimension, AngouriMath.Entity, System.String)
+AngouriMath.Core.DimensionCheck.op_Equality(AngouriMath.Core.DimensionCheck, AngouriMath.Core.DimensionCheck) : System.Boolean
+AngouriMath.Core.DimensionCheck.op_Inequality(AngouriMath.Core.DimensionCheck, AngouriMath.Core.DimensionCheck) : System.Boolean
+AngouriMath.Core.DimensionStatus.Consistent : AngouriMath.Core.DimensionStatus
+AngouriMath.Core.DimensionStatus.Inconsistent : AngouriMath.Core.DimensionStatus
+AngouriMath.Core.DimensionStatus.Undetermined : AngouriMath.Core.DimensionStatus
+AngouriMath.Core.DimensionStatus.value__ : System.Int32
 AngouriMath.Core.Domain.Any : AngouriMath.Core.Domain
 AngouriMath.Core.Domain.Boolean : AngouriMath.Core.Domain
 AngouriMath.Core.Domain.Complex : AngouriMath.Core.Domain
@@ -3384,6 +3431,8 @@ AngouriMath.MathS+DecimalConst.eulergamma { } : PeterO.Numbers.EDecimal
 AngouriMath.MathS+DecimalConst.pi { } : PeterO.Numbers.EDecimal
 AngouriMath.MathS+Diagnostic.CatchOnSimplify { } : AngouriMath.Convenience.Setting<System.Func<AngouriMath.Entity,System.Boolean>>
 AngouriMath.MathS+Diagnostic.OutputExplicit { } : AngouriMath.Convenience.Setting<System.Boolean>
+AngouriMath.MathS+Dimensions.DimensionlessGroups(System.Collections.Generic.IReadOnlyList<AngouriMath.Entity+Variable>, System.Collections.Generic.IReadOnlyDictionary<AngouriMath.Entity+Variable,AngouriMath.Core.Dimension>) : System.Collections.Generic.IReadOnlyList<AngouriMath.Entity>
+AngouriMath.MathS+Dimensions.Of(AngouriMath.Entity, System.Collections.Generic.IReadOnlyDictionary<AngouriMath.Entity+Variable,AngouriMath.Core.Dimension>) : AngouriMath.Core.DimensionCheck
 AngouriMath.MathS+ExperimentalFeatures.DecomposeRational(AngouriMath.Entity+Number+Integer, AngouriMath.Entity+Number+Integer) : System.Collections.Generic.IEnumerable<System.ValueTuple<AngouriMath.Entity+Number+Integer,AngouriMath.Entity+Number+Integer,AngouriMath.Entity+Number+Integer>>
 AngouriMath.MathS+ExperimentalFeatures.DecomposeRational(AngouriMath.Entity+Number+Rational) : System.Collections.Generic.IEnumerable<System.ValueTuple<AngouriMath.Entity+Number+Integer,AngouriMath.Entity+Number+Integer,AngouriMath.Entity+Number+Integer>>
 AngouriMath.MathS+ExperimentalFeatures.ExpandCosineArgumentMultiplied(AngouriMath.Entity, AngouriMath.Entity, System.Int32) : AngouriMath.Entity
@@ -3674,6 +3723,8 @@ class AngouriMath.Core.Budgets.WorkBudget
 class AngouriMath.Core.Compilation.IntoLinq.CompilationProtocol
 class AngouriMath.Core.Compilation.IntoLinq.TensorCompilation
 class AngouriMath.Core.CostModel
+class AngouriMath.Core.Dimension
+class AngouriMath.Core.DimensionCheck
 class AngouriMath.Core.EquationSystem
 class AngouriMath.Core.Exceptions.AngouriBugException
 class AngouriMath.Core.Exceptions.AngouriMathBaseException
@@ -3851,6 +3902,7 @@ class AngouriMath.MathS+Compute
 class AngouriMath.MathS+DecimalConst
 class AngouriMath.MathS+Diagnostic
 class AngouriMath.MathS+Diagnostic+DiagnosticCatchException
+class AngouriMath.MathS+Dimensions
 class AngouriMath.MathS+ExperimentalFeatures
 class AngouriMath.MathS+Hyperbolic
 class AngouriMath.MathS+Matrices
@@ -3868,6 +3920,8 @@ class AngouriMath.MathS+Utils
 class AngouriMath.ProofRecording
 class AngouriMath.ProofStep
 enum AngouriMath.Core.ApproachFrom
+enum AngouriMath.Core.BaseDimension
+enum AngouriMath.Core.DimensionStatus
 enum AngouriMath.Core.Domain
 enum AngouriMath.Core.Transformations.RewriteRuleGrowth
 enum AngouriMath.Core.Transformations.Soundness
