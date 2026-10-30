@@ -6,6 +6,7 @@
 //
 
 using System;
+using PeterO.Numbers;
 using NumericsComplex = System.Numerics.Complex;
 
 namespace AngouriMath.Numerics
@@ -14,12 +15,19 @@ namespace AngouriMath.Numerics
     /// The binomial coefficient, the falling and the rising factorial and the double factorial in
     /// double precision, for the compilers, on the terms the interpreter takes them: a whole order is
     /// a product, and any other goes through the gamma function, with <c>NaN</c> at a pole of the
-    /// numerator and <c>0</c> at one of the denominator, where the reciprocal gamma vanishes.
+    /// numerator and <c>0</c> at one of the denominator, where the reciprocal gamma vanishes. At whole
+    /// arguments each is computed exactly and rounded once, as evaluation's exact value is.
     /// https://github.com/asc-community/AngouriMath/issues/2195
     /// </summary>
     internal static class CombinatorialFunctions
     {
         [AngouriMath.Core.ConstantField] private static readonly NumericsComplex NaN = new(double.NaN, 0);
+
+        // 2^53: a double holds every whole number below it, so a product of two of them below it is exact.
+        private const double ExactBelow = 9007199254740992;
+
+        // Past this many bits a whole number is past the range of a double, whose largest is under 2^1024.
+        private const long BeyondDoubles = 1100;
 
         /// <summary>Whether <paramref name="z"/> is a whole number a <see cref="long"/> holds exactly.</summary>
         private static bool IsWhole(NumericsComplex z, out long whole)
@@ -44,6 +52,8 @@ namespace AngouriMath.Numerics
             {
                 if (lower < 0 || IsWhole(n, out var upper) && upper >= 0 && lower > upper)
                     return 0;
+                if (IsWhole(n, out var whole))
+                    return WholeBinomial(whole, lower);
                 NumericsComplex product = 1;
                 for (long i = 0; i < lower && product != 0 && !IsInfinite(product); i++)
                     product *= (n - i) / (i + 1);
@@ -105,16 +115,10 @@ namespace AngouriMath.Numerics
         {
             if (!IsWhole(n, out var whole) || whole < 0 && whole % 2 == 0)
                 return NaN;
-            NumericsComplex product = 1;
-            if (whole >= 0)
-            {
-                for (var k = whole; k > 1 && !IsInfinite(product); k -= 2)
-                    product *= k;
-                return product;
-            }
-            for (var j = whole + 2; j <= -1; j += 2)
-                product *= j;
-            return 1 / product;
+            // n (n - 2) ... down to 2 or 1, and for a negative odd n the reciprocal of (n + 2) (n + 4) ... (-1).
+            return whole >= 0
+                ? ProductOfWholeFactors(whole, -2, (whole + 1) / 2, reciprocal: false)
+                : ProductOfWholeFactors(whole + 2, 2, (-whole - 1) / 2, reciprocal: true);
         }
 
         public static double DoubleFactorial(double n) => Real(DoubleFactorial(new NumericsComplex(n, 0)));
@@ -134,13 +138,19 @@ namespace AngouriMath.Numerics
                     return 0;
                 // Exactly, by C_(k + 1) = C_k 2 (2k + 1)/(k + 2), whose division leaves no remainder, and rounded
                 // once, since a product of the ratios in doubles rounds at each step and C_5 would be
-                // 41.99999999999999. Past the index the interpreter computes exactly, the gamma ratio.
+                // 41.99999999999999. By EFloat, as (double)BigInteger truncates, and C_32 would be
+                // 55534064877048190. Past the index the interpreter computes exactly, the gamma ratio.
                 if (whole <= 1000)
                 {
-                    var catalan = System.Numerics.BigInteger.One;
+                    var catalan = EInteger.One;
                     for (var k = 0; k < whole; k++)
-                        catalan = catalan * (2 * (2 * k + 1)) / (k + 2);
-                    return (double)catalan;
+                    {
+                        catalan = catalan.Multiply(2 * (2 * k + 1)).Divide(k + 2);
+                        // The Catalan numbers grow, so once one is past the doubles the rest are.
+                        if (catalan.GetUnsignedBitLengthAsInt64() > BeyondDoubles)
+                            return double.PositiveInfinity;
+                    }
+                    return EFloat.FromEInteger(catalan).ToDouble();
                 }
             }
             if (IsWhole(n + 0.5, out var half) && half <= 0)
@@ -157,6 +167,8 @@ namespace AngouriMath.Numerics
         private static NumericsComplex OfAWholeOrder(NumericsComplex x, long n, bool falling)
         {
             var step = falling == n > 0 ? -1 : 1;
+            if (IsWhole(x, out var whole))
+                return ProductOfWholeFactors(n > 0 ? whole : whole + step, step, Math.Abs(n), reciprocal: n < 0);
             NumericsComplex product = 1;
             for (long i = 0; i < Math.Abs(n) && product != 0 && !IsInfinite(product); i++)
             {
@@ -166,6 +178,78 @@ namespace AngouriMath.Numerics
                 product *= factor;
             }
             return n > 0 ? product : 1 / product;
+        }
+
+        // binomial(n, k) for a whole n and a whole k >= 0, k <= n where n >= 0, exactly and rounded once: by
+        // binomial(m, i + 1) = binomial(m, i) (m - i)/(i + 1), whose division leaves no remainder, over the
+        // shorter of k and m - k. In doubles while the product before the division is below 2^53, where it
+        // and the quotient are exact, and past it in EInteger. For a negative n, binomial(n, k) is
+        // (-1)^k binomial(k - n - 1, k).
+        private static double WholeBinomial(long n, long k)
+        {
+            var sign = n < 0 && k % 2 != 0 ? -1 : 1;
+            var top = n < 0 ? k - n - 1 : n;
+            var steps = Math.Min(k, top - k);
+            double value = 1;
+            long i = 0;
+            for (; i < steps; i++)
+            {
+                double factor = top - i;
+                var product = value * factor;
+                if (factor >= ExactBelow || product >= ExactBelow)
+                    break;
+                value = product / (i + 1);
+            }
+            if (i == steps)
+                return sign * value;
+            var exact = EInteger.FromInt64((long)value);
+            for (; i < steps; i++)
+            {
+                exact = exact * EInteger.FromInt64(top - i) / EInteger.FromInt64(i + 1);
+                // The binomials grow up to the middle, so once one is past the doubles the rest are.
+                if (exact.GetUnsignedBitLengthAsInt64() > BeyondDoubles)
+                    return sign * double.PositiveInfinity;
+            }
+            return sign * EFloat.FromEInteger(exact).ToDouble();
+        }
+
+        // The product of the whole factors first, first + step, ..., count of them, or its reciprocal,
+        // exactly and rounded once: in doubles while each partial product is below 2^53, where it is exact,
+        // and past it in EInteger. 0 where a factor vanishes, and NaN for its reciprocal. The callers' factors
+        // are consecutive, or two apart without crossing 0, so otherwise they have one sign and are each at
+        // least 1 in size: a partial product past the range of the doubles stays past it.
+        private static double ProductOfWholeFactors(long first, long step, long count, bool reciprocal)
+        {
+            if (count == 0)
+                return 1;
+            var last = first + step * (count - 1);
+            if (Math.Min(first, last) <= 0 && Math.Max(first, last) >= 0 && first % step == 0)
+                return reciprocal ? double.NaN : 0;
+            double product = 1;
+            long i = 0;
+            for (; i < count; i++)
+            {
+                double factor = first + step * i;
+                var next = product * factor;
+                if (Math.Abs(factor) >= ExactBelow || Math.Abs(next) >= ExactBelow)
+                    break;
+                product = next;
+            }
+            if (i == count)
+                return reciprocal ? 1 / product : product;
+            var exact = EInteger.FromInt64((long)product);
+            for (; i < count; i++)
+            {
+                exact *= EInteger.FromInt64(first + step * i);
+                if (exact.GetUnsignedBitLengthAsInt64() > BeyondDoubles)
+                {
+                    var sign = first < 0 && count % 2 != 0 ? -1 : 1;
+                    return reciprocal ? sign * 0.0 : sign * double.PositiveInfinity;
+                }
+            }
+            return reciprocal
+                ? ERational.Create(exact.Sign < 0 ? EInteger.FromInt32(-1) : EInteger.One, exact.Abs()).ToDouble()
+                : EFloat.FromEInteger(exact).ToDouble();
         }
 
         private static bool IsInfinite(NumericsComplex z) => double.IsInfinity(z.Real) || double.IsInfinity(z.Imaginary);
