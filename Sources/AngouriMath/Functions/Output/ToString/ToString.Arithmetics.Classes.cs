@@ -34,10 +34,16 @@ namespace AngouriMath
             // unbracketed -- but `mod` shares this precedence level and is not associative, so a
             // `mod` on the right must be bracketed or it is re-read as the outer operator:
             // `2 * (3 mod 2)` is 2 and `(2 * 3) mod 2` is 0.
-            private protected override string StringizeNode() =>
-                (Multiplier is Integer(-1) && !MathS.Diagnostic.OutputExplicit ? "-"
-                    : Multiplier.Stringize(Multiplier.Priority < Priority) + " * ")
-                + Multiplicand.Stringize(Multiplicand.Priority < Priority || Multiplicand is Modf);
+            private protected override string StringizeNode()
+            {
+                var multiplicand = Multiplicand.Stringize(Multiplicand.Priority < Priority || Multiplicand is Modf);
+                if (Multiplier is not Integer(-1) || MathS.Diagnostic.OutputExplicit)
+                    return Multiplier.Stringize(Multiplier.Priority < Priority) + " * " + multiplicand;
+                // A negation of something printed with a sign of its own is bracketed: -(-2/3), not --2/3, which is
+                // read back as -(-2) / 3; and -(+oo), not -+oo. A negative rational is not bracketed by its priority,
+                // which is a quotient's, as a negative integer is. https://github.com/asc-community/AngouriMath/issues/2264
+                return multiplicand.StartsWith("-") || multiplicand.StartsWith("+") ? "-(" + multiplicand + ")" : "-" + multiplicand;
+            }
             /// <inheritdoc/>
             public override string ToString() => Stringize();
         }
