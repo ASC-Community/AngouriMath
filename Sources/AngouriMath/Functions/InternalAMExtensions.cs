@@ -180,8 +180,14 @@ namespace AngouriMath
                     yield return s;
         }
 
+        /// <summary>
+        /// <c>z / |z|</c>, and the sign of a real number, so that it is <c>1</c> at <c>+oo</c> and <c>-1</c> at <c>-oo</c>, as
+        /// evaluation has it, where <c>z / |z|</c> was <c>∞ / ∞</c>, <c>NaN</c>. https://github.com/asc-community/AngouriMath/issues/2247
+        /// </summary>
         public static System.Numerics.Complex Signum(this System.Numerics.Complex z)
-            => z == 0 ? 0 : z / z.Magnitude;
+            => z == 0 ? 0
+            : z.Imaginary == 0 ? z.Real switch { > 0 => 1, < 0 => -1, _ => double.NaN }
+            : z / z.Magnitude;
 
         public static System.Numerics.Complex Abs(this System.Numerics.Complex z)
             => System.Numerics.Complex.Abs(z);

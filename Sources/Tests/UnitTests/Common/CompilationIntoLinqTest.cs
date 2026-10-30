@@ -389,8 +389,10 @@ namespace AngouriMath.Tests.Common
             => Assert.Equal((int)Math.Sin(4), "sin(a)".Compile<int, int>("a")(4));
 
         [Fact]
+        // (4 + 3i)^2 is 16 - 9 + 24i exactly, as evaluation has it. Complex.Pow, which this compared with, rounds its
+        // e^(2 ln z) to (7.000000000000001, 24). https://github.com/asc-community/AngouriMath/issues/2247
         public void TestUpcastDowncast5()
-            => Assert.Equal(Complex.Pow(new(4, 3), 2), "a ^ 2".Compile<Complex, Complex>("a")(new(4, 3)));
+            => Assert.Equal(new Complex(7, 24), "a ^ 2".Compile<Complex, Complex>("a")(new(4, 3)));
 
         [Fact]
         public void TestUpcastDowncast6()   //    |   |   |   |   |
