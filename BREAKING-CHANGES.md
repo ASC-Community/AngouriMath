@@ -42,6 +42,21 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A limit at the jump of a step function is not answered by substitution
+
+**Silent: a limit of an expression built on `floor`, `ceil`, `round` or `sgn`, where the step's argument arrives on one
+of its jumps, is left unevaluated, where it was answered by substituting the destination.** That value is the limit only
+where the expression is continuous, and at a jump the value differs on the two sides. `floor(x) - 1` is -2 all the way in
+from the left of 0, but substitution answered -1, and it answered the two-sided limit, which does not exist, with -1 too.
+A bare `floor(x)` or `sgn(x)` was already declined there. Away from a jump, nothing changes
+([#2266](https://github.com/asc-community/AngouriMath/issues/2266)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limitleft(floor(x) - 1, x, 0)".ToEntity().Simplify()` | `-1` | `limitleft(floor(x) - 1, x, 0)` |
+| `"limit(floor(x) + x, x, 1)".ToEntity().Simplify()` | `2` | `limit(floor(x) + x, x, 1)` |
+| `"limitleft(-sgn(x), x, 0)".ToEntity().Simplify()` | `0` | `limitleft(-sgn(x), x, 0)` |
+
 ### An equation through a negative whole power is not answered with no roots
 
 **Silent: an empty answer becomes the roots.** Inverting `x^n = v` for a negative whole `n` multiplied by the roots
