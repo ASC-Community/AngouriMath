@@ -259,6 +259,12 @@ namespace AngouriMath.Functions.Algebra
                     && (lowerLogLimit.Nodes.Any(child => child == Real.PositiveInfinity || child == Real.NegativeInfinity)
                      || lowerLogLimit == Integer.Zero))
                 {
+                    // Nor through a step that jumps all the way in, for the reason l'Hopital's rule
+                    // itself declines it: ln(floor(x)) / ln(x) answered 0.
+                    // https://github.com/asc-community/AngouriMath/issues/2281
+                    if (LimitFunctional.HasAStepThatJumpsNear(upperLogArgument, x, Real.PositiveInfinity, ApproachFrom.BothSides)
+                        || LimitFunctional.HasAStepThatJumpsNear(lowerLogArgument, x, Real.PositiveInfinity, ApproachFrom.BothSides))
+                        return null;
                     var upperDerivative = upperLogArgument.Differentiate(x).InnerSimplified;
                     var lowerDerivative = lowerLogArgument.Differentiate(x).InnerSimplified;
                     // A derivative the library cannot compute comes back *unevaluated* rather than
