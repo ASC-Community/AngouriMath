@@ -761,8 +761,14 @@ namespace AngouriMath
         public partial record LambertWf
         {
             // Every whole branch, and every z but 0 off the principal branch, where W_k(z) goes to -oo as ln z does.
+            // Over the reals, where a branch is real: W_0 for z >= -1/e and W_(-1) for -1/e <= z < 0, both -1 at
+            // -1/e; no other branch is real anywhere. The condition was the complex one under either reading, so it
+            // held for W_0(-1), which is -0.318 + 1.337i. https://github.com/asc-community/AngouriMath/issues/2256
             private protected override Entity IntrinsicCondition =>
-                Branch.In(MathS.Sets.Z) & (Branch.Equalizes(Integer.Zero) | !Argument.Equalizes(Integer.Zero));
+                Codomain < Domain.Complex
+                ? Branch.Equalizes(Integer.Zero) & Argument >= -1 / MathS.e
+                  | Branch.Equalizes(Integer.Create(-1)) & Argument >= -1 / MathS.e & Argument < 0
+                : Branch.In(MathS.Sets.Z) & (Branch.Equalizes(Integer.Zero) | !Argument.Equalizes(Integer.Zero));
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
