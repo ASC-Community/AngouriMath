@@ -6,7 +6,9 @@
 //
 
 using AngouriMath;
+using AngouriMath.Core.Compilation.IntoLinq;
 using AngouriMath.Extensions;
+using GenericTensor.Core;
 using Xunit;
 
 namespace AngouriMath.Tests.Common
@@ -34,6 +36,21 @@ namespace AngouriMath.Tests.Common
             Assert.True(double.IsNaN(overDoubles), $"{expression} at {at}: {overDoubles} over double");
             Assert.True(float.IsNaN(expression.ToEntity().Compile<float, float>("x")((float)at)), $"{expression} at {at} over float");
             Assert.True(expression.ToEntity().Substitute("x", at).Evaled.IsNaN, $"{expression} at {at} evaluates to a value");
+        }
+
+        /// <summary>
+        /// A matrix argument divided by a zero scalar, entry by entry as a scalar is. A matrix written into the expression
+        /// is divided before it is compiled, and only an argument reaches the compiled matrix division.
+        /// </summary>
+        [Fact]
+        public void AMatrixOverZeroHasNoEntries()
+        {
+            var matrix = GenTensor<double, DoubleOperations>.CreateMatrix(new double[,] { { 1, 2 }, { 3, 4 } });
+            var divided = "A / x".ToEntity()
+                .Compile<GenTensor<double, DoubleOperations>, double, GenTensor<double, DoubleOperations>>("A", "x")(matrix, 0);
+            for (var i = 0; i < 2; i++)
+                for (var j = 0; j < 2; j++)
+                    Assert.True(double.IsNaN(divided[i, j]), $"[{i}, {j}] is {divided[i, j]}");
         }
 
         [Theory]
