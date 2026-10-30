@@ -49,10 +49,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
         public static System.Numerics.Complex Log(System.Numerics.Complex a, System.Numerics.Complex b)
             => AngouriMath.Core.Compilation.ComplexBranches.Log(a, b);
+        // A logarithm to base 0 has no value. https://github.com/asc-community/AngouriMath/issues/2255
         public static double Log(double a, double b)
-            => Math.Log(b, a);
+            => a == 0 ? double.NaN : Math.Log(b, a);
         public static float Log(float a, float b)
-            => (float)Math.Log(b, a);
+            => a == 0 ? float.NaN : (float)Math.Log(b, a);
         public static long Log(long a, long b)
             => (long)Math.Log(b, a);
         public static int Log(int a, int b)

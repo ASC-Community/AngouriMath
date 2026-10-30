@@ -602,6 +602,18 @@ reals, to `1` and `0` ([#2195](https://github.com/asc-community/AngouriMath/issu
 | `"arg(x)".ToEntity().Compile("x").Call(-2)` | throws `UncompilableNodeException`, `arg` being a variable | `pi` |
 | `"conj(x)".ToEntity().Compile<Complex, Complex>("x")(3 + 4i)` | throws `UncompilableNodeException`, `conj` being a variable | `3 - 4i` |
 
+### A logarithm to base 0 has no value
+
+**Silent: `log(0, x)` is `NaN`, where it was `0` for a positive `x`.** Evaluation and both compilers took it as
+`ln(x) / ln(0)`, which is `ln(x) / (-oo)`, and came out with 0. But 0 is not a base, since no power of it is anything
+but 0, and `log`'s own condition already excluded it. A base that is small but not 0 keeps its logarithm
+([#2255](https://github.com/asc-community/AngouriMath/issues/2255)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"log(0, 2)".ToEntity().Evaled` | `0` | `NaN` |
+| `"log(x, 2)".ToEntity().Compile("x").Call(0)` | `(-0, -0)` | `(NaN, 0)` |
+
 ### `re` and `im` are the real and the imaginary part
 
 **Not silent: `re(…)` and `im(…)`, and `real(…)` and `imag(…)`, are now the real and the imaginary part, where they were

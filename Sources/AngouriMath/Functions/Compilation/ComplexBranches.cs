@@ -59,7 +59,11 @@ namespace AngouriMath.Core.Compilation
         /// https://github.com/asc-community/AngouriMath/issues/2239
         /// </summary>
         public static NumericsComplex Log(NumericsComplex @base, NumericsComplex value)
-            => RealProducts.Quotient(NumericsComplex.Log(Unsigned(value)), NumericsComplex.Log(Unsigned(@base)));
+            => @base == NumericsComplex.Zero
+                // A logarithm to base 0 has no value, as in evaluation, where ln(value) / ln(0) made it 0.
+                // https://github.com/asc-community/AngouriMath/issues/2255
+                ? new NumericsComplex(double.NaN, 0)
+                : RealProducts.Quotient(NumericsComplex.Log(Unsigned(value)), NumericsComplex.Log(Unsigned(@base)));
 
         public static NumericsComplex Arccos(NumericsComplex a) => NumericsComplex.Acos(Unsigned(a));
 
