@@ -395,6 +395,22 @@ then had no truth value for. A product or a quotient of two real numbers is now 
 | `"-x".ToEntity().Compile("x").Call(double.PositiveInfinity)` | `(-Infinity, NaN)` | `(-Infinity, 0)` |
 | `"x / 2".ToEntity().Compile<Complex, Complex>("x")(double.PositiveInfinity)` | `(Infinity, NaN)` | `(Infinity, 0)` |
 
+### A compiled power of real numbers is the real power, at an infinity and at zero
+
+**Silent: a compiled power over `Complex` is what evaluation gives where it had no value or the wrong one.** In
+FastExpression and in the LINQ compiler over `System.Numerics.Complex`, a power was `Complex.Pow`, which takes
+`e^(b ln a)`. At an infinite base that brings in `∞ · 0`, so `x^2`, `sqrt(x)` and `exp(-x)` at `+oo` had no value, and
+it gave `0` for `0^(-1)` and `1` for `0^0`, where evaluation has none. A power of two reals is now `Math.Pow` where
+it is real, a positive base or a negative one to a whole power; `0` to a power that is not positive has no value; and
+anything else is `Complex.Pow` as before. At finite positive points the two agree to the last bit
+([#2225](https://github.com/asc-community/AngouriMath/issues/2225)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^2".ToEntity().Compile("x").Call(double.PositiveInfinity)` | `(NaN, NaN)` | `(Infinity, 0)` |
+| `"x^(-1)".ToEntity().Compile("x").Call(0)` | `(0, 0)` | `(NaN, 0)` |
+| `"x^0".ToEntity().Compile("x").Call(0)` | `(1, 0)` | `(NaN, 0)` |
+
 ### A compiled statement with no truth value has none
 
 **Silent in part: a compiled comparison has the truth value evaluation gives it.** A comparison over `Complex` was refused

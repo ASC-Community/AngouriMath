@@ -62,7 +62,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
 
         public static System.Numerics.Complex Pow(System.Numerics.Complex a, System.Numerics.Complex b)
-            => System.Numerics.Complex.Pow(a, b);
+            => AngouriMath.Core.Compilation.RealProducts.Power(a, b);
         public static double Pow(double a, double b)
             => Math.Pow(a, b);
         public static float Pow(float a, float b)
