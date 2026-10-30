@@ -335,6 +335,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         // terms. https://github.com/asc-community/AngouriMath/issues/2195
         public static System.Numerics.Complex DoubleFactorial(System.Numerics.Complex a) => AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(a);
         public static double DoubleFactorial(double a) => AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(a);
+        public static System.Numerics.Complex CatalanNumber(System.Numerics.Complex a) => AngouriMath.Numerics.CombinatorialFunctions.CatalanNumber(a);
+        public static double CatalanNumber(double a) => AngouriMath.Numerics.CombinatorialFunctions.CatalanNumber(a);
         public static System.Numerics.Complex Binomial(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.Binomial(a, b);
         public static double Binomial(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.Binomial(a, b);
         public static System.Numerics.Complex FallingFactorial(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.FallingFactorial(a, b);
@@ -540,6 +542,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("Im", 1, typeof(double)), Def<double>(a => Im(a)) },
             { ("DoubleFactorial", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => DoubleFactorial(a)) },
             { ("DoubleFactorial", 1, typeof(double)), Def<double>(a => DoubleFactorial(a)) },
+            { ("CatalanNumber", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => CatalanNumber(a)) },
+            { ("CatalanNumber", 1, typeof(double)), Def<double>(a => CatalanNumber(a)) },
             { ("Binomial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Binomial(a, b)) },
             { ("Binomial", 2, typeof(double)), Def<double>((a, b) => Binomial(a, b)) },
             { ("FallingFactorial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => FallingFactorial(a, b)) },

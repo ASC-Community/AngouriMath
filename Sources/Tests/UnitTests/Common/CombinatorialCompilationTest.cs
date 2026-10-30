@@ -59,6 +59,34 @@ namespace AngouriMath.Tests.Common
             Assert.True(compared > values.Length * values.Length * 3 / 4, $"only {compared} of {values.Length * values.Length} evaluated");
         }
 
+        /// <summary>
+        /// The Catalan numbers: exact on the whole numbers, <c>-1/2</c> at <c>-1</c>, <c>0</c> below it, no value at a
+        /// negative half-integer, and the gamma ratio elsewhere.
+        /// </summary>
+        [Fact]
+        public void TheCatalanNumbersAreWhatEvaluationSays()
+        {
+            var fast = "catalannumber(x)".ToEntity().Compile("x");
+            var linq = "catalannumber(x)".ToEntity().Compile<Complex, Complex>("x");
+            var real = "catalannumber(x)".ToEntity().Compile<double, double>("x");
+            foreach (var a in values.Concat(new[] { "-4", "10", "30", "7/3", "-7/3" }))
+            {
+                var expected = Assert.IsAssignableFrom<Entity.Number.Complex>($"catalannumber({a})".ToEntity().Evaled).ToNumerics();
+                var x = Numeric(a);
+                Assert.True(Agree(expected, fast.Call(x)), $"catalannumber({a}): {expected} evaluated, {fast.Call(x)} by FastExpression");
+                Assert.True(Agree(expected, linq(x)), $"catalannumber({a}): {expected} evaluated, {linq(x)} by LINQ");
+                if (x.Imaginary == 0 && expected.Imaginary == 0)
+                    Assert.True(Agree(expected, real(x.Real)), $"catalannumber({a}): {expected} evaluated, {real(x.Real)} over double");
+            }
+        }
+
+        /// <summary>A Catalan number at a whole index is the integer, exactly, as far as a double holds it.</summary>
+        [Theory]
+        [InlineData(5, 42)]
+        [InlineData(30, 3814986502092304)]
+        public void ACatalanNumberAtAWholeIndexIsExact(int n, long expected)
+            => Assert.Equal((double)expected, "catalannumber(x)".ToEntity().Compile("x").Call(n).Real);
+
         [Fact]
         public void TheDoubleFactorialIsWhatEvaluationSays()
         {

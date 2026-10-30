@@ -17,7 +17,7 @@
     var parts = new[]{ "Conj", "Arg", "Re", "Im" };
     // The combinatorial functions, for Complex and double alone in the same way: one argument, and two.
     // https://github.com/asc-community/AngouriMath/issues/2195
-    var combinatorial = new[]{ "DoubleFactorial" };
+    var combinatorial = new[]{ "DoubleFactorial", "CatalanNumber" };
     var combinatorialBinary = new[]{ "Binomial", "FallingFactorial", "RisingFactorial" };
     var types = new[]{ "System.Numerics.Complex", "double", "float", "long", "int", "BigInteger" };
 #>
