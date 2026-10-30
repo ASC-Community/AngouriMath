@@ -48,6 +48,19 @@ namespace AngouriMath.Tests.Convenience
             Assert.True(double.IsNaN(expression.Compile<double, double>("x")(0)), $"{expression} at 0 over double");
         }
 
+        /// <summary>
+        /// <c>log(x, 1)</c> is 0 for every base but 0 and 1, and its simplification says so: it said only <c>not x = 1</c>,
+        /// and was 0 at <c>x = 0</c>.
+        /// </summary>
+        [Fact]
+        public void TheLogarithmOfOneExcludesTheBase0()
+        {
+            var simplified = "log(x, 1)".ToEntity().Simplify();
+            Assert.True(simplified.Substitute("x", 0).Evaled.IsNaN, $"{simplified} at 0");
+            Assert.True(simplified.Substitute("x", 1).Evaled.IsNaN, $"{simplified} at 1");
+            Assert.Equal(Entity.Number.Integer.Zero, simplified.Substitute("x", 2).Evaled);
+        }
+
         /// <summary>A base that is small and not 0 has its logarithm.</summary>
         [Theory]
         [InlineData("log(2, 8)", 3)]

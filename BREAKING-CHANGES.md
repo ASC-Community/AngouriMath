@@ -606,13 +606,15 @@ reals, to `1` and `0` ([#2195](https://github.com/asc-community/AngouriMath/issu
 
 **Silent: `log(0, x)` is `NaN`, where it was `0` for a positive `x`.** Evaluation and both compilers took it as
 `ln(x) / ln(0)`, which is `ln(x) / (-oo)`, and came out with 0. But 0 is not a base, since no power of it is anything
-but 0, and `log`'s own condition already excluded it. A base that is small but not 0 keeps its logarithm
+but 0, and `log`'s own condition already excluded it. A base that is small but not 0 keeps its logarithm.
+`log(b, 1)`, simplified to 0 for every base but 1, now excludes the base 0 as well
 ([#2255](https://github.com/asc-community/AngouriMath/issues/2255)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"log(0, 2)".ToEntity().Evaled` | `0` | `NaN` |
 | `"log(x, 2)".ToEntity().Compile("x").Call(0)` | `(-0, -0)` | `(NaN, 0)` |
+| `"log(x, 1)".ToEntity().Simplify()` | `0 provided not x = 1` | `0 provided not x = 0 and not x = 1` |
 
 ### `re` and `im` are the real and the imaginary part
 
