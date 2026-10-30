@@ -62,6 +62,8 @@ namespace AngouriMath.Core
             CALL_PRIME_OMEGA,
             CALL_PRIME,
             CALL_PRIME_PI,
+            // Membership in the set of numbers its reference names, a NumberStatements.NumberSet.
+            CALL_MEMBER,
 
             // 2-arg functions
             CALL_SUM = 100,
@@ -92,6 +94,7 @@ namespace AngouriMath.Core
             CALL_HARMONIC_NUMBER,
             CALL_DIVISOR_SIGMA,
             CALL_VALUATION,
+            CALL_DIVIDES,
 
             // 3-arg: a value where its predicate holds, and the one below it elsewhere.
             CALL_SELECT = 150,
@@ -395,6 +398,12 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_VALUATION:
                         stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.Valuation(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_MEMBER:
+                        stack.Push(Truth(AngouriMath.Numerics.NumberStatements.In(stack.Pop(), instruction.Reference)));
+                        break;
+                    case InstructionType.CALL_DIVIDES:
+                        stack.Push(Truth(AngouriMath.Numerics.NumberStatements.Divides(stack.Pop(), stack.Pop())));
                         break;
                     case InstructionType.CALL_CATALAN_NUMBER:
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.CatalanNumber(stack.Pop()));

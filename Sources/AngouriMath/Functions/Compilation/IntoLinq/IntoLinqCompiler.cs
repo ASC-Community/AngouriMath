@@ -30,6 +30,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             // Only expressions that mention a matrix pay for this.
             if (expr.Nodes.Any(node => node is Entity.Matrix))
                 expr = expr.InnerSimplified;
+            expr = CompiledMembership.Rewritten(expr);
 
             var subexpressionsCache = typesAndNames.ToDictionary(c => (Entity)c.variable, c => Expression.Parameter(c.type));
             var functionArguments = subexpressionsCache.Select(c => c.Value).ToArray(); // copying
@@ -94,6 +95,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     => protocol.ConvertUnaryNode(
                         BuildTree(oneArg.NodeChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol),
                         expr),
+
+                // A membership in a set of numbers, the set not being a value: only the element is computed.
+                // https://github.com/asc-community/AngouriMath/issues/2195
+                Set.Inf(var element, Set.SpecialSet special) when AngouriMath.Numerics.NumberStatements.Of(special) is { } set
+                    => protocol.ConvertMembership(
+                        BuildTree(element, cachedSubexpressions, variableAssignments, newLocalVars, protocol), set),
 
                 IBinaryNode twoArg
                     => protocol.ConvertBinaryNode(

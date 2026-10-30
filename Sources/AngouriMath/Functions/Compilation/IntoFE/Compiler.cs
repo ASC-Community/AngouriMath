@@ -734,6 +734,41 @@ namespace AngouriMath
             }
         }
 
+        // A membership whose set the compilers rewrite into a statement about the element is gone by the time
+        // a node is compiled, and what remains is one in a set of numbers, decided where evaluation decides it.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Set
+        {
+            public partial record Inf
+            {
+                private protected override bool CompilesItself => SupSet is SpecialSet special && AngouriMath.Numerics.NumberStatements.Of(special) is not null;
+
+                private protected override void CompileNode(Compiler compiler)
+                {
+                    if (SupSet is not SpecialSet special || AngouriMath.Numerics.NumberStatements.Of(special) is not { } set)
+                    {
+                        base.CompileNode(compiler);
+                        return;
+                    }
+                    Element.InnerCompile(compiler);
+                    compiler.Instructions.Add(new(InstructionType.CALL_MEMBER, (int)set));
+                }
+            }
+        }
+
+        // Divisibility of whole numbers, with no truth value at any other.
+        public partial record Dividesf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Dividend.InnerCompile(compiler);
+                Divisor.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_DIVIDES));
+            }
+        }
+
         public partial record Maxf
         {
             private protected override bool CompilesItself => true;
@@ -966,6 +1001,7 @@ namespace AngouriMath.Core
                         varNamespace[varName] = id++;
                 foreach (var constant in Variable.NamedConstants.Values)
                     func = func.Substitute(constant, constant.Value);
+                func = Compilation.CompiledMembership.Rewritten(func);
                 var visited = new HashSet<Entity>();
                 var cache = new Dictionary<Entity, int>();
                 foreach (var node in func.Nodes)
