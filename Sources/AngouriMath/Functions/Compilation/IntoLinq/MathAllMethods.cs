@@ -347,6 +347,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex LambertW(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
         public static double LambertW(double a, double b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
 
+        // The polygamma functions of a whole order, and the harmonic numbers.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public static System.Numerics.Complex Polygamma(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.PolygammaFunction.Polygamma(a, b);
+        public static double Polygamma(double a, double b) => AngouriMath.Numerics.PolygammaFunction.Polygamma(a, b);
+        public static System.Numerics.Complex HarmonicNumber(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(a, b);
+        public static double HarmonicNumber(double a, double b) => AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(a, b);
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -540,7 +547,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("RisingFactorial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => RisingFactorial(a, b)) },
             { ("RisingFactorial", 2, typeof(double)), Def<double>((a, b) => RisingFactorial(a, b)) },
             { ("LambertW", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => LambertW(a, b)) },
+            { ("Polygamma", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Polygamma(a, b)) },
+            { ("HarmonicNumber", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => HarmonicNumber(a, b)) },
             { ("LambertW", 2, typeof(double)), Def<double>((a, b) => LambertW(a, b)) },
+            { ("Polygamma", 2, typeof(double)), Def<double>((a, b) => Polygamma(a, b)) },
+            { ("HarmonicNumber", 2, typeof(double)), Def<double>((a, b) => HarmonicNumber(a, b)) },
         };
 
         // An expression tree is how C# spells "the MethodInfo of this method" without a string:
