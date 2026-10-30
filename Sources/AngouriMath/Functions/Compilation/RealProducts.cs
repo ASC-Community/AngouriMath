@@ -39,7 +39,7 @@ namespace AngouriMath.Core.Compilation
         public static NumericsComplex Power(NumericsComplex a, NumericsComplex b)
         {
             if (a.Imaginary != 0 || b.Imaginary != 0)
-                return NumericsComplex.Pow(a, b);
+                return NumericsComplex.Pow(ComplexBranches.Unsigned(a), ComplexBranches.Unsigned(b));
             var (x, y) = (a.Real, b.Real);
             if (double.IsNaN(x) || double.IsNaN(y))
                 return new NumericsComplex(double.NaN, 0);
@@ -50,7 +50,7 @@ namespace AngouriMath.Core.Compilation
                 return new NumericsComplex(y == 0.5 ? Math.Sqrt(x) : Math.Pow(x, y), 0);
             if (!double.IsInfinity(y) && Math.Floor(y) == y)
                 return new NumericsComplex(Math.Pow(x, y), 0);
-            return NumericsComplex.Pow(a, b);
+            return NumericsComplex.Pow(ComplexBranches.Unsigned(a), ComplexBranches.Unsigned(b));
         }
     }
 }

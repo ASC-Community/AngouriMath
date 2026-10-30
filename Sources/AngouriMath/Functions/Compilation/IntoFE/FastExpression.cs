@@ -250,22 +250,25 @@ namespace AngouriMath.Core
                         stack.Push(1 / System.Numerics.Complex.Tan(stack.Pop()));
                         break;
                     case InstructionType.CALL_LOG:
-                        stack.Push(System.Numerics.Complex.Log(stack.Pop(), stack.Pop().Real));
+                    {
+                        var value = stack.Pop();
+                        stack.Push(Core.Compilation.ComplexBranches.Log(stack.Pop(), value));
+                    }
                         break;
                     case InstructionType.CALL_ARCSIN:
                         stack.Push(Core.Compilation.ComplexBranches.Arcsin(stack.Pop()));
                         break;
                     case InstructionType.CALL_ARCCOS:
-                        stack.Push(System.Numerics.Complex.Acos(stack.Pop()));
+                        stack.Push(Core.Compilation.ComplexBranches.Arccos(stack.Pop()));
                         break;
                     case InstructionType.CALL_ARCTAN:
-                        stack.Push(System.Numerics.Complex.Atan(stack.Pop()));
+                        stack.Push(Core.Compilation.ComplexBranches.Arctan(stack.Pop()));
                         break;
                     case InstructionType.CALL_ARCCOTAN:
-                        stack.Push(System.Numerics.Complex.Atan(1 / stack.Pop()));
+                        stack.Push(Core.Compilation.ComplexBranches.Arccotan(stack.Pop()));
                         break;
                     case InstructionType.CALL_ARCSECANT:
-                        stack.Push(System.Numerics.Complex.Acos(1 / stack.Pop()));
+                        stack.Push(Core.Compilation.ComplexBranches.Arcsecant(stack.Pop()));
                         break;
                     case InstructionType.CALL_ARCCOSECANT:
                         stack.Push(Core.Compilation.ComplexBranches.Arccosecant(stack.Pop()));
@@ -282,22 +285,22 @@ namespace AngouriMath.Core
                         stack.Push(AngouriMath.Numerics.SpecialFunctions.Erfi(stack.Pop()));
                         break;
                     case InstructionType.CALL_EI:
-                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Ei(stack.Pop()));
+                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Ei(Core.Compilation.ComplexBranches.Unsigned(stack.Pop())));
                         break;
                     case InstructionType.CALL_LI:
-                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Li(stack.Pop()));
+                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Li(Core.Compilation.ComplexBranches.Unsigned(stack.Pop())));
                         break;
                     case InstructionType.CALL_SI:
                         stack.Push(AngouriMath.Numerics.SpecialFunctions.Si(stack.Pop()));
                         break;
                     case InstructionType.CALL_CI:
-                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Ci(stack.Pop()));
+                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Ci(Core.Compilation.ComplexBranches.Unsigned(stack.Pop())));
                         break;
                     case InstructionType.CALL_SHI:
                         stack.Push(AngouriMath.Numerics.SpecialFunctions.Shi(stack.Pop()));
                         break;
                     case InstructionType.CALL_CHI:
-                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Chi(stack.Pop()));
+                        stack.Push(AngouriMath.Numerics.SpecialFunctions.Chi(Core.Compilation.ComplexBranches.Unsigned(stack.Pop())));
                         break;
                     case InstructionType.CALL_FACTORIAL:
                         stack.Push(AngouriMath.Numerics.SpecialFunctions.Factorial(stack.Pop()));
@@ -315,7 +318,7 @@ namespace AngouriMath.Core
                         stack.Push(AngouriMath.Numerics.ComplexParts.Conj(stack.Pop()));
                         break;
                     case InstructionType.CALL_ARG:
-                        stack.Push(AngouriMath.Numerics.ComplexParts.Arg(stack.Pop()));
+                        stack.Push(AngouriMath.Numerics.ComplexParts.Arg(Core.Compilation.ComplexBranches.Unsigned(stack.Pop())));
                         break;
                     case InstructionType.CALL_RE:
                         stack.Push(AngouriMath.Numerics.ComplexParts.Re(stack.Pop()));
@@ -374,7 +377,7 @@ namespace AngouriMath.Core
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_LAMBERTW:
-                        stack.Push(AngouriMath.Numerics.LambertWFunction.LambertW(stack.Pop(), stack.Pop()));
+                        stack.Push(AngouriMath.Numerics.LambertWFunction.LambertW(stack.Pop(), Core.Compilation.ComplexBranches.Unsigned(stack.Pop())));
                         break;
                     case InstructionType.CALL_POLYGAMMA:
                         stack.Push(AngouriMath.Numerics.PolygammaFunction.Polygamma(stack.Pop(), stack.Pop()));

@@ -445,6 +445,23 @@ then had no truth value for. A product or a quotient of two real numbers is now 
 | `"-x".ToEntity().Compile("x").Call(double.PositiveInfinity)` | `(-Infinity, NaN)` | `(-Infinity, 0)` |
 | `"x / 2".ToEntity().Compile<Complex, Complex>("x")(double.PositiveInfinity)` | `(Infinity, NaN)` | `(Infinity, 0)` |
 
+### A compiled function takes the side of its branch cut evaluation takes
+
+**Silent: a compiled logarithm, root or inverse function of a number on its cut is evaluation's value, where it was
+the conjugate.** `System.Numerics.Complex` computes `-0` as a part of many real values, `cos(2)` being `(-0.416, -0)`,
+and reads it as the lower side of a cut. The library has no signed zero, so a real number is on the upper side. Every
+compiled function with a cut now reads a zero part as `+0`: the logarithm, a power that is not whole, the inverse
+trigonometric functions, `arg`, the exponential and logarithmic integrals and `lambertw`, in FastExpression and in the
+LINQ compiler. A `conj` of a real number, new to compile since 2.6.0, took the same wrong side, as `ln(conj(x))` at
+`-2` did ([#2236](https://github.com/asc-community/AngouriMath/issues/2236)). FastExpression's logarithm also kept only
+the real part of a complex base, and takes `ln(value) / ln(base)` now
+([#2239](https://github.com/asc-community/AngouriMath/issues/2239)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"ln(cos(x))".ToEntity().Compile("x").Call(2)` | `(-0.8767171085319084, -3.141592653589793)` | `(-0.8767171085319084, 3.141592653589793)` |
+| `"log(x, 2)".ToEntity().Compile("x").Call(new Complex(1, 1))` | `(NaN, NaN)` | `(0.32596797216345985, -0.7387021222729507)` |
+
 ### A compiled power of real numbers is the real power, at an infinity and at zero
 
 **Silent: a compiled power over `Complex` is what evaluation gives where it had no value or the wrong one.** In

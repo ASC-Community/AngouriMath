@@ -48,7 +48,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /* POWERS */
 
         public static System.Numerics.Complex Log(System.Numerics.Complex a, System.Numerics.Complex b)
-            => System.Numerics.Complex.Log(b) / System.Numerics.Complex.Log(a);
+            => AngouriMath.Core.Compilation.ComplexBranches.Log(a, b);
         public static double Log(double a, double b)
             => Math.Log(b, a);
         public static float Log(float a, float b)
@@ -81,6 +81,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a)
 <# if (name == "Asin") { #>
             => AngouriMath.Core.Compilation.ComplexBranches.Arcsin(a);
+<# } else if (name == "Acos") { #>
+            => AngouriMath.Core.Compilation.ComplexBranches.Arccos(a);
+<# } else if (name == "Atan") { #>
+            => AngouriMath.Core.Compilation.ComplexBranches.Arctan(a);
 <# } else { #>
             => System.Numerics.Complex.<#= name #>(a);
 <# } #>
@@ -123,8 +127,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex <#= name.Item1 #>(System.Numerics.Complex a)
 <# if (name.Item1 == "Acsc") { #>
             => AngouriMath.Core.Compilation.ComplexBranches.Arccosecant(a);
+<# } else if (name.Item1 == "Acot") { #>
+            => AngouriMath.Core.Compilation.ComplexBranches.Arccotan(a);
 <# } else { #>
-            => System.Numerics.Complex.<#= name.Item2 #>(1 / a);
+            => AngouriMath.Core.Compilation.ComplexBranches.Arcsecant(a);
 <# } #>
         public static double <#= name.Item1 #>(double a)
             => Math.<#= name.Item2 #>(1 / a);
@@ -213,14 +219,14 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         // The special functions, in double precision as the kernels define them, and the factorial,
         // the gamma function one along. https://github.com/asc-community/AngouriMath/issues/1607
 <# foreach (var name in special) { #>
-        public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.<#= name #>(a);
+        public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.<#= name #>(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double <#= name #>(double a) => AngouriMath.Numerics.SpecialFunctions.<#= name #>(a);
 <# } #>
 
         // The conjugate, the principal argument and the real and the imaginary parts.
         // https://github.com/asc-community/AngouriMath/issues/2195
 <# foreach (var name in parts) { #>
-        public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.<#= name #>(a);
+        public static System.Numerics.Complex <#= name #>(System.Numerics.Complex a) => AngouriMath.Numerics.ComplexParts.<#= name #>(AngouriMath.Core.Compilation.ComplexBranches.Unsigned(a));
         public static double <#= name #>(double a) => AngouriMath.Numerics.ComplexParts.<#= name #>(a);
 <# } #>
 
@@ -237,7 +243,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
 
         // The Lambert W function on the branch the first argument names.
         // https://github.com/asc-community/AngouriMath/issues/2195
-        public static System.Numerics.Complex LambertW(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
+        public static System.Numerics.Complex LambertW(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, AngouriMath.Core.Compilation.ComplexBranches.Unsigned(b));
         public static double LambertW(double a, double b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
 
         // The polygamma functions of a whole order, and the harmonic numbers.
