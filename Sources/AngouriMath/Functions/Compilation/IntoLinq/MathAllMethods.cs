@@ -356,6 +356,23 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex HarmonicNumber(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(a, b);
         public static double HarmonicNumber(double a, double b) => AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(a, b);
 
+        // The functions of a factorisation, the valuation, the n-th prime and the prime-counting function, by the
+        // interpreter's routines. https://github.com/asc-community/AngouriMath/issues/2195
+        public static System.Numerics.Complex Mobius(System.Numerics.Complex a) => AngouriMath.Numerics.NumberTheoreticFunctions.Mobius(a);
+        public static double Mobius(double a) => AngouriMath.Numerics.NumberTheoreticFunctions.Mobius(a);
+        public static System.Numerics.Complex PrimeNu(System.Numerics.Complex a) => AngouriMath.Numerics.NumberTheoreticFunctions.PrimeNu(a);
+        public static double PrimeNu(double a) => AngouriMath.Numerics.NumberTheoreticFunctions.PrimeNu(a);
+        public static System.Numerics.Complex PrimeOmega(System.Numerics.Complex a) => AngouriMath.Numerics.NumberTheoreticFunctions.PrimeOmega(a);
+        public static double PrimeOmega(double a) => AngouriMath.Numerics.NumberTheoreticFunctions.PrimeOmega(a);
+        public static System.Numerics.Complex Prime(System.Numerics.Complex a) => AngouriMath.Numerics.NumberTheoreticFunctions.Prime(a);
+        public static double Prime(double a) => AngouriMath.Numerics.NumberTheoreticFunctions.Prime(a);
+        public static System.Numerics.Complex PrimePi(System.Numerics.Complex a) => AngouriMath.Numerics.NumberTheoreticFunctions.PrimePi(a);
+        public static double PrimePi(double a) => AngouriMath.Numerics.NumberTheoreticFunctions.PrimePi(a);
+        public static System.Numerics.Complex DivisorSigma(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.NumberTheoreticFunctions.DivisorSigma(a, b);
+        public static double DivisorSigma(double a, double b) => AngouriMath.Numerics.NumberTheoreticFunctions.DivisorSigma(a, b);
+        public static System.Numerics.Complex Valuation(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.NumberTheoreticFunctions.Valuation(a, b);
+        public static double Valuation(double a, double b) => AngouriMath.Numerics.NumberTheoreticFunctions.Valuation(a, b);
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -556,6 +573,20 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("LambertW", 2, typeof(double)), Def<double>((a, b) => LambertW(a, b)) },
             { ("Polygamma", 2, typeof(double)), Def<double>((a, b) => Polygamma(a, b)) },
             { ("HarmonicNumber", 2, typeof(double)), Def<double>((a, b) => HarmonicNumber(a, b)) },
+            { ("Mobius", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Mobius(a)) },
+            { ("Mobius", 1, typeof(double)), Def<double>(a => Mobius(a)) },
+            { ("PrimeNu", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => PrimeNu(a)) },
+            { ("PrimeNu", 1, typeof(double)), Def<double>(a => PrimeNu(a)) },
+            { ("PrimeOmega", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => PrimeOmega(a)) },
+            { ("PrimeOmega", 1, typeof(double)), Def<double>(a => PrimeOmega(a)) },
+            { ("Prime", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Prime(a)) },
+            { ("Prime", 1, typeof(double)), Def<double>(a => Prime(a)) },
+            { ("PrimePi", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => PrimePi(a)) },
+            { ("PrimePi", 1, typeof(double)), Def<double>(a => PrimePi(a)) },
+            { ("DivisorSigma", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => DivisorSigma(a, b)) },
+            { ("DivisorSigma", 2, typeof(double)), Def<double>((a, b) => DivisorSigma(a, b)) },
+            { ("Valuation", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Valuation(a, b)) },
+            { ("Valuation", 2, typeof(double)), Def<double>((a, b) => Valuation(a, b)) },
         };
 
         // An expression tree is how C# spells "the MethodInfo of this method" without a string:

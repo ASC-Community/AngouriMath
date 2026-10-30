@@ -158,6 +158,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Factorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Factorial", 1, newE.Type), newE),
                 DoubleFactorialf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("DoubleFactorial", 1, newE.Type), newE),
                 CatalanNumberf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("CatalanNumber", 1, newE.Type), newE),
+                // The number-theoretic functions, exact at a whole argument and NaN at any other.
+                // https://github.com/asc-community/AngouriMath/issues/2195
+                Mobiusf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Mobius", 1, newE.Type), newE),
+                PrimeNuf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("PrimeNu", 1, newE.Type), newE),
+                PrimeOmegaf when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("PrimeOmega", 1, newE.Type), newE),
+                Primef when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("Prime", 1, newE.Type), newE),
+                PrimePif when ShouldBeAtLeastDouble(e) is var newE => Expression.Call(GetDef("PrimePi", 1, newE.Type), newE),
                 Phif =>         Expression.Call(GetDef("Phi", 1, e.Type), e),
 
                 // The conjugate, the argument and the parts, widened to double as the special
@@ -249,6 +256,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     => Expression.Call(GetDef("Polygamma", 2, newLeft.Type), newLeft, newRight),
                 HarmonicNumberf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
                     => Expression.Call(GetDef("HarmonicNumber", 2, newLeft.Type), newLeft, newRight),
+                DivisorSigmaf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("DivisorSigma", 2, newLeft.Type), newLeft, newRight),
+                Valuationf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("Valuation", 2, newLeft.Type), newLeft, newRight),
                 Maxf => Expression.Call(GetDef("Max", 2, left.Type), left, right),
                 Minf => Expression.Call(GetDef("Min", 2, left.Type), left, right),
 
