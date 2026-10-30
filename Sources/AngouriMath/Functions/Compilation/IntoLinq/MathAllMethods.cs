@@ -342,6 +342,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex RisingFactorial(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(a, b);
         public static double RisingFactorial(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(a, b);
 
+        // The Lambert W function on the branch the first argument names.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public static System.Numerics.Complex LambertW(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
+        public static double LambertW(double a, double b) => AngouriMath.Numerics.LambertWFunction.LambertW(a, b);
+
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
         /// .NET 7 and later and this assembly also targets netstandard2.0. A complex number is NaN
@@ -534,6 +539,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("FallingFactorial", 2, typeof(double)), Def<double>((a, b) => FallingFactorial(a, b)) },
             { ("RisingFactorial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => RisingFactorial(a, b)) },
             { ("RisingFactorial", 2, typeof(double)), Def<double>((a, b) => RisingFactorial(a, b)) },
+            { ("LambertW", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => LambertW(a, b)) },
+            { ("LambertW", 2, typeof(double)), Def<double>((a, b) => LambertW(a, b)) },
         };
 
         // An expression tree is how C# spells "the MethodInfo of this method" without a string:

@@ -242,6 +242,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     => Expression.Call(GetDef("FallingFactorial", 2, newLeft.Type), newLeft, newRight),
                 RisingFactorialf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
                     => Expression.Call(GetDef("RisingFactorial", 2, newLeft.Type), newLeft, newRight),
+                LambertWf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("LambertW", 2, newLeft.Type), newLeft, newRight),
                 Maxf => Expression.Call(GetDef("Max", 2, left.Type), left, right),
                 Minf => Expression.Call(GetDef("Min", 2, left.Type), left, right),
 

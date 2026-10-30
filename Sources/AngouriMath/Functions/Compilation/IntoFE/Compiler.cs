@@ -604,6 +604,19 @@ namespace AngouriMath
             }
         }
 
+        // The Lambert W function on its branch. https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record LambertWf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Argument.InnerCompile(compiler);
+                Branch.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_LAMBERTW));
+            }
+        }
+
         public partial record Maxf
         {
             private protected override bool CompilesItself => true;
