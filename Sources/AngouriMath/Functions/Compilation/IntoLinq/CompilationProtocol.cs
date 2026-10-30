@@ -324,6 +324,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             return typeHolder switch
             {
                 Piecewise => HandlePiecewise(en),
+                Congruentf => HandleCongruence(en.ToArray()),
                 // A matrix is a tensor over its elements' common type, built from the compiled
                 // elements in row-major order, which is the order DirectChildren gives them.
                 // https://github.com/asc-community/AngouriMath/issues/526
@@ -335,6 +336,15 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             };
         }
             
+        // A congruence, over Complex where any of its numbers is one and over double otherwise, with no truth value
+        // where they are not whole. https://github.com/asc-community/AngouriMath/issues/2195
+        private Expression HandleCongruence(Expression[] numbers)
+        {
+            var complex = numbers.Any(number => (Nullable.GetUnderlyingType(number.Type) ?? number.Type) == typeof(System.Numerics.Complex));
+            var type = complex ? typeof(System.Numerics.Complex) : typeof(double);
+            return Expression.Call(complex ? complexCongruence : realCongruence, numbers.Select(number => ConvertType(number, type)));
+        }
+
         private Expression HandleMatrix(Entity.Matrix matrix, IEnumerable<Expression> en)
         {
             var elements = en.ToArray();
@@ -529,6 +539,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             ((MethodCallExpression)((Expression<Func<double, int, bool?>>)((x, set) => AngouriMath.Numerics.NumberStatements.In(x, set))).Body).Method;
         [ConstantField] private static readonly MethodInfo complexDivisibility =
             ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, bool?>>)((a, b) => AngouriMath.Numerics.NumberStatements.Divides(a, b))).Body).Method;
+        [ConstantField] private static readonly MethodInfo complexCongruence =
+            ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, System.Numerics.Complex, bool?>>)((a, b, n) => AngouriMath.Numerics.NumberStatements.Congruent(a, b, n))).Body).Method;
+        [ConstantField] private static readonly MethodInfo realCongruence =
+            ((MethodCallExpression)((Expression<Func<double, double, double, bool?>>)((a, b, n) => AngouriMath.Numerics.NumberStatements.Congruent(a, b, n))).Body).Method;
         [ConstantField] private static readonly MethodInfo realDivisibility =
             ((MethodCallExpression)((Expression<Func<double, double, bool?>>)((a, b) => AngouriMath.Numerics.NumberStatements.Divides(a, b))).Body).Method;
 

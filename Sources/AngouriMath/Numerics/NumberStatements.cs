@@ -77,6 +77,23 @@ namespace AngouriMath.Numerics
 
         public static bool? Divides(double divisor, double dividend) => Divides(new NumericsComplex(divisor, 0), new NumericsComplex(dividend, 0));
 
+        /// <summary>
+        /// Whether <paramref name="left"/> and <paramref name="right"/> are congruent modulo <paramref name="modulus"/>:
+        /// for whole numbers, whether the modulus divides their difference, exactly, a modulus of 0 meaning they are
+        /// equal; for any other, no truth value.
+        /// </summary>
+        public static bool? Congruent(NumericsComplex left, NumericsComplex right, NumericsComplex modulus)
+        {
+            if (!IsWhole(left) || !IsWhole(right) || !IsWhole(modulus))
+                return null;
+            // In whole numbers, since the difference of two doubles is not exact past 2^53.
+            var difference = EFloat.FromDouble(left.Real).ToEInteger().Subtract(EFloat.FromDouble(right.Real).ToEInteger());
+            return modulus.Real == 0 ? difference.IsZero : difference.Remainder(EFloat.FromDouble(modulus.Real).ToEInteger()).IsZero;
+        }
+
+        public static bool? Congruent(double left, double right, double modulus)
+            => Congruent(new NumericsComplex(left, 0), new NumericsComplex(right, 0), new NumericsComplex(modulus, 0));
+
         // A double's remainder by another is exact, so a whole one is divided exactly however large.
         private static bool IsWhole(NumericsComplex z)
             => z.Imaginary == 0 && !double.IsNaN(z.Real) && !double.IsInfinity(z.Real) && Math.Floor(z.Real) == z.Real;

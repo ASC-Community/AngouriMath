@@ -756,6 +756,20 @@ namespace AngouriMath
             }
         }
 
+        // A congruence of whole numbers, with no truth value at any other.
+        public partial record Congruentf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Modulus.InnerCompile(compiler);
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_CONGRUENT));
+            }
+        }
+
         // Divisibility of whole numbers, with no truth value at any other.
         public partial record Dividesf
         {

@@ -388,6 +388,18 @@ truth value at any other ([#2195](https://github.com/asc-community/AngouriMath/i
 | `"x in [0; 1]".ToEntity().Compile("x").Call(0.5)` | `UncompilableNodeException` | `(1, 0)` |
 | `"3 divides x".ToEntity().Compile("x").Call(6)` | `UncompilableNodeException` | `(1, 0)` |
 
+### A congruence compiles
+
+**Not silent: what was refused is compiled.** `a = b (mod n)` was refused by both compilers with
+`UncompilableNodeException`. It compiles to the truth value evaluation gives: between whole numbers whether `n` divides
+`a - b`, taken in whole numbers so that it is exact past `2^53`, a modulus of `0` meaning equality, and no truth value
+for any other number ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x = 1 (mod 5)".ToEntity().Compile("x").Call(6)` | `UncompilableNodeException` | `(1, 0)` |
+| `"x = 1 (mod 5)".ToEntity().Compile<double, bool>("x")(6)` | `UncompilableNodeException` | `True` |
+
 ### `mod` compiles over `Complex`
 
 **Not silent: what was refused is compiled.** `Compile<Complex, ...>` refused `mod` with `UncompilableNodeException`,
