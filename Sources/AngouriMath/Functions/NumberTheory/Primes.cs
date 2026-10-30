@@ -105,27 +105,86 @@ namespace AngouriMath.Functions
             }
         }
 
+        // The first thirteen primes. Miller–Rabin to them as bases is exact below psi13, the least strong
+        // pseudoprime to all thirteen: Sorenson and Webster, "Strong pseudoprimes to twelve prime bases",
+        // Math. Comp. 86 (2017). The first twelve already suffice below 2^64.
+        [ConstantField] private static readonly int[] witnesses = { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41 };
+        [ConstantField] private static readonly EInteger psi13 = EInteger.FromString("3317044064679887385961981");
+
+        // Past these sizes neither test is attempted, and primality is left open: Lucas–Lehmer at 2^5000 - 1
+        // takes about 5000 squarings of 5000 bits, and Miller–Rabin at 4096 bits thirteen powers of that size.
+        private const long LargestMersenneExponent = 5000;
+        private const long LargestTestedBits = 4096;
+
         /// <summary>
-        /// Whether the whole number is prime, or <see langword="null"/> where it is not decided:
-        /// trial division, exact for a number that fits a machine word, and nothing claimed past
-        /// that, so that a membership in <c>PP</c> is left open rather than answered slowly or
-        /// wrongly. https://github.com/asc-community/AngouriMath/issues/1450
+        /// Whether the whole number is prime, or <see langword="null"/> where it is not decided. Miller–Rabin to the
+        /// first thirteen primes is exact below <c>3317044064679887385961981</c>; past it a witness still proves a
+        /// number composite, a Mersenne number <c>2^p - 1</c> is decided by Lucas–Lehmer, and a number that passes is
+        /// left open, since passing is not a proof. This was trial division, exact only below 2^63, about 1.5e9
+        /// divisions for a prime near it, and for one past 3037000499^2 never finishing, the square of the divisor
+        /// overflowing. https://github.com/asc-community/AngouriMath/issues/2230
         /// </summary>
         internal static bool? IsPrime(EInteger n)
         {
             if (n.CompareTo(EInteger.FromInt32(2)) < 0)
                 return false;
-            if (!n.CanFitInInt64())
-                return null;
-            var value = n.ToInt64Checked();
-            if (value < 4)
-                return true;
-            if (value % 2 == 0)
-                return false;
-            for (long divisor = 3; divisor * divisor <= value; divisor += 2)
-                if (value % divisor == 0)
+            foreach (var witness in witnesses)
+            {
+                if (n.CompareTo(EInteger.FromInt32(witness)) == 0)
+                    return true;
+                if (n.Remainder(EInteger.FromInt32(witness)).IsZero)
                     return false;
+            }
+            // No factor up to 41 and below 43^2: prime.
+            if (n.CompareTo(EInteger.FromInt32(43 * 43)) < 0)
+                return true;
+            var bits = n.GetUnsignedBitLengthAsInt64();
+            // 2^p - 1, whose successor is a power of two.
+            if (n.Add(EInteger.One).And(n).IsZero && bits <= LargestMersenneExponent)
+                return IsPrime(EInteger.FromInt64(bits)) is true && LucasLehmer(n, bits);
+            if (bits > LargestTestedBits)
+                return null;
+            if (!IsStrongProbablePrime(n))
+                return false;
+            return n.CompareTo(psi13) < 0 ? true : null;
+        }
+
+        // Whether n passes Miller–Rabin to every witness, n odd and past them.
+        private static bool IsStrongProbablePrime(EInteger n)
+        {
+            var less = n.Subtract(EInteger.One);
+            var odd = less;
+            var twos = 0;
+            while (odd.IsEven)
+            {
+                odd = odd.ShiftRight(1);
+                twos++;
+            }
+            foreach (var witness in witnesses)
+            {
+                var x = EInteger.FromInt32(witness).ModPow(odd, n);
+                if (x.Equals(EInteger.One) || x.Equals(less))
+                    continue;
+                var reached = false;
+                for (var i = 1; i < twos && !reached; i++)
+                {
+                    x = x.Multiply(x).Remainder(n);
+                    reached = x.Equals(less);
+                }
+                if (!reached)
+                    return false;
+            }
             return true;
+        }
+
+        // 2^p - 1, p an odd prime, is prime exactly when s reaches 0 modulo it after p - 2 steps of s -> s^2 - 2
+        // from 4.
+        private static bool LucasLehmer(EInteger mersenne, long exponent)
+        {
+            var s = EInteger.FromInt32(4);
+            for (long i = 0; i < exponent - 2; i++)
+                s = s.Multiply(s).Subtract(EInteger.FromInt32(2)).Mod(mersenne);
+            return s.IsZero;
         }
 
         /// <summary>
