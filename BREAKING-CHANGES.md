@@ -437,8 +437,9 @@ one where both sides are real, and `NaN` where either is not
 - A constant is taken over `Complex` where the expression is compiled over it. As a `long`, a constant widened only
   to `double`, so `sqrt(-1)`, `ln(-1)` and `arcsin(2)` were `NaN` and `1/0` was `+oo`
   ([#2235](https://github.com/asc-community/AngouriMath/issues/2235)).
-- An Iverson bracket, an `int?`, and a `provided` integer, a `long?`, are widened to `double` before a function takes
-  them. They threw `KeyNotFoundException` or `AngouriBugException`
+- A `provided` integer, a `long?`, and an Iverson bracket, an `int?`, are widened to `double` before a function or a
+  `piecewise` takes them. A `provided` integer threw `KeyNotFoundException` or `AngouriBugException` there, and an
+  Iverson bracket did not compile at all in 2.6.0
   ([#2237](https://github.com/asc-community/AngouriMath/issues/2237)).
 - `sgn(0)` is `0`, where `z / |z|` made it `NaN` ([#2238](https://github.com/asc-community/AngouriMath/issues/2238)).
 
@@ -447,6 +448,7 @@ one where both sides are real, and `NaN` where either is not
 | `"x + sqrt(-1)".ToEntity().Compile<Complex, Complex>("x")(0)` | `(NaN, 0)` | `(6.123233995736766E-17, 1)` |
 | `"x + 1/0".ToEntity().Compile<Complex, Complex>("x")(0)` | `(Infinity, 0)` | `(NaN, NaN)` |
 | `"x + sgn(-1 provided pi > 3)".ToEntity().Compile<Complex, Complex>("x")(1)` | throws `AngouriBugException` | `(0, 0)` |
+| `"piecewise(piecewise(-1 provided x > 0, 3) provided x > 0, x) + x".ToEntity().Compile<double, double>("x")(1)` | throws `KeyNotFoundException` | `0` |
 | `"sgn(x)".ToEntity().Compile<Complex, Complex>("x")(0)` | `(NaN, NaN)` | `(0, 0)` |
 
 ### A compiled product of real numbers is real at an infinity
