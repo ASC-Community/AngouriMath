@@ -683,6 +683,17 @@ real roots, so those are now the kinks, and each piece is solved exactly
 | `"x^2/abs(1-x^2) = x".Solve("x")` | `{ 0, 0.618…, 1.618…, 1.618… + 1.7E-9i, … }` | `{ 0, (-1 + sqrt(5)) / 2, (1 + sqrt(5)) / 2 }` |
 | `"abs(x^2 - 4) = 3*x".Solve("x")` | `{ 1, 4, 4.0000000000000062… + 1.6E-7i }` | `{ 1, 4 }` |
 
+### A piecewise's condition under a reading asks only the case it takes
+
+**Silent: `DomainConditionIn` of a `piecewise` is where the case it takes is defined, as `DomainCondition` already
+reads it (#1817), where it asked every case to be defined.** `piecewise(sqrt(x) provided x > 0, 1)` is 1 at `-4`, and its
+condition over the reals failed there. The library asks for this condition under the ambient reading, so the change
+reaches whatever consults it there ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"piecewise(sqrt(x) provided x > 0, 1)".ToEntity().DomainConditionIn(Domain.Real)` | `x >= 0 and x in RR` | `x > 0 and x >= 0 or not x > 0 or not x in RR` |
+
 ### A system with more or fewer equations than unknowns is solved or declined
 
 **Not silent: what was an exception is an answer or `null`.** `EquationSystem.Solve` threw
