@@ -320,6 +320,12 @@ namespace AngouriMath.AotSmokeTest
             var linqNumberTheory = "divisorsigma(1, x) + valuation(x, 2)".Compile<double, double>(x);
             Check("compiled mobius(x) + prime(x) + primepi(x) at 30, divisorsigma(1, x) + valuation(x, 2) at 12",
                 fastNumberTheory.Call(30) == 122 && linqNumberTheory(12) == 30, $"{fastNumberTheory.Call(30)}, {linqNumberTheory(12)}");
+            // 7 is a prime in [0; 10] and 3 divides 6; i is in no interval.
+            var fastMembership = "iverson(x in (PP /\\ [0; 10])) + iverson(3 divides x - 1)".Compile(x);
+            var linqMembership = "x in [0; 1] or 3 divides x".Compile<Complex, bool?>(x);
+            Check("compiled membership and divisibility at 7, and at 6 and i",
+                fastMembership.Call(7) == 2 && linqMembership(6) == true && linqMembership(Complex.ImaginaryOne) == null,
+                $"{fastMembership.Call(7)}, {linqMembership(6)}, {linqMembership(Complex.ImaginaryOne)}");
             // FastExpression: a statement is its truth value, and a piecewise the case that holds.
             var fastPiecewise = "piecewise(x provided x > 0, -x)".Compile(x);
             var fastStatement = "x > 1 or x < 0".Compile(x);

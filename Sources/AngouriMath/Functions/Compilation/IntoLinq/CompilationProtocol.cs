@@ -260,6 +260,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     => Expression.Call(GetDef("DivisorSigma", 2, newLeft.Type), newLeft, newRight),
                 Valuationf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
                     => Expression.Call(GetDef("Valuation", 2, newLeft.Type), newLeft, newRight),
+                Dividesf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => newLeft.Type == typeof(System.Numerics.Complex)
+                        ? Expression.Call(complexDivisibility, newLeft, ConvertType(newRight, typeof(System.Numerics.Complex)))
+                        : Expression.Call(realDivisibility, ConvertType(newLeft, typeof(double)), ConvertType(newRight, typeof(double))),
                 Maxf => Expression.Call(GetDef("Max", 2, left.Type), left, right),
                 Minf => Expression.Call(GetDef("Min", 2, left.Type), left, right),
 
@@ -484,6 +488,29 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 { (ExpressionType.GreaterThan, typeof(BigInteger)), Cmp<BigInteger>((a, b) => a > b) },
                 { (ExpressionType.GreaterThanOrEqual, typeof(BigInteger)), Cmp<BigInteger>((a, b) => a >= b) },
             };
+
+        // Membership in a set of numbers and divisibility, with no truth value where evaluation has none.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        [ConstantField] private static readonly MethodInfo complexMembership =
+            ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, int, bool?>>)((z, set) => AngouriMath.Numerics.NumberStatements.In(z, set))).Body).Method;
+        [ConstantField] private static readonly MethodInfo realMembership =
+            ((MethodCallExpression)((Expression<Func<double, int, bool?>>)((x, set) => AngouriMath.Numerics.NumberStatements.In(x, set))).Body).Method;
+        [ConstantField] private static readonly MethodInfo complexDivisibility =
+            ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, bool?>>)((a, b) => AngouriMath.Numerics.NumberStatements.Divides(a, b))).Body).Method;
+        [ConstantField] private static readonly MethodInfo realDivisibility =
+            ((MethodCallExpression)((Expression<Func<double, double, bool?>>)((a, b) => AngouriMath.Numerics.NumberStatements.Divides(a, b))).Body).Method;
+
+        /// <summary>
+        /// Membership of a compiled element in a set of numbers, over <see cref="System.Numerics.Complex"/> where the
+        /// element is one and over <see cref="double"/> otherwise.
+        /// </summary>
+        internal Expression ConvertMembership(Expression element, AngouriMath.Numerics.NumberStatements.NumberSet set)
+        {
+            var widened = ShouldBeAtLeastDouble(element);
+            return widened.Type == typeof(System.Numerics.Complex)
+                ? Expression.Call(complexMembership, widened, Expression.Constant((int)set))
+                : Expression.Call(realMembership, ConvertType(widened, typeof(double)), Expression.Constant((int)set));
+        }
 
         [ConstantField] private static readonly MethodInfo complexRemainder =
             ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, System.Numerics.Complex>>)((a, b) => RealOnly.Mod(a, b))).Body).Method;

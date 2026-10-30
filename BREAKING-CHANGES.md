@@ -354,6 +354,22 @@ interpreter leaves them as written ([#2195](https://github.com/asc-community/Ang
 | `"valuation(x, 2)".ToEntity().Compile("x").Call(12)` | `UncompilableNodeException` | `(2, 0)` |
 | `"valuation(x, 2)".ToEntity().Compile<double, double>("x")(0)` | `UncompilableNodeException` | `Infinity` |
 
+### Membership and divisibility compile
+
+**Not silent: what was refused is compiled.** `x in S` and `a divides b` were refused by both compilers with
+`UncompilableNodeException`. A membership compiles to the truth value evaluation gives, `1`, `0` or `NaN` in
+FastExpression and `true`, `false` or `null` in the LINQ compiler. The set is fixed when the expression is compiled:
+a union, an intersection and a difference by Kleene's connectives, an interval by comparing the element with its ends,
+a finite set by equality with its members, a conditional set by its predicate, and `RR`, `CC`, `ZZ`, `ZZ+`, `ZZ*` and
+`PP` as evaluation decides them. Membership in `QQ` stays refused, since every finite double is a rational and
+`pi in QQ` is `False`, and so does membership in `BB`. A divisibility holds or fails between whole numbers and has no
+truth value at any other ([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x in [0; 1]".ToEntity().Compile("x").Call(0.5)` | `UncompilableNodeException` | `(1, 0)` |
+| `"3 divides x".ToEntity().Compile("x").Call(6)` | `UncompilableNodeException` | `(1, 0)` |
+
 ### `mod` compiles over `Complex`
 
 **Not silent: what was refused is compiled.** `Compile<Complex, ...>` refused `mod` with `UncompilableNodeException`,
