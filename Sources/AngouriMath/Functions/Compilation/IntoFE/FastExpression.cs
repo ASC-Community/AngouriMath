@@ -98,6 +98,8 @@ namespace AngouriMath.Core
 
             // 3-arg: a value where its predicate holds, and the one below it elsewhere.
             CALL_SELECT = 150,
+            // Whether two numbers are congruent modulo a third.
+            CALL_CONGRUENT,
         }
         internal sealed partial record Instruction(InstructionType Type, int Reference = -1, System.Numerics.Complex Value = default)
         {
@@ -412,6 +414,9 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_DOUBLE_FACTORIAL:
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.DoubleFactorial(stack.Pop()));
+                        break;
+                    case InstructionType.CALL_CONGRUENT:
+                        stack.Push(Truth(AngouriMath.Numerics.NumberStatements.Congruent(stack.Pop(), stack.Pop(), stack.Pop())));
                         break;
                     case InstructionType.CALL_SELECT:
                     {
