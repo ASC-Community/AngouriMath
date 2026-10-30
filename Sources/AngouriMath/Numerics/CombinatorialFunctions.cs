@@ -63,7 +63,10 @@ namespace AngouriMath.Numerics
                 return NaN;
             if (IsWhole(n - k, out var difference) && difference < 0)
                 return 0;
-            return SpecialFunctions.Factorial(n) / (SpecialFunctions.Factorial(k) * SpecialFunctions.Factorial(n - k));
+            var ratio = SpecialFunctions.Factorial(n) / (SpecialFunctions.Factorial(k) * SpecialFunctions.Factorial(n - k));
+            return InTheDoubles(ratio) ? ratio : FromLogarithm(
+                SpecialFunctions.LogFactorial(n) - SpecialFunctions.LogFactorial(k) - SpecialFunctions.LogFactorial(n - k),
+                n.Imaginary == 0 && k.Imaginary == 0);
         }
 
         public static double Binomial(double n, double k) => Real(Binomial(new NumericsComplex(n, 0), new NumericsComplex(k, 0)));
@@ -82,7 +85,9 @@ namespace AngouriMath.Numerics
                 return NaN;
             if (IsWhole(x - n, out var difference) && difference < 0)
                 return 0;
-            return SpecialFunctions.Factorial(x) / SpecialFunctions.Factorial(x - n);
+            var ratio = SpecialFunctions.Factorial(x) / SpecialFunctions.Factorial(x - n);
+            return InTheDoubles(ratio) ? ratio : FromLogarithm(
+                SpecialFunctions.LogFactorial(x) - SpecialFunctions.LogFactorial(x - n), x.Imaginary == 0 && n.Imaginary == 0);
         }
 
         public static double FallingFactorial(double x, double n) => Real(FallingFactorial(new NumericsComplex(x, 0), new NumericsComplex(n, 0)));
@@ -101,7 +106,9 @@ namespace AngouriMath.Numerics
                 return NaN;
             if (IsWhole(x, out var bottom) && bottom <= 0)
                 return 0;
-            return SpecialFunctions.Factorial(x + n - 1) / SpecialFunctions.Factorial(x - 1);
+            var ratio = SpecialFunctions.Factorial(x + n - 1) / SpecialFunctions.Factorial(x - 1);
+            return InTheDoubles(ratio) ? ratio : FromLogarithm(
+                SpecialFunctions.LogFactorial(x + n - 1) - SpecialFunctions.LogFactorial(x - 1), x.Imaginary == 0 && n.Imaginary == 0);
         }
 
         public static double RisingFactorial(double x, double n) => Real(RisingFactorial(new NumericsComplex(x, 0), new NumericsComplex(n, 0)));
@@ -157,7 +164,10 @@ namespace AngouriMath.Numerics
                 return NaN;
             var top = SpecialFunctions.Factorial(n - 0.5);
             var bottom = SpecialFunctions.Factorial(n + 1);
-            return NumericsComplex.Pow(4, n) * top / (Math.Sqrt(Math.PI) * bottom);
+            var ratio = NumericsComplex.Pow(4, n) * top / (Math.Sqrt(Math.PI) * bottom);
+            return InTheDoubles(ratio) ? ratio : FromLogarithm(
+                n * Math.Log(4) + SpecialFunctions.LogFactorial(n - 0.5) - SpecialFunctions.LogFactorial(n + 1) - Math.Log(Math.PI) / 2,
+                n.Imaginary == 0);
         }
 
         public static double CatalanNumber(double n) => Real(CatalanNumber(new NumericsComplex(n, 0)));
@@ -253,6 +263,23 @@ namespace AngouriMath.Numerics
         }
 
         private static bool IsInfinite(NumericsComplex z) => double.IsInfinity(z.Real) || double.IsInfinity(z.Imaginary);
+
+        /// <summary>
+        /// Whether a ratio of factorials, at arguments that are none of its poles, came out as a number. A factorial past
+        /// 170 is past the doubles where a ratio of them need not be: <c>binomial(216, pi)</c> is about <c>2954596.68</c>
+        /// and <c>216!</c> about <c>1e408</c>, so the ratio was <c>∞/∞</c>, <c>NaN</c>. None of the ratios is 0 away from a
+        /// pole, so a 0 is one whose terms were under the doubles. https://github.com/asc-community/AngouriMath/issues/2248
+        /// </summary>
+        private static bool InTheDoubles(NumericsComplex ratio)
+            => ratio != 0 && !IsInfinite(ratio) && !double.IsNaN(ratio.Real) && !double.IsNaN(ratio.Imaginary);
+
+        /// <summary>
+        /// The ratio whose logarithm is <paramref name="logarithm"/>, where its terms are past the doubles. A real one's
+        /// logarithm has a multiple of <c>pi</c> for an imaginary part, odd where the ratio is negative, which is its sign.
+        /// </summary>
+        private static NumericsComplex FromLogarithm(NumericsComplex logarithm, bool real)
+            => !real ? NumericsComplex.Exp(logarithm)
+            : new NumericsComplex(Math.Cos(logarithm.Imaginary) < 0 ? -Math.Exp(logarithm.Real) : Math.Exp(logarithm.Real), 0);
 
         // The real value of a real argument's result, and NaN where it is not real.
         private static double Real(NumericsComplex z) => z.Imaginary == 0 ? z.Real : double.NaN;

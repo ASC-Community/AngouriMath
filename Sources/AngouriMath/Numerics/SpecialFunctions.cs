@@ -456,6 +456,17 @@ namespace AngouriMath.Numerics
                 ? ExpTimes(Math.Log(Math.PI) - LogSine(Math.PI * z) - LogGamma(1 - z), 1)
                 : ExpTimes(LogGamma(z), 1);
 
+        /// <summary>
+        /// A logarithm of <c>z!</c>, <c>Γ(z + 1)</c>, at a number that is not one of its poles, for a ratio of factorials
+        /// that are past the doubles where the ratio is not. At a real number its imaginary part is a multiple of
+        /// <c>pi</c>, odd where the factorial is negative. https://github.com/asc-community/AngouriMath/issues/2248
+        /// </summary>
+        internal static NumericsComplex LogFactorial(NumericsComplex z)
+        {
+            var w = z + 1;
+            return w.Real < 0.5 ? Math.Log(Math.PI) - LogSine(Math.PI * w) - LogGamma(1 - w) : LogGamma(w);
+        }
+
         /// <summary>A logarithm of the gamma function for <c>Re z &gt;= 1/2</c>, by Lanczos's approximation.</summary>
         private static NumericsComplex LogGamma(NumericsComplex z)
         {
