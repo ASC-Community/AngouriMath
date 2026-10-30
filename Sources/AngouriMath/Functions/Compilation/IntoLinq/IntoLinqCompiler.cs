@@ -31,6 +31,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             if (expr.Nodes.Any(node => node is Entity.Matrix))
                 expr = expr.InnerSimplified;
             expr = CompiledMembership.Rewritten(expr);
+            StatementPositions.Check(expr);
 
             var subexpressionsCache = typesAndNames.ToDictionary(c => (Entity)c.variable, c => Expression.Parameter(c.type));
             var functionArguments = subexpressionsCache.Select(c => c.Value).ToArray(); // copying
