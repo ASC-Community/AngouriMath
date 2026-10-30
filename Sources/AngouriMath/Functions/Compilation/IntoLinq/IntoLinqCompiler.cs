@@ -47,7 +47,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             // https://github.com/asc-community/AngouriMath/issues/894
             try
             {
-                var tree = BuildTree(expr, subexpressionsCache, variableAssignments, localVars, protocol);
+                // Over Complex a constant is a Complex too, so that a function of it is taken over Complex: as a long,
+                // sqrt(-1) widened only to double and was NaN. https://github.com/asc-community/AngouriMath/issues/2235
+                var constantType = typesAndNames.Any(c => c.type == typeof(System.Numerics.Complex)) || returnType == typeof(System.Numerics.Complex)
+                    ? typeof(System.Numerics.Complex)
+                    : null;
+                var tree = BuildTree(expr, subexpressionsCache, variableAssignments, localVars, protocol, constantType);
                 var treeWithLocals = Expression.Block(localVars, variableAssignments.Append(tree));
                 Expression entireExpression = returnType is not null ? protocol.ConvertType(treeWithLocals, returnType) : treeWithLocals;
                 var finalLambda = Expression.Lambda<TDelegate>(entireExpression, functionArguments);
@@ -68,7 +73,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             Dictionary<Entity, ParameterExpression> cachedSubexpressions,
             List<Expression> variableAssignments,
             List<ParameterExpression> newLocalVars,
-            CompilationProtocol protocol)
+            CompilationProtocol protocol,
+            Type? constantType = null)
         {
             if (cachedSubexpressions.TryGetValue(expr, out var readyVar))
                 return readyVar;
@@ -76,7 +82,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             Expression subTree = expr switch
             {
                 Variable { IsConstant: true } c
-                    => BuildTree(c.Evaled, cachedSubexpressions, variableAssignments, newLocalVars, protocol),
+                    => BuildTree(c.Evaled, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType),
 
                 // A compiled expression is a function of the variables it was compiled over,
                 // so one it does not mention is not something it can be given a value for.
@@ -90,26 +96,27 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                             ? $", which are {string.Join(", ", over)}"
                             : ", which are none")),
 
+                Number when constantType is { } type => protocol.ConvertType(protocol.ConvertConstant(expr), type),
                 Entity.Boolean or Number => protocol.ConvertConstant(expr),
 
                 IUnaryNode oneArg
                     => protocol.ConvertUnaryNode(
-                        BuildTree(oneArg.NodeChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol),
+                        BuildTree(oneArg.NodeChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType),
                         expr),
 
                 // A membership in a set of numbers, the set not being a value: only the element is computed.
                 // https://github.com/asc-community/AngouriMath/issues/2195
                 Set.Inf(var element, Set.SpecialSet special) when AngouriMath.Numerics.NumberStatements.Of(special) is { } set
                     => protocol.ConvertMembership(
-                        BuildTree(element, cachedSubexpressions, variableAssignments, newLocalVars, protocol), set),
+                        BuildTree(element, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType), set),
 
                 IBinaryNode twoArg
                     => protocol.ConvertBinaryNode(
-                        BuildTree(twoArg.NodeFirstChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol), 
-                        BuildTree(twoArg.NodeSecondChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol), 
+                        BuildTree(twoArg.NodeFirstChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType), 
+                        BuildTree(twoArg.NodeSecondChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType), 
                         expr),
 
-                var other => protocol.ConvertOtherNode(other.DirectChildren.Select(c => BuildTree(c, cachedSubexpressions, variableAssignments, newLocalVars, protocol)), expr)
+                var other => protocol.ConvertOtherNode(other.DirectChildren.Select(c => BuildTree(c, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType)), expr)
             };
 
             var newVar = Expression.Variable(subTree.Type);
