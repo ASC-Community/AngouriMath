@@ -826,6 +826,9 @@ namespace AngouriMath
             // im(prime(x)) has no value at x = -3.
             private static Entity? ImaginaryPart(Entity argument, bool isExact) => argument switch
             {
+                // A number that does not exist has no parts. NaN is a Real, whose imaginary part is 0, so
+                // im(1/0) was 0. https://github.com/asc-community/AngouriMath/issues/2253
+                Complex { IsNaN: true } => Real.NaN,
                 Complex number => number.ImaginaryPart,
                 Conjugatef(var z) => (-new Imf(z)).InnerSimplified(isExact),
                 Sumf(var left, var right) => (new Imf(left) + new Imf(right)).InnerSimplified(isExact),
