@@ -183,6 +183,17 @@ and `Simplify` passed that on as `not x = 0`, though at `x = 0` the input is `-y
 |---|---|---|
 | `"-(t*x + y)/(1 - y*x) + (t*x + y)/(1 - y*x)".Simplify()` | `0 provided not 1 - x * y = 0 and not x = 0` | `0 provided not 1 - x * y = 0` |
 
+### The signum of a value that does not exist has none
+
+**Silent: `sgn(NaN)` is `NaN`, where it was `1`.** The rule took the sign of a real number from its `EDecimal`, whose
+`Sign` is `1` for `NaN`. So the signum of anything without a value was `1`: `sgn(-1 provided false)`, `sgn(0/0)`, and
+`1 + sgn(-1 provided pi < 3)` was `2` ([#2241](https://github.com/asc-community/AngouriMath/issues/2241)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sgn(NaN)".ToEntity().Evaled` | `1` | `NaN` |
+| `"sgn(-1 provided false)".ToEntity().Evaled` | `1` | `NaN` |
+
 ### A matrix is divided, raised to a power and compared as a matrix
 
 **Silent: wrong answers about matrices become right, or stay written.** Where an operation had no answer of its own

@@ -188,7 +188,6 @@ InnerSimplified	order	(1 * x) ^ 2 + cos(1/2 * 0)	cos(1/2 * 0) + (1 * x) ^ 2
 InnerSimplified	order	(1 * x) ^ 2 + e ^ 0 ^ 2	e ^ 0 ^ 2 + (1 * x) ^ 2
 InnerSimplified	order	(1 * x) ^ 2 + e ^ 1	e ^ 1 + (1 * x) ^ 2
 InnerSimplified	order	(1 * x) ^ 2 + ln(-2)	ln(-2) + (1 * x) ^ 2
-InnerSimplified	order	(1 * x) ^ 2 + sgn(a / 0)	sgn(a / 0) + (1 * x) ^ 2
 InnerSimplified	order	(1 * x) ^ 2 + sgn(x + x)	sgn(x + x) + (1 * x) ^ 2
 InnerSimplified	order	(1 * x) ^ 2 + sin(y - 0)	sin(y - 0) + (1 * x) ^ 2
 InnerSimplified	order	(1 * x) ^ 2 + sqrt(1/2 / a)	sqrt(1/2 / a) + (1 * x) ^ 2
@@ -304,7 +303,6 @@ InnerSimplified	order	(1/2) ^ a + cos(1/2 * 0)	cos(1/2 * 0) + (1/2) ^ a
 InnerSimplified	order	(1/2) ^ a + e ^ 0 ^ 2	e ^ 0 ^ 2 + (1/2) ^ a
 InnerSimplified	order	(1/2) ^ a + e ^ 1	e ^ 1 + (1/2) ^ a
 InnerSimplified	order	(1/2) ^ a + ln(-2)	ln(-2) + (1/2) ^ a
-InnerSimplified	order	(1/2) ^ a + sgn(a / 0)	sgn(a / 0) + (1/2) ^ a
 InnerSimplified	order	(1/2) ^ a + sgn(x + x)	sgn(x + x) + (1/2) ^ a
 InnerSimplified	order	(1/2) ^ a + sin(y - 0)	sin(y - 0) + (1/2) ^ a
 InnerSimplified	order	(1/2) ^ a + sqrt(1/2 / a)	sqrt(1/2 / a) + (1/2) ^ a
@@ -450,7 +448,6 @@ InnerSimplified	order	(y + -1) ^ (-1) + cos(1/2 * 0)	cos(1/2 * 0) + (y + -1) ^ (
 InnerSimplified	order	(y + -1) ^ (-1) + e ^ 0 ^ 2	e ^ 0 ^ 2 + (y + -1) ^ (-1)
 InnerSimplified	order	(y + -1) ^ (-1) + e ^ 1	e ^ 1 + (y + -1) ^ (-1)
 InnerSimplified	order	(y + -1) ^ (-1) + ln(-2)	ln(-2) + (y + -1) ^ (-1)
-InnerSimplified	order	(y + -1) ^ (-1) + sgn(a / 0)	sgn(a / 0) + (y + -1) ^ (-1)
 InnerSimplified	order	(y + -1) ^ (-1) + sgn(x + x)	sgn(x + x) + (y + -1) ^ (-1)
 InnerSimplified	order	(y + -1) ^ (-1) + sin(y - 0)	sin(y - 0) + (y + -1) ^ (-1)
 InnerSimplified	order	(y + -1) ^ (-1) + sqrt(1/2 / a)	sqrt(1/2 / a) + (y + -1) ^ (-1)
@@ -514,7 +511,6 @@ InnerSimplified	order	(y ^ x) ^ (-1) + cos(1/2 * 0)	cos(1/2 * 0) + (y ^ x) ^ (-1
 InnerSimplified	order	(y ^ x) ^ (-1) + e ^ 0 ^ 2	e ^ 0 ^ 2 + (y ^ x) ^ (-1)
 InnerSimplified	order	(y ^ x) ^ (-1) + e ^ 1	e ^ 1 + (y ^ x) ^ (-1)
 InnerSimplified	order	(y ^ x) ^ (-1) + ln(-2)	ln(-2) + (y ^ x) ^ (-1)
-InnerSimplified	order	(y ^ x) ^ (-1) + sgn(a / 0)	sgn(a / 0) + (y ^ x) ^ (-1)
 InnerSimplified	order	(y ^ x) ^ (-1) + sgn(x + x)	sgn(x + x) + (y ^ x) ^ (-1)
 InnerSimplified	order	(y ^ x) ^ (-1) + sin(y - 0)	sin(y - 0) + (y ^ x) ^ (-1)
 InnerSimplified	order	(y ^ x) ^ (-1) + sqrt(1/2 / a)	sqrt(1/2 / a) + (y ^ x) ^ (-1)
@@ -548,7 +544,6 @@ InnerSimplified	order	-1 - x + cos(1/2 * 0)	cos(1/2 * 0) + -1 - x
 InnerSimplified	order	-1 - x + e ^ 0 ^ 2	e ^ 0 ^ 2 + -1 - x
 InnerSimplified	order	-1 - x + e ^ 1	e ^ 1 + -1 - x
 InnerSimplified	order	-1 - x + ln(-2)	ln(-2) + -1 - x
-InnerSimplified	order	-1 - x + sgn(a / 0)	sgn(a / 0) + -1 - x
 InnerSimplified	order	-1 - x + sgn(x + x)	sgn(x + x) + -1 - x
 InnerSimplified	order	-1 - x + sin(y - 0)	sin(y - 0) + -1 - x
 InnerSimplified	order	-1 - x + sqrt(1/2 / a)	sqrt(1/2 / a) + -1 - x
@@ -612,7 +607,6 @@ InnerSimplified	order	-y * a + cos(1/2 * 0)	cos(1/2 * 0) + -y * a
 InnerSimplified	order	-y * a + e ^ 0 ^ 2	e ^ 0 ^ 2 + -y * a
 InnerSimplified	order	-y * a + e ^ 1	e ^ 1 + -y * a
 InnerSimplified	order	-y * a + ln(-2)	ln(-2) + -y * a
-InnerSimplified	order	-y * a + sgn(a / 0)	sgn(a / 0) + -y * a
 InnerSimplified	order	-y * a + sgn(x + x)	sgn(x + x) + -y * a
 InnerSimplified	order	-y * a + sin(y - 0)	sin(y - 0) + -y * a
 InnerSimplified	order	-y * a + sqrt(1/2 / a)	sqrt(1/2 / a) + -y * a
@@ -672,7 +666,6 @@ InnerSimplified	order	0 - a + cos(1/2 * 0)	cos(1/2 * 0) + 0 - a
 InnerSimplified	order	0 - a + e ^ 0 ^ 2	e ^ 0 ^ 2 + 0 - a
 InnerSimplified	order	0 - a + e ^ 1	e ^ 1 + 0 - a
 InnerSimplified	order	0 - a + ln(-2)	ln(-2) + 0 - a
-InnerSimplified	order	0 - a + sgn(a / 0)	sgn(a / 0) + 0 - a
 InnerSimplified	order	0 - a + sgn(x + x)	sgn(x + x) + 0 - a
 InnerSimplified	order	0 - a + sin(y - 0)	sin(y - 0) + 0 - a
 InnerSimplified	order	0 - a + sqrt(1/2 / a)	sqrt(1/2 / a) + 0 - a
@@ -788,7 +781,6 @@ InnerSimplified	order	1 / (-1 - x) + cos(1/2 * 0)	cos(1/2 * 0) + 1 / (-1 - x)
 InnerSimplified	order	1 / (-1 - x) + e ^ 0 ^ 2	e ^ 0 ^ 2 + 1 / (-1 - x)
 InnerSimplified	order	1 / (-1 - x) + e ^ 1	e ^ 1 + 1 / (-1 - x)
 InnerSimplified	order	1 / (-1 - x) + ln(-2)	ln(-2) + 1 / (-1 - x)
-InnerSimplified	order	1 / (-1 - x) + sgn(a / 0)	sgn(a / 0) + 1 / (-1 - x)
 InnerSimplified	order	1 / (-1 - x) + sgn(x + x)	sgn(x + x) + 1 / (-1 - x)
 InnerSimplified	order	1 / (-1 - x) + sin(y - 0)	sin(y - 0) + 1 / (-1 - x)
 InnerSimplified	order	1 / (-1 - x) + sqrt(1/2 / a)	sqrt(1/2 / a) + 1 / (-1 - x)
@@ -930,7 +922,6 @@ InnerSimplified	order	2 ^ x + cos(1/2 * 0)	cos(1/2 * 0) + 2 ^ x
 InnerSimplified	order	2 ^ x + e ^ 0 ^ 2	e ^ 0 ^ 2 + 2 ^ x
 InnerSimplified	order	2 ^ x + e ^ 1	e ^ 1 + 2 ^ x
 InnerSimplified	order	2 ^ x + ln(-2)	ln(-2) + 2 ^ x
-InnerSimplified	order	2 ^ x + sgn(a / 0)	sgn(a / 0) + 2 ^ x
 InnerSimplified	order	2 ^ x + sgn(x + x)	sgn(x + x) + 2 ^ x
 InnerSimplified	order	2 ^ x + sin(y - 0)	sin(y - 0) + 2 ^ x
 InnerSimplified	order	2 ^ x + sqrt(1/2 / a)	sqrt(1/2 / a) + 2 ^ x
@@ -994,7 +985,6 @@ InnerSimplified	order	a / y + cos(1/2 * 0)	cos(1/2 * 0) + a / y
 InnerSimplified	order	a / y + e ^ 0 ^ 2	e ^ 0 ^ 2 + a / y
 InnerSimplified	order	a / y + e ^ 1	e ^ 1 + a / y
 InnerSimplified	order	a / y + ln(-2)	ln(-2) + a / y
-InnerSimplified	order	a / y + sgn(a / 0)	sgn(a / 0) + a / y
 InnerSimplified	order	a / y + sgn(x + x)	sgn(x + x) + a / y
 InnerSimplified	order	a / y + sin(y - 0)	sin(y - 0) + a / y
 InnerSimplified	order	a / y + sqrt(1/2 / a)	sqrt(1/2 / a) + a / y
@@ -1058,7 +1048,6 @@ InnerSimplified	order	a ^ 1 + cos(1/2 * 0)	cos(1/2 * 0) + a ^ 1
 InnerSimplified	order	a ^ 1 + e ^ 0 ^ 2	e ^ 0 ^ 2 + a ^ 1
 InnerSimplified	order	a ^ 1 + e ^ 1	e ^ 1 + a ^ 1
 InnerSimplified	order	a ^ 1 + ln(-2)	ln(-2) + a ^ 1
-InnerSimplified	order	a ^ 1 + sgn(a / 0)	sgn(a / 0) + a ^ 1
 InnerSimplified	order	a ^ 1 + sgn(x + x)	sgn(x + x) + a ^ 1
 InnerSimplified	order	a ^ 1 + sin(y - 0)	sin(y - 0) + a ^ 1
 InnerSimplified	order	a ^ 1 + sqrt(1/2 / a)	sqrt(1/2 / a) + a ^ 1
@@ -1122,7 +1111,6 @@ InnerSimplified	order	abs(a ^ a) + cos(1/2 * 0)	cos(1/2 * 0) + abs(a ^ a)
 InnerSimplified	order	abs(a ^ a) + e ^ 0 ^ 2	e ^ 0 ^ 2 + abs(a ^ a)
 InnerSimplified	order	abs(a ^ a) + e ^ 1	e ^ 1 + abs(a ^ a)
 InnerSimplified	order	abs(a ^ a) + ln(-2)	ln(-2) + abs(a ^ a)
-InnerSimplified	order	abs(a ^ a) + sgn(a / 0)	sgn(a / 0) + abs(a ^ a)
 InnerSimplified	order	abs(a ^ a) + sgn(x + x)	sgn(x + x) + abs(a ^ a)
 InnerSimplified	order	abs(a ^ a) + sin(y - 0)	sin(y - 0) + abs(a ^ a)
 InnerSimplified	order	abs(a ^ a) + sqrt(1/2 / a)	sqrt(1/2 / a) + abs(a ^ a)
@@ -1186,7 +1174,6 @@ InnerSimplified	order	abs(x - 2) + cos(1/2 * 0)	cos(1/2 * 0) + abs(x - 2)
 InnerSimplified	order	abs(x - 2) + e ^ 0 ^ 2	e ^ 0 ^ 2 + abs(x - 2)
 InnerSimplified	order	abs(x - 2) + e ^ 1	e ^ 1 + abs(x - 2)
 InnerSimplified	order	abs(x - 2) + ln(-2)	ln(-2) + abs(x - 2)
-InnerSimplified	order	abs(x - 2) + sgn(a / 0)	sgn(a / 0) + abs(x - 2)
 InnerSimplified	order	abs(x - 2) + sgn(x + x)	sgn(x + x) + abs(x - 2)
 InnerSimplified	order	abs(x - 2) + sin(y - 0)	sin(y - 0) + abs(x - 2)
 InnerSimplified	order	abs(x - 2) + sqrt(1/2 / a)	sqrt(1/2 / a) + abs(x - 2)
@@ -1250,7 +1237,6 @@ InnerSimplified	order	cos(-x) + cos(1/2 * 0)	cos(1/2 * 0) + cos(-x)
 InnerSimplified	order	cos(-x) + e ^ 0 ^ 2	e ^ 0 ^ 2 + cos(-x)
 InnerSimplified	order	cos(-x) + e ^ 1	e ^ 1 + cos(-x)
 InnerSimplified	order	cos(-x) + ln(-2)	ln(-2) + cos(-x)
-InnerSimplified	order	cos(-x) + sgn(a / 0)	sgn(a / 0) + cos(-x)
 InnerSimplified	order	cos(-x) + sgn(x + x)	sgn(x + x) + cos(-x)
 InnerSimplified	order	cos(-x) + sin(y - 0)	sin(y - 0) + cos(-x)
 InnerSimplified	order	cos(-x) + sqrt(1/2 / a)	sqrt(1/2 / a) + cos(-x)
@@ -1366,7 +1352,6 @@ InnerSimplified	order	e ^ 1 + cos(-x)	cos(-x) + e ^ 1
 InnerSimplified	order	e ^ 1 + cos(1/2 * 0)	cos(1/2 * 0) + e ^ 1
 InnerSimplified	order	e ^ 1 + e ^ 0 ^ 2	e ^ 0 ^ 2 + e ^ 1
 InnerSimplified	order	e ^ 1 + ln(-2)	ln(-2) + e ^ 1
-InnerSimplified	order	e ^ 1 + sgn(a / 0)	sgn(a / 0) + e ^ 1
 InnerSimplified	order	e ^ 1 + sgn(x + x)	sgn(x + x) + e ^ 1
 InnerSimplified	order	e ^ 1 + sin(y - 0)	sin(y - 0) + e ^ 1
 InnerSimplified	order	e ^ 1 + sqrt(1/2 / a)	sqrt(1/2 / a) + e ^ 1
@@ -1430,7 +1415,6 @@ InnerSimplified	order	ln(-2) + cos(-x)	cos(-x) + ln(-2)
 InnerSimplified	order	ln(-2) + cos(1/2 * 0)	cos(1/2 * 0) + ln(-2)
 InnerSimplified	order	ln(-2) + e ^ 0 ^ 2	e ^ 0 ^ 2 + ln(-2)
 InnerSimplified	order	ln(-2) + e ^ 1	e ^ 1 + ln(-2)
-InnerSimplified	order	ln(-2) + sgn(a / 0)	sgn(a / 0) + ln(-2)
 InnerSimplified	order	ln(-2) + sgn(x + x)	sgn(x + x) + ln(-2)
 InnerSimplified	order	ln(-2) + sin(y - 0)	sin(y - 0) + ln(-2)
 InnerSimplified	order	ln(-2) + sqrt(1/2 / a)	sqrt(1/2 / a) + ln(-2)
@@ -1441,32 +1425,6 @@ InnerSimplified	order	ln(-2) + x	x + ln(-2)
 InnerSimplified	order	ln(-2) + x * 1	x * 1 + ln(-2)
 InnerSimplified	order	ln(-2) + x - y	x - y + ln(-2)
 InnerSimplified	order	ln(-2) + y / (-1)	y / (-1) + ln(-2)
-InnerSimplified	order	sgn(a / 0) + (1 * x) ^ 2	(1 * x) ^ 2 + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + (1/2) ^ a	(1/2) ^ a + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + (y + -1) ^ (-1)	(y + -1) ^ (-1) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + (y ^ x) ^ (-1)	(y ^ x) ^ (-1) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + -1 - x	-1 - x + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + -y * a	-y * a + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + 0 - a	0 - a + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + 1 / (-1 - x)	1 / (-1 - x) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + 2 ^ x	2 ^ x + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + a / y	a / y + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + a ^ 1	a ^ 1 + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + abs(a ^ a)	abs(a ^ a) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + abs(x - 2)	abs(x - 2) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + cos(-x)	cos(-x) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + e ^ 1	e ^ 1 + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + ln(-2)	ln(-2) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + sgn(x + x)	sgn(x + x) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + sin(y - 0)	sin(y - 0) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + sqrt(1/2 / a)	sqrt(1/2 / a) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + sqrt(1/2)	sqrt(1/2) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + sqrt(a)	sqrt(a) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + sqrt(e)	sqrt(e) + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + x	x + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + x * 1	x * 1 + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + x - y	x - y + sgn(a / 0)
-InnerSimplified	order	sgn(a / 0) + y / (-1)	y / (-1) + sgn(a / 0)
 InnerSimplified	order	sgn(x + x) * (-1 - x)	(-1 - x) * sgn(x + x)
 InnerSimplified	order	sgn(x + x) * (0 + 2)	(0 + 2) * sgn(x + x)
 InnerSimplified	order	sgn(x + x) * (0 - a)	(0 - a) * sgn(x + x)
@@ -1521,7 +1479,6 @@ InnerSimplified	order	sgn(x + x) + cos(1/2 * 0)	cos(1/2 * 0) + sgn(x + x)
 InnerSimplified	order	sgn(x + x) + e ^ 0 ^ 2	e ^ 0 ^ 2 + sgn(x + x)
 InnerSimplified	order	sgn(x + x) + e ^ 1	e ^ 1 + sgn(x + x)
 InnerSimplified	order	sgn(x + x) + ln(-2)	ln(-2) + sgn(x + x)
-InnerSimplified	order	sgn(x + x) + sgn(a / 0)	sgn(a / 0) + sgn(x + x)
 InnerSimplified	order	sgn(x + x) + sin(y - 0)	sin(y - 0) + sgn(x + x)
 InnerSimplified	order	sgn(x + x) + sqrt(1/2 / a)	sqrt(1/2 / a) + sgn(x + x)
 InnerSimplified	order	sgn(x + x) + sqrt(1/2)	sqrt(1/2) + sgn(x + x)
@@ -1585,7 +1542,6 @@ InnerSimplified	order	sin(y - 0) + cos(1/2 * 0)	cos(1/2 * 0) + sin(y - 0)
 InnerSimplified	order	sin(y - 0) + e ^ 0 ^ 2	e ^ 0 ^ 2 + sin(y - 0)
 InnerSimplified	order	sin(y - 0) + e ^ 1	e ^ 1 + sin(y - 0)
 InnerSimplified	order	sin(y - 0) + ln(-2)	ln(-2) + sin(y - 0)
-InnerSimplified	order	sin(y - 0) + sgn(a / 0)	sgn(a / 0) + sin(y - 0)
 InnerSimplified	order	sin(y - 0) + sgn(x + x)	sgn(x + x) + sin(y - 0)
 InnerSimplified	order	sin(y - 0) + sqrt(1/2 / a)	sqrt(1/2 / a) + sin(y - 0)
 InnerSimplified	order	sin(y - 0) + sqrt(1/2)	sqrt(1/2) + sin(y - 0)
@@ -1649,7 +1605,6 @@ InnerSimplified	order	sqrt(1/2 / a) + cos(1/2 * 0)	cos(1/2 * 0) + sqrt(1/2 / a)
 InnerSimplified	order	sqrt(1/2 / a) + e ^ 0 ^ 2	e ^ 0 ^ 2 + sqrt(1/2 / a)
 InnerSimplified	order	sqrt(1/2 / a) + e ^ 1	e ^ 1 + sqrt(1/2 / a)
 InnerSimplified	order	sqrt(1/2 / a) + ln(-2)	ln(-2) + sqrt(1/2 / a)
-InnerSimplified	order	sqrt(1/2 / a) + sgn(a / 0)	sgn(a / 0) + sqrt(1/2 / a)
 InnerSimplified	order	sqrt(1/2 / a) + sgn(x + x)	sgn(x + x) + sqrt(1/2 / a)
 InnerSimplified	order	sqrt(1/2 / a) + sin(y - 0)	sin(y - 0) + sqrt(1/2 / a)
 InnerSimplified	order	sqrt(1/2 / a) + sqrt(1/2)	sqrt(1/2) + sqrt(1/2 / a)
@@ -1713,7 +1668,6 @@ InnerSimplified	order	sqrt(1/2) + cos(1/2 * 0)	cos(1/2 * 0) + sqrt(1/2)
 InnerSimplified	order	sqrt(1/2) + e ^ 0 ^ 2	e ^ 0 ^ 2 + sqrt(1/2)
 InnerSimplified	order	sqrt(1/2) + e ^ 1	e ^ 1 + sqrt(1/2)
 InnerSimplified	order	sqrt(1/2) + ln(-2)	ln(-2) + sqrt(1/2)
-InnerSimplified	order	sqrt(1/2) + sgn(a / 0)	sgn(a / 0) + sqrt(1/2)
 InnerSimplified	order	sqrt(1/2) + sgn(x + x)	sgn(x + x) + sqrt(1/2)
 InnerSimplified	order	sqrt(1/2) + sin(y - 0)	sin(y - 0) + sqrt(1/2)
 InnerSimplified	order	sqrt(1/2) + sqrt(1/2 / a)	sqrt(1/2 / a) + sqrt(1/2)
@@ -1777,7 +1731,6 @@ InnerSimplified	order	sqrt(a) + cos(1/2 * 0)	cos(1/2 * 0) + sqrt(a)
 InnerSimplified	order	sqrt(a) + e ^ 0 ^ 2	e ^ 0 ^ 2 + sqrt(a)
 InnerSimplified	order	sqrt(a) + e ^ 1	e ^ 1 + sqrt(a)
 InnerSimplified	order	sqrt(a) + ln(-2)	ln(-2) + sqrt(a)
-InnerSimplified	order	sqrt(a) + sgn(a / 0)	sgn(a / 0) + sqrt(a)
 InnerSimplified	order	sqrt(a) + sgn(x + x)	sgn(x + x) + sqrt(a)
 InnerSimplified	order	sqrt(a) + sin(y - 0)	sin(y - 0) + sqrt(a)
 InnerSimplified	order	sqrt(a) + sqrt(1/2 / a)	sqrt(1/2 / a) + sqrt(a)
@@ -1841,7 +1794,6 @@ InnerSimplified	order	sqrt(e) + cos(1/2 * 0)	cos(1/2 * 0) + sqrt(e)
 InnerSimplified	order	sqrt(e) + e ^ 0 ^ 2	e ^ 0 ^ 2 + sqrt(e)
 InnerSimplified	order	sqrt(e) + e ^ 1	e ^ 1 + sqrt(e)
 InnerSimplified	order	sqrt(e) + ln(-2)	ln(-2) + sqrt(e)
-InnerSimplified	order	sqrt(e) + sgn(a / 0)	sgn(a / 0) + sqrt(e)
 InnerSimplified	order	sqrt(e) + sgn(x + x)	sgn(x + x) + sqrt(e)
 InnerSimplified	order	sqrt(e) + sin(y - 0)	sin(y - 0) + sqrt(e)
 InnerSimplified	order	sqrt(e) + sqrt(1/2 / a)	sqrt(1/2 / a) + sqrt(e)
@@ -1916,7 +1868,6 @@ InnerSimplified	order	x * 1 + cos(1/2 * 0)	cos(1/2 * 0) + x * 1
 InnerSimplified	order	x * 1 + e ^ 0 ^ 2	e ^ 0 ^ 2 + x * 1
 InnerSimplified	order	x * 1 + e ^ 1	e ^ 1 + x * 1
 InnerSimplified	order	x * 1 + ln(-2)	ln(-2) + x * 1
-InnerSimplified	order	x * 1 + sgn(a / 0)	sgn(a / 0) + x * 1
 InnerSimplified	order	x * 1 + sgn(x + x)	sgn(x + x) + x * 1
 InnerSimplified	order	x * 1 + sin(y - 0)	sin(y - 0) + x * 1
 InnerSimplified	order	x * 1 + sqrt(1/2 / a)	sqrt(1/2 / a) + x * 1
@@ -1966,7 +1917,6 @@ InnerSimplified	order	x + cos(1/2 * 0)	cos(1/2 * 0) + x
 InnerSimplified	order	x + e ^ 0 ^ 2	e ^ 0 ^ 2 + x
 InnerSimplified	order	x + e ^ 1	e ^ 1 + x
 InnerSimplified	order	x + ln(-2)	ln(-2) + x
-InnerSimplified	order	x + sgn(a / 0)	sgn(a / 0) + x
 InnerSimplified	order	x + sgn(x + x)	sgn(x + x) + x
 InnerSimplified	order	x + sin(y - 0)	sin(y - 0) + x
 InnerSimplified	order	x + sqrt(1/2 / a)	sqrt(1/2 / a) + x
@@ -1999,7 +1949,6 @@ InnerSimplified	order	x - y + cos(1/2 * 0)	cos(1/2 * 0) + x - y
 InnerSimplified	order	x - y + e ^ 0 ^ 2	e ^ 0 ^ 2 + x - y
 InnerSimplified	order	x - y + e ^ 1	e ^ 1 + x - y
 InnerSimplified	order	x - y + ln(-2)	ln(-2) + x - y
-InnerSimplified	order	x - y + sgn(a / 0)	sgn(a / 0) + x - y
 InnerSimplified	order	x - y + sgn(x + x)	sgn(x + x) + x - y
 InnerSimplified	order	x - y + sin(y - 0)	sin(y - 0) + x - y
 InnerSimplified	order	x - y + sqrt(1/2 / a)	sqrt(1/2 / a) + x - y
@@ -2063,7 +2012,6 @@ InnerSimplified	order	y / (-1) + cos(1/2 * 0)	cos(1/2 * 0) + y / (-1)
 InnerSimplified	order	y / (-1) + e ^ 0 ^ 2	e ^ 0 ^ 2 + y / (-1)
 InnerSimplified	order	y / (-1) + e ^ 1	e ^ 1 + y / (-1)
 InnerSimplified	order	y / (-1) + ln(-2)	ln(-2) + y / (-1)
-InnerSimplified	order	y / (-1) + sgn(a / 0)	sgn(a / 0) + y / (-1)
 InnerSimplified	order	y / (-1) + sgn(x + x)	sgn(x + x) + y / (-1)
 InnerSimplified	order	y / (-1) + sin(y - 0)	sin(y - 0) + y / (-1)
 InnerSimplified	order	y / (-1) + sqrt(1/2 / a)	sqrt(1/2 / a) + y / (-1)
