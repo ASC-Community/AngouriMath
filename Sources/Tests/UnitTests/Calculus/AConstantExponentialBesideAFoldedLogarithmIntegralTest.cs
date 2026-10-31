@@ -74,7 +74,10 @@ namespace AngouriMath.Tests.Calculus
         /// <summary>
         /// An even power of <c>x</c>, where the factorisation reads a symbol and splits the
         /// biquadratic over it into arms on its sign -- <c>coth(a + 2 ln(x))/x^2</c> is 3,577
-        /// characters in the symbol and 413 as the exponential, which is kept.
+        /// characters in the symbol and 413 as the exponential, which is kept. The bound was 1,300
+        /// until the arctangent's poles joined the points the answer lists as having no value:
+        /// <c>x^2 coth(a + 2 ln(x))^2</c> keeps two arctangents and went from 1,128 characters to
+        /// 1,382 with their two conditions. https://github.com/asc-community/AngouriMath/issues/2256
         /// </summary>
         [Theory]
         [InlineData("coth(a + 2*ln(x))/x^2")]
@@ -82,6 +85,6 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("coth(a + 2*ln(x))^2")]
         [InlineData("x^2*coth(a + 2*ln(x))^2")]
         [InlineData("tanh(a + 2*ln(x))^2")]
-        public void AnEvenPowerOfX(string integrand) => DifferentiatesBack(integrand, 1300);
+        public void AnEvenPowerOfX(string integrand) => DifferentiatesBack(integrand, 1400);
     }
 }

@@ -1479,16 +1479,26 @@ namespace AngouriMath.Functions.Algebra
         /// and the second is the constant-numerator case above.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// With <c>a</c> a symbol the constant-numerator case is a piecewise with an arm for
         /// <c>a = 0</c>, and on that arm the multiple of the derivative, which divided by
         /// <c>a</c>, is not the integrand's: there it is <c>(px + q)/(bx + c)</c>, which is
         /// <c>px/b + (q - pc/b) ln(bx + c)/b</c>. Timofeev's <c>(b1 + c1 x)/(a + 2b x + c x^2)</c>
         /// had no antiderivative, with the arm declined for the symbol in front.
+        /// </para>
+        /// <para>
+        /// A numerator that is a multiple of the derivative leaves no constant part, and the
+        /// arctangent it would have is left out rather than multiplied by zero, as the higher
+        /// powers leave it out: <c>0 * arctan(2x/2)</c> is <c>0</c> only where the arctangent has
+        /// a value, so <c>x/(x^2 + 1)</c> was answered with <c>provided not 1 + (2x/2)^2 = 0</c>
+        /// once the arctangent's poles were in its condition, beside a logarithm that has none
+        /// there either. https://github.com/asc-community/AngouriMath/issues/2256
+        /// </para>
         /// </remarks>
         private static Entity IntegrateLinearOverQuadratic(
             Entity p, Entity q, Entity a, Entity b, Entity c, Entity denominator, Entity.Variable x)
             => WithTheArmForAZeroLeadingCoefficient(
-                IntegrateRationalQuadratic(q - p * b / (2 * a), a, b, c, x),
+                TreeAnalyzer.IsZero(q - p * b / (2 * a)) ? Entity.Number.Integer.Zero : IntegrateRationalQuadratic(q - p * b / (2 * a), a, b, c, x),
                 a,
                 p / (2 * a) * AntiderivativeLog(denominator),
                 LinearOverPowerOfLinear(p, q, b, c, 1, x));

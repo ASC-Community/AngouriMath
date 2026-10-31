@@ -921,6 +921,22 @@ conjugate as `0 - 1i`, in decimals, on the one instance that every `i` is, in ev
 |---|---|---|
 | `Complex.ImaginaryOne.Conjugate`, after `(1 / Complex.ImaginaryOne).Evaled` with `DowncastingEnabled` off | `0 - 1i` | `-i` |
 
+### `arctan` and `arccot` are undefined at their poles
+
+**Silent: a simplification that cancels an `arctan` or an `arccot` carries `not 1 + x ^ 2 = 0`, where it carried
+nothing.** Both have poles at `i` and `-i`, where they evaluate to an infinity, as `ln(0)` does, and the tangent's
+condition excludes its own poles the same way. Their condition said they were defined everywhere, so
+`arctan(x) - arctan(x)` simplified to `0`, which has a value at `i`. An antiderivative that keeps an `arctan` can now
+list its poles beside the other points it has no value at, which says nothing new
+([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"arctan(x) - arctan(x)".ToEntity().Simplify()` | `0` | `0 provided not 1 + x ^ 2 = 0` |
+| `"arccot(x) - arccot(x)".ToEntity().Simplify()` | `0` | `0 provided not 1 + x ^ 2 = 0` |
+| `"arctan(x)".ToEntity().DomainCondition` | `True` | `not 1 + x ^ 2 = 0` |
+| `"x^2*coth(a + 2*ln(x))^2".ToEntity().Integrate("x").Simplify()` | `… + C + x ^ 3 / 3` | `… + C + x ^ 3 / 3 provided not x ^ 2 / e ^ (-a) + 1 = 0 and not x ^ 2 / (-e ^ (-a)) + 1 = 0` |
+
 ### `max` and `min` are defined where their arguments are real
 
 **Silent: `max(x, x)` and `min(x, x)` simplify to `x provided x in RR`, where they were `x`.** The complex numbers are
