@@ -34,6 +34,31 @@ namespace AngouriMath.Tests.Algebra
             => Assert.IsType<ConditionalSet>(equation.ToEntity().Solve("x"));
 
         /// <summary>
+        /// <c>x</c> inside a function that is not holomorphic and outside it too: Newton's method
+        /// assumes a holomorphic function, and over the complex numbers <c>|u| = +-u</c> only where
+        /// <c>u</c> is real, which a root need not make it, so neither the search nor a split by the
+        /// sign finds every root. Left unsolved. The search's near-copies of a root came back as
+        /// roots: <c>x^2/|1 - x^2| = x</c> had <c>1.618 + 1.7e-9 i</c> beside <c>1.618</c>.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2139">#2139</a>
+        /// </summary>
+        [Theory]
+        [InlineData("x^2/abs(1 - x^2) = x")]
+        [InlineData("abs(x^2 - 4) = 3 x")]
+        [InlineData("x^2 + 1 = abs(x)")]
+        [InlineData("x * abs(x) = 4")]
+        [InlineData("x + sgn(x) = 3")]
+        [InlineData("x + conj(x) = 2 + i")]
+        public void OverTheComplexNumbersAnEquationInAndOutOfAModulusIsLeftUnsolved(string equation)
+            => Assert.IsType<ConditionalSet>(equation.ToEntity().Solve("x"));
+
+        /// <summary>The variable only inside the modulus, or not in one at all, is answered as before.</summary>
+        [Theory]
+        [InlineData("abs(x) = 2")]
+        [InlineData("x^2 = 4")]
+        public void OverTheComplexNumbersTheOthersAreStillAnswered(string equation)
+            => Assert.IsNotType<ConditionalSet>(equation.ToEntity().Solve("x"));
+
+        /// <summary>
         /// Sullivan and Mackey's Prob 1.5.16, and moduli between which a whole interval solves.
         /// </summary>
         [Theory]

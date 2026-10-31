@@ -392,6 +392,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (ModulusSolver.IsRealForEveryComplex(expr, x))
                 return Unsolved(expr, x);
 
+            // Over the complex numbers, x inside a modulus or another function that is not
+            // holomorphic and outside it as well is not the search's either: Newton's method
+            // assumes a holomorphic function, and its near-copies of a root came back as roots.
+            // Left unsolved; over the reals it is solved by cases, above.
+            // https://github.com/asc-community/AngouriMath/issues/2139
+            if (MathS.Settings.Codomain.Value != Core.Domain.Real && ModulusSolver.IsInsideAndOutsideAFunctionThatIsNotHolomorphic(expr, x))
+                return Unsolved(expr, x);
+
             // A numerical search that comes back with nothing has not shown there is
             // nothing to find: Newton's method is started from finitely many points inside
             // a bounded region, so an empty result is a fact about the search rather than

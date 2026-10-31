@@ -1034,6 +1034,21 @@ unchanged ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
 | `"max(x, x)".ToEntity().Simplify()` | `x` | `x provided x in RR` |
 | `"max(x, 2)".ToEntity().DomainCondition` | `True` | `x in RR` |
 
+### Over the complex numbers, an equation in and out of a modulus is left unsolved
+
+**Silent: an equation with `x` inside `abs`, `sgn`, `conj`, `Re`, `Im` or `arg` and outside it too is left unsolved
+in the complex codomain, the default, where a numerical search answered it.** Newton's method assumes a holomorphic
+function, and over the complex numbers `|u| = ±u` only where `u` is real, which a root need not make it, so neither
+the search nor a split by the sign finds every root. The search's near-copies of a root came back as roots. Where it
+happened to be right, as for `x * abs(x) = 4`, the answer is given up with the rest; over the reals each is still
+solved by cases, exactly ([#2139](https://github.com/asc-community/AngouriMath/issues/2139)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^2/abs(1-x^2) = x".ToEntity().Solve("x")` | `{ 0, 0.618…, 1.618…, 1.618… + 1.7E-9i, 1.618… + 9.9E-8i }` | `{ x : x ^ 2 / abs(1 - x ^ 2) = x }` |
+| `"abs(x^2 - 4) = 3x".ToEntity().Solve("x")` | `{ 1, 4, 4.0000000000000062… + 1.6E-7i }` | `{ x : abs(x ^ 2 - 4) = 3 * x }` |
+| `"x * abs(x) = 4".ToEntity().Solve("x")` | `{ 2 }` | `{ x : x * abs(x) = 4 }` |
+
 ### `conjugate`, `conj` and `arg` are functions
 
 **Not silent: these names followed by a bracket are now the complex conjugate and the principal argument, where they
