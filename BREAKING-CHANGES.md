@@ -417,6 +417,21 @@ taken through its decimal, which had already rounded it onto the integer beside 
 | `"round(10^120 + 3/2)".ToEntity().Evaled` | `10^120` | `10^120 + 2` |
 | `"round(+oo)".ToEntity().Evaled` | throws `OverflowException` | `+oo` |
 
+### A factor a numerator's terms hold to a power cancels
+
+**Silent: a quotient whose numerator's terms each hold a factor of the denominator, as it is or to a whole power,
+is cancelled by it.** A term holding the factor only to a power was not read as holding it, so
+`(x (y + 1) + (y + 1)^2) / (y + 1)^4` was left as written while `(x (y + 1) + (y + 1)) / (y + 1)^2` cancelled. The
+quotient rule squares the denominator at each derivative, so a Taylor expansion of `e^x / (1 + x^2)` took its seventh
+derivative in 5,117 nodes, and takes it in 149: 9 terms took 8 s and take 1 s
+([#2301](https://github.com/asc-community/AngouriMath/issues/2301)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(x * (y + 1) + (y + 1)^2) / (y + 1)^4".ToEntity().Simplify()` | `(x * (y + 1) + (y + 1) ^ 2) / (y + 1) ^ 4` | `(x + y + 1) / (y + 1) ^ 3` |
+| `"(x * (x^2 + 1) + (x^2 + 1)^2) / (x^2 + 1)^4".ToEntity().Simplify()` | `(x * (x ^ 2 + 1) + (x ^ 2 + 1) ^ 2) / (x ^ 2 + 1) ^ 4` | `(x ^ 2 + 1 + x) / (x ^ 2 + 1) ^ 3` |
+| `"(a * (x^2 + 1) + b * (x^2 + 1)^2) / (x^2 + 1)^3".ToEntity().Simplify()` | `(b * (x ^ 2 + 1) + a) / (x ^ 4 + 2 * x ^ 2 + 1) provided not x ^ 2 + 1 = 0` | `(a + b * (x ^ 2 + 1)) / (x ^ 2 + 1) ^ 2` |
+
 ### A squared sine and cosine with one coefficient are found anywhere in a sum
 
 **Silent: an identity reaches its value however the sum is written.** `k sin(x)^2 + k cos(x)^2` was reduced to `k`

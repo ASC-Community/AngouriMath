@@ -77,8 +77,74 @@ namespace AngouriMath.Functions
         /// </summary>
         internal static Entity PairwiseGroupedQuotient(
             Entity whole, Entity num, Entity den, TreeAnalyzer.SortLevel level)
-            => PairwiseGrouping(num, den, level).Select(PowerRules).MultiplyAll()
+            => PairwiseGrouping(WithAFactorOfTheOtherOut(num, den), WithAFactorOfTheOtherOut(den, num), level)
+                .Select(PowerRules).MultiplyAll()
                 .InnerSimplified.Replace(CollapseMultipleFractions);
+
+        /// <summary>
+        /// <paramref name="sum"/> with a factor of <paramref name="other"/> taken out of it, where
+        /// every term of the sum holds that factor, as it is or to a whole power, so that the
+        /// pairing meets it: <c>x (y + 1) + (y + 1)^2</c> beside <c>(y + 1)^4</c> is
+        /// <c>(y + 1) (x + y + 1)</c>. The sum as it is where no polynomial factor is in every term.
+        /// </summary>
+        /// <remarks>
+        /// A term that held the factor only to a power was not read as holding it, so
+        /// <c>(x (y + 1) + (y + 1)^2) / (y + 1)^4</c> was left as written while
+        /// <c>(x (y + 1) + (y + 1)) / (y + 1)^2</c> cancelled. The quotient rule squares the
+        /// denominator at each derivative, so the Taylor expansion of <c>e^x / (1 + x^2)</c> took
+        /// its derivatives over <c>(x^2 + 1)^2</c>, <c>^4</c>, <c>^8</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2301
+        /// </remarks>
+        private static Entity WithAFactorOfTheOtherOut(Entity sum, Entity other)
+        {
+            if (sum is not (Sumf or Minusf))
+                return sum;
+            var terms = Sumf.LinearChildren(sum);
+            foreach (var candidate in Mulf.LinearChildren(other))
+            {
+                var factor = candidate is Powf(var @base, Integer { IsPositive: true }) ? @base : candidate;
+                if (factor is Number || !factor.Vars.Any() || !IsAPolynomial(factor))
+                    continue;
+                var lowest = terms.Min(term => PowerOf(factor, term));
+                if (lowest < 1)
+                    continue;
+                return MathS.Pow(factor, lowest) * Sumf.Sum(terms.Select(term => Without(factor, lowest, term)).ToList());
+            }
+            return sum;
+
+            // A polynomial factor only. A power of a sine has a cancellation of its own, through the
+            // opened angles and a common denominator, and taking it out first left the reporter's
+            // second expression of https://github.com/asc-community/AngouriMath/issues/557 short of 0.
+            static bool IsAPolynomial(Entity factor)
+                => factor.Nodes.All(node => node is Number or Variable or Sumf or Minusf or Mulf
+                    || node is Powf(_, Integer { IsPositive: true }));
+
+            // How many times the factor is in the product, counting a whole power of it as that many.
+            static int PowerOf(Entity factor, Entity term)
+                => Mulf.LinearChildren(term).Sum(child =>
+                    child == factor ? 1
+                    : child is Powf(var b, Integer { IsPositive: true } k) && b == factor && k.EInteger.CanFitInInt32() ? k.EInteger.ToInt32Checked()
+                    : 0);
+
+            // The product with that many of the factor taken off it.
+            static Entity Without(Entity factor, int count, Entity term)
+            {
+                var kept = new List<Entity>();
+                foreach (var child in Mulf.LinearChildren(term))
+                {
+                    var here = child == factor ? 1
+                        : child is Powf(var b, Integer { IsPositive: true } k) && b == factor && k.EInteger.CanFitInInt32() ? k.EInteger.ToInt32Checked()
+                        : 0;
+                    var taken = System.Math.Min(here, count);
+                    count -= taken;
+                    if (here - taken > 0)
+                        kept.Add(here - taken == 1 ? factor : MathS.Pow(factor, here - taken));
+                    else if (here == 0)
+                        kept.Add(child);
+                }
+                return kept.Count == 0 ? Integer.One : kept.Aggregate((left, right) => left * right);
+            }
+        }
 
         /// <summary>n^(p/q) for a q of 2 or more -- a root that is not a whole power.</summary>
         private static bool IsSurd(Entity node)
