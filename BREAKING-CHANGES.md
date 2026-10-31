@@ -607,6 +607,24 @@ interpreter leaves them as written ([#2195](https://github.com/asc-community/Ang
 | `"valuation(x, 2)".ToEntity().Compile("x").Call(12)` | `UncompilableNodeException` | `(2, 0)` |
 | `"valuation(x, 2)".ToEntity().Compile<double, double>("x")(0)` | `UncompilableNodeException` | `Infinity` |
 
+### Compiling over the reals can refuse what is not real
+
+**Not silent, and only where asked for: `MathS.Settings.RefuseNonRealCompilation`, off by default, refuses to compile into a
+function returning `double` or `float` an expression that is not real wherever it is defined.** Over the reals every value
+computed on the way is real, so `sin(arcsin(x))` at 2, which is 2, is NaN there, as `1/x` is at 0. That is now documented
+on every `Compile` overload, and with the setting on, such an expression throws `UncompilableNodeException`, so that a NaN
+means only that there is no value. The check is structural and conservative: `sqrt(x)` and `ln(x)` are refused too.
+
+**Silent: `floor`, `ceil`, `round`, `min` and `max` of real arguments are known to be real**, which the derivative of a
+modulus or a sign needs, so these are answered where they were left unevaluated
+([#2286](https://github.com/asc-community/AngouriMath/issues/2286)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^y".Compile<double, double, double>("x", "y")` under the setting | (no setting) | throws `UncompilableNodeException` |
+| `"derivative(abs(floor(x)), x)".ToEntity().Simplify()` | unevaluated | `0 provided not floor(x) = 0 and not x in ZZ` |
+| `"derivative(abs(min(x, 1)), x)".ToEntity().Simplify()` | unevaluated | `sgn(min(x, 1)) * (1 - sgn(x - 1)) / 2 provided not min(x, 1) = 0 and not x - 1 = 0` |
+
 ### Membership and divisibility compile
 
 **Not silent: what was refused is compiled.** `x in S` and `a divides b` were refused by both compilers with

@@ -6286,6 +6286,43 @@ namespace AngouriMath
             public static Setting<bool> AllowNewton { get; } = true;
 
             /// <summary>
+            /// Whether compiling into a function that returns <see cref="double"/> or <see cref="float"/> refuses an
+            /// expression that is not real wherever it is defined. Off by default.
+            /// </summary>
+            /// <remarks>
+            /// Compiled over the reals, every value the function computes on the way is a real number. So an expression
+            /// whose value at a real argument is not real, or is real only by way of a value that is not -- <c>sqrt(x)</c>
+            /// at -4, <c>sin(arcsin(x))</c> at 2 -- evaluates to NaN there, as it does where it has no value at all, as
+            /// <c>1/x</c> at 0. With this off, that is how such an expression compiles, and a NaN from the compiled
+            /// function means that the expression has no value there or that its computation left the reals. With it on,
+            /// an expression that cannot be shown to be real wherever it is defined is refused with
+            /// <see cref="Core.Exceptions.UncompilableNodeException"/>, and a NaN means only that there is no value. The
+            /// showing is structural and so conservative: <c>sqrt(x)</c> and <c>ln(x)</c> are refused, though both are
+            /// real for positive x. Compile over <see cref="System.Numerics.Complex"/> for the value itself.
+            /// <a href="https://github.com/asc-community/AngouriMath/issues/2286">#2286</a>
+            /// </remarks>
+            /// <example>
+            /// <code>
+            /// using static AngouriMath.MathS;
+            ///
+            /// Console.WriteLine("sin(arcsin(x))".Compile&lt;double, double&gt;("x")(2));
+            ///
+            /// using var _ = Settings.RefuseNonRealCompilation.Set(true);
+            ///
+            /// Console.WriteLine("x / (1 + x^2)".Compile&lt;double, double&gt;("x")(2));
+            /// try { "sin(arcsin(x))".Compile&lt;double, double&gt;("x"); }
+            /// catch (AngouriMath.Core.Exceptions.UncompilableNodeException) { Console.WriteLine("refused"); }
+            /// </code>
+            /// Prints
+            /// <code>
+            /// NaN
+            /// 0.4
+            /// refused
+            /// </code>
+            /// </example>
+            public static Setting<bool> RefuseNonRealCompilation { get; } = false;
+
+            /// <summary>
             /// Criteria for simplifier so you could control which expressions are considered easier by you.
             /// The higher the value - the more complicated an expression is.
             /// </summary>

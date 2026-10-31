@@ -3498,6 +3498,7 @@ AngouriMath.MathS+Settings.MaxExpansionTermCount { } : AngouriMath.Convenience.S
 AngouriMath.MathS+Settings.NewtonSolver { } : AngouriMath.Convenience.Setting<AngouriMath.MathS+Settings+NewtonSetting>
 AngouriMath.MathS+Settings.PrecisionErrorCommon { } : AngouriMath.Convenience.Setting<PeterO.Numbers.EDecimal>
 AngouriMath.MathS+Settings.PrecisionErrorZeroRange { } : AngouriMath.Convenience.Setting<PeterO.Numbers.EDecimal>
+AngouriMath.MathS+Settings.RefuseNonRealCompilation { } : AngouriMath.Convenience.Setting<System.Boolean>
 AngouriMath.MathS+UnsafeAndInternal.AreEqualNumerically(AngouriMath.Entity, AngouriMath.Entity) : System.Boolean
 AngouriMath.MathS+UnsafeAndInternal.AreEqualNumerically(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity[]) : System.Boolean
 AngouriMath.MathS+UnsafeAndInternal.CheckPoints { } : AngouriMath.Convenience.Setting<AngouriMath.Entity[]>

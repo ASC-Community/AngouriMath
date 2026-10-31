@@ -67,6 +67,14 @@ namespace AngouriMath.Functions
                      or Arctanf or Arccotanf or Signumf or Erff or Erfcf or Erfif or Eif or Sif or Shif
                      or Conjugatef:
                     return IsRealValued(expr.DirectChildren[0], x);
+                // The integer below, above or nearest to a real number is real, and so is the larger or the smaller
+                // of two. https://github.com/asc-community/AngouriMath/issues/2286
+                case Floorf or Ceilf or Roundf:
+                    return IsRealValued(expr.DirectChildren[0], x);
+                case Maxf(var left, var right):
+                    return IsRealValued(left, x) && IsRealValued(right, x);
+                case Minf(var left, var right):
+                    return IsRealValued(left, x) && IsRealValued(right, x);
                 // A polygamma function of a whole order is real on the real line between its poles.
                 case Polygammaf(var order, var argument) when !order.ContainsNode(x):
                     return IsRealValued(argument, x);
