@@ -175,9 +175,14 @@ public sealed class ToolsTest
         Assert.DoesNotContain("provided", answer.Field("eigenvalues"));
     }
 
-    [Fact]
-    public void Series() =>
-        Assert.Equal("x ^ 5 / 120 - x ^ 3 / 6 + x", Mcp.Call("am_series", """{"expression":"sin(x)","variable":"x","degree":7}""").Field("result"));
+    // The degree is the highest power kept, x ^ 7 at 7. It was passed on as the number of terms, so
+    // degree 7 stopped at x ^ 5 and degree 1 was the constant. https://github.com/asc-community/AngouriMath/issues/2299
+    [Theory]
+    [InlineData("sin(x)", 7, "x ^ 5 / 120 - x ^ 7 / 5040 - x ^ 3 / 6 + x")]
+    [InlineData("sin(x)", 1, "x")]
+    [InlineData("e^x", 1, "1 + x")]
+    public void Series(string expression, int degree, string expected) =>
+        Assert.Equal(expected, Mcp.Call("am_series", $$"""{"expression":"{{expression}}","variable":"x","degree":{{degree}}}""").Field("result"));
 
     [Fact]
     public void Factorize() =>

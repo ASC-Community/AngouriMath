@@ -2624,7 +2624,8 @@ namespace AngouriMath
             /// The function to find the Maclaurin expansion of
             /// </param>
             /// <param name="degree">
-            /// The degree of the resulting Maclaurin polynomial (and the variable in the resulting series)
+            /// The number of terms, one more than the highest power kept: 4 keeps the powers up to the
+            /// cube, as the example shows. https://github.com/asc-community/AngouriMath/issues/2299
             /// </param>
             /// <param name="exprVariables">
             /// The variable/s to take the series over (and the variable the series will be over)
@@ -2711,7 +2712,8 @@ namespace AngouriMath
             /// The function to find the Taylor expansion of
             /// </param>
             /// <param name="degree">
-            /// The degree of the resulting taylor polynomial
+            /// The number of terms, one more than the highest power kept: 4 keeps the powers up to the
+            /// cube, as the example shows. https://github.com/asc-community/AngouriMath/issues/2299
             /// </param>
             /// <param name="exprVariables">
             /// The variable/s to take the series over (and the variable in the resulting series),
@@ -2799,7 +2801,8 @@ namespace AngouriMath
             /// The function to find the Taylor expansion of
             /// </param>
             /// <param name="degree">
-            /// The degree of the resulting taylor polynomial
+            /// The number of terms, one more than the highest power kept: 4 keeps the powers up to the
+            /// cube, as the example shows. https://github.com/asc-community/AngouriMath/issues/2299
             /// </param>
             /// <param name="exprToPolyVars">
             /// The variable/s to take the series over, the variable the series will be over,
