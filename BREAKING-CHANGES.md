@@ -884,6 +884,28 @@ but 0, and `log`'s own condition already excluded it. A base that is small but n
 | `"log(x, 2)".ToEntity().Compile("x").Call(0)` | `(-0, -0)` | `(NaN, 0)` |
 | `"log(x, 1)".ToEntity().Simplify()` | `0 provided not x = 1` | `0 provided not x = 0 and not x = 1` |
 
+### A difference of two intervals keeps the parts on either side
+
+**Silent: `A \ B` for two intervals is the part of `A` below `B` and the part above it, each holding the end `B`
+leaves.** It was one interval, from an end of `A` to the far end of `B`, where `B` lay inside `A`. Where `B` covered
+an end of `A`, the end of the cut was read from `B`'s other end. And an end of `A` that `B` left out was lost.
+Membership follows the set, so `5 in ([0; 10] \ (2; 3))` was `False`. Ends such as `sqrt(2)` are compared by their
+values, where the difference was left as written. With ends that have no value, `[a; b] \ (a; b)` is left as written,
+since it is `{ a, b }` where `a < b` and nothing where `a > b`
+([#2290](https://github.com/asc-community/AngouriMath/issues/2290)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"[0; 10] \\ (2; 3)".ToEntity().Simplify()` | `[0; 3]` | `[0; 2] \/ [3; 10]` |
+| `"[0; 10] \\ [-1; 3)".ToEntity().Simplify()` | `(3; 10]` | `[3; 10]` |
+| `"[0; 10] \\ (0; 3)".ToEntity().Simplify()` | `[3; 10]` | `{ 0 } \/ [3; 10]` |
+| `"[0; 10] \\ (0; 10)".ToEntity().Simplify()` | `[0; 10]` | `{ 0, 10 }` |
+| `"(-oo; +oo) \\ [0; 1)".ToEntity().Simplify()` | `(-oo; 1)` | `(-oo; 0) \/ [1; +oo)` |
+| `"[0; sqrt(2)] \\ [1; 2]".ToEntity().Simplify()` | `[0; sqrt(2)] \ [1; 2]` | `[0; 1)` |
+| `"(a; b) \\ [a; b]".ToEntity().Simplify()` | `(a; b)` | `{  }` |
+| `"[a; b] \\ (a; b)".ToEntity().Simplify()` | `[a; b]` | `[a; b] \ (a; b)` |
+| `"5 in ([0; 10] \\ (2; 3))".ToEntity().Simplify()` | `False` | `True` |
+
 ### `re` and `im` are the real and the imaginary part
 
 **Not silent: `re(…)` and `im(…)`, and `real(…)` and `imag(…)`, are now the real and the imaginary part, where they were

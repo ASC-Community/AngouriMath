@@ -6,6 +6,8 @@
 //
 
 using AngouriMath;
+using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Set;
@@ -85,6 +87,96 @@ namespace AngouriMath.Tests.Core.Sets
         [Fact] public void Subtraction4() => TestInt(D.SetSubtract(E), (Interval)D);
         [Fact] public void Subtraction5() => TestInt(A.SetSubtract(F), Interval(2, true, 3, false));
         [Fact] public void Subtraction6() => TestInt(F.SetSubtract(A), Interval(5, false, 6, true));
+
+        /// <summary>
+        /// What is left of an interval with another taken out is the part below it and the part
+        /// above it, and each part holds the end the second one leaves. One interval from an end
+        /// of the first to the far end of the second used to be answered, with its ends read from
+        /// the wrong side. https://github.com/asc-community/AngouriMath/issues/2290
+        /// </summary>
+        [Theory]
+        [InlineData("[0; 10] \\ (2; 3)", "[0; 2] \\/ [3; 10]")]
+        [InlineData("[0; 10] \\ [2; 3]", "[0; 2) \\/ (3; 10]")]
+        [InlineData("(0; 10) \\ (2; 3)", "(0; 2] \\/ [3; 10)")]
+        [InlineData("[0; 10] \\ [-1; 3)", "[3; 10]")]
+        [InlineData("[0; 10] \\ (-1; 3]", "(3; 10]")]
+        [InlineData("[0; 10] \\ (5; 12]", "[0; 5]")]
+        [InlineData("[0; 10] \\ [5; 12)", "[0; 5)")]
+        [InlineData("[0; 10] \\ (0; 3)", "{ 0 } \\/ [3; 10]")]
+        [InlineData("[0; 10] \\ (7; 10)", "[0; 7] \\/ { 10 }")]
+        [InlineData("[0; 10] \\ (0; 10)", "{ 0, 10 }")]
+        [InlineData("[0; 10] \\ [0; 10)", "{ 10 }")]
+        [InlineData("[0; 10] \\ [5; 5]", "[0; 10] \\ { 5 }")]
+        [InlineData("[0; 10] \\ (5; 5)", "[0; 10]")]
+        [InlineData("[0; sqrt(2)] \\ [1; 2]", "[0; 1)")]
+        [InlineData("(-oo; +oo) \\ [0; 1)", "(-oo; 0) \\/ [1; +oo)")]
+        public void ADifferenceKeepsThePartsOnEitherSide(string difference, string expected)
+            => Assert.Equal(MathS.FromString(expected).Simplify(), MathS.FromString(difference).Simplify());
+
+        /// <summary>
+        /// The difference holds a point exactly where the first interval does and the second does
+        /// not, over every order of the four ends, with each end open or closed, and with either
+        /// interval reversed or at a single point. Two intervals that each have more than one point
+        /// are subtracted to a set without a difference in it; one that has a point or none is a
+        /// listed set by then, and the difference may stay.
+        /// https://github.com/asc-community/AngouriMath/issues/2290
+        /// </summary>
+        [Fact]
+        public void ADifferenceHoldsWhatTheFirstHoldsAndTheSecondDoesNot()
+        {
+            var points = Enumerable.Range(-1, 9).Select(k => (Entity)Entity.Number.Rational.Create(k, 2)).ToArray();
+            var failures = new List<string>();
+            foreach (var aLeft in Enumerable.Range(0, 4))
+            foreach (var aRight in Enumerable.Range(0, 4))
+            foreach (var bLeft in Enumerable.Range(0, 4))
+            foreach (var bRight in Enumerable.Range(0, 4))
+            foreach (var flags in Enumerable.Range(0, 16))
+            {
+                var a = Interval(aLeft, (flags & 1) != 0, aRight, (flags & 2) != 0);
+                var b = Interval(bLeft, (flags & 4) != 0, bRight, (flags & 8) != 0);
+                var difference = a.SetSubtract(b).InnerSimplified;
+                if (difference is not Set left || left is SetMinusf && aLeft < aRight && bLeft < bRight)
+                {
+                    failures.Add($"{a} \\ {b} is not decided: {difference}");
+                    continue;
+                }
+                foreach (var point in points)
+                {
+                    var expected = Holds(a, point) && !Holds(b, point);
+                    if (!left.TryContains(point, out var contains) || contains != expected)
+                        failures.Add($"{point} in {a} \\ {b} = {left}: expected {expected}");
+                }
+            }
+            Assert.Empty(failures);
+
+            static bool Holds(Interval interval, Entity point)
+            {
+                var value = (Entity.Number.Real)point.EvalNumerical();
+                var (left, right) = ((Entity.Number.Real)interval.Left.EvalNumerical(), (Entity.Number.Real)interval.Right.EvalNumerical());
+                return (left < value || interval.LeftClosed && left == value) && (value < right || interval.RightClosed && value == right);
+            }
+        }
+
+        /// <summary>
+        /// Ends that have no value say whether anything is left only when they are the same and
+        /// the second interval holds every end the first holds. <c>[a; b] \ (a; b)</c> is
+        /// <c>{ a, b }</c> where <c>a &lt; b</c> and nothing where <c>a &gt; b</c>, so it stays as
+        /// it is, and it used to be answered <c>[a; b]</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2290
+        /// </summary>
+        [Theory]
+        [InlineData("[a; b] \\ (a; b)")]
+        [InlineData("[a; b] \\ [a; b)")]
+        [InlineData("(a; b] \\ (a; b)")]
+        public void ADifferenceOfSymbolicIntervalsWithAnEndLeftStays(string difference)
+            => Assert.IsType<SetMinusf>(MathS.FromString(difference).InnerSimplified);
+
+        [Theory]
+        [InlineData("(a; b) \\ [a; b]")]
+        [InlineData("[a; b) \\ [a; b]")]
+        [InlineData("(a; b] \\ (a; b]")]
+        public void ADifferenceOfSymbolicIntervalsThatCoversIsEmpty(string difference)
+            => Assert.Equal(Set.Empty, MathS.FromString(difference).InnerSimplified);
 
         /// <summary>
         /// An interval whose ends are reversed holds nothing: it meets nothing, and adds nothing to
