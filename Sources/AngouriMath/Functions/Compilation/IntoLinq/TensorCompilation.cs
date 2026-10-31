@@ -36,7 +36,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// <inheritdoc/>
         public double Negate(double a) => -a;
         /// <inheritdoc/>
-        public double Divide(double a, double b) => a / b;
+        public double Divide(double a, double b) => b == 0 ? double.NaN : a / b;
         /// <inheritdoc/>
         public double CreateOne() => 1;
         /// <inheritdoc/>
@@ -67,7 +67,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// <inheritdoc/>
         public float Negate(float a) => -a;
         /// <inheritdoc/>
-        public float Divide(float a, float b) => a / b;
+        public float Divide(float a, float b) => b == 0 ? float.NaN : a / b;
         /// <inheritdoc/>
         public float CreateOne() => 1;
         /// <inheritdoc/>

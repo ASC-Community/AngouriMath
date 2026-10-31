@@ -41,10 +41,19 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             => AngouriMath.Core.Compilation.RealProducts.Power(a, b);
         // A power of a number that does not exist, or to such a power, has no value, as in evaluation and the other
         // compilers: Math.Pow takes NaN^0 and 1^NaN as 1. https://github.com/asc-community/AngouriMath/issues/2250
+        // Nor does 0 to a power that is not positive, which evaluation and the other compilers answer NaN: Math.Pow
+        // takes 0^0 as 1 and 0^(-1) as +oo. https://github.com/asc-community/AngouriMath/issues/2286
         public static double Pow(double a, double b)
-            => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : Math.Pow(a, b);
+            => double.IsNaN(a) || double.IsNaN(b) || a == 0 && b <= 0 ? double.NaN : Math.Pow(a, b);
         public static float Pow(float a, float b)
-            => float.IsNaN(a) || float.IsNaN(b) ? float.NaN : (float)Math.Pow(a, b);
+            => float.IsNaN(a) || float.IsNaN(b) || a == 0 && b <= 0 ? float.NaN : (float)Math.Pow(a, b);
+
+        // A division by zero has no value, as in evaluation and the other compilers, where the IEEE quotient is an
+        // infinity. https://github.com/asc-community/AngouriMath/issues/2286
+        public static double Divide(double a, double b)
+            => b == 0 ? double.NaN : a / b;
+        public static float Divide(float a, float b)
+            => b == 0 ? float.NaN : a / b;
         public static long Pow(long a, long b)
             => (long)Math.Pow(a, b);
         public static int Pow(int a, int b)
@@ -425,6 +434,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("Min", 2, typeof(long)), Def<long>((a, b) => Min(a, b)) },
             { ("Min", 2, typeof(int)), Def<int>((a, b) => Min(a, b)) },
             { ("Min", 2, typeof(BigInteger)), Def<BigInteger>((a, b) => Min(a, b)) },
+            { ("Divide", 2, typeof(double)), Def<double>((a, b) => Divide(a, b)) },
+            { ("Divide", 2, typeof(float)), Def<float>((a, b) => Divide(a, b)) },
             { ("Sin", 1, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>(a => Sin(a)) },
             { ("Sin", 1, typeof(double)), Def<double>(a => Sin(a)) },
             { ("Sin", 1, typeof(float)), Def<float>(a => Sin(a)) },

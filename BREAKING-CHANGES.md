@@ -412,6 +412,18 @@ Pythagorean identity with a coefficient is now a rule of its own, found wherever
 | `"2 + (-2)*cos(x)^2 + (-2)*sin(x)^2".Simplify()` | `2 + (-2) * cos(x) ^ 2 + (-2) * sin(x) ^ 2` | `0` |
 | `"2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2".Simplify()` | unchanged | `0` |
 
+### A compiled division by zero over `double` has no value
+
+**Silent: compiled over `double` or `float`, a division by zero and 0 to a power that is not positive are `NaN`, as in
+evaluation, FastExpression and the compiler over `Complex`.** The IEEE quotient made `1/0` an infinity, and `Math.Pow`
+made `0^(-1)` an infinity and `0^0` 1 ([#2286](https://github.com/asc-community/AngouriMath/issues/2286)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"1/x".Compile<double, double>("x")(0)` | `+Infinity` | `NaN` |
+| `"x^(-1)".Compile<double, double>("x")(0)` | `+Infinity` | `NaN` |
+| `"x^x".Compile<double, double>("x")(0)` | `1` | `NaN` |
+
 ### A lambda applied to a vector multiplies by it as a vector
 
 **Silent: a matrix of vectors becomes the product.** Applying a lambda simplified its body first, and a simplified
