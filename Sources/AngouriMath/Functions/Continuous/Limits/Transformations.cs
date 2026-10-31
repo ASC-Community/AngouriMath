@@ -1370,6 +1370,34 @@ namespace AngouriMath.Functions.Algebra
             finally { lHopitalDepth--; }
         }
 
+        /// <summary>
+        /// Whether a step function in <paramref name="expr"/> jumps in every neighbourhood of the
+        /// destination: a floor, a ceil or a round whose argument does not tend to a finite value,
+        /// or a sign whose argument has no limit, and so may cross zero all the way in.
+        /// </summary>
+        /// <remarks>
+        /// l'Hopital's rule needs both parts differentiable on a punctured neighbourhood of the
+        /// destination. The derivative of floor(x) is 0 provided not x in ZZ, and every
+        /// neighbourhood of +oo holds integers, so floor(x) / x at +oo read 0 / 1 and answered 0,
+        /// where it is 1. Where the argument tends to a finite value the step is constant on
+        /// either side of the destination, and the rule holds there.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2281">#2281</a>
+        /// </remarks>
+        internal static bool HasAStepThatJumpsNear(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        {
+            return expr.Nodes.Any(node => node switch
+            {
+                Floorf(var argument) => DoesNotSettle(argument),
+                Ceilf(var argument) => DoesNotSettle(argument),
+                Roundf(var argument) => DoesNotSettle(argument),
+                Signumf(var argument) => argument.ContainsNode(x)
+                    && EvalAssumingContinuous(argument.Limit(x, dest, side)) is not Real { IsNaN: false },
+                _ => false
+            });
+            bool DoesNotSettle(Entity argument) => argument.ContainsNode(x)
+                && EvalAssumingContinuous(argument.Limit(x, dest, side)) is not Real { IsFinite: true };
+        }
+
         private static Entity? ApplylHopitalRuleImpl(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
             if (expr is not Divf && AsQuotient(expr, x, dest, side) is { } quotient)
@@ -1379,7 +1407,8 @@ namespace AngouriMath.Functions.Algebra
                     if (numLimit == 0 && denLimit == 0 ||
                             IsInfiniteNode(numLimit) && IsInfiniteNode(denLimit))
                         if (num is not Number && den is not Number)
-                            if (num.ContainsNode(x) && den.ContainsNode(x))
+                            if (num.ContainsNode(x) && den.ContainsNode(x)
+                                && !HasAStepThatJumpsNear(expr, x, dest, side))
                             {
                                 // Simplified, because the shape of the quotient is what the
                                 // machinery below matches on and differentiation does not

@@ -411,6 +411,21 @@ for `u` made a matrix of vectors. A lambda written in place is now applied befor
 | `apply(lambda(u, [[0, -1], [1, 0]] * u), [p, q])` | `[[0, [-p, -q]], [[p, q], 0]]` | `[-q, p]` |
 | `apply(lambda(u, [1, 1]T * u), [p, q])` | `[[[p, q], [p, q]]]` | `p + q` |
 
+### l'Hopital's rule is not applied across the jumps of a step function
+
+**Silent: a limit of a quotient with a `floor`, `ceil`, `round` or `sgn` that jumps in every neighbourhood of the
+destination is left unevaluated, where l'Hopital's rule answered it wrongly.** The rule needs both parts differentiable
+near the destination, and the derivative of `floor(x)` is `0` only between the integers, so `floor(x) / x` at `+oo` read
+`0 / 1`. Where a step's argument tends to a finite value the step is constant on either side, and the rule is applied as
+before ([#2281](https://github.com/asc-community/AngouriMath/issues/2281)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limit(floor(x) / x, x, +oo)".ToEntity().Simplify()` | `0` | `limit(floor(x) / x, x, +oo)`; the limit is 1 |
+| `"limit(ln(floor(x)) / ln(x), x, +oo)".ToEntity().Simplify()` | `0` | unevaluated; the limit is 1 |
+| `"limit(ln(x) / ln(floor(x)), x, +oo)".ToEntity().Simplify()` | `NaN` | unevaluated; the limit is 1 |
+| `"limit((x - floor(x)) / x, x, +oo)".ToEntity().Simplify()` | `1` | unevaluated; the limit is 0 |
+
 ### One and a squared tangent are found anywhere in a sum
 
 **Silent: an identity reaches its value whichever way the sum is sorted.** `1 + tan(x)^2 = sec(x)^2` and
