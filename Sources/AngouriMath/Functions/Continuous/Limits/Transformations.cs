@@ -1056,9 +1056,11 @@ namespace AngouriMath.Functions.Algebra
             if (EvalAssumingContinuous(divisor.Limit(x, dest, side)) is not Real { IsZero: true })
                 return null;
             // A dividend that vanishes too makes the quotient indeterminate rather than
-            // divergent, and one that diverges is a different question again. Only a dividend
-            // with a definite non-zero size leaves the divisor to decide the answer.
-            if (EvalAssumingContinuous(dividend.Limit(x, dest, side)) is not Real { IsFinite: true, IsZero: false } dividendLimit)
+            // divergent. One with a definite sign that does not vanish, a finite one or an
+            // infinity, leaves the divisor to decide the answer: -oo over a divisor vanishing from
+            // below is +oo, and ln(x^2) / (cos(x) - 1) at 0 was left as (-oo) / 0, which is NaN.
+            // https://github.com/asc-community/AngouriMath/issues/2274
+            if (EvalAssumingContinuous(dividend.Limit(x, dest, side)) is not Real { IsZero: false, IsNaN: false } dividendLimit)
                 return null;
             if (SignFromVanishingOrder(divisor, x, dest, side) is not { } divisorSign)
                 return null;
