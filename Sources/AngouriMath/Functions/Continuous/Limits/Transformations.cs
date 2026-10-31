@@ -1037,7 +1037,7 @@ namespace AngouriMath.Functions.Algebra
         /// The sign an expression keeps throughout a punctured one-sided neighbourhood of the
         /// destination, or <see langword="null"/> where it cannot be read off.
         /// </summary>
-        private static int? SignNear(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        internal static int? SignNear(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
             if (EvalAssumingContinuous(expr.Limit(x, dest, side)) is not Real { IsNaN: false } limit)
                 return null;

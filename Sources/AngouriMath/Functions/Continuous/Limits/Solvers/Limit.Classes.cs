@@ -410,21 +410,27 @@ namespace AngouriMath
                     return null;
                 // The sign is constant on either side of zero, so wherever the argument tends
                 // to anything but zero the limit is simply the sign of that -- including the
-                // infinities, where it is 1 and -1. At zero it is the one place there is
-                // nothing to say: the sign is 1 on one side and -1 on the other, and which one
-                // a one-sided limit takes depends on the direction the argument approaches
-                // from rather than only on what it tends to.
+                // infinities, where it is 1 and -1. At zero the sign is 1 on one side and -1 on
+                // the other, and which one a one-sided limit takes depends on the direction the
+                // argument approaches from rather than only on what it tends to.
                 //
-                // Nothing is returned there rather than an unevaluated limit of this very
-                // expression. That is what used to be here, and it does not merely fail to
+                // Where that direction cannot be read, nothing is returned rather than an
+                // unevaluated limit of this very expression. That is what used to be here, and it
+                // does not merely fail to
                 // answer -- the two-sided path compares its two one-sided results by evaluating
                 // them, evaluating a limit computes it, and computing it arrives back here. The
                 // recursion ends by overflowing the stack, which kills the process rather than
                 // raising anything a caller could catch:
                 // https://github.com/asc-community/AngouriMath/issues/704. Null says the same
                 // thing to the caller, which hands back an unevaluated limit of its own.
-                if (argument.Evaled is not Number value || value == 0 || value.Evaled == MathS.NaN)
+                if (argument.Evaled is not Number value || value.Evaled == MathS.NaN)
                     return null;
+                // At zero the side the argument arrives from is the sign, where it can be read:
+                // sgn(x^3 - x) at 0+ is -1, from below. A two-sided limit is its two sides, each
+                // asked of this, and is not answered here.
+                // https://github.com/asc-community/AngouriMath/issues/2266
+                if (value == 0)
+                    return SignNear(Argument, x, dist, side) is { } arrivesFrom ? Integer.Create(arrivesFrom) : null;
                 return new Signumf(argument);
             }
         }
@@ -441,14 +447,19 @@ namespace AngouriMath
         /// </summary>
         /// <remarks>
         /// Away from the jumps the function is locally constant, so the limit is simply the
-        /// function of the argument's limit. On a jump there is nothing to say: the value
-        /// differs on the two sides of it, and which side the argument arrives from is not
-        /// decided by the side <paramref name="x"/> approaches its destination from --
-        /// lim(x -> 0+) floor(2 - x^2) reaches 2 from below and lim(x -> 0+) floor(2 + x^2)
-        /// from above, and both are limits from the right.
+        /// function of the argument's limit. On a jump the value differs on the two sides of it,
+        /// and which side the argument arrives from is not decided by the side
+        /// <paramref name="x"/> approaches its destination from -- lim(x -> 0+) floor(2 - x^2)
+        /// reaches 2 from below and lim(x -> 0+) floor(2 + x^2) from above, and both are limits
+        /// from the right. It is the sign the argument less the jump keeps on that side, which
+        /// <see cref="SignNear"/> reads off the first derivative that does not vanish, and
+        /// <paramref name="atAJump"/> gives the value from it. A two-sided limit is asked of
+        /// each side, where the sign is not one sign, and is not answered here.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2266">#2266</a>
         /// <para/>
-        /// Null is returned there rather than an unevaluated limit of the very expression being
-        /// asked about. The latter is what the inherited default does, and it does not merely
+        /// Null is returned where the sign cannot be read, rather than an unevaluated limit of
+        /// the very expression being asked about. The latter is what the inherited default does,
+        /// and it does not merely
         /// fail to answer: the two-sided path compares its one-sided results by evaluating them,
         /// evaluating a limit computes it, and computing it arrives back here. The recursion
         /// ends by overflowing the stack, which kills the process rather than raising anything a
@@ -459,7 +470,7 @@ namespace AngouriMath
         /// same one on <see cref="Signumf"/>.
         /// </remarks>
         private static Entity? LimitOfAStepFunction(Entity argument, Variable x, Entity dist,
-            ApproachFrom side, System.Func<Entity, Entity> rebuild)
+            ApproachFrom side, System.Func<Entity, Entity> rebuild, System.Func<Integer, int, Entity> atAJump)
         {
             if (argument.ComputeLimitDivideEtImpera(x, dist, side) is not { } limit)
                 return null;
@@ -482,7 +493,9 @@ namespace AngouriMath
             if (value is not Complex { RealPart: var real, ImaginaryPart: var imaginary })
                 return null;
             if (SitsOnAJump(real))
-                return null;
+                return value is Integer jump && SignNear(argument - jump, x, dist, side) is { } arrivesFrom
+                    ? atAJump(jump, arrivesFrom)
+                    : null;
             if (value is not Real && SitsOnAJump(imaginary))
                 return null;
             return rebuild(limit);
@@ -494,13 +507,15 @@ namespace AngouriMath
         partial record Floorf
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
-                => LimitOfAStepFunction(Argument, x, dist, side, static a => new Floorf(a));
+                => LimitOfAStepFunction(Argument, x, dist, side, static a => new Floorf(a),
+                    static (jump, arrivesFrom) => arrivesFrom > 0 ? jump : jump - 1);
         }
 
         partial record Ceilf
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
-                => LimitOfAStepFunction(Argument, x, dist, side, static a => new Ceilf(a));
+                => LimitOfAStepFunction(Argument, x, dist, side, static a => new Ceilf(a),
+                    static (jump, arrivesFrom) => arrivesFrom > 0 ? jump + 1 : jump);
         }
 
         partial record Providedf

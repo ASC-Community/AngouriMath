@@ -214,10 +214,10 @@ namespace AngouriMath.Tests.Convenience
                 input.ToEntity().Limit("x", destination.ToEntity()).Evaled);
 
         /// <summary>
-        /// On a jump the two sides disagree, and which side the argument arrives from is not
-        /// decided by the side <c>x</c> approaches its destination from. So the answer is an
-        /// unevaluated limit — the same thing <c>signum</c> returns at zero. What it must not
-        /// do is pick one of the two values.
+        /// On a jump the two sides disagree, so there is no two-sided limit, and the answer is
+        /// NaN -- the same thing <c>signum</c> returns at zero. It was an unevaluated limit
+        /// before the sides were read (https://github.com/asc-community/AngouriMath/issues/2266).
+        /// What it must not do is pick one of the two values.
         /// </summary>
         [Theory]
         [InlineData("floor(x)", "0")]
@@ -225,9 +225,9 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("floor(x)", "-3")]
         [InlineData("ceil(x)", "0")]
         [InlineData("ceil(x)", "2")]
-        public void TheLimitOnAJumpIsDeclined(string input, string destination)
-            => Assert.IsType<Entity.Limitf>(
-                input.ToEntity().Limit("x", destination.ToEntity()));
+        public void TheLimitOnAJumpDoesNotExist(string input, string destination)
+            => Assert.Equal(MathS.NaN,
+                input.ToEntity().Limit("x", destination.ToEntity()).Evaled);
 
         /// <summary>
         /// A rational with more digits than the precision, a third away from an integer on either

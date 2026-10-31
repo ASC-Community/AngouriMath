@@ -43,29 +43,33 @@ namespace AngouriMath.Tests.Calculus
             Assert.Equal(expected.ToEntity().Evaled, Limit(expression, destination).Evaled);
 
         /// <summary>
-        /// Where the argument tends to zero there is nothing to say: the sign is 1 on one side
-        /// and -1 on the other, and which one is taken depends on the direction the argument
-        /// approaches from rather than only on what it tends to. Left unevaluated -- and, above
+        /// Where the argument tends to zero the sign is 1 on one side and -1 on the other, so
+        /// there is no two-sided limit, and NaN says so -- it was left unevaluated before the
+        /// sides were read (https://github.com/asc-community/AngouriMath/issues/2266). Above
         /// all, terminating, which is what this test is really for.
         /// </summary>
         [Theory]
         [InlineData("signum(x)", "0")]
         [InlineData("signum(x ^ 3)", "0")]
-        public void AtZeroItIsLeftUnevaluatedAndTerminates(string expression, string destination)
+        public void AtZeroThereIsNoLimitAndItTerminates(string expression, string destination)
         {
             var task = Task.Run(() => Limit(expression, destination));
             Assert.True(task.Wait(LimitTermination.Guard), "the limit did not terminate");
-            Assert.IsType<Entity.Limitf>(task.Result);
+            Assert.Equal(MathS.NaN, task.Result);
         }
 
+        /// <summary>
+        /// Which one a one-sided limit takes depends on the direction the argument approaches
+        /// from, which here is the direction x does. Terminating as the two-sided one does.
+        /// </summary>
         [Theory]
-        [InlineData(ApproachFrom.Left)]
-        [InlineData(ApproachFrom.Right)]
-        public void OneSidedAtZeroTerminatesToo(ApproachFrom side)
+        [InlineData(ApproachFrom.Left, -1)]
+        [InlineData(ApproachFrom.Right, 1)]
+        public void OneSidedAtZeroIsTheSignOfItsSide(ApproachFrom side, int sign)
         {
             var task = Task.Run(() => "signum(x)".ToEntity().Limit("x", 0, side).Simplify());
             Assert.True(task.Wait(LimitTermination.Guard), "the limit did not terminate");
-            Assert.IsType<Entity.Limitf>(task.Result);
+            Assert.Equal(Entity.Number.Integer.Create(sign), task.Result);
         }
 
         /// <summary>
