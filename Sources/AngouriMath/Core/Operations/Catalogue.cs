@@ -146,13 +146,15 @@ namespace AngouriMath.Core.Operations
 
         /// <summary>
         /// <see cref="MathS.Series.Taylor(Entity, int, ValueTuple{Variable, Entity}[])"/>, or
-        /// <see cref="MathS.Series.Maclaurin(Entity, int, Variable[])"/> where there is no point.
+        /// <see cref="MathS.Series.Maclaurin(Entity, int, Variable[])"/> where there is no point,
+        /// with one term more than the degree, since those count terms: <c>sin(x)</c> to degree 1 is
+        /// <c>x</c>, and was <c>0</c>. https://github.com/asc-community/AngouriMath/issues/2299
         /// </summary>
         public static Query<Func<Entity, Variable, int, Entity?, Entity>> Series { get; } = new(
             "series", "Expands as a Taylor series in a variable, up to a degree, around a point or around zero.",
             static (e, variable, degree, around) => around is null
-                ? MathS.Series.Maclaurin(e, degree, variable)
-                : MathS.Series.Taylor(e, degree, (variable, around)),
+                ? MathS.Series.Maclaurin(e, degree + 1, variable)
+                : MathS.Series.Taylor(e, degree + 1, (variable, around)),
             TheVariable, new Parameter("degree", "The highest power kept."), new Parameter("around", "The point, or none for zero."));
 
         // ---------------------------------------------------------------- queries on a number

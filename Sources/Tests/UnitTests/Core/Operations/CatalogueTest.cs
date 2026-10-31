@@ -172,6 +172,23 @@ namespace AngouriMath.Tests.Core.Operations
         }
 
         /// <summary>
+        /// The series is taken to the degree asked for, which is the highest power it keeps. It
+        /// was passed on as the number of terms, one fewer: <c>sin(x)</c> to degree 1 was <c>0</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2299
+        /// </summary>
+        [Theory]
+        [InlineData("sin(x)", 1, null, "x")]
+        [InlineData("e^x", 1, null, "1 + x")]
+        [InlineData("sin(x)", 7, null, "x - x^3/6 + x^5/120 - x^7/5040")]
+        [InlineData("e^x", 2, "1", "e + e (x - 1) + e (x - 1)^2 / 2")]
+        [InlineData("cos(x)", 0, null, "1")]
+        public void ASeriesKeepsTheHighestPowerItIsAskedFor(string expression, int degree, string? around, string expected)
+        {
+            var series = Catalogue.Series.Ask(expression, MathS.Var("x"), degree, around is null ? null : MathS.FromString(around));
+            Assert.Equal(Entity.Number.Integer.Zero, (series - MathS.FromString(expected)).Simplify());
+        }
+
+        /// <summary>
         /// One answer from each entry, against the method the entry names, on an input where
         /// that method and its neighbours answer differently -- so that an entry holding the
         /// wrong method is caught.
@@ -203,8 +220,8 @@ namespace AngouriMath.Tests.Core.Operations
             Assert.Equal(MathS.Boolean.BuildTruthTable("a and not b", "a", "b"), Catalogue.TruthTable.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]));
             Assert.Equal(MathS.SolveBooleanTable("a and not b", "a", "b"), Catalogue.SatisfyingAssignments.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]));
             Assert.NotEqual(Catalogue.TruthTable.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]), Catalogue.SatisfyingAssignments.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]));
-            Assert.Equal(MathS.Series.Maclaurin("e^x", 3, x), Catalogue.Series.Ask("e^x", x, 3, null));
-            Assert.Equal(MathS.Series.Taylor("e^x", 3, (x, 1)), Catalogue.Series.Ask("e^x", x, 3, 1));
+            Assert.Equal(MathS.Series.Maclaurin("e^x", 4, x), Catalogue.Series.Ask("e^x", x, 3, null));
+            Assert.Equal(MathS.Series.Taylor("e^x", 4, (x, 1)), Catalogue.Series.Ask("e^x", x, 3, 1));
             Assert.NotEqual(Catalogue.Series.Ask("e^x", x, 3, null), Catalogue.Series.Ask("e^x", x, 3, 1));
 
             Assert.Equal(MathS.ToBaseN(10.5m, 2), Catalogue.ToBase.Ask(10.5m, 2));

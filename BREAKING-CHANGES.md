@@ -950,6 +950,20 @@ no value at `i`, where it is 1 ([#2256](https://github.com/asc-community/Angouri
 | `"x! = 0".ToEntity().Simplify()` | `False provided x in RR and (x >= 0 or not x in ZZ)` | `False provided x in ZZ implies x >= 0` |
 | `"x!".ToEntity().DomainCondition` | `x in RR and (x >= 0 or not x in ZZ)` | `x in ZZ implies x >= 0` |
 
+### `am_series` keeps the power it is asked for
+
+**Silent: `am_series` and `Catalogue.Series` keep the powers up to the degree given, where they kept one fewer.**
+The degree, documented as the highest power kept, was passed to `MathS.Series.Maclaurin` and `Taylor` as their
+number of terms. So degree 1 gave the constant term alone, and linearising a model gave its value at the point.
+`MathS.Series` is unchanged, and its documentation now says that its argument counts terms
+([#2299](https://github.com/asc-community/AngouriMath/issues/2299)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `am_series`, `sin(x)`, degree 7 | `x ^ 5 / 120 - x ^ 3 / 6 + x` | `x ^ 5 / 120 - x ^ 7 / 5040 - x ^ 3 / 6 + x` |
+| `am_series`, `sin(x)`, degree 1 | `0` | `x` |
+| `am_series`, `e^x`, degree 1 | `1` | `1 + x` |
+
 ### A number's conjugate is made under the setting in force
 
 **Silent: `Complex.Conjugate` is made under the downcasting setting of the caller, where the first caller's setting was
