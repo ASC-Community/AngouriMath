@@ -249,14 +249,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             internal MethodInfo SubtractFromScalar { get; }
             internal MethodInfo MultiplyScalar { get; }
             internal MethodInfo DivideScalar { get; }
-            internal MethodInfo DivideFromScalar { get; }
             internal MethodInfo Power { get; }
 
             private Kit(Type tensor, MethodInfo empty, MethodInfo set, MethodInfo add, MethodInfo subtract, MethodInfo multiply,
                 MethodInfo addScalar, MethodInfo subtractScalar, MethodInfo subtractFromScalar, MethodInfo multiplyScalar,
-                MethodInfo divideScalar, MethodInfo divideFromScalar, MethodInfo power)
-                => (Tensor, Empty, Set, Add, Subtract, Multiply, AddScalar, SubtractScalar, SubtractFromScalar, MultiplyScalar, DivideScalar, DivideFromScalar, Power)
-                    = (tensor, empty, set, add, subtract, multiply, addScalar, subtractScalar, subtractFromScalar, multiplyScalar, divideScalar, divideFromScalar, power);
+                MethodInfo divideScalar, MethodInfo power)
+                => (Tensor, Empty, Set, Add, Subtract, Multiply, AddScalar, SubtractScalar, SubtractFromScalar, MultiplyScalar, DivideScalar, Power)
+                    = (tensor, empty, set, add, subtract, multiply, addScalar, subtractScalar, subtractFromScalar, multiplyScalar, divideScalar, power);
 
             // An expression tree is how C# names a method without a string: the call inside it
             // is resolved at compile time, closed over T and TWrapper, and rooted for the trimmer.
@@ -274,7 +273,6 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     Named<Func<T, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((s, a) => TensorCompilation.SubtractFromScalar(s, a)),
                     Named<Func<GenTensor<T, TWrapper>, T, GenTensor<T, TWrapper>>>((a, s) => TensorCompilation.MultiplyScalar(a, s)),
                     Named<Func<GenTensor<T, TWrapper>, T, GenTensor<T, TWrapper>>>((a, s) => TensorCompilation.DivideScalar(a, s)),
-                    Named<Func<T, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((s, a) => TensorCompilation.DivideFromScalar(s, a)),
                     Named<Func<GenTensor<T, TWrapper>, int, GenTensor<T, TWrapper>>>((a, n) => TensorCompilation.Power(a, n)));
         }
 
@@ -380,6 +378,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static GenTensor<T, TWrapper> DivideScalar<T, TWrapper>(GenTensor<T, TWrapper> a, T scalar) where TWrapper : struct, IOperations<T>
             => Elementwise(a, x => default(TWrapper).Divide(x, scalar));
         /// <summary>The scalar over every element.</summary>
+        /// <remarks>
+        /// Not what a scalar over a matrix means, which is the scalar times the inverse, and so not what the compiler
+        /// makes of one. https://github.com/asc-community/AngouriMath/issues/2287
+        /// </remarks>
         public static GenTensor<T, TWrapper> DivideFromScalar<T, TWrapper>(T scalar, GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
             => Elementwise(a, x => default(TWrapper).Divide(scalar, x));
         /// <summary>The matrix power, a non-negative whole exponent, by repeated squaring.</summary>
@@ -452,7 +454,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Entity.Sumf => Expression.Call(rightKit!.AddScalar, right, value),
                 Entity.Minusf => Expression.Call(rightKit!.SubtractFromScalar, value, right),
                 Entity.Mulf => Expression.Call(rightKit!.MultiplyScalar, right, value),
-                Entity.Divf => Expression.Call(rightKit!.DivideFromScalar, value, right),
+                // A scalar over a matrix is the scalar times its inverse, as evaluation has it, and the
+                // inverse is not compiled, as a negative power is not: dividing by every element
+                // instead gave 2 / [[1, 2], [3, 4]] as [[2, 1], [2/3, 1/2]].
+                // https://github.com/asc-community/AngouriMath/issues/2287
+                Entity.Divf => throw new UncompilableNodeException(
+                    "A scalar over a matrix is the scalar times its inverse, which is not compiled: invert the matrix first"),
                 _ => null,
             };
         }
