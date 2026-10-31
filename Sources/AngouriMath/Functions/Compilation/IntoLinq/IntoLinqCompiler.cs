@@ -32,6 +32,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 expr = expr.InnerSimplified;
             expr = CompiledMembership.Rewritten(expr);
             StatementPositions.Check(expr);
+            if (MathS.Settings.RefuseNonRealCompilation && returnType is { } real && IsRealType(real)
+                && typesAndNames.All(c => IsRealType(c.type)) && !IsRealWhereverDefined(expr, typesAndNames))
+                throw new UncompilableNodeException(
+                    $"`{expr.Stringize()}` is not real wherever it is defined, and MathS.Settings.RefuseNonRealCompilation is on: compile it over Complex");
 
             var subexpressionsCache = typesAndNames.ToDictionary(c => (Entity)c.variable, c => Expression.Parameter(c.type));
             var functionArguments = subexpressionsCache.Select(c => c.Value).ToArray(); // copying
@@ -66,6 +70,23 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 throw new UncompilableNodeException(
                     $"`{expr.Stringize()}` has no compiled form for the types requested: {e.Message}");
             }
+        }
+
+        private static bool IsRealType(Type type)
+            => type == typeof(double) || type == typeof(float) || type == typeof(int) || type == typeof(long)
+               || type == typeof(System.Numerics.BigInteger);
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is real wherever it is defined with every argument real, by
+        /// <see cref="Functions.TreeAnalyzer.IsRealValued"/>. That reads one variable as real, and reads its shapes
+        /// alone and never the values, so each argument is written as one fresh variable and its verdict is the
+        /// verdict for them all. https://github.com/asc-community/AngouriMath/issues/2286
+        /// </summary>
+        private static bool IsRealWhereverDefined(Entity expr, IEnumerable<(Type type, Variable variable)> typesAndNames)
+        {
+            var real = Variable.CreateTemp(expr.Vars);
+            var renamed = typesAndNames.Aggregate(expr, (e, argument) => e.Substitute(argument.variable, real));
+            return Functions.TreeAnalyzer.IsRealValued(renamed, real);
         }
 
         internal static Expression BuildTree(

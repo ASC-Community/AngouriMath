@@ -53,6 +53,11 @@ namespace AngouriMath.Extensions
         /// 3
         /// </code>
         /// </example>
+        /// <remarks>
+        /// Into a function that returns <see cref="double"/> or <see cref="float"/>, a value that is not real is NaN, and
+        /// so is every value computed from one, though the expression may be real there: <c>sin(arcsin(x))</c> at 2.
+        /// <see cref="MathS.Settings.RefuseNonRealCompilation"/> refuses such an expression instead.
+        /// </remarks>
         public static TDelegate Compile<TDelegate>(this string @this, CompilationProtocol protocol, Type returnType, IEnumerable<(Type type, Variable variable)> typesAndNames) where TDelegate : Delegate
             => IntoLinqCompiler.Compile<TDelegate>(@this, returnType, protocol, typesAndNames);
 
@@ -104,6 +109,11 @@ namespace AngouriMath.Extensions
         /// <#= total #>
         /// </code>
         /// </example>
+        /// <remarks>
+        /// Into a function that returns <see cref="double"/> or <see cref="float"/>, a value that is not real is NaN, and
+        /// so is every value computed from one, though the expression may be real there: <c>sin(arcsin(x))</c> at 2.
+        /// <see cref="MathS.Settings.RefuseNonRealCompilation"/> refuses such an expression instead.
+        /// </remarks>
         public static Func<<# for(var t=1;t<=i;t++){ #>TIn<#= t #>, <# } #>TOut> Compile<<# for(var t=1;t<=i;t++){ #>TIn<#= t #>, <# } #>TOut>(this string @this, Variable var1<# for(var t=2; t<=i; t++){ #>, Variable var<#= t #><# } #>)
             => IntoLinqCompiler.Compile<Func<<# for(var t=1;t<=i;t++){ #>TIn<#= t #>, <# } #>TOut>>(@this, typeof(TOut), new(), 
                 new[] { (typeof(TIn1), var1)<# for(var t=2;t<=i;t++){ #>, (typeof(TIn<#= t #>), var<#= t #>) <# } #> });
