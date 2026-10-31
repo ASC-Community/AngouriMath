@@ -463,11 +463,13 @@ namespace AngouriMath
                             => Real.PositiveInfinity.Provided(condition),
 
                         // log_b(1) is 0/ln(b), which is 0 for every base but 1, where it is
-                        // 0/0 -- and every division by zero here is NaN. The condition belongs
-                        // on the answer rather than gating the rule, because at b = 1 the
-                        // expression is genuinely undefined and not merely something else.
+                        // 0/0 -- and every division by zero here is NaN -- and 0, which is not a
+                        // base (https://github.com/asc-community/AngouriMath/issues/2255). The
+                        // condition belongs on the answer rather than gating the rule, because at
+                        // those bases the expression is genuinely undefined and not merely
+                        // something else.
                         ({ DomainCondition: var condition }, Integer(1))
-                            => Integer.Zero.Provided(condition).Provided(!a.EqualTo(1)),
+                            => Integer.Zero.Provided(condition).Provided(!a.EqualTo(0) & !a.EqualTo(1)),
 
                         _ => null
                     },
@@ -524,9 +526,15 @@ namespace AngouriMath
         {
             // Factorial is defined for non-negative integers in the traditional sense,
             // but extends to complex numbers via the gamma function: n! = Γ(n+1)
-            // The gamma function has poles at negative integers, so factorial is undefined there
-            private protected override Entity IntrinsicCondition => 
-                Argument.In(MathS.Sets.R) & (Argument >= 0 | !Argument.In(MathS.Sets.Z));
+            // The gamma function has poles at negative integers, so factorial is undefined there,
+            // and only there. The condition asked for a real argument as well, though i! is
+            // 0.498 - 0.155i, so x!/x! simplified to 1 provided x in RR, which has no value at i.
+            // Off the integers x >= 0 may have no truth value and x in ZZ is false, so the implication
+            // is true. It is written as Simplify writes it, so that a quotient's x! = 0, which Simplify
+            // reads as False under this same condition, folds into it.
+            // https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition =>
+                new Impliesf(Argument.In(MathS.Sets.Z), Argument >= 0);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
@@ -753,8 +761,14 @@ namespace AngouriMath
         public partial record LambertWf
         {
             // Every whole branch, and every z but 0 off the principal branch, where W_k(z) goes to -oo as ln z does.
+            // Over the reals, where a branch is real: W_0 for z >= -1/e and W_(-1) for -1/e <= z < 0, both -1 at
+            // -1/e; no other branch is real anywhere. The condition was the complex one under either reading, so it
+            // held for W_0(-1), which is -0.318 + 1.337i. https://github.com/asc-community/AngouriMath/issues/2256
             private protected override Entity IntrinsicCondition =>
-                Branch.In(MathS.Sets.Z) & (Branch.Equalizes(Integer.Zero) | !Argument.Equalizes(Integer.Zero));
+                Codomain < Domain.Complex
+                ? Branch.Equalizes(Integer.Zero) & Argument >= -1 / MathS.e
+                  | Branch.Equalizes(Integer.Create(-1)) & Argument >= -1 / MathS.e & Argument < 0
+                : Branch.In(MathS.Sets.Z) & (Branch.Equalizes(Integer.Zero) | !Argument.Equalizes(Integer.Zero));
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
@@ -1330,7 +1344,10 @@ namespace AngouriMath
 
         public partial record Minf
         {
-            private protected override Entity IntrinsicCondition => Boolean.True;
+            // Defined where both arguments are real: the complex numbers are not ordered, and the node is
+            // read over the reals, so min(i, i) is NaN. The condition said True, and min(x, x) simplified
+            // to x, which has a value at x = i. https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition => Left.In(MathS.Sets.R) & Right.In(MathS.Sets.R);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
@@ -1340,7 +1357,8 @@ namespace AngouriMath
                         // Only ordered arguments compare. A complex one is left alone rather
                         // than guessed at, which is what SymPy's Min does too.
                         (Real l, Real r) => l.EDecimal.CompareTo(r.EDecimal) <= 0 ? l : r,
-                        var (l, r) when l == r => l,
+                        // min(a, a) is a where a is real, and has no value where it is not.
+                        var (l, r) when l == r => l.Provided(l.In(MathS.Sets.R)).InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a, b) => ((Minf)@this).New(a, b), isExact);
@@ -1348,7 +1366,8 @@ namespace AngouriMath
 
         public partial record Maxf
         {
-            private protected override Entity IntrinsicCondition => Boolean.True;
+            // As Minf's: defined where both arguments are real. https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition => Left.In(MathS.Sets.R) & Right.In(MathS.Sets.R);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
@@ -1356,7 +1375,7 @@ namespace AngouriMath
                     (a, b) => (a, b) switch
                     {
                         (Real l, Real r) => l.EDecimal.CompareTo(r.EDecimal) >= 0 ? l : r,
-                        var (l, r) when l == r => l,
+                        var (l, r) when l == r => l.Provided(l.In(MathS.Sets.R)).InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a, b) => ((Maxf)@this).New(a, b), isExact);

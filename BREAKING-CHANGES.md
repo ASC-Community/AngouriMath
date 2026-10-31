@@ -42,6 +42,21 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A limit at the jump of a step function is not answered by substitution
+
+**Silent: a limit of an expression built on `floor`, `ceil`, `round` or `sgn`, where the step's argument arrives on one
+of its jumps, is left unevaluated, where it was answered by substituting the destination.** That value is the limit only
+where the expression is continuous, and at a jump the value differs on the two sides. `floor(x) - 1` is -2 all the way in
+from the left of 0, but substitution answered -1, and it answered the two-sided limit, which does not exist, with -1 too.
+A bare `floor(x)` or `sgn(x)` was already declined there. Away from a jump, nothing changes
+([#2266](https://github.com/asc-community/AngouriMath/issues/2266)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limitleft(floor(x) - 1, x, 0)".ToEntity().Simplify()` | `-1` | `limitleft(floor(x) - 1, x, 0)` |
+| `"limit(floor(x) + x, x, 1)".ToEntity().Simplify()` | `2` | `limit(floor(x) + x, x, 1)` |
+| `"limitleft(-sgn(x), x, 0)".ToEntity().Simplify()` | `0` | `limitleft(-sgn(x), x, 0)` |
+
 ### An equation through a negative whole power is not answered with no roots
 
 **Silent: an empty answer becomes the roots.** Inverting `x^n = v` for a negative whole `n` multiplied by the roots
@@ -207,6 +222,18 @@ and `Simplify` passed that on as `not x = 0`, though at `x = 0` the input is `-y
 | `"sgn(NaN)".ToEntity().Evaled` | `1` | `NaN` |
 | `"sgn(-1 provided false)".ToEntity().Evaled` | `1` | `NaN` |
 
+### A negation of a signed term is printed in brackets
+
+**Silent: `-(-2/3)` prints as `-(-2/3)`, where it printed as `--2/3`.** A negation prints as a bare `-` in front of what
+it negates, and a negative integer was bracketed by its priority, but a negative rational, a negation, and `+oo` were
+not. `--5/4` reads back as `-(-5) / 4`, which has the same value as a different expression, and is easy to misread
+([#2264](https://github.com/asc-community/AngouriMath/issues/2264)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sinh(-5/4)".ToEntity().ToString()` | `(e ^ (-5/4) - e ^ (--5/4)) / 2` | `(e ^ (-5/4) - e ^ (-(-5/4))) / 2` |
+| `new Entity.Mulf(-1, new Entity.Mulf(-1, x)).ToString()` | `--x` | `-(-x)` |
+
 ### A matrix is divided, raised to a power and compared as a matrix
 
 **Silent: wrong answers about matrices become right, or stay written.** Where an operation had no answer of its own
@@ -238,6 +265,18 @@ except where shown.
 | `[a, b] = [c, d]` | `[a = c, b = d]` | `a = c and b = d` |
 | `([[1, 2], [2, 4]] ^ (-1)).Evaled` | throws `InvalidDeterminantException` | `[[1, 2], [2, 4]] ^ (-1)` |
 | `([[1, 2], [2, 4]] ^ (-1)).Simplify()` | throws `InvalidDeterminantException` | `1 / [[1, 2], [2, 4]]` |
+
+### A 1x1 matrix has a rank and row echelon forms
+
+**Not silent: what threw now answers.** For a 1x1 matrix, `Rank`, `RowEchelonForm` and `ReducedRowEchelonForm` threw
+`InvalidCastException`, and so did `MathS.Matrices.PointwiseMultiplication` of two 1x1 matrices. A 1x1 matrix simplifies
+to its entry, and these cast the simplified matrix back where the product already wrapped it
+([#2269](https://github.com/asc-community/AngouriMath/issues/2269)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Matrix(new Entity[,] { { 2 } }).Rank` | throws `InvalidCastException` | `1` |
+| `MathS.Matrix(new Entity[,] { { 2 } }).ReducedRowEchelonForm` | throws `InvalidCastException` | `[1]` |
 
 ### A sum of fractions that is a constant over one denominator simplifies to it
 
@@ -657,6 +696,20 @@ reals, to `1` and `0` ([#2195](https://github.com/asc-community/AngouriMath/issu
 | `"arg(x)".ToEntity().Compile("x").Call(-2)` | throws `UncompilableNodeException`, `arg` being a variable | `pi` |
 | `"conj(x)".ToEntity().Compile<Complex, Complex>("x")(3 + 4i)` | throws `UncompilableNodeException`, `conj` being a variable | `3 - 4i` |
 
+### A logarithm to base 0 has no value
+
+**Silent: `log(0, x)` is `NaN`, where it was `0` for a positive `x`.** Evaluation and both compilers took it as
+`ln(x) / ln(0)`, which is `ln(x) / (-oo)`, and came out with 0. But 0 is not a base, since no power of it is anything
+but 0, and `log`'s own condition already excluded it. A base that is small but not 0 keeps its logarithm.
+`log(b, 1)`, simplified to 0 for every base but 1, now excludes the base 0 as well
+([#2255](https://github.com/asc-community/AngouriMath/issues/2255)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"log(0, 2)".ToEntity().Evaled` | `0` | `NaN` |
+| `"log(x, 2)".ToEntity().Compile("x").Call(0)` | `(-0, -0)` | `(NaN, 0)` |
+| `"log(x, 1)".ToEntity().Simplify()` | `0 provided not x = 1` | `0 provided not x = 0 and not x = 1` |
+
 ### `re` and `im` are the real and the imaginary part
 
 **Not silent: `re(…)` and `im(…)`, and `real(…)` and `imag(…)`, are now the real and the imaginary part, where they were
@@ -671,6 +724,19 @@ Both are real, `im(3 + 4i)` being `4`, real-linear, and turned by the conjugate 
 | `"im(3 + 4i)".ToEntity().Simplify()` | `(3 + 4i) * im` | `4` |
 | `"re * x".ToEntity()` | `re * x` | `re * x` |
 
+### The factorial and the gamma function are defined off the real line
+
+**Silent: the condition a simplified factorial carries is `x in ZZ implies x >= 0`, where it was `x in RR and (x >= 0
+or not x in ZZ)`.** A factorial, and the gamma function with it, has poles at the negative integers and nowhere else.
+Its condition also asked for a real argument, though `i!` is `0.498 - 0.155i`. So `x!/x!` simplified to an answer with
+no value at `i`, where it is 1 ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x!/x!".ToEntity().Simplify()` | `1 provided x in RR and (x >= 0 or not x in ZZ)` | `1 provided x in ZZ implies x >= 0` |
+| `"x! = 0".ToEntity().Simplify()` | `False provided x in RR and (x >= 0 or not x in ZZ)` | `False provided x in ZZ implies x >= 0` |
+| `"x!".ToEntity().DomainCondition` | `x in RR and (x >= 0 or not x in ZZ)` | `x in ZZ implies x >= 0` |
+
 ### A number's conjugate is made under the setting in force
 
 **Silent: `Complex.Conjugate` is made under the downcasting setting of the caller, where the first caller's setting was
@@ -680,6 +746,18 @@ conjugate as `0 - 1i`, in decimals, on the one instance that every `i` is, in ev
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `Complex.ImaginaryOne.Conjugate`, after `(1 / Complex.ImaginaryOne).Evaled` with `DowncastingEnabled` off | `0 - 1i` | `-i` |
+
+### `max` and `min` are defined where their arguments are real
+
+**Silent: `max(x, x)` and `min(x, x)` simplify to `x provided x in RR`, where they were `x`.** The complex numbers are
+not ordered, and both nodes are read over the reals, so `max(i, i)` has no value. Their condition said they were
+defined everywhere, and `max(x, x)` simplified to `x`, which has a value at `i`. A comparison of two real arguments is
+unchanged ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"max(x, x)".ToEntity().Simplify()` | `x` | `x provided x in RR` |
+| `"max(x, 2)".ToEntity().DomainCondition` | `True` | `x in RR` |
 
 ### `conjugate`, `conj` and `arg` are functions
 
@@ -713,6 +791,17 @@ real roots, so those are now the kinks, and each piece is solved exactly
 |---|---|---|
 | `"x^2/abs(1-x^2) = x".Solve("x")` | `{ 0, 0.618…, 1.618…, 1.618… + 1.7E-9i, … }` | `{ 0, (-1 + sqrt(5)) / 2, (1 + sqrt(5)) / 2 }` |
 | `"abs(x^2 - 4) = 3*x".Solve("x")` | `{ 1, 4, 4.0000000000000062… + 1.6E-7i }` | `{ 1, 4 }` |
+
+### A piecewise's condition under a reading asks only the case it takes
+
+**Silent: `DomainConditionIn` of a `piecewise` is where the case it takes is defined, as `DomainCondition` already
+reads it (#1817), where it asked every case to be defined.** `piecewise(sqrt(x) provided x > 0, 1)` is 1 at `-4`, and its
+condition over the reals failed there. The library asks for this condition under the ambient reading, so the change
+reaches whatever consults it there ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"piecewise(sqrt(x) provided x > 0, 1)".ToEntity().DomainConditionIn(Domain.Real)` | `x >= 0 and x in RR` | `x > 0 and x >= 0 or not x > 0 or not x in RR` |
 
 ### A system with more or fewer equations than unknowns is solved or declined
 

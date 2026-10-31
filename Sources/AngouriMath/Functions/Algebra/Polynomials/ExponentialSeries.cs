@@ -202,6 +202,10 @@ namespace AngouriMath.Functions
                     => HoldsOverTheRange(left, index, start) && HoldsOverTheRange(right, index, start),
                 Orf(var left, var right)
                     => HoldsOverTheRange(left, index, start) || HoldsOverTheRange(right, index, start),
+                // A factorial's own condition, index + a in ZZ implies index + a >= 0: true wherever
+                // its conclusion is. https://github.com/asc-community/AngouriMath/issues/2256
+                Impliesf(_, var conclusion)
+                    => HoldsOverTheRange(conclusion, index, start),
                 _ => false,
             };
 
