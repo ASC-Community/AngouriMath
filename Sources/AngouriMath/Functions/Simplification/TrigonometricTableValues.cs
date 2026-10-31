@@ -52,7 +52,7 @@ namespace AngouriMath.Functions
 
             for (var j = begin; j <= end; j++)
             {
-                if (Number.IsZero(table[j].arg - dArg))
+                if (Number.IsZero(table[j].arg - dArg) && !IsWrittenThroughTheComplexNumbers(table[j].res))
                 {
                     res = table[j].res;
                     return true;
@@ -61,6 +61,20 @@ namespace AngouriMath.Functions
             res = null;
             return false;
         }
+
+        /// <summary>
+        /// Whether a value is written through numbers that are not real: <c>i</c>, or a square root
+        /// of a negative number. Every angle here is real, so such a value is a real number whose
+        /// radical form needs the complex numbers, casus irreducibilis, and the function of its angle
+        /// is the shorter answer: <c>cos(2pi/7)</c> is
+        /// <c>(-1 + cbrt((7 + 21 sqrt(-3))/2) + cbrt((7 - 21 sqrt(-3))/2))/6</c>, and no real
+        /// radical form exists. <c>sin(pi/7)</c> simplified to the half-angle of it, many times
+        /// longer than the input. Such an entry is passed over rather than removed, so the closed form
+        /// stays on record. https://github.com/asc-community/AngouriMath/issues/2143
+        /// </summary>
+        private static bool IsWrittenThroughTheComplexNumbers(Entity value)
+            => value.Nodes.Any(node => node is Complex and not Real
+                || node is Powf(Real { IsNegative: true }, Rational { ERational.Denominator.IsEven: true }));
 
         /// <summary>
         /// Every angle in the tables below is written <c>2pi/n</c>, so they name nothing at
