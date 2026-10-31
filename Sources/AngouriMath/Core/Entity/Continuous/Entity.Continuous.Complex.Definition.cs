@@ -74,7 +74,15 @@ namespace AngouriMath
                 /// <summary>
                 /// Checks if both parts equal 0
                 /// </summary>
-                public new bool IsZero => RealPart.EDecimal.IsZero && ImaginaryPart.EDecimal.IsZero;
+                /// <remarks>
+                /// A rational part is zero when it is, and not when its decimal is: written out in the
+                /// precision context, every rational under 1e-199 in size is 0, and 0 / 10^(-250) was NaN.
+                /// <a href="https://github.com/asc-community/AngouriMath/issues/2277">#2277</a>
+                /// </remarks>
+                public new bool IsZero => PartIsZero(RealPart) && PartIsZero(ImaginaryPart);
+
+                private static bool PartIsZero(Real part) =>
+                    part is Rational rational ? rational.ERational.IsZero : part.EDecimal.IsZero;
 
                 /// <summary>
                 /// Creates an instance of Complex

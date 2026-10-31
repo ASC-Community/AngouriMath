@@ -222,6 +222,20 @@ arcsine of that is `NaN`. Of `arcsin(k + c)` for `k` from 1 to 40 and `c` in `pi
 | `"arcsin(6 + pi)".ToEntity().Evaled` | `NaN` | `1.5707963267948966 - 2.902976737696685i`, to 15 digits |
 | `"arccos(6 + pi)".ToEntity().Evaled` | `NaN` | `2.902976737696685i`, to 15 digits |
 
+### An exact rational is zero, positive or negative as it is
+
+**Silent: 0 divided by a rational smaller than about 1e-199 is 0, where it was NaN.** Whether an exact rational was zero,
+and its sign, was read off its decimal, written out in the precision context, whose exponent range writes every rational
+under about 1e-199 in size as 0. So `0 / 10^(-200)` was a division by zero, and `0 ^ (1/10^250)` a power to an exponent
+that was not positive. A rational is now read by its exact value
+([#2277](https://github.com/asc-community/AngouriMath/issues/2277)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"0 / 10^(-200)".ToEntity().Evaled` | `NaN` | `0` |
+| `"0 / (3/10^260)".ToEntity().Evaled` | `NaN` | `0` |
+| `"0 ^ (1/10^250)".ToEntity().Evaled` | `NaN` | `0` |
+
 ### A system with a product equation is solved branch by branch
 
 **Silent: solutions that were missing are answered.** `EquationSystem.Solve` eliminated `x * y = 0` for `y` as `0`,

@@ -49,10 +49,17 @@ namespace AngouriMath
                 public override bool IsExact => !EDecimal.IsFinite;
 
                 /// <summary>Strictly less than 0</summary>
-                public bool IsNegative => EDecimal.IsNegative;
+                /// <remarks>
+                /// A rational's sign is its own, and not its decimal's: the decimal is written out in the
+                /// precision context, whose exponent range writes every rational under 1e-199 in size as
+                /// zero, so 0^(10^(-250)) was NaN.
+                /// <a href="https://github.com/asc-community/AngouriMath/issues/2277">#2277</a>
+                /// </remarks>
+                public bool IsNegative => this is Rational rational ? rational.ERational.Sign < 0 : EDecimal.IsNegative;
 
                 /// <summary>Strictly greater than 0</summary>
-                public bool IsPositive => !EDecimal.IsNegative && !EDecimal.IsZero;
+                /// <remarks>A rational's sign is its own, as for <see cref="IsNegative"/>.</remarks>
+                public bool IsPositive => this is Rational rational ? rational.ERational.Sign > 0 : !EDecimal.IsNegative && !EDecimal.IsZero;
 
                 /// <summary>
                 /// Creates an instance of Real
