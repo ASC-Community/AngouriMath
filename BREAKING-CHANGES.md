@@ -457,6 +457,23 @@ made `0^(-1)` an infinity and `0^0` 1 ([#2286](https://github.com/asc-community/
 | `"x^(-1)".Compile<double, double>("x")(0)` | `+Infinity` | `NaN` |
 | `"x^x".Compile<double, double>("x")(0)` | `1` | `NaN` |
 
+### `tanh` and `coth` of a large number are their limits
+
+**Silent: `tanh` and `coth` of a large positive number evaluate and compile to `1`, where they were `NaN`, and at
+`+oo` they are `1`, as at `-oo` they were already `-1`.** Both are spelled `(e^(2x) - 1) / (e^(2x) + 1)` and its
+reciprocal, and past the range of the decimals, or of a double, both sides were infinite. A quotient of one power plus
+two constants, `(b^v + c1) / (b^v + c2)`, is now evaluated as `1 + (c1 - c2) / (b^v + c2)` where both sides are
+infinite, and always compiled so, since a double cannot tell an overflow from an infinity
+([#2254](https://github.com/asc-community/AngouriMath/issues/2254)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"tanh(5568)".ToEntity().Evaled` | `NaN` | `1` |
+| `"coth(332640)".ToEntity().EvalNumerical()` | `NaN` | `1` |
+| `"tanh(+oo)".ToEntity().Evaled` | `NaN` | `1` |
+| `"tanh(x)".Compile<double, double>("x")(400)` | `NaN` | `1` |
+| `"coth(x)".ToEntity().Compile("x").Call(400)` | `(NaN, NaN)` | `(1, 0)` |
+
 ### A lambda applied to a vector multiplies by it as a vector
 
 **Silent: a matrix of vectors becomes the product.** Applying a lambda simplified its body first, and a simplified
@@ -965,6 +982,20 @@ no value at `i`, where it is 1 ([#2256](https://github.com/asc-community/Angouri
 | `"x! = 0".ToEntity().Simplify()` | `False provided x in RR and (x >= 0 or not x in ZZ)` | `False provided x in ZZ implies x >= 0` |
 | `"x!".ToEntity().DomainCondition` | `x in RR and (x >= 0 or not x in ZZ)` | `x in ZZ implies x >= 0` |
 
+### `am_series` keeps the power it is asked for
+
+**Silent: `am_series` and `Catalogue.Series` keep the powers up to the degree given, where they kept one fewer.**
+The degree, documented as the highest power kept, was passed to `MathS.Series.Maclaurin` and `Taylor` as their
+number of terms. So degree 1 gave the constant term alone, and linearising a model gave its value at the point.
+`MathS.Series` is unchanged, and its documentation now says that its argument counts terms
+([#2299](https://github.com/asc-community/AngouriMath/issues/2299)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `am_series`, `sin(x)`, degree 7 | `x ^ 5 / 120 - x ^ 3 / 6 + x` | `x ^ 5 / 120 - x ^ 7 / 5040 - x ^ 3 / 6 + x` |
+| `am_series`, `sin(x)`, degree 1 | `0` | `x` |
+| `am_series`, `e^x`, degree 1 | `1` | `1 + x` |
+
 ### A number's conjugate is made under the setting in force
 
 **Silent: `Complex.Conjugate` is made under the downcasting setting of the caller, where the first caller's setting was
@@ -974,6 +1005,22 @@ conjugate as `0 - 1i`, in decimals, on the one instance that every `i` is, in ev
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `Complex.ImaginaryOne.Conjugate`, after `(1 / Complex.ImaginaryOne).Evaled` with `DowncastingEnabled` off | `0 - 1i` | `-i` |
+
+### `arctan` and `arccot` are undefined at their poles
+
+**Silent: a simplification that cancels an `arctan` or an `arccot` carries `not 1 + x ^ 2 = 0`, where it carried
+nothing.** Both have poles at `i` and `-i`, where they evaluate to an infinity, as `ln(0)` does, and the tangent's
+condition excludes its own poles the same way. Their condition said they were defined everywhere, so
+`arctan(x) - arctan(x)` simplified to `0`, which has a value at `i`. An antiderivative that keeps an `arctan` can now
+list its poles beside the other points it has no value at, which says nothing new
+([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"arctan(x) - arctan(x)".ToEntity().Simplify()` | `0` | `0 provided not 1 + x ^ 2 = 0` |
+| `"arccot(x) - arccot(x)".ToEntity().Simplify()` | `0` | `0 provided not 1 + x ^ 2 = 0` |
+| `"arctan(x)".ToEntity().DomainCondition` | `True` | `not 1 + x ^ 2 = 0` |
+| `"x^2*coth(a + 2*ln(x))^2".ToEntity().Integrate("x").Simplify()` | `… + C + x ^ 3 / 3` | `… + C + x ^ 3 / 3 provided not x ^ 2 / e ^ (-a) + 1 = 0 and not x ^ 2 / (-e ^ (-a)) + 1 = 0` |
 
 ### `max` and `min` are defined where their arguments are real
 

@@ -31,6 +31,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             if (expr.Nodes.Any(node => node is Entity.Matrix))
                 expr = expr.InnerSimplified;
             expr = CompiledMembership.Rewritten(expr);
+            expr = Functions.ExponentialQuotients.Rewritten(expr);
             StatementPositions.Check(expr);
             if (MathS.Settings.RefuseNonRealCompilation && returnType is { } real && IsRealType(real)
                 && typesAndNames.All(c => IsRealType(c.type)) && !IsRealWhereverDefined(expr, typesAndNames))

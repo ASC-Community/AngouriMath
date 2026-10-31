@@ -235,6 +235,9 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 [AngouriMath/Core/Budgets/*.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
+[Tests/UnitTests/Convenience/ArctangentPolesTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
 [Tests/UnitTests/Algebra/SolveTest/ModulusEquationTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
@@ -430,6 +433,9 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [AngouriMath/Numerics/NumberStatements.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[AngouriMath/Functions/ExponentialQuotients.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [AngouriMath/Functions/Compilation/CompiledMembership.cs]
@@ -1014,6 +1020,9 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Common/AFactorHeldToAPowerCancelsTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[Tests/UnitTests/Common/HyperbolicTangentPastTheRangeTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Common/RefuseNonRealCompilationTest.cs]

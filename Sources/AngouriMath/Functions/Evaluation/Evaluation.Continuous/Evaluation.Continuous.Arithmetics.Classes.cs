@@ -239,6 +239,11 @@ namespace AngouriMath
                         ? c.IsZero ? MathS.NaN : 0
                         : new Providedf(0, new Notf(new Equalsf(n0, 0))),
                     (_, Integer(0)) => Real.NaN,
+                    // tanh's spelling past the decimals' range, both sides infinite: the same
+                    // quotient without them. https://github.com/asc-community/AngouriMath/issues/2254
+                    (Complex { IsFinite: false }, Complex { IsFinite: false }) when !isExact
+                        && Functions.ExponentialQuotients.Rescaled(Dividend, Divisor) is { } rescaled
+                        => rescaled.InnerSimplified(isExact),
                     (Complex n1, Complex n2) when !isExact => n1 / n2,
                     (var n1, Integer(1)) => n1,
                     // Sizes are not divided: aleph(0) / 2 has no value.
