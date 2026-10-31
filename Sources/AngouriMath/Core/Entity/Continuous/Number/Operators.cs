@@ -695,6 +695,11 @@ namespace AngouriMath
             /// <param name="x">The number of which we want to get its base power</param>
             public static Complex Log(Complex @base, Complex x)
             {
+                // 0 is not a base: no power of it is anything but 0, and log_0(x) has no value, which is what
+                // Logf's condition says. ln(x)/ln(0) is ln(x)/(-oo), and was 0. An exact zero only: a base that
+                // is small and not 0 has its logarithm. https://github.com/asc-community/AngouriMath/issues/2255
+                if (@base.RealPart.EDecimal.IsZero && @base.ImaginaryPart.EDecimal.IsZero)
+                    return Real.NaN;
                 if (LostToExponentRange(x) || LostToExponentRange(@base))
                     return Ln(x) / Ln(@base);
                 // A base of 1 is excluded from the real shortcut so that it falls through to the

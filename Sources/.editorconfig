@@ -75,6 +75,9 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 [Tests/UnitTests/Calculus/ModulusPhaseTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
+[Tests/UnitTests/Calculus/LimitAtAJumpTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
 [Tests/UnitTests/Core/DomainConditionInAReadingTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
@@ -85,6 +88,9 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Algebra/ExponentialTwoBasesTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[Tests/UnitTests/Algebra/OneByOneMatrixTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Core/Transformations/*.cs]
@@ -237,7 +243,13 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 [Tests/UnitTests/Convenience/BinomialTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
+[Tests/UnitTests/Convenience/MaxMinOffTheRealLineTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
 [Tests/UnitTests/Convenience/ConjugateAndArgumentTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[Tests/UnitTests/Convenience/FactorialOffTheRealLineTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Algebra/SolveTest/FractionalPowerRangeTest.cs]
@@ -246,13 +258,22 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 [Tests/UnitTests/Convenience/RealAndImaginaryPartTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
+[Tests/UnitTests/Convenience/NegationOfASignedTermPrintsTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
 [Tests/UnitTests/Convenience/DoubleFactorialTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Convenience/IversonTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
+[Tests/UnitTests/Convenience/PiecewiseConditionInAReadingTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
 [Tests/UnitTests/Convenience/MatrixFunctionsInAnExpressionTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[Tests/UnitTests/Convenience/LambertWOverTheRealsTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Common/ExponentialOfALogarithmTest.cs]
@@ -930,6 +951,9 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Common/FiniteSetStatementCompilationTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[Tests/UnitTests/Convenience/LogarithmToBaseZeroTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
 [Tests/UnitTests/Convenience/EulerGammaTest.cs]

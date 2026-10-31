@@ -188,6 +188,19 @@ namespace AngouriMath
                 => entity is Matrix m ? m : MathS.Scalar(entity);
 
             /// <summary>
+            /// <paramref name="simplified"/>, a simplification of a matrix of <paramref name="source"/>'s shape, as a matrix. A
+            /// 1x1 matrix simplifies to its entry, and a cast threw InvalidCastException for the row echelon forms, and so for
+            /// the rank, of every 1x1 matrix. A larger one simplifies to something that is not a matrix only where an entry has
+            /// no value, which is a fault and still raises: wrapping it as a 1x1 matrix would give it a rank of 1.
+            /// https://github.com/asc-community/AngouriMath/issues/2269,
+            /// https://github.com/asc-community/AngouriMath/issues/2270
+            /// </summary>
+            internal static Matrix OfTheShapeOf(Matrix source, Entity simplified)
+                => simplified is Matrix m ? m
+                : source.RowCount == 1 && source.ColumnCount == 1 ? MathS.Scalar(simplified)
+                : (Matrix)simplified;
+
+            /// <summary>
             /// Access the tensor if it is a matrix
             /// </summary>
             public Entity this[int x, int y] => InnerMatrix[x, y];
@@ -579,7 +592,7 @@ namespace AngouriMath
             /// </remarks>
             public Matrix RowEchelonForm =>
                 @ref.GetValue(static @this =>
-                    (Matrix)new Matrix(@this.InnerMatrix.RowEchelonFormSimple()).InnerSimplified,
+                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.RowEchelonFormSimple()).InnerSimplified),
                     this);
             private LazyPropertyA<Matrix> @ref;
 
@@ -588,7 +601,7 @@ namespace AngouriMath
             /// </summary>
             public Matrix ReducedRowEchelonForm =>
                 rref.GetValue(static @this =>
-                    (Matrix)new Matrix(@this.InnerMatrix.ReducedRowEchelonFormSimple()).InnerSimplified,
+                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.ReducedRowEchelonFormSimple()).InnerSimplified),
                     this);
             private LazyPropertyA<Matrix> rref;
 

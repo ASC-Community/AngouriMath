@@ -42,6 +42,14 @@ namespace AngouriMath.Functions.Algebra
         internal static Entity? SolveBySubstitution(Entity expr, Variable x)
         {
             var res = expr.Substitute(x, Infinity);
+            // Reading the value at the destination is the limit only where the expression is continuous there, and a step
+            // function whose argument arrives on one of its jumps is not: floor(x) - 1 from the left of 0 is floor(-1/t) - 1
+            // at t = +oo here, whose -1/oo evaluates to 0, and the floor of that is 0 where it is -1 all the way in. The
+            // nodes decline a jump themselves (LimitOfAStepFunction, Signumf's override), and this is where the declined
+            // node was answered anyway, as part of the expression it is in.
+            // https://github.com/asc-community/AngouriMath/issues/2266
+            if (res.Nodes.Any(SitsOnAJump))
+                return null;
             if (res.Evaled is Complex limit)
             {
                 MultithreadingFunctional.ExitIfCancelled();
@@ -63,6 +71,27 @@ namespace AngouriMath.Functions.Algebra
                 return res;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="node"/> is a step function whose argument evaluates to one of its jumps: an integer for
+        /// <c>floor</c> and <c>ceil</c>, a half-integer for <c>round</c>, 0 for <c>sgn</c>. Taken on the real part, and on the
+        /// imaginary part of a value that is not real, as LimitOfAStepFunction takes it.
+        /// </summary>
+        private static bool SitsOnAJump(Entity node)
+        {
+            static bool Whole(Real part) => part is Integer || part.EDecimal.IsFinite && part.EDecimal.CompareTo(part.EDecimal.Floor()) == 0;
+            static bool OnAJump(Entity argument, System.Func<Real, bool> jump)
+                => argument.Evaled is Complex { RealPart: var real, ImaginaryPart: var imaginary } value
+                   && (jump(real) || value is not Real && jump(imaginary));
+            return node switch
+            {
+                Floorf(var argument) => OnAJump(argument, Whole),
+                Ceilf(var argument) => OnAJump(argument, Whole),
+                Roundf(var argument) => OnAJump(argument, part => Whole((Real)(part + Rational.Create(1, 2)).Evaled)),
+                Signumf(var argument) => argument.Evaled is Complex { IsZero: true },
+                _ => false,
+            };
         }
 
         internal static Entity? SolveAsPolynomial(Entity expr, Variable x)

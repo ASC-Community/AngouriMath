@@ -68,9 +68,12 @@ namespace AngouriMath.Tests.Convenience
         public void MinAndMaxCompareWhereTheArgumentsAreOrdered(string input, int expected)
             => Assert.Equal(Entity.Number.Integer.Create(expected), input.ToEntity().Simplify());
 
+        // That thing where it is real: the complex numbers are not ordered, and min(i, i) has no value.
+        // https://github.com/asc-community/AngouriMath/issues/2256
         [Theory]
-        [InlineData("min(x, x)", "x")]
-        [InlineData("max(x, x)", "x")]
+        [InlineData("min(x, x)", "x provided x in RR")]
+        [InlineData("max(x, x)", "x provided x in RR")]
+        [InlineData("min(3, 3)", "3")]
         public void MinAndMaxOfOneThingWithItselfIsThatThing(string input, string expected)
             => Assert.Equal(expected.ToEntity(), input.ToEntity().Simplify());
 

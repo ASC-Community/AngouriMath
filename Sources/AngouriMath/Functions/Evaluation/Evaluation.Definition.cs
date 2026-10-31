@@ -66,6 +66,13 @@ namespace AngouriMath
         /// https://github.com/asc-community/AngouriMath/issues/1817
         /// </remarks>
         private static Entity WhereTheCaseItTakesIsDefined(Piecewise piecewise)
+            => WhereTheCaseItTakesIsDefined(piecewise, static entity => entity.DomainCondition);
+
+        /// <summary>
+        /// As above, with <paramref name="conditionOf"/> for where a predicate and a case's expression are defined:
+        /// <see cref="DomainCondition"/>, or <see cref="DomainConditionIn(Domain)"/> under a reading.
+        /// </summary>
+        private static Entity WhereTheCaseItTakesIsDefined(Piecewise piecewise, System.Func<Entity, Entity> conditionOf)
         {
             Entity defined = Boolean.False;
             Entity noEarlierCase = Boolean.True;
@@ -74,8 +81,8 @@ namespace AngouriMath
                 // Never taken, and passed over by the cases after it.
                 if (@case.Predicate.Evaled is var decided && (decided.IsNaN || decided == Boolean.False))
                     continue;
-                var predicateDomain = @case.Predicate.DomainCondition;
-                defined |= @case.Predicate & @case.Expression.DomainCondition & noEarlierCase;
+                var predicateDomain = conditionOf(@case.Predicate);
+                defined |= @case.Predicate & conditionOf(@case.Expression) & noEarlierCase;
                 noEarlierCase &= predicateDomain == Boolean.True ? !@case.Predicate : !@case.Predicate | !predicateDomain;
             }
             return defined;
@@ -371,6 +378,11 @@ namespace AngouriMath
         /// </remarks>
         public Entity DomainConditionIn(Domain reading)
         {
+            // A piecewise is defined where the case it takes is, as DomainCondition reads it, and not where every case
+            // is: tan(piecewise(pi / x provided x > 0, x / 2)) is 0 at 0, and its condition over the reals asked the
+            // first case to be defined there. https://github.com/asc-community/AngouriMath/issues/2256
+            if (this is Piecewise piecewise)
+                return WhereTheCaseItTakesIsDefined(piecewise, entity => entity.DomainConditionIn(reading)).InnerSimplified;
             var read = Codomain > reading ? WithCodomain(reading) : this;
             var condition = read.IntrinsicCondition;
             foreach (var child in DirectChildren)
