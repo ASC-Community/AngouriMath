@@ -5972,7 +5972,7 @@ namespace AngouriMath
                 // dictionary, so the entry has to be there before several threads read it.
                 // See Functions.GenTensorGuard.
                 Functions.GenTensorGuard.EnsurePiecewiseCacheWarmed();
-                return (Matrix)new Matrix(GenTensor.PiecewiseMultiply(m1.InnerMatrix, m2.InnerMatrix)).InnerSimplified;
+                return Entity.Matrix.OfTheShapeOf(m1, new Matrix(GenTensor.PiecewiseMultiply(m1.InnerMatrix, m2.InnerMatrix)).InnerSimplified);
             }
 
             /// <summary>

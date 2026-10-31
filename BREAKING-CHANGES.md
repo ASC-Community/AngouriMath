@@ -253,6 +253,18 @@ except where shown.
 | `([[1, 2], [2, 4]] ^ (-1)).Evaled` | throws `InvalidDeterminantException` | `[[1, 2], [2, 4]] ^ (-1)` |
 | `([[1, 2], [2, 4]] ^ (-1)).Simplify()` | throws `InvalidDeterminantException` | `1 / [[1, 2], [2, 4]]` |
 
+### A 1x1 matrix has a rank and row echelon forms
+
+**Not silent: what threw now answers.** For a 1x1 matrix, `Rank`, `RowEchelonForm` and `ReducedRowEchelonForm` threw
+`InvalidCastException`, and so did `MathS.Matrices.PointwiseMultiplication` of two 1x1 matrices. A 1x1 matrix simplifies
+to its entry, and these cast the simplified matrix back where the product already wrapped it
+([#2269](https://github.com/asc-community/AngouriMath/issues/2269)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Matrix(new Entity[,] { { 2 } }).Rank` | throws `InvalidCastException` | `1` |
+| `MathS.Matrix(new Entity[,] { { 2 } }).ReducedRowEchelonForm` | throws `InvalidCastException` | `[1]` |
+
 ### A sum of fractions that is a constant over one denominator simplifies to it
 
 **Silent: an identity in fractions reaches its value, and conditions are written shorter.** `Simplify` gathered
