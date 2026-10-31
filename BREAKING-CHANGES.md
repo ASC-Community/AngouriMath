@@ -85,7 +85,7 @@ and some are left unevaluated ([#2267](https://github.com/asc-community/AngouriM
 |---|---|---|
 | `"limitright(ln(x) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `+oo` |
 | `"limitright(ln(sin(x)) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `+oo` |
-| `"limit(ln(x^2) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `NaN`, which is wrong too: both sides are `+oo` ([#2274](https://github.com/asc-community/AngouriMath/issues/2274)) |
+| `"limit(ln(x^2) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `+oo`, by [#2274](https://github.com/asc-community/AngouriMath/issues/2274) |
 
 ### A value put in for a derivative's variable is where it is evaluated
 
@@ -543,6 +543,20 @@ the expression's own domain as its condition ([#2142](https://github.com/asc-com
 | `"sin(a) + sin(b) - 2*sin((a + b)/2)*cos((a - b)/2)".Simplify()` | `sin(a) + sin(b) - 2 * sin((a + b) / 2) * cos((a - b) / 2)` | `0` |
 | `"(1 - cos(a))/(1 + cos(a))/tan(a/2)^2".Simplify()` | `(1 - cos(a)) / ((cos(a) + 1) * tan(a / 2) ^ 2)` | `1 provided not cos(a) + 1 = 0 and not tan(a / 2) = 0 and not cos(a / 2) = 0` |
 | `"(cos(2*x) - 1)^2 + sin(2*x)^2 - 4*sin(x)^2".Simplify()` ([#2133](https://github.com/asc-community/AngouriMath/issues/2133)) | `2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2` | `0` |
+
+### An infinity over a vanishing divisor is the infinity of the signs
+
+**Silent: a limit of a quotient whose dividend tends to an infinity and whose divisor vanishes from one side is that
+infinity times the divisor's sign, where a two-sided one was `NaN`.** The quotient of the parts' limits, `(-oo) / 0`, says
+nothing about the side the divisor vanishes from, and the rule that reads the side asked for a finite dividend. So each
+side of `ln(x^2) / (cos(x) - 1)` at 0 came back undecided, and the two-sided limit, `+oo` from both, was `NaN`
+([#2274](https://github.com/asc-community/AngouriMath/issues/2274)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limit(ln(x^2) / (cos(x) - 1), x, 0)".ToEntity().Simplify()` | `NaN` | `+oo` |
+| `"limit(ln(x^2) / ln(1 - x^2/2), x, 0)".ToEntity().Simplify()` | `NaN` | `+oo` |
+| `"limit(ln(abs(x)) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `NaN` | `+oo` |
 
 ### The double factorial is the postfix `n!!`
 
