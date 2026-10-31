@@ -1016,6 +1016,7 @@ namespace AngouriMath.Core
                 foreach (var constant in Variable.NamedConstants.Values)
                     func = func.Substitute(constant, constant.Value);
                 func = Compilation.CompiledMembership.Rewritten(func);
+                func = Functions.ExponentialQuotients.Rewritten(func);
                 Compilation.StatementPositions.Check(func);
                 var visited = new HashSet<Entity>();
                 var cache = new Dictionary<Entity, int>();

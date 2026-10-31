@@ -442,6 +442,23 @@ made `0^(-1)` an infinity and `0^0` 1 ([#2286](https://github.com/asc-community/
 | `"x^(-1)".Compile<double, double>("x")(0)` | `+Infinity` | `NaN` |
 | `"x^x".Compile<double, double>("x")(0)` | `1` | `NaN` |
 
+### `tanh` and `coth` of a large number are their limits
+
+**Silent: `tanh` and `coth` of a large positive number evaluate and compile to `1`, where they were `NaN`, and at
+`+oo` they are `1`, as at `-oo` they were already `-1`.** Both are spelled `(e^(2x) - 1) / (e^(2x) + 1)` and its
+reciprocal, and past the range of the decimals, or of a double, both sides were infinite. A quotient of one power plus
+two constants, `(b^v + c1) / (b^v + c2)`, is now evaluated as `1 + (c1 - c2) / (b^v + c2)` where both sides are
+infinite, and always compiled so, since a double cannot tell an overflow from an infinity
+([#2254](https://github.com/asc-community/AngouriMath/issues/2254)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"tanh(5568)".ToEntity().Evaled` | `NaN` | `1` |
+| `"coth(332640)".ToEntity().EvalNumerical()` | `NaN` | `1` |
+| `"tanh(+oo)".ToEntity().Evaled` | `NaN` | `1` |
+| `"tanh(x)".Compile<double, double>("x")(400)` | `NaN` | `1` |
+| `"coth(x)".ToEntity().Compile("x").Call(400)` | `(NaN, NaN)` | `(1, 0)` |
+
 ### A lambda applied to a vector multiplies by it as a vector
 
 **Silent: a matrix of vectors becomes the product.** Applying a lambda simplified its body first, and a simplified
