@@ -24,24 +24,53 @@ namespace AngouriMath.Functions
         {
             if (termCount < 0)
                 throw new InvalidNumberException($"{nameof(termCount)} is supposed to be at least 0, and {termCount} was given");
-            var terms = new List<Entity>();
-            foreach (var term in SingleTaylorExpansionTerms(expr, exprVariable, polyVariable, point))
-            {
-                if (terms.Count >= termCount)
-                    return TreeAnalyzer.MultiHangBinary(terms, (a, b) => a + b);
-                terms.Add(term);
-            }
-            throw new AngouriBugException($"We cannot get here, as {nameof(SingleTaylorExpansionTerms)} is supposed to be endless");
+            return Sum(SingleTaylorExpansionTerms(expr, exprVariable, polyVariable, point), termCount);
         }
 
+        /// <summary>
+        /// The first <paramref name="termCount"/> terms added up, 0 where there are none, and
+        /// <see cref="Number.Real.NaN"/> where a term has no value.
+        /// </summary>
+        /// <remarks>
+        /// The term after the last is never asked for, since it costs a derivative more. The
+        /// expansion of <c>sin(x) / x</c> around 0 has no value, as the function has none there,
+        /// and neither has any derivative of it; it was the sum of the terms, <c>NaN + NaN + ...</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2291
+        /// </remarks>
+        private static Entity Sum(IEnumerable<Entity> series, int termCount)
+        {
+            var terms = new List<Entity>();
+            using var enumerator = series.GetEnumerator();
+            while (terms.Count < termCount && enumerator.MoveNext())
+            {
+                if (enumerator.Current.IsNaN)
+                    return Number.Real.NaN;
+                terms.Add(enumerator.Current);
+            }
+            return terms.Count == 0 ? Number.Integer.Zero : TreeAnalyzer.MultiHangBinary(terms, (a, b) => a + b);
+        }
+
+        /// <remarks>
+        /// Each derivative is simplified before the next is taken from it, and each coefficient
+        /// once it is evaluated at the point. A quotient's derivative taken as it stands grows about
+        /// eightfold a step, so the ninth of <c>sin(x) / x</c> had 7,797,110 nodes, and 87
+        /// simplified, and the eleventh ran out of memory. Where a coefficient has no value, neither
+        /// has any after it, so the derivatives stop there.
+        /// https://github.com/asc-community/AngouriMath/issues/2291
+        /// </remarks>
         internal static IEnumerable<Entity> SingleTaylorExpansionTerms(Entity expr, Variable exprVariable, Variable polyVariable, Entity point)
         {
             var currExpr = expr;
             var i = 0;
             while (true)
             {
-                var coef = currExpr.Substitute(exprVariable, point);
+                var coef = currExpr.Substitute(exprVariable, point).Simplify();
                 var num = (i == 0 ? coef : coef * (polyVariable - point).Pow(i)).InnerSimplified;
+                if (num.IsNaN)
+                {
+                    while (true)
+                        yield return Number.Real.NaN;
+                }
                 if (num != Number.Integer.Zero)
                     if (i > 1)
                         yield return num / ((Entity)i).Factorial();
@@ -49,7 +78,7 @@ namespace AngouriMath.Functions
                         yield return num;
                 else
                     yield return Number.Integer.Zero;
-                currExpr = currExpr.Differentiate(exprVariable);
+                currExpr = currExpr.Differentiate(exprVariable).Simplify();
                 i++;
             }
         }
@@ -58,14 +87,7 @@ namespace AngouriMath.Functions
         {
             if (termCount < 0)
                 throw new InvalidNumberException($"{nameof(termCount)} is supposed to be at least 0, and {termCount} was given");
-            var terms = new List<Entity>();
-            foreach (var term in MultivariableTaylorExpansionTerms(expr, exprToPolyVars))
-            {
-                if (terms.Count >= termCount)
-                    return TreeAnalyzer.MultiHangBinary(terms, (a, b) => a + b);
-                terms.Add(term);
-            }
-            throw new AngouriBugException($"We cannot get here, as {nameof(MultivariableTaylorExpansionTerms)} is supposed to be endless");
+            return Sum(MultivariableTaylorExpansionTerms(expr, exprToPolyVars), termCount);
         }
 
         internal static IEnumerable<Entity> MultivariableTaylorExpansionTerms(Entity expr, params (Variable exprVariable, Variable polyVariable, Entity point)[] exprToPolyVars)
@@ -119,7 +141,8 @@ namespace AngouriMath.Functions
                             // If no match is found, we add it to the new term list.
                             if (!foundRepeatFlag)
                             {
-                                var newPartialDerivative = partialDerivative.Differentiate(exprVariable);
+                                // Simplified before the next is taken from it, as in SingleTaylorExpansionTerms.
+                                var newPartialDerivative = partialDerivative.Differentiate(exprVariable).Simplify();
                                 newTerms.Add((coefficient, newPointCoeffs, newPartialDerivative));
                             }
 
@@ -146,6 +169,7 @@ namespace AngouriMath.Functions
                     var solvedPartialDerivative = partialDerivative;
                     foreach (var (exprVariable, polyVariable, point) in exprToPolyVars)
                         solvedPartialDerivative = solvedPartialDerivative.Substitute(exprVariable, point);
+                    solvedPartialDerivative = solvedPartialDerivative.Simplify();
 
                     var fullTerm = solvedPartialDerivative * coefficient * pointCoefficients;
 

@@ -870,6 +870,23 @@ reals, to `1` and `0` ([#2195](https://github.com/asc-community/AngouriMath/issu
 | `"arg(x)".ToEntity().Compile("x").Call(-2)` | throws `UncompilableNodeException`, `arg` being a variable | `pi` |
 | `"conj(x)".ToEntity().Compile<Complex, Complex>("x")(3 + 4i)` | throws `UncompilableNodeException`, `conj` being a variable | `3 - 4i` |
 
+### A Taylor expansion simplifies each derivative before taking the next
+
+**Silent: `MathS.Series.Taylor`, `Maclaurin` and `TaylorTerms` print simplified coefficients, an expansion where the
+function has no value is `NaN`, and no terms are `0`.** Each derivative was taken from the one before it as it stood,
+and only the term built from it was simplified. A quotient's derivatives grew about eightfold a step: the ninth of
+`sin(x) / x` had 7,797,110 nodes, and 87 simplified. One derivative more than the terms kept was also taken, then
+dropped. An expansion around a point where the function has no value summed a `NaN` for each term
+([#2291](https://github.com/asc-community/AngouriMath/issues/2291)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Series.Taylor("sin(x) / x", 11, ("x", 1))` | `OutOfMemoryException` after 32 s with a 2 GB heap | 529 characters, 0.9 s |
+| `MathS.Series.Taylor("sin(x) / x", 7, ("x", 1))` | 36,421 characters | `sin(1) + (cos(1) - sin(1)) * (x - 1) + ((-2) * cos(1) + sin(1)) * (x - 1) ^ 2 / 2! + ...` |
+| `MathS.Series.Taylor("sin(x) / x", 4, ("x", 0))` | `NaN + NaN + NaN / 2! + NaN / 3!` | `NaN` |
+| `MathS.Series.Taylor("sin(x)", 0, ("x", 1))` | throws `AngouriBugException` | `0` |
+| `MathS.Series.Taylor("sin(x) + cos(y)", 6, ("x", 1))` | `sin(1) + cos(y) + cos(1) * (x - 1) + -sin(1) * (x - 1) ^ 2 / 2! + cos(1) * (-1) * (x - 1) ^ 3 / 3! + ...` | `cos(y) + sin(1) + cos(1) * (x - 1) + -sin(1) * (x - 1) ^ 2 / 2! + -cos(1) * (x - 1) ^ 3 / 3! + ...` |
+
 ### A logarithm to base 0 has no value
 
 **Silent: `log(0, x)` is `NaN`, where it was `0` for a positive `x`.** Evaluation and both compilers took it as
