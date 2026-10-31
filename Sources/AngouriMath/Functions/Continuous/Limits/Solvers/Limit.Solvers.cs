@@ -273,6 +273,29 @@ namespace AngouriMath.Functions.Algebra
         private static bool IsRealValued(Entity expr, Variable x)
             => TreeAnalyzer.IsRealValued(expr, x);
 
+        /// <summary>
+        /// Whether the logarithm of something tending to <paramref name="argumentLimit"/>
+        /// diverges, which is where the argument tends to zero or to an infinity.
+        /// </summary>
+        /// <remarks>
+        /// Read off the value wherever the limit has one, and off its form only where it does
+        /// not. A limit comes back in whatever form the reading that found it left it in, and
+        /// the substitution leaves the expression with +oo put in for x: cos(1/x) tends to
+        /// <c>cos(1 / +oo)</c>, which has an infinity in it and is 1. Read off the form, its
+        /// logarithm diverged, so ln(x) / ln(cos(x)) at 0+ -- -oo over a divisor vanishing from
+        /// below, which is +oo -- was taken for oo/oo and differentiated into
+        /// (1/x) / (-tan(x)), and answered -oo. l'Hopital's rule says nothing about a quotient
+        /// whose divisor vanishes and whose dividend does not.
+        /// https://github.com/asc-community/AngouriMath/issues/2267
+        /// <para/>
+        /// A limit that is not a finite number -- <c>+oo * a</c>, or an infinity with an
+        /// imaginary part -- is still read off its form.
+        /// </remarks>
+        private static bool LogarithmDiverges(Entity argumentLimit)
+            => argumentLimit.Evaled is Complex { IsFinite: true } value
+                ? value == Integer.Zero
+                : argumentLimit.Nodes.Any(child => child == Real.PositiveInfinity || child == Real.NegativeInfinity);
+
         internal static Entity? SolveAsLogarithmDivision(Entity expr, Variable x)
         {
             if (expr is Divf(Logf(var upperLogBase, var upperLogArgument), Logf(var lowerLogBase, var lowerLogArgument)))
@@ -283,10 +306,7 @@ namespace AngouriMath.Functions.Algebra
                 var lowerLogLimit = LimitFunctional.ComputeLimit(lowerLogArgument, x, Real.PositiveInfinity);
                 if (upperLogLimit is null || lowerLogLimit is null) return null;
                 MultithreadingFunctional.ExitIfCancelled();
-                if ((upperLogLimit.Nodes.Any(child => child == Real.PositiveInfinity || child == Real.NegativeInfinity)
-                     || upperLogLimit == Integer.Zero)
-                    && (lowerLogLimit.Nodes.Any(child => child == Real.PositiveInfinity || child == Real.NegativeInfinity)
-                     || lowerLogLimit == Integer.Zero))
+                if (LogarithmDiverges(upperLogLimit) && LogarithmDiverges(lowerLogLimit))
                 {
                     var upperDerivative = upperLogArgument.Differentiate(x).InnerSimplified;
                     var lowerDerivative = lowerLogArgument.Differentiate(x).InnerSimplified;

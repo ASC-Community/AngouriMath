@@ -72,6 +72,21 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A quotient of logarithms is differentiated only where both diverge
+
+**Silent: a limit of a quotient of logarithms whose divisor tends to 0 is no longer answered by l'Hopital's rule, which
+gave it the wrong sign.** Whether a logarithm diverges was read off the form of its argument's limit, and the limit of
+`cos(1/x)` comes back as `cos(1 / +oo)`, which has an infinity in it and is 1. So `ln(x) / ln(cos(x))` at `0+`, `-oo` over a
+divisor vanishing from below, was taken for `oo / oo`, and its derivatives' ratio answered `-oo` where the limit is `+oo`.
+A limit that evaluates to a number is now judged by its value. Some of these quotients are answered with the right sign,
+and some are left unevaluated ([#2267](https://github.com/asc-community/AngouriMath/issues/2267)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limitright(ln(x) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `+oo` |
+| `"limitright(ln(sin(x)) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `+oo` |
+| `"limit(ln(x^2) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `NaN`, which is wrong too: both sides are `+oo` ([#2274](https://github.com/asc-community/AngouriMath/issues/2274)) |
+
 ### A value put in for a derivative's variable is where it is evaluated
 
 **Silent: substituting for the variable of a derivative or an indefinite integral evaluates it there, where the value was
