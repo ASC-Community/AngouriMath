@@ -156,9 +156,21 @@ namespace AngouriMath.Functions.Algebra
 
         [System.ThreadStatic] private static int bothSidesDepth;
 
+        /// <summary>
+        /// A logarithm to a base other than e as a quotient of natural logarithms.
+        /// </summary>
+        /// <remarks>
+        /// A base that is e evaluated is e. The limit of a limit node's evaluation is taken of its
+        /// expression evaluated, in which ln(f) is log(2.718..., f), and as a quotient that is
+        /// ln(f) / ln(2.718...), whose first remarkable limit asks the limit of ln(f) through a
+        /// limit node of its own -- which is evaluated, and so asks the same question again. Where
+        /// the limit of ln(f) is not decided, that did not end, and the stack overflowed.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2273">#2273</a>
+        /// </remarks>
         private static Entity ExpandLogarithm(Entity expr)
             => expr switch
             {
+                Logf(var @base, var antilog) when @base == MathS.e.Evaled => MathS.Ln(antilog),
                 Logf(var @base, var antilog) when @base != MathS.e => MathS.Ln(antilog) / MathS.Ln(@base),
                 _ => expr
             };

@@ -164,6 +164,19 @@ carried it once combined: a second derivative of `1/sqrt(x^2 + 13)` stated `not 
 | `"(a provided b > 0) + (c provided b > 0)".ToEntity().InnerSimplified` | `a + c provided b > 0 and b > 0` | `a + c provided b > 0` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
 
+### A limit of a logarithm that is not decided is left unevaluated
+
+**Not silent: what overflowed the stack now returns.** A limit of a logarithm whose argument has no limit, as
+`ln(2 + sin(x))` at `+oo`, overflowed the stack and took the process down. A limit node simplifies its expression evaluated,
+where `ln(f)` is `log(2.718..., f)`, and that base was not read as `e`: the quotient `ln(f) / ln(2.718...)` it was rewritten
+as asked the limit of `ln(f)` again, through a limit node of its own
+([#2273](https://github.com/asc-community/AngouriMath/issues/2273)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"limit(ln(2 + sin(x)), x, +oo)".ToEntity().Simplify()` | stack overflow | `limit(ln(2 + sin(x)), x, +oo)` |
+| `"limitright(ln(sin(1/x) + 2), x, 0)".ToEntity().Simplify()` | stack overflow | `limitright(ln(2 + sin(1 / x)), x, 0)` |
+
 ### Primality is decided by Miller–Rabin and Lucas–Lehmer, and finishes
 
 **Silent: a membership in `PP` left open past the machine word is decided where a test proves it, and one that did
