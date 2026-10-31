@@ -582,9 +582,17 @@ namespace AngouriMath
             /// <summary>
             /// Matrix's form, transformed via Gaussian elimination.
             /// </summary>
+            /// <remarks>
+            /// Both forms divide as they go. GenericTensor's SafeDivision variants keep every entry as a numerator and a
+            /// denominator that are never reduced against each other, which is for element types whose division truncates,
+            /// and an Entity divides exactly. Unreduced, the pairs grew with every row operation and the back substitution
+            /// squared them: one 7x7 of small entries took two minutes, and an 8x8 did not return in ten, and the 4x4
+            /// of https://github.com/asc-community/AngouriMath/issues/2270 ended with a denominator near 1e-246, which
+            /// https://github.com/asc-community/AngouriMath/issues/2277 made a NaN.
+            /// </remarks>
             public Matrix RowEchelonForm =>
                 @ref.GetValue(static @this =>
-                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.RowEchelonFormSafeDivision()).InnerSimplified),
+                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.RowEchelonFormSimple()).InnerSimplified),
                     this);
             private LazyPropertyA<Matrix> @ref;
 
@@ -593,7 +601,7 @@ namespace AngouriMath
             /// </summary>
             public Matrix ReducedRowEchelonForm =>
                 rref.GetValue(static @this =>
-                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.ReducedRowEchelonFormSafeDivision()).InnerSimplified),
+                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.ReducedRowEchelonFormSimple()).InnerSimplified),
                     this);
             private LazyPropertyA<Matrix> rref;
 

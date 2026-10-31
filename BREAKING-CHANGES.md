@@ -195,6 +195,20 @@ and a number that passes every round is left open, since passing is not a proof
 | `"(10^30 + 1) in PP".ToEntity().Evaled` | `1000000000000000000000000000001 in PP` | `False` |
 | `"(10^30 + 57) in PP".ToEntity().Evaled` | `1000000000000000000000000000057 in PP` | `1000000000000000000000000000057 in PP` |
 
+### The row echelon forms divide exactly
+
+**Not silent for numbers: what threw or did not return now answers. Silent for symbols: the forms are written
+otherwise.** Both forms were computed by GenericTensor's SafeDivision elimination, which keeps every entry as a numerator
+and a denominator that are never reduced against each other, so their sizes grew with every row operation. For a 4x4 of
+small rationals, the reduced form and `Rank` could throw `InvalidCastException`, and an 8x8 did not return. Both now divide as they go
+([#2270](https://github.com/asc-community/AngouriMath/issues/2270)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"[[1/2, -2/3, 0, -2/3], [3, -2, 0, -2/3], [2, 2, 1, -3], [-2/3, 0, -2/3, 1]]"`, `.Rank` | throws `InvalidCastException` | `4` |
+| the same, `.ReducedRowEchelonForm` | throws `InvalidCastException` | the identity |
+| `"[[a, b], [c, d]]"`, `.RowEchelonForm` | `[[a, b], [(c * a + -c * a) / a, (d * a + -c * b) / a]]` | `[[a, b], [c + -c / a * a, d + -c / a * b]]` |
+
 ### `arcsin` and `arccos` of a real number past 1 have their value
 
 **Silent: `arcsin(x)` and `arccos(x)` of a real `x` past 1 are `sign(x) pi/2 - i arccosh|x|` and `pi/2 - arcsin(x)`,
