@@ -242,8 +242,15 @@ namespace AngouriMath
                     return lim;
                 else
                 {
-                    var @base = Base.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 && lim1 != 0 ? lim1 : Base;
-                    var power = Antilogarithm.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim2 && lim2 != 0 ? lim2 : Antilogarithm;
+                    var baseLimit = Base.ComputeLimitDivideEtImpera(x, dist, side);
+                    var antilogarithmLimit = Antilogarithm.ComputeLimitDivideEtImpera(x, dist, side);
+                    // The logarithm of a limit on the cut is the limit only from above or along the
+                    // real line. https://github.com/asc-community/AngouriMath/issues/2266
+                    if (ArrivesOnTheCutOffTheRealLine(Base, baseLimit, x, dist)
+                        || ArrivesOnTheCutOffTheRealLine(Antilogarithm, antilogarithmLimit, x, dist))
+                        return null;
+                    var @base = baseLimit is { IsFinite: true } lim1 && lim1 != 0 ? lim1 : Base;
+                    var power = antilogarithmLimit is { IsFinite: true } lim2 && lim2 != 0 ? lim2 : Antilogarithm;
                     MultithreadingFunctional.ExitIfCancelled();
                     return ComputeLimitImpl(New(@base, power), x, dist, side);
                 }
@@ -256,8 +263,14 @@ namespace AngouriMath
             {
                 if (ComputeLimitImpl(this, x, dist, side) is { } lim)
                     return lim;
+                var baseLimit = Base.ComputeLimitDivideEtImpera(x, dist, side);
+                var exponentLimit = Exponent.ComputeLimitDivideEtImpera(x, dist, side);
+                // A power to an exponent that is not whole has the logarithm's cut, for the reason
+                // the logarithm above declines it. https://github.com/asc-community/AngouriMath/issues/2266
+                if (exponentLimit?.Evaled is not Integer && ArrivesOnTheCutOffTheRealLine(Base, baseLimit, x, dist))
+                    return null;
                 var substituted =
-                    (Base.ComputeLimitDivideEtImpera(x, dist, side), Exponent.ComputeLimitDivideEtImpera(x, dist, side))
+                    (baseLimit, exponentLimit)
                     switch {
                         ({ IsFinite: true } lim1, { IsFinite: true } lim2) => New(lim1, lim2),
                         (_, { } l2) when !Base.ContainsNode(x) => New(Base, l2),
