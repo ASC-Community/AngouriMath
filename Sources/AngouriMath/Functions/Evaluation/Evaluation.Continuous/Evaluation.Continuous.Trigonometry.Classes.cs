@@ -228,7 +228,11 @@ namespace AngouriMath
         
         public partial record Arctanf
         {
-            private protected override Entity IntrinsicCondition => Boolean.True;
+            // arctan(z) = (i/2)(ln(1 - iz) - ln(1 + iz)) has poles where 1 + z^2 = 0, at z = i and z = -i, where it
+            // evaluates to an infinity, as ln(0) does: undefined there, as the tangent is where its cosine is 0.
+            // The condition said True, and arctan(x) - arctan(x) simplified to 0, which has a value at i.
+            // https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition => !(1 + Argument.Pow(2)).EqualTo(0);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
@@ -254,7 +258,9 @@ namespace AngouriMath
         
         public partial record Arccotanf
         {
-            private protected override Entity IntrinsicCondition => Boolean.True;
+            // arccot(z) = arctan(1/z), so its poles are arctan's, z = i and z = -i. At 0 it is pi/2.
+            // https://github.com/asc-community/AngouriMath/issues/2256
+            private protected override Entity IntrinsicCondition => !(1 + Argument.Pow(2)).EqualTo(0);
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
