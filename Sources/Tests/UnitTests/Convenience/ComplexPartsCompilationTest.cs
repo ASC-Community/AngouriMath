@@ -59,6 +59,34 @@ namespace AngouriMath.Tests.Convenience
             Assert.Equal(MathS.NaN, "arg(0)".ToEntity().Evaled);
         }
 
+        /// <summary>
+        /// The parts of a value that is not there are not there either. <c>x / x</c> at 0 compiles
+        /// to <c>NaN + NaN i</c>, its imaginary part to <c>NaN</c>, and the imaginary part of that
+        /// was <c>0</c>, a value where the interpreter has none.
+        /// </summary>
+        [Theory]
+        [InlineData("Im(Im(x / x))")]
+        [InlineData("Im(Re(x / x))")]
+        [InlineData("Re(Im(x / x))")]
+        [InlineData("Im(Im(sqrt(x) / sqrt(x)))")]
+        public void APartOfNoValueHasNoValue(string expression)
+        {
+            Assert.True(expression.ToEntity().Substitute("x", 0).Evaled.IsNaN);
+            Assert.True(double.IsNaN(expression.ToEntity().Compile("x").Call(0).Real), $"FastExpression gives {expression.ToEntity().Compile("x").Call(0)}");
+            Assert.True(double.IsNaN(expression.ToEntity().Compile<NumericsComplex, NumericsComplex>("x")(0).Real),
+                $"LINQ gives {expression.ToEntity().Compile<NumericsComplex, NumericsComplex>("x")(0)}");
+        }
+
+        /// <summary>A NaN in either part of an argument is the whole argument's.</summary>
+        [Theory]
+        [InlineData("Re(x)", 1, double.NaN)]
+        [InlineData("Im(x)", double.NaN, 1)]
+        public void ANaNInOnePartIsTheWholeNumbers(string expression, double re, double im)
+        {
+            Assert.True(double.IsNaN(expression.ToEntity().Compile("x").Call(new NumericsComplex(re, im)).Real));
+            Assert.True(double.IsNaN(expression.ToEntity().Compile<NumericsComplex, NumericsComplex>("x")(new NumericsComplex(re, im)).Real));
+        }
+
         /// <summary>Over doubles, the argument of a negative number is pi, and the imaginary part is 0.</summary>
         [Theory]
         [InlineData("arg(x)", -2, System.Math.PI)]
