@@ -72,6 +72,8 @@ namespace AngouriMath.Core
             CALL_DIV,
             CALL_MOD,
             CALL_POW,
+            // A power to a rational with an odd denominator below ten; Reference is 1 where its numerator is odd.
+            CALL_REAL_ROOT_POW,
             CALL_LOG,
             CALL_MAX,
             CALL_MIN,
@@ -230,6 +232,9 @@ namespace AngouriMath.Core
                     }
                     case InstructionType.CALL_POW:
                         stack.Push(AngouriMath.Core.Compilation.RealProducts.Power(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_REAL_ROOT_POW:
+                        stack.Push(AngouriMath.Core.Compilation.RealProducts.RealRootPower(stack.Pop(), stack.Pop(), instruction.Reference == 1));
                         break;
                     case InstructionType.CALL_SIN:
                         stack.Push(System.Numerics.Complex.Sin(stack.Pop()));

@@ -262,6 +262,14 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Modf => Operator(ExpressionType.Modulo,
                                  Operator(ExpressionType.Add, Operator(ExpressionType.Modulo, left, right), right),
                                  right),
+                // A rational exponent with an odd denominator below ten takes the real root of a negative
+                // real, as evaluation does: (-8)^(1/3) is -2, which was 1 + 1.73i, and NaN over double.
+                Powf { Exponent: Rational { ERational: var ratio } } when Core.Compilation.RealProducts.TakesTheRealRootOfANegative(ratio)
+                    && ShouldBeAtLeastDouble(left) is var newLeft
+                    && ShouldBeAtLeastDouble(right) is var newRight
+                    && (newLeft.Type == typeof(System.Numerics.Complex) || newLeft.Type == typeof(double))
+                    => Expression.Call(newLeft.Type == typeof(double) ? realRootPowerOfReals : realRootPower,
+                        newLeft, newRight, Expression.Constant(!ratio.Numerator.IsEven)),
                 Powf when 
                     ShouldBeAtLeastDouble(left) is var newLeft 
                     && ShouldBeAtLeastDouble(right) is var newRight
@@ -577,6 +585,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 : Expression.Call(realMembership, ConvertType(widened, typeof(double)), Expression.Constant((int)set));
         }
 
+        [ConstantField] private static readonly MethodInfo realRootPower =
+            ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, bool, System.Numerics.Complex>>)((a, b, odd) => Core.Compilation.RealProducts.RealRootPower(a, b, odd))).Body).Method;
+        [ConstantField] private static readonly MethodInfo realRootPowerOfReals =
+            ((MethodCallExpression)((Expression<Func<double, double, bool, double>>)((a, b, odd) => Core.Compilation.RealProducts.RealRootPower(a, b, odd))).Body).Method;
         [ConstantField] private static readonly MethodInfo complexRemainder =
             ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, System.Numerics.Complex>>)((a, b) => RealOnly.Mod(a, b))).Body).Method;
 
