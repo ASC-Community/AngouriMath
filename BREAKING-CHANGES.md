@@ -116,6 +116,18 @@ did, and `ln(x + 2) / ln(x + 3)` at 0 was `ln(2) / ln(3)`. With symbols it was n
 | `"limit(ln(a + 1/x) / ln(b + 1/x), x, +oo)".ToEntity().Simplify()` | `a / b` | `ln(a) / ln(b)` |
 | `"limit(ln(1 + x) / ln(y + x), x, 0)".ToEntity().Simplify()` | `1 / y` | `0 provided not ln(y) = 0` |
 
+### A cube shifted is solved
+
+**Silent: a cubic `a(x + h)^3 = k` written out, with `b^2 = 3ac`, is solved where it was answered `{ }`.** Cardano's
+`C^3` is `(D1 + sqrt(D1^2 - 4 D0^3)) / 2`, and with `D0 = 0` that is `(D1 + |D1|) / 2`, which is 0 for a negative `D1`.
+Every root was then taken for `-b/(3a)`, which is none, and the empty set claimed there was no root. With `D0 = 0`, `C` is a
+cube root of `D1` itself.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(x + 1)^3 = 2".ToEntity().Solve("x")` | `{ }` | `{ -(3 + -3 * 2 ^ (1/3)) / 3, … }`, the three cube roots of 2 less 1 |
+| `"3x^3 + 9x^2 + 9x + 1 = 0".ToEntity().Solve("x")` | `{ }` | `{ -(9 + -3 * 18 ^ (1/3)) / 3 / 3, … }` |
+
 ### A quadratic whose discriminant is a square is answered without the root
 
 **Silent: the same roots, written as what they are.** The quadratic formula wrote `sqrt(b^2 - 4ac)` whatever the

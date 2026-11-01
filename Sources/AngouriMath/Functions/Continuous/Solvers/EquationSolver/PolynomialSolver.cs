@@ -239,10 +239,23 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var u3 = Rational.Create(-1, 2) - coeff;
             var D0 = MathS.Sqr(b) - 3 * a * c;
             var D1 = (2 * MathS.Pow(b, 3) - 9 * a * b * c + 27 * MathS.Sqr(a) * d).InnerSimplified;
-            var C = MathS.Pow((D1 + MathS.Sqrt(MathS.Sqr(D1) - 4 * MathS.Pow(D0, 3))) / 2, Rational.Create(1, 3));
+            // C is a cube root of either root of C^6 - D1 C^3 + D0^3 = 0, and only one that is not 0
+            // can be divided by. With D0 = 0 those roots are D1 and 0, and the square root of D1^2
+            // is |D1|, so for a negative D1 the sum below is 0: a(x + h)^3 = k, a cube shifted, had
+            // C = 0 and every root taken for -b/(3a), which is none, and (x + 1)^3 = 2 was answered
+            // { }. With D0 = 0 a cube root of D1 itself is C, and the roots are -(b + u C)/(3a),
+            // D0/C being 0; that is -b/(3a) three times where D1 is 0 as well. For a negative D1 the
+            // cube root is written as the negative of the cube root of -D1, which is a cube root of
+            // D1 whichever root of a negative number a power is read as.
+            var shifted = D0.Evaled == 0;
+            var C = !shifted
+                ? MathS.Pow((D1 + MathS.Sqrt(MathS.Sqr(D1) - 4 * MathS.Pow(D0, 3))) / 2, Rational.Create(1, 3))
+                : D1.Evaled is Real { IsNegative: true }
+                    ? -MathS.Pow(-D1, Rational.Create(1, 3))
+                    : MathS.Pow(D1, Rational.Create(1, 3));
 
             return new[] { u1, u2, u3 }.Select(uk =>
-                C.Evaled == 0 && D0.Evaled == 0 ? -(b + uk * C) / 3 / a : -(b + uk * C + D0 / C / uk) / 3 / a);
+                shifted ? -(b + uk * C) / 3 / a : -(b + uk * C + D0 / C / uk) / 3 / a);
         }
 
         [ConstantField] private static readonly int[] sqrtsOf1 = { -1, 1 };
