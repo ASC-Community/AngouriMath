@@ -233,6 +233,21 @@ carried it once combined: a second derivative of `1/sqrt(x^2 + 13)` stated `not 
 | `"(a provided b > 0) + (c provided b > 0)".ToEntity().InnerSimplified` | `a + c provided b > 0 and b > 0` | `a + c provided b > 0` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
 
+### A root in exact numbers is put back to the working precision
+
+**Silent: a number that is not a root, in exact numbers, is no longer answered as one.** Every root is put back into the
+equation, and one was dropped only where it left more than a hundredth of the largest term. That bound is for roots
+found numerically, which are only as accurate as the search. An exact root in an equation of exact numbers is evaluated
+to `MathS.Settings.DecimalPrecisionContext`'s digits, so a true root leaves only rounding, and it is now held to half of
+those digits. `(3x - 4) sqrt(x) + 3 + 3x - 4x^2 = 0` is solved by squaring, and one of the roots of the quartic that
+gives, 1.3233 in radicals, leaves 0.069 against a largest term of 7. A root with a function, a constant like `pi`, or a
+decimal in it is still held to a hundredth. No issue was filed; a check of generated equations in `sqrt(x)` beside
+powers of `x` found it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(3x - 4) * sqrt(x) + 3 + 3x - 4x^2 = 0".Solve("x")` | four roots, one of them 1.3233…, which is not a root | the other three |
+
 ### A limit of a logarithm that is not decided is left unevaluated
 
 **Not silent: what overflowed the stack now returns.** A limit of a logarithm whose argument has no limit, as
