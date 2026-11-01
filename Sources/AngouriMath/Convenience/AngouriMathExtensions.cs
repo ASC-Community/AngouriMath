@@ -219,7 +219,10 @@ namespace AngouriMath.Extensions
         /// </code>
         /// </example>
         public static Set Unite(this IEnumerable<Set> sets)
-            => sets.Any() ? sets.Aggregate((a, b) => MathS.Union(a, b)) : Empty;
+            // Enumerated once. Asking Any and then Aggregate of a lazy sequence computed its first
+            // element twice, and the solvers pass one: each root's equation in a union of solves
+            // was solved once to see that there was a first and again to unite it.
+            => sets.ToArray() is { Length: > 0 } array ? array.Aggregate((a, b) => MathS.Union(a, b)) : Empty;
 
         /// <summary>
         /// Computes the intersection of your <see cref="IEnumerable"/>'s and makes it one <see cref="Set"/>.
@@ -243,7 +246,8 @@ namespace AngouriMath.Extensions
         /// </code>
         /// </example>
         public static Set Intersect(this IEnumerable<Set> sets)
-            => sets.Any() ? sets.Aggregate((a, b) => MathS.Intersection(a, b)) : Empty;
+            // Enumerated once, as Unite is.
+            => sets.ToArray() is { Length: > 0 } array ? array.Aggregate((a, b) => MathS.Intersection(a, b)) : Empty;
 
         /// <summary>
         /// Parses the expression into <see cref="Entity"/>.
