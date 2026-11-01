@@ -239,10 +239,23 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var u3 = Rational.Create(-1, 2) - coeff;
             var D0 = MathS.Sqr(b) - 3 * a * c;
             var D1 = (2 * MathS.Pow(b, 3) - 9 * a * b * c + 27 * MathS.Sqr(a) * d).InnerSimplified;
-            var C = MathS.Pow((D1 + MathS.Sqrt(MathS.Sqr(D1) - 4 * MathS.Pow(D0, 3))) / 2, Rational.Create(1, 3));
+            // C is a cube root of either root of C^6 - D1 C^3 + D0^3 = 0, and only one that is not 0
+            // can be divided by. With D0 = 0 those roots are D1 and 0, and the square root of D1^2
+            // is |D1|, so for a negative D1 the sum below is 0: a(x + h)^3 = k, a cube shifted, had
+            // C = 0 and every root taken for -b/(3a), which is none, and (x + 1)^3 = 2 was answered
+            // { }. With D0 = 0 a cube root of D1 itself is C, and the roots are -(b + u C)/(3a),
+            // D0/C being 0; that is -b/(3a) three times where D1 is 0 as well. For a negative D1 the
+            // cube root is written as the negative of the cube root of -D1, which is a cube root of
+            // D1 whichever root of a negative number a power is read as.
+            var shifted = D0.Evaled == 0;
+            var C = !shifted
+                ? MathS.Pow((D1 + MathS.Sqrt(MathS.Sqr(D1) - 4 * MathS.Pow(D0, 3))) / 2, Rational.Create(1, 3))
+                : D1.Evaled is Real { IsNegative: true }
+                    ? -MathS.Pow(-D1, Rational.Create(1, 3))
+                    : MathS.Pow(D1, Rational.Create(1, 3));
 
             return new[] { u1, u2, u3 }.Select(uk =>
-                C.Evaled == 0 && D0.Evaled == 0 ? -(b + uk * C) / 3 / a : -(b + uk * C + D0 / C / uk) / 3 / a);
+                shifted ? -(b + uk * C) / 3 / a : -(b + uk * C + D0 / C / uk) / 3 / a);
         }
 
         [ConstantField] private static readonly int[] sqrtsOf1 = { -1, 1 };
@@ -268,9 +281,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var gamma = (-3 * MathS.Pow(b, 4) / (256 * MathS.Pow(a, 4)) + MathS.Sqr(b) * c / (16 * MathS.Pow(a, 3)) - (b * d) / (4 * MathS.Sqr(a)) + e / a)
                 .InnerSimplified;
 
+            // Biquadratic once depressed: y^4 + alpha y^2 + gamma = 0 for y = x + b/(4a), so x is
+            // the root of the quadratic in y^2 shifted back by b/(4a). The shift was written
+            // -b / 4 * a, which is -b a / 4, and for a leading coefficient other than 1 or -1 every
+            // candidate was off and failed its check: 31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0, with four
+            // real roots, was answered { }.
             if (beta.Evaled == 0)
                 return sqrtsOf1.SelectMany(_ => sqrtsOf1,
-                    (s, t) => -b / 4 * a + s * MathS.Sqrt((-alpha + t * MathS.Sqrt(MathS.Sqr(alpha) - 4 * gamma)) / 2));
+                    (s, t) => -b / (4 * a) + s * MathS.Sqrt((-alpha + t * MathS.Sqrt(MathS.Sqr(alpha) - 4 * gamma)) / 2));
 
             var oneThird = Rational.Create(1, 3);
             var P = (-MathS.Sqr(alpha) / 12 - gamma)

@@ -72,6 +72,18 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A quartic that is biquadratic once depressed is solved
+
+**Silent: a quartic whose depressed form `y^4 + alpha y^2 + gamma`, for `y = x + b/(4a)`, has no cubic term is solved,
+where it was answered `{ }`.** Its roots were shifted back by `-b a / 4` where the shift is `-b/(4a)`, so with a leading
+coefficient other than `1` or `-1` every candidate was off and failed its check, and the empty set claimed there was no
+root. An equation in a square root whose squared form is such a quartic was answered `{ }` with it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/2 + -sqrt((27/62 + -8/31 * sqrt(2)) / 2), … }`, four real roots |
+| `"x^2 - x - 1 = 4x*sqrt(2x^2 - 4x + 2)".ToEntity().Solve("x")` | `{ }` | `{ 1/2 + -sqrt((27/62 + 8/31 * sqrt(2)) / 2) }` |
+
 ### A quotient of logarithms is differentiated only where both diverge
 
 **Silent: a limit of a quotient of logarithms whose divisor tends to 0 is no longer answered by l'Hopital's rule, which
@@ -116,6 +128,18 @@ did, and `ln(x + 2) / ln(x + 3)` at 0 was `ln(2) / ln(3)`. With symbols it was n
 | `"limit(ln(a + 1/x) / ln(b + 1/x), x, +oo)".ToEntity().Simplify()` | `a / b` | `ln(a) / ln(b)` |
 | `"limit(ln(1 + x) / ln(y + x), x, 0)".ToEntity().Simplify()` | `1 / y` | `0 provided not ln(y) = 0` |
 
+### A cube shifted is solved
+
+**Silent: a cubic `a(x + h)^3 = k` written out, with `b^2 = 3ac`, is solved where it was answered `{ }`.** Cardano's
+`C^3` is `(D1 + sqrt(D1^2 - 4 D0^3)) / 2`, and with `D0 = 0` that is `(D1 + |D1|) / 2`, which is 0 for a negative `D1`.
+Every root was then taken for `-b/(3a)`, which is none, and the empty set claimed there was no root. With `D0 = 0`, `C` is a
+cube root of `D1` itself.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(x + 1)^3 = 2".ToEntity().Solve("x")` | `{ }` | `{ -(3 + -3 * 2 ^ (1/3)) / 3, … }`, the three cube roots of 2 less 1 |
+| `"3x^3 + 9x^2 + 9x + 1 = 0".ToEntity().Solve("x")` | `{ }` | `{ -(9 + -3 * 18 ^ (1/3)) / 3 / 3, … }` |
+
 ### A quadratic whose discriminant is a square is answered without the root
 
 **Silent: the same roots, written as what they are.** The quadratic formula wrote `sqrt(b^2 - 4ac)` whatever the
@@ -141,8 +165,11 @@ the square root the solver takes after solving for `x^2`, where an equation has 
 for `0 < p < 1` its values lie in the sector `-p pi < arg <= p pi`, with `0`, and for `-1 < p < 0` in
 `p pi <= arg < -p pi`, without `0`. `x^p = a` was solved to `a^(1/p)` with no condition, which is no root where `a` is
 outside the sector: `sqrt(x) = a` was `{ a ^ 2 }`, and at `a = -1` that is `1`, whose square root is `1` and not `-1`. The root now carries
-the sector, written with `arg`, as `abs`'s inversion carries its own condition. A number on the other side is decided
-as before, and `|p| > 1` needs no condition, since every value is then a power. What the equation is provided is known
+the sector, written with `arg`, as `abs`'s inversion carries its own condition. A negative real to a rational power
+whose denominator is odd and below ten is the real root to the numerator, as the evaluator gives it, `(-8)^(1/3)` being
+`-2`: with an odd numerator the negative reals are values as well, so `x^(1/3) = -2` is still `{ -8 }`, and with an even
+one a positive value has a negative preimage too. A number on the other side is decided as before, and `|p| > 1` needs
+no condition, since every value is then a power. What the equation is provided is known
 while it is solved, as a provided expression is differentiated: a value known to be real, or declared real, has the
 half-line for its sector, one known to lie on it needs no condition, and one known to lie off it has no root. A conjunct of a condition that
 another conjunct already forces is not stated, so `a > -5 and a >= 0` is `a >= 0`, and a condition stated twice is
@@ -153,7 +180,8 @@ carried it once combined: a second derivative of `1/sqrt(x^2 + 13)` stated `not 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"sqrt(x) = a".ToEntity().Solve("x")` | `{ a ^ 2 }` | `{ a ^ 2 provided a = 0 or -1/2 * pi < arg(a) and arg(a) <= 1/2 * pi }` |
-| `"x^(1/3) = a".ToEntity().Solve("x")` | `{ a ^ 3 }` | `{ a ^ 3 provided a = 0 or -1/3 * pi < arg(a) and arg(a) <= 1/3 * pi }` |
+| `"x^(1/3) = a".ToEntity().Solve("x")` | `{ a ^ 3 }` | `{ a ^ 3 provided a = 0 or -1/3 * pi < arg(a) and arg(a) <= 1/3 * pi or arg(a) = pi }` |
+| `"x^(2/3) = 4".ToEntity().Solve("x")` | `{ 8 }` | `{ 8, -8 }` |
 | `"x^(-1/2) = a".ToEntity().Solve("x")` | `{ a ^ (-2) }` | `{ a ^ (-2) provided not a = 0 and -1/2 * pi <= arg(a) and arg(a) < 1/2 * pi }` |
 | `"(sqrt(x) = a) provided a in RR".ToEntity().Solve("x")` | `{ a ^ 2 provided a in RR }` | `{ a ^ 2 provided a in RR and a >= 0 }` |
 | `"(sqrt(x) = a) provided a > 0".ToEntity().Solve("x")` | `{ a ^ 2 provided a > 0 }` | `{ a ^ 2 provided a > 0 }` |
