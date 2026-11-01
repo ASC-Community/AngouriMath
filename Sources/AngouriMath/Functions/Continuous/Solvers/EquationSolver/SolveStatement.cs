@@ -42,9 +42,32 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// equation as the caller wrote it.
         /// </remarks>
         internal static Set WithoutSpuriousRoots(Set roots, Entity equation, Variable x)
-            => roots is FiniteSet finite && finite.Any(root => IsSpurious(equation, x, root))
-                ? finite.Where(root => !IsSpurious(equation, x, root)).ToSet()
-                : roots;
+        {
+            if (roots is not FiniteSet finite || !finite.Any(root => IsSpurious(equation, x, root)))
+                return roots;
+            var kept = finite.Where(root => !IsSpurious(equation, x, root)).ToSet();
+            // A polynomial of degree one or more has a root over the complex numbers, so where every
+            // candidate for one fails, what failed is the solver, and the empty set left would claim
+            // there is no root: (x + 1)^3 = 2 was { } while Cardano's C was 0 for a shifted cube, and
+            // 31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0 while a biquadratic quartic was shifted by -b a / 4.
+            // Left unsolved instead, which says only that the roots were not found.
+            if (kept.Count == 0 && IsAPolynomialWithARoot(equation, x))
+                return new ConditionalSet(x, equation is Minusf(var left, var right) ? left.Equalizes(right) : equation.Equalizes(0));
+            return kept;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="equation"/> is a polynomial in <paramref name="x"/> with numbers
+        /// for coefficients and a degree of one or more, read over the complex numbers, where such a
+        /// polynomial has a root.
+        /// </summary>
+        private static bool IsAPolynomialWithARoot(Entity equation, Variable x)
+            => MathS.Settings.Codomain.Value != Core.Domain.Real
+                && TreeAnalyzer.TryGetPolynomial(equation, x, out var monomials)
+                && monomials.Keys.All(power => power.Sign >= 0)
+                && monomials.Where(monomial => monomial.Key.Sign > 0)
+                    .Any(monomial => monomial.Value.Evaled is Number.Complex { IsZero: false })
+                && monomials.Values.All(coefficient => coefficient.Evaled is Number.Complex { IsFinite: true });
 
         /// <summary>
         /// Answers the condition itself where a root denies the independence the calculus
