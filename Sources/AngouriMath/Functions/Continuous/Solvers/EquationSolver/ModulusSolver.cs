@@ -37,6 +37,28 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         internal static bool IsRealForEveryComplex(Entity expr, Variable x)
             => expr.ContainsNode(x) && RealWhereverItIs(expr, x);
 
+        /// <summary>
+        /// Whether <paramref name="x"/> is both inside a function that is not holomorphic -- a
+        /// modulus, a signum, a conjugate, a real or imaginary part, an argument -- and outside every
+        /// such function somewhere in <paramref name="expr"/>.
+        /// </summary>
+        /// <remarks>
+        /// Newton's method assumes a holomorphic function, and over the complex numbers
+        /// <c>|u| = +-u</c> only where <c>u</c> is real, which a root need not make it:
+        /// <c>x^2 + 1 = |x|</c> has roots at <c>+-0.618 i</c>, where <c>|x|</c> is <c>0.618</c>. So
+        /// neither the search nor a split by the sign finds every root, and the search's near-copies
+        /// of a root came back as roots: <c>x^2/|1 - x^2| = x</c> had <c>1.618 + 1.7e-9 i</c> beside
+        /// <c>1.618</c>. https://github.com/asc-community/AngouriMath/issues/2139
+        /// </remarks>
+        internal static bool IsInsideAndOutsideAFunctionThatIsNotHolomorphic(Entity expr, Variable x)
+            => expr.Nodes.Any(node => IsNotHolomorphic(node) && node.ContainsNode(x)) && IsOutsideThem(expr, x);
+
+        private static bool IsNotHolomorphic(Entity node)
+            => node is Absf or Signumf or Conjugatef or Ref or Imf or Argf;
+
+        private static bool IsOutsideThem(Entity expr, Variable x)
+            => expr == x || !IsNotHolomorphic(expr) && expr.DirectChildren.Any(child => IsOutsideThem(child, x));
+
         private static bool RealWhereverItIs(Entity expr, Variable x)
             => expr switch
             {
