@@ -19,6 +19,12 @@ namespace AngouriMath.Tests.Algebra
     /// solution. <c>sqrt(x) = a</c> was answered <c>{ a ^ 2 }</c>, which is wrong at
     /// <c>a = -1</c>: <c>sqrt((-1)^2)</c> is <c>1</c>.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/212">#212</a>
+    /// <para/>
+    /// A negative real to a rational power with an odd denominator below ten is the real root to
+    /// the numerator, which is what the evaluator gives: <c>(-8)^(1/3)</c> is <c>-2</c>. So with
+    /// an odd numerator the negative reals are values too, and <c>x^(1/3) = -2</c> is
+    /// <c>x = -8</c>, which the sector alone answered <c>{ }</c>; and with an even one a positive
+    /// value has a negative preimage as well, <c>(-8)^(2/3) = 4</c>.
     /// </summary>
     [Trait("Area", "Algebra")]
     public sealed class FractionalPowerRangeTest
@@ -40,7 +46,8 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("sqrt(x) = a", "-i", false)]
         [InlineData("sqrt(x) = a", "-1", false)]
         [InlineData("x^(1/3) = a", "1 + i", true)]
-        [InlineData("x^(1/3) = a", "-1", false)]
+        [InlineData("x^(1/3) = a", "-1", true)]
+        [InlineData("x^(1/3) = a", "-i", false)]
         [InlineData("x^(-1/2) = a", "-i", true)]
         [InlineData("x^(-1/2) = a", "i", false)]
         [InlineData("x^(-1/2) = a", "0", false)]
@@ -63,6 +70,14 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("sqrt(x) = -1", "{ }")]
         [InlineData("sqrt(x) = i", "{ -1 }")]
         [InlineData("sqrt(x) = -i", "{ }")]
+        [InlineData("x^(1/3) = -2", "{ -8 }")]
+        [InlineData("x^(1/5) = -2", "{ -32 }")]
+        [InlineData("x^(-1/3) = -1/2", "{ -8 }")]
+        [InlineData("x^(3/5) = -8", "{ -32 }")]
+        [InlineData("x^(2/3) = 4", "{ 8, -8 }")]
+        [InlineData("x^(4/3) = 16", "{ 8, -8 }")]
+        [InlineData("x^(2/3) = -4", "{ }")]
+        [InlineData("x^(1/11) = -1", "{ }")]
         public void ANumberIsDecided(string equation, string expected)
             => Assert.Equal(expected.ToEntity(), equation.ToEntity().Solve("x"));
 

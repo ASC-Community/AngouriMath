@@ -116,9 +116,16 @@ namespace AngouriMath
                             return Enumerable.Empty<Entity>();
                         return Together(Number.GetAllRootsOf1(pow.Abs()).Select(root => Base.Invert(root * MathS.Pow(value, 1 / Exponent), x)));
                     }
-                    else
-                        return Base.Invert(MathS.Pow(value, 1 / Exponent), x)
-                            ?.Select(root => root.Provided(InTheRange(value)));
+                    var principal = Base.Invert(MathS.Pow(value, 1 / Exponent), x)
+                        ?.Select(root => root.Provided(InTheRange(value)));
+                    // With an even numerator a negative base has a positive power, (-8)^(2/3) = 4,
+                    // so a positive value has the negative of its principal preimage for a
+                    // preimage as well: x^(2/3) = 4 is 8 and -8.
+                    if (principal is { } && TakesTheRealRootOfANegative(out var oddNumerator) && !oddNumerator)
+                        return Base.Invert(-MathS.Pow(value, 1 / Exponent), x) is { } negative
+                            ? principal.Concat(negative.Select(root => root.Provided(new Greaterf(value, Integer.Zero))))
+                            : null;
+                    return principal;
                 }  
                 // a ^ x = value => x = log(a, value)
                 // TODO: determine how we should return periodic roots as
@@ -138,12 +145,21 @@ namespace AngouriMath
                 if (Exponent.Evaled is not Real { EDecimal.IsFinite: true } p
                     || p.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.One) >= 0)
                     return Boolean.True;
+                // A negative base with an odd numerator has a negative power, (-8)^(1/3) = -2, so
+                // the negative reals are in the range as well, and x^(1/3) = -2 is x = -8, as it
+                // was before the sector was stated.
+                var reachesTheNegatives = TakesTheRealRootOfANegative(out var oddNumerator) && oddNumerator;
                 // Where the value is known to be real -- by its codomain, or by what the equation
                 // it came from was provided -- arg(value) is 0 or pi, so the sector is the half-line
                 // value >= 0 for p > 0 and value > 0 for p < 0, and nothing is stated where that is
-                // known as well: sqrt(x) = a provided a > 0 is a ^ 2 provided a > 0.
-                Entity halfLine = p.IsPositive ? new GreaterOrEqualf(value, Integer.Zero) : new Greaterf(value, Integer.Zero);
-                Entity outside = p.IsPositive ? new Lessf(value, Integer.Zero) : new LessOrEqualf(value, Integer.Zero);
+                // known as well: sqrt(x) = a provided a > 0 is a ^ 2 provided a > 0. With the
+                // negatives it is every real, or every real but 0.
+                Entity halfLine = reachesTheNegatives
+                    ? (p.IsPositive ? Boolean.True : !value.EqualTo(Integer.Zero))
+                    : p.IsPositive ? new GreaterOrEqualf(value, Integer.Zero) : new Greaterf(value, Integer.Zero);
+                Entity outside = reachesTheNegatives
+                    ? (p.IsPositive ? Boolean.False : value.EqualTo(Integer.Zero))
+                    : p.IsPositive ? new Lessf(value, Integer.Zero) : new LessOrEqualf(value, Integer.Zero);
                 if (TreeAnalyzer.IsKnown(halfLine))
                     return Boolean.True;
                 if (TreeAnalyzer.IsKnown(outside))
@@ -153,9 +169,26 @@ namespace AngouriMath
                 var bound = (Exponent * MathS.pi).InnerSimplified;
                 var opposite = ((-Exponent).InnerSimplified * MathS.pi).InnerSimplified;
                 var angle = MathS.Arg(value);
-                return p.IsPositive
+                Entity sector = p.IsPositive
                     ? value.EqualTo(Integer.Zero) | (new Lessf(opposite, angle) & new LessOrEqualf(angle, bound))
                     : !value.EqualTo(Integer.Zero) & new LessOrEqualf(bound, angle) & new Lessf(angle, opposite);
+                return reachesTheNegatives ? sector | angle.EqualTo(MathS.pi) : sector;
+            }
+
+            /// <summary>
+            /// Whether a negative real base has a real power, as the evaluator takes it: a rational
+            /// power whose denominator is odd and below ten is the real root of a negative real to
+            /// the numerator, as Number.Pow's search for a good root finds it, and any other is the
+            /// principal power. (-8)^(1/3) is -2, (-8)^(2/3) is 4, and (-1)^(1/11) is not real.
+            /// </summary>
+            private bool TakesTheRealRootOfANegative(out bool oddNumerator)
+            {
+                oddNumerator = false;
+                if (Exponent is not Rational { ERational: var ratio } || ratio.Denominator.IsEven
+                    || ratio.Denominator.CompareTo(PeterO.Numbers.EInteger.FromInt32(10)) >= 0)
+                    return false;
+                oddNumerator = !ratio.Numerator.IsEven;
+                return true;
             }
         }
 
