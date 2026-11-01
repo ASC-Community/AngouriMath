@@ -1049,20 +1049,26 @@ unchanged ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
 | `"max(x, x)".ToEntity().Simplify()` | `x` | `x provided x in RR` |
 | `"max(x, 2)".ToEntity().DomainCondition` | `True` | `x in RR` |
 
-### Over the complex numbers, an equation in and out of a modulus is left unsolved
+### Over the complex numbers, an equation in and out of a modulus is solved in the parts of `x`
 
-**Silent: an equation with `x` inside `abs`, `sgn`, `conj`, `Re`, `Im` or `arg` and outside it too is left unsolved
-in the complex codomain, the default, where a numerical search answered it.** Newton's method assumes a holomorphic
-function, and over the complex numbers `|u| = ±u` only where `u` is real, which a root need not make it, so neither
-the search nor a split by the sign finds every root. The search's near-copies of a root came back as roots. Where it
-happened to be right, as for `x * abs(x) = 4`, the answer is given up with the rest; over the reals each is still
-solved by cases, exactly ([#2139](https://github.com/asc-community/AngouriMath/issues/2139)).
+**Silent: an equation with `x` inside `abs`, `sgn`, `conj`, `Re` or `Im` and outside it too is solved exactly in the
+complex codomain, the default, where a numerical search answered it in decimals with near-copies of a root that solve
+nothing.** Newton's method assumes a holomorphic function, and over the complex numbers `|u| = ±u` only where `u` is
+real, which a root need not make it, so a split by the sign misses roots too: `x^2 + 1 = abs(x)` is solved by
+`±0.618… i`. With `x = a + b i` and each modulus a real `t ≥ 0` with `t^2 = (Re u)^2 + (Im u)^2`, the equation is a
+system of polynomial equations in `a`, `b` and the `t`s, solved by a Gröbner basis, and its real solutions are the
+roots; `sgn(u)` is `u / |u|` where `u` is not zero and `0` where it is, and both cases are solved. Where that system
+has more than finitely many solutions, roots that are not found exactly, or more than 32 by Bézout's bound, the
+equation is left unsolved, as it is with `arg` in it
+([#2139](https://github.com/asc-community/AngouriMath/issues/2139)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
-| `"x^2/abs(1-x^2) = x".ToEntity().Solve("x")` | `{ 0, 0.618…, 1.618…, 1.618… + 1.7E-9i, 1.618… + 9.9E-8i }` | `{ x : x ^ 2 / abs(1 - x ^ 2) = x }` |
-| `"abs(x^2 - 4) = 3x".ToEntity().Solve("x")` | `{ 1, 4, 4.0000000000000062… + 1.6E-7i }` | `{ x : abs(x ^ 2 - 4) = 3 * x }` |
-| `"x * abs(x) = 4".ToEntity().Solve("x")` | `{ 2 }` | `{ x : x * abs(x) = 4 }` |
+| `"x^2/abs(1-x^2) = x".ToEntity().Solve("x")` | `{ 0, 0.618…, 1.618…, 1.618… + 1.7E-9i, 1.618… + 9.9E-8i }` | `{ 0, (1 + sqrt(5)) / 2, (sqrt(5) - 1) / 2 }` |
+| `"abs(x^2 - 4) = 3x".ToEntity().Solve("x")` | `{ 1, 4, 4.0000000000000062… + 1.6E-7i }` | `{ 1, 4 }` |
+| `"1/abs(x) = x^2".ToEntity().Solve("x")` | `{ -1, -0.999999… - 2.1E-7i, -0.999999… + 2.1E-7i, …, 1 }`, eight entries | `{ 1, -1 }` |
+| `"x^2 + 1 = abs(x)".ToEntity().Solve("x")` | `{ x : x ^ 2 + 1 = abs(x) }` | `{ 1/2 * i * (sqrt(5) - 1), 1/2 * i * (1 - sqrt(5)) }` |
+| `"x^5 = abs(x) + 1".ToEntity().Solve("x")` | `{ -0.944368… - 0.686124…i, …, 1.167303… }`, eight entries for five roots | `{ x : x ^ 5 = abs(x) + 1 }` |
 
 ### `conjugate`, `conj` and `arg` are functions
 

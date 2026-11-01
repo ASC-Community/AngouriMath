@@ -147,6 +147,18 @@ namespace AngouriMath.Functions
             return degree;
         }
 
+        /// <summary>The highest total degree of a term; zero for a constant.</summary>
+        internal int Degree
+        {
+            get
+            {
+                var degree = 0;
+                foreach (var monomial in terms.Keys)
+                    degree = System.Math.Max(degree, TotalDegree(monomial));
+                return degree;
+            }
+        }
+
         /// <summary>The greatest monomial in lexicographic order; zero if there is none.</summary>
         private ulong LeadingMonomial()
         {
