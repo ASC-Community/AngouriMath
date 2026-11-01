@@ -224,6 +224,19 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     return TreeAnalyzer.Assuming(predicate, () => Solve(expression, x, compensateSolving)).Filter(predicate, x);
                 case Piecewise p:
                     return EquationSolver.SolvePiecewise(p, x, (e, x) => Solve(e, x, compensateSolving));
+                // A quotient is zero exactly where its numerator is and its denominator is not
+                // zero: (x^2 - x)/(x^2 + x) = 0 is x = 1, x = 0 being a zero of both. Left to the
+                // spellings below, (18x^2 - 3x^3 - 4x^4 + x^5)/(9x^2 - 6x^4 + x^6) = 0 was taken
+                // by a substitution t = x^2 into powers t^(3/2) and t^(5/2) and given to Newton's
+                // method, which answered three near-copies of 3 beside it and left out -2. Only
+                // where the numerator's roots are finitely many numbers, each of which can be put
+                // into the denominator; anything else is left to the routes below.
+                case Divf(var numerator, var denominator)
+                    when numerator.ContainsNode(x) && denominator.ContainsNode(x)
+                         && Solve(numerator, x, compensateSolving) is FiniteSet zeros
+                         && zeros.All(root => !root.Vars.Any()):
+                    return zeros.Where(root => denominator.Substitute(x, root).Evaled is not Complex value
+                        || value.IsFinite && !(value is Rational rational ? rational.IsZero : IsZero(value))).ToSet();
                 // A product is zero exactly where one of its factors is. Without this the
                 // factors are expanded back into a polynomial and the equation is answered
                 // by the general formula for whatever degree that turns out to be, so
