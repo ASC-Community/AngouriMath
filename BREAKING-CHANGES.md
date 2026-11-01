@@ -72,6 +72,27 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A polynomial with no roots in closed form is answered with all of them
+
+**Silent: a polynomial equation with rational coefficients and no roots in closed form is answered with every root,
+where it could be answered with some.** Two defects lost them. An equation in powers of `x` was solved through `x` to
+the least of its powers, so `x^5 - 30x^4 + 1` was written in `t = x^4` with `x^5` as `t^(5/4)`, which is not `x^5` off
+the positive reals; the substitution is now `x` to the greatest common divisor of the powers, and none where that is 1.
+And where no route writes the roots in radicals, a polynomial went to Newton's method. It starts from points inside a
+bounded region and answered the roots it found there as if they were all. `x^5 - 30x^4 + 1 = 0` has three real roots,
+one of them near 30, and two off the real line, and was answered with one root. The roots now come from the
+Durand–Kerner iteration, which settles every root of each square-free part at once or answers nothing, to
+`MathS.Settings.DecimalPrecisionContext`'s digits. So a polynomial Newton's method did answer in full has the same roots
+with more digits. No issue was filed; it was found following an equation in `x^(1/3)` that cubes to a polynomial with a
+root near 23.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^5 - 30x^4 + 1 = 0".Solve("x")` | one root | five roots, one of them `29.9999987…` |
+| `"x^7 - 30x^6 + 1 = 0".Solve("x")` | one root | seven roots |
+| `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
+| `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
+
 ### A quartic that is biquadratic once depressed is solved
 
 **Silent: a quartic whose depressed form `y^4 + alpha y^2 + gamma`, for `y = x + b/(4a)`, has no cubic term is solved,
