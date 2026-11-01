@@ -30,9 +30,15 @@ namespace AngouriMath.Numerics
         private static double Arg(double re, double im)
             => re == 0 && im == 0 ? double.NaN : Math.Atan2(im == 0 ? 0.0 : im, re == 0 ? 0.0 : re);
 
-        public static NumericsComplex Re(NumericsComplex z) => z.Real;
+        /// <summary>
+        /// The real and the imaginary part, which a number with no value does not have either: a
+        /// NaN in one part is the whole number's, as a NaN over the doubles has an imaginary part
+        /// of NaN. Taking only the other part gave <c>Im(Im(x / x))</c> the value 0 at 0, where
+        /// <c>x / x</c> has none.
+        /// </summary>
+        public static NumericsComplex Re(NumericsComplex z) => double.IsNaN(z.Imaginary) ? double.NaN : z.Real;
         public static double Re(double x) => x;
-        public static NumericsComplex Im(NumericsComplex z) => z.Imaginary;
+        public static NumericsComplex Im(NumericsComplex z) => double.IsNaN(z.Real) ? double.NaN : z.Imaginary;
         public static double Im(double x) => double.IsNaN(x) ? double.NaN : 0;
     }
 }
