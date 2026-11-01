@@ -63,7 +63,16 @@ jobs:
           dotnet pack -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
           cd bin/Release
           dotnet nuget push AngouriMath.FSharp.${{ steps.version.outputs.version }}.nupkg --api-key ${{ secrets.NUGET_KEY }} --source nuget.org
-          
+
+      - name: 'Pack and publish AngouriMath.UnitsNet'
+        run: |
+          cd Sources/Wrappers/AngouriMath.UnitsNet
+          dotnet restore
+          dotnet build -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
+          dotnet pack -c Release -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.file_version }}
+          cd bin/Release
+          dotnet nuget push AngouriMath.UnitsNet.${{ steps.version.outputs.version }}.nupkg --api-key ${{ secrets.NUGET_KEY }} --source nuget.org
+
       - name: 'Pack and publish AngouriMath.Interactive'
         run: |
           cd Sources/Wrappers/AngouriMath.Interactive

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="$(MSBuildThisFileDirectory)/../../Package.Build.props" />
+
+  <!--
+  UnitsNet's quantities and units as AngouriMath dimensions. A package of its own, because it adds a
+  dependency the kernel does not have: clause (D) of Packaging.md section 4.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>unitsnet.key</AssemblyOriginatorKeyFile>
+    <Description>UnitsNet's quantities and units as AngouriMath dimensions: check a formula's units with UnitsNet's units, and name the quantities a dimension can be. https://am.angouri.org</Description>
+    <PackageTags>$(PackageTags), unitsnet, units, dimensional analysis</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UnitsNet" Version="5.75.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AngouriMath\AngouriMath.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -12,16 +12,17 @@ quoting a figure at a later commit: a report records a build, not a repository.
 
 ---
 
-## 1. The four packages that ship
+## 1. The five packages that ship
 
 `.github/workflows/Nuget.yml` fires on `release: published`, takes the version from the tag, and has
-exactly four pack-and-push steps. That workflow is the definition of "published"; a project's
+exactly five pack-and-push steps. That workflow is the definition of "published"; a project's
 settings only decide whether the step would succeed.
 
 | package | project | TFMs | nupkg | payload |
 |---|---|---|---|---|
 | `AngouriMath` | `Sources/AngouriMath` | `netstandard2.0;net8.0;net10.0` | 1,726,251 B | `AngouriMath.dll` — 1,184,256 B (net8.0, net10.0), 1,175,552 B (netstandard2.0) — plus a ~1.26 MB XML doc per TFM |
 | `AngouriMath.FSharp` | `Sources/Wrappers/AngouriMath.FSharp` | `netstandard2.0` | 75,600 B | `AngouriMath.FSharp.dll`, 52,736 B |
+| `AngouriMath.UnitsNet` | `Sources/Wrappers/AngouriMath.UnitsNet` | `netstandard2.0` | 45,679 B | `AngouriMath.UnitsNet.dll`, 10,752 B; most of the nupkg is the icon |
 | `AngouriMath.Interactive` | `Sources/Wrappers/AngouriMath.Interactive` | `netstandard2.1` | 94,674 B | the Jupyter kernel extension |
 | `AngouriMath.Terminal` | `Sources/Terminal/AngouriMath.Terminal` | `net10.0`, `PackAsTool`, command `amcli` | **28,750,908 B** (79,915,066 B uncompressed, 192 entries, 186 of them under `tools/`) | a self-contained dotnet tool |
 
@@ -37,10 +38,12 @@ Declared dependencies, read out of each generated `.nuspec`:
 |---|---|
 | `AngouriMath` | `Antlr4.Runtime.Standard` 4.13.1, `GenericTensor` 1.0.4, `HonkSharp` 1.0.3, `PeterO.Numbers` 1.8.0 — and `System.Memory` 4.5.4 on the `netstandard2.0` leg only |
 | `AngouriMath.FSharp` | `AngouriMath`, `FSharp.Core` |
+| `AngouriMath.UnitsNet` | `AngouriMath`, `UnitsNet` 5.75.1 |
 | `AngouriMath.Interactive` | `AngouriMath.FSharp`, `FSharp.Core`, `Microsoft.DotNet.Interactive`, `Microsoft.DotNet.Interactive.Formatting`, `Plotly.NET` |
 | `AngouriMath.Terminal` | none declared; a tool carries its closure in `tools/`, which is why it is 16× the kernel |
 
-So the dependency shape is a **chain, not a graph**: kernel ← FSharp ← Interactive ← Terminal.
+So the dependency shape is a **chain, not a graph**: kernel ← FSharp ← Interactive ← Terminal, with
+UnitsNet attached to the kernel at one point, beside FSharp.
 
 ### What is in the tree and does not ship
 
@@ -312,7 +315,8 @@ never an argument for the easier of two right answers.
    folder.
 2. **Dependencies form a chain, never a cycle and never a sideways edge:**
    `AngouriMath ← AngouriMath.FSharp ← AngouriMath.Interactive ← AngouriMath.Terminal.Lib ←
-   AngouriMath.Terminal`. A new package attaches to this chain at one point.
+   AngouriMath.Terminal`. A new package attaches to this chain at one point, as
+   `AngouriMath.UnitsNet` does at `AngouriMath`.
 3. **A package's public surface may name types from packages below it and its own, never from above.**
 4. **The kernel's third-party dependency set is a list of four**, and adding to it is a packaging
    decision taken deliberately, because it changes what every consumer restores.

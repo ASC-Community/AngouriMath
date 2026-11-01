@@ -77,6 +77,10 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AngouriMath.Interactive", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AngouriMath.CPP.Exporting", "Wrappers\AngouriMath.CPP.Exporting\AngouriMath.CPP.Exporting.csproj", "{40BCFEFF-F691-B86D-DEF7-1B3D75C72011}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AngouriMath.UnitsNet", "Wrappers\AngouriMath.UnitsNet\AngouriMath.UnitsNet.csproj", "{6A1E2C4B-8D3F-4B7A-9E21-5C0D7F3A1B64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitsNetBridgeTests", "Tests\UnitsNetBridgeTests\UnitsNetBridgeTests.csproj", "{3F9B7D21-4C6E-4A8B-B1D5-72E0C8A9F413}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -187,6 +191,14 @@ Global
 		{1E2C70F3-EB0F-46AC-8D12-293243D4C135}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E2C70F3-EB0F-46AC-8D12-293243D4C135}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E2C70F3-EB0F-46AC-8D12-293243D4C135}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A1E2C4B-8D3F-4B7A-9E21-5C0D7F3A1B64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A1E2C4B-8D3F-4B7A-9E21-5C0D7F3A1B64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A1E2C4B-8D3F-4B7A-9E21-5C0D7F3A1B64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A1E2C4B-8D3F-4B7A-9E21-5C0D7F3A1B64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F9B7D21-4C6E-4A8B-B1D5-72E0C8A9F413}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F9B7D21-4C6E-4A8B-B1D5-72E0C8A9F413}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F9B7D21-4C6E-4A8B-B1D5-72E0C8A9F413}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F9B7D21-4C6E-4A8B-B1D5-72E0C8A9F413}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -218,5 +230,7 @@ Global
 		{ABAD0619-30C7-242D-670F-2ECC908074A2} = {D8022D2F-1DCE-4CE1-98DF-70B00D719D59}
 		{40BCFEFF-F691-B86D-DEF7-1B3D75C72011} = {D8022D2F-1DCE-4CE1-98DF-70B00D719D59}
 		{1E2C70F3-EB0F-46AC-8D12-293243D4C135} = {358BFC2B-1A5B-4740-8BA1-0E53EFC7EDAC}
+		{6A1E2C4B-8D3F-4B7A-9E21-5C0D7F3A1B64} = {D8022D2F-1DCE-4CE1-98DF-70B00D719D59}
+		{3F9B7D21-4C6E-4A8B-B1D5-72E0C8A9F413} = {9869C55D-A753-4DE2-9C22-CCF768C6EC53}
 	EndGlobalSection
 EndGlobal

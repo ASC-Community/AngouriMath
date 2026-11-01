@@ -1,0 +1,38 @@
+name: 'UnitsNet bridge Test'
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  Test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: 'recursive'
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.x'
+        dotnet-quality: 'preview'
+
+    - name: Build Tests # We need it to be able to retry
+      run: |
+        dotnet add "Sources/Tests/UnitsNetBridgeTests" package Microsoft.NET.Test.Sdk # Update is required for GitHubActionsTestLogger to print anything
+        dotnet add "Sources/Tests/UnitsNetBridgeTests" package GitHubActionsTestLogger
+        dotnet build Sources/Tests/UnitsNetBridgeTests
+
+    - name: Test
+      run: |
+        dotnet test "Sources/Tests/UnitsNetBridgeTests" -c Release -l GitHubActions
