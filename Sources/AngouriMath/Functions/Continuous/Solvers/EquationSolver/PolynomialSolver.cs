@@ -268,9 +268,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var gamma = (-3 * MathS.Pow(b, 4) / (256 * MathS.Pow(a, 4)) + MathS.Sqr(b) * c / (16 * MathS.Pow(a, 3)) - (b * d) / (4 * MathS.Sqr(a)) + e / a)
                 .InnerSimplified;
 
+            // Biquadratic once depressed: y^4 + alpha y^2 + gamma = 0 for y = x + b/(4a), so x is
+            // the root of the quadratic in y^2 shifted back by b/(4a). The shift was written
+            // -b / 4 * a, which is -b a / 4, and for a leading coefficient other than 1 or -1 every
+            // candidate was off and failed its check: 31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0, with four
+            // real roots, was answered { }.
             if (beta.Evaled == 0)
                 return sqrtsOf1.SelectMany(_ => sqrtsOf1,
-                    (s, t) => -b / 4 * a + s * MathS.Sqrt((-alpha + t * MathS.Sqrt(MathS.Sqr(alpha) - 4 * gamma)) / 2));
+                    (s, t) => -b / (4 * a) + s * MathS.Sqrt((-alpha + t * MathS.Sqrt(MathS.Sqr(alpha) - 4 * gamma)) / 2));
 
             var oneThird = Rational.Create(1, 3);
             var P = (-MathS.Sqr(alpha) / 12 - gamma)

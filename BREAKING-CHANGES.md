@@ -72,6 +72,18 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A quartic that is biquadratic once depressed is solved
+
+**Silent: a quartic whose depressed form `y^4 + alpha y^2 + gamma`, for `y = x + b/(4a)`, has no cubic term is solved,
+where it was answered `{ }`.** Its roots were shifted back by `-b a / 4` where the shift is `-b/(4a)`, so with a leading
+coefficient other than `1` or `-1` every candidate was off and failed its check, and the empty set claimed there was no
+root. An equation in a square root whose squared form is such a quartic was answered `{ }` with it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/2 + -sqrt((27/62 + -8/31 * sqrt(2)) / 2), … }`, four real roots |
+| `"x^2 - x - 1 = 4x*sqrt(2x^2 - 4x + 2)".ToEntity().Solve("x")` | `{ }` | `{ 1/2 + -sqrt((27/62 + 8/31 * sqrt(2)) / 2) }` |
+
 ### A quotient of logarithms is differentiated only where both diverge
 
 **Silent: a limit of a quotient of logarithms whose divisor tends to 0 is no longer answered by l'Hopital's rule, which
