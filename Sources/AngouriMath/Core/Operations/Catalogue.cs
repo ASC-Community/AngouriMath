@@ -237,6 +237,23 @@ namespace AngouriMath.Core.Operations
             "is_prime", "Whether an integer is prime.",
             static n => n.IsPrime);
 
+        // ---------------------------------------------------------------- queries on physical dimensions
+
+        [ConstantField]
+        private static readonly Parameter TheDimensions = new("dimensions", "The physical dimension of each variable.");
+
+        /// <summary><see cref="MathS.Dimensions.Of(Entity, IReadOnlyDictionary{Variable, Dimension})"/>.</summary>
+        public static Query<Func<Entity, IReadOnlyDictionary<Variable, Dimension>, DimensionCheck>> Dimension { get; } = new(
+            "dimension", "The physical dimension of an expression from those of its variables, or the part where two dimensions disagree.",
+            static (e, dimensions) => MathS.Dimensions.Of(e, dimensions),
+            TheDimensions);
+
+        /// <summary><see cref="MathS.Dimensions.DimensionlessGroups(IReadOnlyList{Variable}, IReadOnlyDictionary{Variable, Dimension})"/>.</summary>
+        public static Query<Func<IReadOnlyList<Variable>, IReadOnlyDictionary<Variable, Dimension>, IReadOnlyList<Entity>>> DimensionlessGroups { get; } = new(
+            "dimensionless_groups", "The independent products of powers of variables that have no dimension: their Buckingham pi groups.",
+            static (variables, dimensions) => MathS.Dimensions.DimensionlessGroups(variables, dimensions),
+            TheDimensions);
+
         // ---------------------------------------------------------------- the list
 
         /// <summary>Every entry above, in the order written.</summary>
@@ -248,6 +265,7 @@ namespace AngouriMath.Core.Operations
             ToBase, FromBase,
             Determinant, Inverse, Transpose, Rank, ReducedRowEchelonForm, Trace, TensorProduct,
             PrimeFactorization, Totient, GreatestCommonDivisor, DivisorCount, IsPrime,
+            Dimension, DimensionlessGroups,
         ];
 
         /// <summary>The entry named <paramref name="name"/>, or <see langword="null"/> where there is none.</summary>

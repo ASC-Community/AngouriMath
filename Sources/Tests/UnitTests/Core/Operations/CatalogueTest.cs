@@ -243,6 +243,13 @@ namespace AngouriMath.Tests.Core.Operations
             Assert.Equal(MathS.NumberTheory.CountDivisors(twelve), Catalogue.DivisorCount.Ask(twelve));
             Assert.Equal(twelve.IsPrime, Catalogue.IsPrime.Ask(twelve));
             Assert.True(Catalogue.IsPrime.Ask(7));
+
+            Variable v = "v", t = "t";
+            var dimensions = new Dictionary<Variable, Dimension> { [x] = Dimension.Length, [v] = Dimension.Length / Dimension.Time, [t] = Dimension.Time };
+            Assert.Equal(MathS.Dimensions.Of("x + v t", dimensions), Catalogue.Dimension.Ask("x + v t", dimensions));
+            Assert.Equal(MathS.Dimensions.Of("x + v", dimensions), Catalogue.Dimension.Ask("x + v", dimensions));
+            Assert.NotEqual(Catalogue.Dimension.Ask("x + v t", dimensions), Catalogue.Dimension.Ask("x + v", dimensions));
+            Assert.Equal(MathS.Dimensions.DimensionlessGroups([x, v, t], dimensions), Catalogue.DimensionlessGroups.Ask([x, v, t], dimensions));
         }
     }
 }

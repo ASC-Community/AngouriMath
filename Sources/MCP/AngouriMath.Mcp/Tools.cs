@@ -125,6 +125,8 @@ internal static class Tools
     {
         [Catalogue.Normalize.Name] = "am_simplify offers the whole simplification, which starts with this pass",
         [Catalogue.Evaluate.Name] = "am_evaluate keeps an exact value exact, simplifying rather than evaluating, and adds a numeric value beside it",
+        [Catalogue.Dimension.Name] = "waits for am_dimensions, https://github.com/asc-community/AngouriMath/issues/2298",
+        [Catalogue.DimensionlessGroups.Name] = "waits for am_dimensions, https://github.com/asc-community/AngouriMath/issues/2298",
     };
 
     /// <summary>The names of the catalogue's entries, which a test checks the lists above against.</summary>
