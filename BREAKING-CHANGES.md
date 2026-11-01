@@ -1041,13 +1041,15 @@ list its poles beside the other points it has no value at, which says nothing ne
 
 **Silent: `max(x, x)` and `min(x, x)` simplify to `x provided x in RR`, where they were `x`.** The complex numbers are
 not ordered, and both nodes are read over the reals, so `max(i, i)` has no value. Their condition said they were
-defined everywhere, and `max(x, x)` simplified to `x`, which has a value at `i`. A comparison of two real arguments is
-unchanged ([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
+defined everywhere, and `max(x, x)` simplified to `x`, which has a value at `i`. Compiled by either compiler over
+`Complex`, `max(x, x)` was `x` there too, and is `NaN`. A comparison of two real arguments is unchanged
+([#2256](https://github.com/asc-community/AngouriMath/issues/2256)).
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"max(x, x)".ToEntity().Simplify()` | `x` | `x provided x in RR` |
 | `"max(x, 2)".ToEntity().DomainCondition` | `True` | `x in RR` |
+| `"max(x, x)".ToEntity().Compile("x").Call(new Complex(0.5, 1.2))` | `<0.5; 1.2>` | `<NaN; NaN>` |
 
 ### Over the complex numbers, an equation in and out of a modulus is solved in the parts of `x`
 

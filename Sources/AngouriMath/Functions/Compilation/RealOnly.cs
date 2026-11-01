@@ -47,9 +47,11 @@ namespace AngouriMath.Core.Compilation
         }
 
         /// <summary>
-        /// The larger of two numbers, or NaN where they differ and are not both real: the complex
-        /// numbers are not ordered, and the interpreter leaves <c>max(2, 1 + i)</c> unevaluated.
-        /// Two equal arguments are their own maximum, which the interpreter says as well.
+        /// The larger of two numbers, or NaN where they are not both real: the complex numbers are
+        /// not ordered, and the interpreter leaves <c>max(2, 1 + i)</c> unevaluated and gives
+        /// <c>max(i, i)</c> no value. Two equal complex arguments had themselves for a maximum
+        /// here after the interpreter stopped saying so, and compiled <c>max(x, x)</c> was
+        /// <c>x</c> off the real line. https://github.com/asc-community/AngouriMath/issues/2256
         /// </summary>
         public static NumericsComplex Max(NumericsComplex a, NumericsComplex b)
             => Ordered(a, b, larger: true);
@@ -59,9 +61,9 @@ namespace AngouriMath.Core.Compilation
             => Ordered(a, b, larger: false);
 
         private static NumericsComplex Ordered(NumericsComplex a, NumericsComplex b, bool larger)
-            => a == b ? a
-             : a.Imaginary is not 0 || b.Imaginary is not 0 || double.IsNaN(a.Real) || double.IsNaN(b.Real)
+            => a.Imaginary is not 0 || b.Imaginary is not 0 || double.IsNaN(a.Real) || double.IsNaN(b.Real)
                 ? new NumericsComplex(double.NaN, double.NaN)
+             : a == b ? a
              : new NumericsComplex(larger == a.Real >= b.Real ? a.Real : b.Real, 0);
     }
 }

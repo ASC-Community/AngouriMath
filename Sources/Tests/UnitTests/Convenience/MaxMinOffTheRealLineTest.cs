@@ -52,5 +52,28 @@ namespace AngouriMath.Tests.Convenience
             Assert.True(simplified.Substitute("x", "i".ToEntity()).Evaled.IsNaN, $"{simplified} at i");
             Assert.Equal(Entity.Number.Integer.Create(3), simplified.Substitute("x", 3).Evaled);
         }
+
+        /// <summary>
+        /// Compiled, they have no value where evaluation has none. FastExpression and the LINQ
+        /// compiler over <c>Complex</c> answered <c>max(x, x)</c> at <c>1/2 + 6/5 i</c> with
+        /// <c>1/2 + 6/5 i</c>, and so <c>max(x, x) * 2</c> with <c>1 + 12/5 i</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("max(x, x)")]
+        [InlineData("min(x, x)")]
+        [InlineData("max(x, x) * 2")]
+        public void CompiledItHasNoValueWhereEvaluationHasNone(string expression)
+        {
+            var entity = expression.ToEntity();
+            var fastExpression = entity.Compile("x");
+            var linq = entity.Compile<System.Numerics.Complex, System.Numerics.Complex>("x");
+            var offTheLine = new System.Numerics.Complex(0.5, 1.2);
+            Assert.True(double.IsNaN(fastExpression.Call(offTheLine).Real), $"FastExpression gives {fastExpression.Call(offTheLine)}");
+            Assert.True(double.IsNaN(linq(offTheLine).Real), $"LINQ gives {linq(offTheLine)}");
+            var onTheLine = new System.Numerics.Complex(0.5, 0);
+            var value = entity.Substitute("x", "1/2".ToEntity()).EvalNumerical().RealPart.EDecimal.ToDouble();
+            Assert.Equal(value, fastExpression.Call(onTheLine).Real);
+            Assert.Equal(value, linq(onTheLine).Real);
+        }
     }
 }
