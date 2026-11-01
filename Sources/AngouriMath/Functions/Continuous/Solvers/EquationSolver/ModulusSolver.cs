@@ -52,7 +52,27 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// <c>1.618</c>. https://github.com/asc-community/AngouriMath/issues/2139
         /// </remarks>
         internal static bool IsInsideAndOutsideAFunctionThatIsNotHolomorphic(Entity expr, Variable x)
-            => expr.Nodes.Any(node => IsNotHolomorphic(node) && node.ContainsNode(x)) && IsOutsideThem(expr, x);
+            => IsInsideOne(expr, x) && IsOutsideThem(expr, x);
+
+        /// <summary>
+        /// Whether <paramref name="x"/> is inside a function that is not holomorphic somewhere in
+        /// <paramref name="expr"/>.
+        /// </summary>
+        /// <remarks>
+        /// Walked by hand, since the solver asks it of every equation it is given: enumerating
+        /// <see cref="Entity.Nodes"/> allocates an iterator at each level, and that was 4.5 MB of
+        /// the solve the kernel benchmark calls SolveHard, which has no such function in it.
+        /// </remarks>
+        private static bool IsInsideOne(Entity expr, Variable x)
+        {
+            if (IsNotHolomorphic(expr))
+                return expr.ContainsNode(x);
+            var children = expr.DirectChildren;
+            for (var i = 0; i < children.Count; i++)
+                if (IsInsideOne(children[i], x))
+                    return true;
+            return false;
+        }
 
         private static bool IsNotHolomorphic(Entity node)
             => node is Absf or Signumf or Conjugatef or Ref or Imf or Argf;
