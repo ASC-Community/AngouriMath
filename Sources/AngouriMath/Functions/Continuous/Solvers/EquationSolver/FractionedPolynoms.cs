@@ -6,6 +6,7 @@
 //
 
 using AngouriMath.Core.Multithreading;
+using PeterO.Numbers;
 
 namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 {
@@ -34,15 +35,34 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 potentialFraction.fracs = new List<(Entity main, Integer pow)>();
                 foreach (var mpChild in Mulf.LinearChildren(child))
                 {
-                    if (!(mpChild is Powf(var @base, Number num and not Integer))) // (x + 3) ^ 3
+                    // The exponent is folded first: the power rules write x * sqrt(x) as x ^ (1/2 + 1),
+                    // whose exponent is a sum, and read as it stands that was no fractional power, so
+                    // sqrt(x) - 1/x - 1 - i = 0, cleared of its denominator, went to Newton's method and
+                    // was answered without its root -1.
+                    if (!(mpChild is Powf(var @base, var exponent) && exponent.InnerSimplified is Number num and not Integer)) // (x + 3) ^ 3
                     {
                         potentialFraction.multiplier *= mpChild;
                         continue;
                     }
                     if (num is not Rational fracNum)
                         return false; // (x + 1)^0.2348728
-                    var newChild = MathS.Pow(@base, fracNum.ERational.Numerator).InnerSimplified;
+                    // A power past one is a whole power times a proper fractional one, x^(3/2) being
+                    // x * sqrt(x), so it shares its radical with sqrt(x): 3 sqrt(x) - x^(3/2) is the one
+                    // term (3 - x) sqrt(x), where read as sqrt(x) and sqrt(x^3) it was two radicals that
+                    // cannot be raised together, and the equation went to Newton's method without its
+                    // root 0. Raising to the power keeps every root whichever root is taken, since
+                    // (x^(p/q))^q is x^p, and the roots it adds are not the equation's.
                     var den = fracNum.ERational.Denominator;
+                    var whole = fracNum.ERational.Numerator.Divide(den);
+                    var rest = fracNum.ERational.Numerator.Subtract(whole.Multiply(den));
+                    if (rest.Sign < 0)
+                    {
+                        whole = whole.Subtract(EInteger.One);
+                        rest = rest.Add(den);
+                    }
+                    if (!whole.IsZero)
+                        potentialFraction.multiplier *= MathS.Pow(@base, Integer.Create(whole));
+                    var newChild = MathS.Pow(@base, Integer.Create(rest)).InnerSimplified;
                     potentialFraction.fracs.Add((newChild, den));
 
                     MultithreadingFunctional.ExitIfCancelled();

@@ -128,6 +128,26 @@ did, and `ln(x + 2) / ln(x + 3)` at 0 was `ln(2) / ln(3)`. With symbols it was n
 | `"limit(ln(a + 1/x) / ln(b + 1/x), x, +oo)".ToEntity().Simplify()` | `a / b` | `ln(a) / ln(b)` |
 | `"limit(ln(1 + x) / ln(y + x), x, 0)".ToEntity().Simplify()` | `1 / y` | `0 provided not ln(y) = 0` |
 
+### A radical times a power of its variable is solved exactly
+
+**Silent: an equation in `sqrt(x)` or a cube root of `x` beside powers of `x` is answered in radicals and with all its
+roots, where it was answered in decimals and could miss roots or include a number that is not one.** Such an equation is
+solved by raising the radical's side to a power, and the solver looks for each fractional power before doing it. The
+power rules write `x * sqrt(x)` as `x ^ (1/2 + 1)`, and an exponent written as a sum was not read as a fractional power.
+Equations with that term, which includes any `c/x` cleared of its denominator, went to Newton's method. It answered in
+decimals, and in `sqrt(x) - 1/x - 1 - i = 0` it found one root and missed the root -1. The exponent is now folded, and a
+power past one is read as a whole power times a proper fractional one, so `x^(3/2)` shares the radical of `sqrt(x)`. One
+answer that was exact is spelled differently. No issue was filed; a check of systems built from known solutions met this
+equation after an elimination. On 200 generated equations of this shape, 2.6.0 missed 45 roots in 22 of them and
+answered 5 numbers that are not roots. Now 2 roots are missing and none is wrong.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sqrt(x) - 1/x - 1 - i = 0".Solve("x")` | `{ 1.3002… + 1.6248…i }` | `-1` and that root in radicals |
+| `"sqrt(x) + 1/x = 0".Solve("x")` | `{ -0.5 - 0.8660…i, -0.5 + 0.8660…i }` | `{ -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
+| `"sqrt(x) - 1/x - 1 = 0".Solve("x")` | `{ 2.1478… }` | that root in radicals |
+| `"(3 - x)*sqrt(x) - x = 0".Solve("x")` | `{ 0, (7 - sqrt(13)) / 2 }` | `{ 0, (-7 + sqrt(13)) / (-2) }` |
+
 ### A cube shifted is solved
 
 **Silent: a cubic `a(x + h)^3 = k` written out, with `b^2 = 3ac`, is solved where it was answered `{ }`.** Cardano's
