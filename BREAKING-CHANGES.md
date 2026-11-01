@@ -484,6 +484,21 @@ its rows in the order it finds them, which can differ from the eliminator's
 | `MathS.Equations("x*y", "x + y^2 - 1").Solve("x", "y")` | `[[1, 0]]` | `[[1, 0], [0, 1], [0, -1]]` |
 | `MathS.Equations("x*y + 3*x - 5*y - 15", "x^2 - 3*x - 4*y - 10").Solve("x", "y")` | `[[1, -3], [2, -3]]` | `[[5, 0], [1, -3], [2, -3]]` |
 
+### A polynomial system with roots in decimals keeps its exact solutions
+
+**Silent: a polynomial system whose elimination has roots with no closed form has all its solutions, the rational ones
+exactly.** The Gröbner triangularisation puts every tuple it finds back into the system and keeps it only where each
+equation is exactly zero, which a root found numerically never is. One such root sent the whole system to the
+eliminator, which answered in decimals and could lose solutions: `x^2 + y^2 = 2, x^3 - y = -2` eliminates to
+`(x + 1)` times a quintic with no roots in radicals, and both of its real solutions were missing. A tuple in decimals is
+now kept where each equation's residual is under `1E-10` of the largest term it adds up to. A tuple that is no solution
+misses by whole quantities. An exact tuple is still checked exactly. No issue was filed; a check of systems built from
+known solutions found it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.Equations("x^2 + y^2 - 2", "x^3 - y + 2").Solve("x", "y")` | the four complex solutions, in decimals | `[-1, 1]`, `[-1.3455, -0.4356]` and the four complex solutions |
+
 ### `round` is exact, and an infinity is its own nearest integer
 
 **Silent for a long rational, not silent for an infinity.** `round` of a rational with more digits than the precision was

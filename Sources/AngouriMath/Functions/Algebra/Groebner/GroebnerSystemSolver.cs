@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AngouriMath.Core;
 using AngouriMath.Core.Budgets;
+using PeterO.Numbers;
 using static AngouriMath.Entity;
 
 namespace AngouriMath.Functions.Algebra.Groebner
@@ -41,9 +42,11 @@ namespace AngouriMath.Functions.Algebra.Groebner
     /// <c>(sqrt(2), sqrt(2))</c> and <c>(-sqrt(2), -sqrt(2))</c> — because one structural
     /// pass is enough to prove a radical identity. Where a root is a decimal the check cannot
     /// be made at all, and rather than accept a tuple on a tolerance, which is how a root
-    /// that is merely close becomes a reported solution, the whole system goes back to the
-    /// existing solver. So this takes what it can prove and declines the rest without
-    /// changing what those did before.
+    /// that is merely close becomes a reported solution, the whole system went back to the
+    /// existing solver, which answers it in decimals too and can leave out what this would have
+    /// found exactly: x^2 + y^2 = 2, x^3 - y = -2 lost (-1, 1). So a candidate in decimals is
+    /// checked to the precision it has instead, a negligible share of the largest term, which a
+    /// tuple that is not a solution misses by whole quantities.
     /// </para>
     /// </remarks>
     internal static class GroebnerSystemSolver
@@ -151,7 +154,9 @@ namespace AngouriMath.Functions.Algebra.Groebner
 
             var builder = new MatrixBuilder(variables.Count);
             foreach (var candidate in found)
-                builder.Add(candidate);
+                // An entry already in decimals is the number it evaluates to, rather than the
+                // polynomial in decimals that back-substitution wrote it as.
+                builder.Add(candidate.Select(entry => entry.Nodes.Any(IsADecimal) && entry.Evaled is Number.Complex value ? value : entry).ToArray());
             solutions = builder.ToMatrix();
             return true;
         }
@@ -274,14 +279,48 @@ namespace AngouriMath.Functions.Algebra.Groebner
             for (var i = 0; i < variables.Count; i++)
                 substitutions[variables[i]] = candidate[i];
 
+            // A candidate with a decimal in it is a root of a factor of a univariate polynomial whose
+            // roots have no closed form, found numerically, and no structural pass makes its residual
+            // exactly zero. Such a candidate is checked to the precision it has: each equation's
+            // residual is to be a negligible part of the largest term the equation adds up to. A
+            // tuple that does not satisfy the system, as a basis out of shape position can give, is
+            // off by whole quantities and fails this as it fails the exact test. Declining every
+            // decimal sent the system to elimination, which answered x^2 + y^2 = 2, x^3 - y = -2 in
+            // decimals and without its rational solution (-1, 1).
+            bool? inDecimals = null;
             foreach (var equation in equations)
             {
                 if (!budget.Spend())
                     return false;
-                if (equation.Substitute(substitutions).InnerSimplified is not Number.Integer { IsZero: true })
+                var substituted = equation.Substitute(substitutions);
+                if (substituted.InnerSimplified is Number.Integer { IsZero: true })
+                    continue;
+                inDecimals ??= candidate.Any(entry => entry.Nodes.Any(IsADecimal));
+                if (inDecimals is false || !IsNegligible(substituted))
                     return budget.Allow(false, "unverifiable root");
             }
             return true;
+        }
+
+        private static bool IsADecimal(Entity node)
+            => node is Number.Complex number && (number.RealPart is not Number.Rational || number.ImaginaryPart is not Number.Rational);
+
+        /// <summary>How small a residual is next to the largest term, to be what rounding leaves of a zero.</summary>
+        [ConstantField] private static readonly EDecimal NegligibleShare = EDecimal.FromString("1E-10");
+
+        /// <summary>
+        /// Whether <paramref name="substituted"/>, an equation with numbers for its unknowns,
+        /// evaluates to a residual negligible next to the largest of the terms it adds up to.
+        /// </summary>
+        private static bool IsNegligible(Entity substituted)
+        {
+            if (substituted.Evaled is not Number.Complex { IsFinite: true } residual)
+                return false;
+            var largest = EDecimal.One;
+            foreach (var term in Sumf.LinearChildren(substituted))
+                if (term.Evaled is Number.Complex { IsFinite: true } value)
+                    largest = EDecimal.Max(largest, value.Abs().EDecimal);
+            return residual.Abs().EDecimal.CompareTo(largest.Multiply(NegligibleShare)) <= 0;
         }
     }
 }

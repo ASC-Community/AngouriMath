@@ -268,9 +268,9 @@ namespace AngouriMath.Tests.Algebra
         }
 
         /// <summary>
-        /// Where the univariate's roots are decimals there is nothing to prove an identity
-        /// with, so the system is declined — and the declining has to be quick, because an
-        /// earlier version proved nothing slowly and cost more than it saved.
+        /// Where the univariate's roots are decimals there is nothing to prove an identity with,
+        /// so a candidate in decimals is checked to the precision it has, its residual a
+        /// negligible share of the largest term of each equation.
         /// </summary>
         [Fact]
         public void APolynomialSystemWithDecimalRootsIsStillAnswered()
@@ -279,6 +279,34 @@ namespace AngouriMath.Tests.Algebra
             var solutions = MathS.Equations(equations).Solve("x", "y");
             Assert.NotNull(solutions);
             Assert.Equal(9, solutions.RowCount);
+        }
+
+        /// <summary>
+        /// A rational solution beside roots that are decimals is kept exactly. The univariate of
+        /// x^2 + y^2 = 2, x^3 - y = -2 is (x + 1) times a quintic with no roots in radicals; the
+        /// path declined every candidate for the quintic's decimals, and the elimination it fell
+        /// back to answered in decimals without (-1, 1). Found by a check of systems built from
+        /// known solutions; no issue was filed.
+        /// </summary>
+        [Fact]
+        public void ARationalSolutionBesideDecimalOnesIsKept()
+        {
+            var solutions = MathS.Equations("x^2 + y^2 - 2", "x^3 - y + 2").Solve("x", "y");
+            Assert.NotNull(solutions);
+            Assert.Equal(6, solutions.RowCount);
+            var exact = false;
+            for (var row = 0; row < solutions.RowCount; row++)
+            {
+                if (solutions[row, 0] == (Entity)(-1) && solutions[row, 1] == (Entity)1)
+                    exact = true;
+                foreach (var equation in new Entity[] { "x^2 + y^2 - 2", "x^3 - y + 2" })
+                {
+                    var residual = equation.Substitute("x", solutions[row, 0]).Substitute("y", solutions[row, 1]).EvalNumerical();
+                    Assert.True(Number.Abs(residual).EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromString("1e-10")) < 0,
+                        $"row {row} leaves {residual} in {equation}");
+                }
+            }
+            Assert.True(exact, $"(-1, 1) is not a row of {solutions}");
         }
 
         /// <summary>
