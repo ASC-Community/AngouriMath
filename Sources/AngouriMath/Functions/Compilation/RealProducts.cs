@@ -80,6 +80,33 @@ namespace AngouriMath.Core.Compilation
         private static bool IsWhole(double y) => !double.IsInfinity(y) && Math.Floor(y) == y;
 
         /// <summary>
+        /// A power to a rational exponent whose denominator is odd and below ten, as evaluation takes it:
+        /// of a negative real, the real root to the numerator, <c>(-8)^(1/3) = -2</c> and <c>(-8)^(2/3) = 4</c>,
+        /// as <c>Number.Pow</c>'s search for a good root finds it; of any other number, <see cref="Power"/>.
+        /// The principal power gave <c>1 + 1.73i</c> and <c>-2 + 3.46i</c>, and <c>Math.Pow</c> NaN over
+        /// <c>double</c>, where evaluation has a real value. Whether the exponent is such a rational is only
+        /// known where it is written, so the compilers choose this where they compile the power.
+        /// </summary>
+        public static NumericsComplex RealRootPower(NumericsComplex a, NumericsComplex b, bool oddNumerator)
+            => a.Imaginary == 0 && a.Real < 0 && b.Imaginary == 0 && !double.IsNaN(b.Real)
+                ? new NumericsComplex((oddNumerator ? -1 : 1) * Math.Pow(-a.Real, b.Real), 0)
+                : Power(a, b);
+
+        /// <summary><see cref="RealRootPower(NumericsComplex, NumericsComplex, bool)"/> over <see cref="double"/>.</summary>
+        public static double RealRootPower(double a, double b, bool oddNumerator)
+            => a < 0 && !double.IsNaN(b)
+                ? (oddNumerator ? -1 : 1) * Math.Pow(-a, b)
+                : IntoLinq.MathAllMethods.Pow(a, b);
+
+        /// <summary>
+        /// Whether a power to <paramref name="exponent"/> takes the real root of a negative real, in evaluation:
+        /// a rational that is not whole, with an odd denominator below ten.
+        /// </summary>
+        internal static bool TakesTheRealRootOfANegative(PeterO.Numbers.ERational exponent)
+            => !exponent.Denominator.Equals(PeterO.Numbers.EInteger.One) && !exponent.Denominator.IsEven
+                && exponent.Denominator.CompareTo(PeterO.Numbers.EInteger.FromInt32(10)) < 0;
+
+        /// <summary>
         /// A whole power of a number that is not real, as a product of its factors, which is how evaluation takes it.
         /// <see cref="System.Numerics.Complex.Pow(System.Numerics.Complex, System.Numerics.Complex)"/> takes <c>e^(n ln z)</c>,
         /// whose rounded angle leaves a part that should be 0 at about <c>1e-16</c>: <c>i^2</c> was <c>(-1, 1.2e-16)</c>, which is

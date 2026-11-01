@@ -503,6 +503,20 @@ Pythagorean identity with a coefficient is now a rule of its own, found wherever
 | `"2 + (-2)*cos(x)^2 + (-2)*sin(x)^2".Simplify()` | `2 + (-2) * cos(x) ^ 2 + (-2) * sin(x) ^ 2` | `0` |
 | `"2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2".Simplify()` | unchanged | `0` |
 
+### A compiled odd root of a negative real is real
+
+**Silent: compiled, a negative real to a rational power with an odd denominator below ten is the real root to the
+numerator, as evaluation has it, where both compilers took the principal power, and `Compile<double, double>` gave
+`NaN`.** `(-8)^(1/3)` evaluates to `-2`, `(-8)^(2/3)` to `4`. Newton's method, which `Solve` falls back to, runs on the
+compiled function, so a root needing the real root was not found either. A base off the real line, a positive one, an
+even denominator or one of ten or more is the principal power, as before.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^(1/3)".ToEntity().Compile("x").Call(-8)` | `<1.0000000000000002; 1.7320508075688772>` | `<-2; 0>` |
+| `"x^(1/3)".ToEntity().Compile<double, double>("x")(-8)` | `NaN` | `-2` |
+| `"(3 - 4x)^(1/3) + sqrt(4 + 4x) = 3".ToEntity().Solve("x")` | `{ (-2.466…) / 4, 2.952… / 4 }` | `{ (-2.466…) / 4, 2.952… / 4, 33.514… / 4 }` |
+
 ### A compiled division by zero over `double` has no value
 
 **Silent: compiled over `double` or `float`, a division by zero and 0 to a power that is not positive are `NaN`, as in

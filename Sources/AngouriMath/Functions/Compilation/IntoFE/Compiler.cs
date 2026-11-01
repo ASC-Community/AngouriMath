@@ -166,11 +166,16 @@ namespace AngouriMath
         {
             private protected override bool CompilesItself => true;
 
+            // A rational exponent with an odd denominator below ten takes the real root of a negative real,
+            // as evaluation does: (-8)^(1/3) is -2, which the principal power made 1 + 1.73i.
             private protected override void CompileNode(Compiler compiler)
             {
                 Exponent.InnerCompile(compiler);
                 Base.InnerCompile(compiler);
-                compiler.Instructions.Add(new(InstructionType.CALL_POW));
+                compiler.Instructions.Add(
+                    Exponent is Rational { ERational: var ratio } && Core.Compilation.RealProducts.TakesTheRealRootOfANegative(ratio)
+                        ? new(InstructionType.CALL_REAL_ROOT_POW, ratio.Numerator.IsEven ? 0 : 1)
+                        : new(InstructionType.CALL_POW));
             }
         }
 
