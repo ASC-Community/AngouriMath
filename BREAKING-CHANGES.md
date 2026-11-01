@@ -383,6 +383,17 @@ except where shown.
 | `([[1, 2], [2, 4]] ^ (-1)).Evaled` | throws `InvalidDeterminantException` | `[[1, 2], [2, 4]] ^ (-1)` |
 | `([[1, 2], [2, 4]] ^ (-1)).Simplify()` | throws `InvalidDeterminantException` | `1 / [[1, 2], [2, 4]]` |
 
+### An inequality has no solution where its expression has no value
+
+**Silent: the answer to an inequality leaves out the real points where a denominator of the expression as written is
+zero.** The solver reads a quotient after a factor shared by its numerator and denominator has cancelled, so its answer
+had the points where that factor vanishes, at which the quotient is `0/0`.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(4x - x^3)/x > 0".ToEntity().Solve("x")` | `(-2; 2)` | `(-2; 2) \ { 0 }` |
+| `"x/x > 0".ToEntity().Solve("x")` | `RR` | `RR \ { 0 }` |
+
 ### A 1x1 matrix has a rank and row echelon forms
 
 **Not silent: what threw now answers.** For a 1x1 matrix, `Rank`, `RowEchelonForm` and `ReducedRowEchelonForm` threw

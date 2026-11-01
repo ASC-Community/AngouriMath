@@ -122,6 +122,40 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         [ConstantField] private static readonly EDecimal RelativeResidualTolerance = EDecimal.FromString("0.01");
 
         /// <summary>
+        /// <paramref name="answer"/> without the real points at which <paramref name="expr"/>, as
+        /// written, has no value because a denominator in it is zero; <paramref name="answer"/> as
+        /// it is where a denominator's zeros are not found as finitely many numbers.
+        /// </summary>
+        /// <remarks>
+        /// The inequality solver reads the expression after a factor common to a numerator and a
+        /// denominator has cancelled, so its answer had the points where that factor is zero, at
+        /// which the quotient is 0/0 and has no value: (4x - x^3)/x > 0 was (-2; 2), with 0 in it,
+        /// and x/x > 0 was RR. A pole that has not cancelled is outside the answer already, since a
+        /// quotient is solved as the product of its numerator and denominator.
+        /// </remarks>
+        private static Set? WithoutPoles(Set? answer, Entity expr, Variable x)
+        {
+            if (answer is null)
+                return null;
+            var poles = new List<Entity>();
+            foreach (var node in expr.Nodes)
+            {
+                var denominator = node switch
+                {
+                    Divf(_, var divisor) => divisor,
+                    Powf(var @base, Integer { EInteger.Sign: < 0 }) => @base,
+                    _ => null,
+                };
+                if (denominator is null || !denominator.ContainsNode(x))
+                    continue;
+                if (AnalyticalEquationSolver.Solve(denominator, x) is not FiniteSet zeros || zeros.Any(zero => zero.Vars.Any()))
+                    return answer;
+                poles.AddRange(zeros.Where(zero => zero.Evaled is Number.Real));
+            }
+            return poles.Count == 0 ? answer : (Set)MathS.SetSubtraction(answer, new FiniteSet(poles)).InnerSimplified;
+        }
+
+        /// <summary>
         /// Whether a root demonstrably fails the equation. Anything that cannot be
         /// evaluated to a number -- a root still carrying a parameter, say
         /// <c>pi + 2 * pi * n_1</c>, or one whose residual is not finite -- is kept, so
@@ -411,17 +445,17 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 Impliesf(var left, var right) => Implication(left, right, x),
                 Notf(var operand) => Negation(expr, operand, x),
 
-                Greaterf(var left, var right) => 
-                    AnalyticalInequalitySolver.Solve(Minus(left, right), x),
+                Greaterf(var left, var right) =>
+                    WithoutPoles(AnalyticalInequalitySolver.Solve(Minus(left, right), x), Minus(left, right), x),
                 LessOrEqualf(var left, var right) =>
-                    AnalyticalInequalitySolver.Solve(Minus(right, left), x)
-                    ?.Unite(AnalyticalEquationSolver.Solve(Minus(left, right), x)),
+                    WithoutPoles(AnalyticalInequalitySolver.Solve(Minus(right, left), x)
+                        ?.Unite(AnalyticalEquationSolver.Solve(Minus(left, right), x)), Minus(left, right), x),
                 GreaterOrEqualf(var left, var right) =>
-                    AnalyticalInequalitySolver.Solve(Minus(left, right), x) is { } above
-                    ? (Set)MathS.Union(above, AnalyticalEquationSolver.Solve(Minus(left, right), x)) : null,
+                    WithoutPoles(AnalyticalInequalitySolver.Solve(Minus(left, right), x) is { } above
+                        ? (Set)MathS.Union(above, AnalyticalEquationSolver.Solve(Minus(left, right), x)) : null, Minus(left, right), x),
 
-                Lessf(var left, var right) => 
-                    AnalyticalInequalitySolver.Solve(Minus(right, left), x),
+                Lessf(var left, var right) =>
+                    WithoutPoles(AnalyticalInequalitySolver.Solve(Minus(right, left), x), Minus(left, right), x),
 
                 Variable when expr == x => new FiniteSet(true),
 
