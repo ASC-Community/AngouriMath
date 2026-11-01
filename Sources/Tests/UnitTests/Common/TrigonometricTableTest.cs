@@ -91,8 +91,10 @@ namespace AngouriMath.Tests.Common
             // the 1158 calls swept: 581 of them resolved before the half turn was applied
             // and 690 after, and the 581 were already sound -- what was missing was missing,
             // not wrong. Raise this if the table gains entries; it is here to catch losing
-            // them silently.
-            Assert.True(resolved >= 690, $"only {resolved} of the swept angles resolved at all");
+            // them silently. 642 since the entries written through the complex numbers, the
+            // sevenths, ninths and eighteenths and the half angles of them, are passed over and
+            // their calls left as written: https://github.com/asc-community/AngouriMath/issues/2143
+            Assert.True(resolved >= 642, $"only {resolved} of the swept angles resolved at all");
         }
 
         /// <summary>

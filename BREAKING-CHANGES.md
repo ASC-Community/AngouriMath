@@ -371,6 +371,21 @@ is the canonical one: square-free, and without what the answer's own denominator
 | `"(a - 1)/(1 - b) - (1 - a)/(b - 1)".Simplify()` | `0 provided not (b - 1) * (1 - b) = 0` | `0 provided not b - 1 = 0` |
 | `"(x*y*a*b*c)/(c*b*a*x*x)".Simplify()` | `y / x provided not a * b * c * x = 0` | `y / x provided not a * b * c = 0` |
 
+### A sine or cosine with no real radical form stays as written
+
+**Silent: `sin(pi/7)`, `cos(2pi/9)` and the other values whose only radical form goes through the complex numbers
+simplify to themselves, where they were nested radicals with cube roots of complex numbers.** That is casus
+irreducibilis: no real radical form exists, and the radical was many times longer than the input. The table's
+entries for the sevenths, ninths and eighteenths are passed over, and their half angles with them. A value with a
+real radical form still takes it ([#2143](https://github.com/asc-community/AngouriMath/issues/2143)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(pi/7)".ToEntity().Simplify()` | `sqrt((1 - 1/6 * (-1 + ((7 + 21 * sqrt(-3)) / 2) ^ (1/3) + ((7 - 21 * sqrt(-3)) / 2) ^ (1/3))) / 2)` | `sin(pi / 7)` |
+| `"cos(2 pi/9)".ToEntity().Simplify()` | `(((sqrt(-3) - 1) / 2) ^ (1/3) + (-(sqrt(-3) + 1) / 2) ^ (1/3)) / 2` | `cos(2/9 * pi)` |
+| `"sin(pi/18)".ToEntity().Simplify()` | `sqrt((1 - 1/4 * ((4 + 4 * sqrt(-3)) ^ (1/3) + (4 - 4 * sqrt(-3)) ^ (1/3))) / 2)` | `sin(pi / 18)` |
+| `"sin(pi/5)".ToEntity().Simplify()` | `1/4 * sqrt(10 - 2 * sqrt(5))` | `1/4 * sqrt(10 - 2 * sqrt(5))` |
+
 ### A step function at a jump takes the side its argument arrives from
 
 **Silent: a limit of `floor`, `ceil` or `sgn` whose argument arrives on a jump is answered, where it was left
