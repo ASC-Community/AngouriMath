@@ -405,6 +405,15 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // TODO: Solve factorials (Needs Lambert W function)
             // https://mathoverflow.net/a/28977
 
+            // A polynomial with rational coefficients that no route above writes in closed form has
+            // all its roots by the Durand-Kerner iteration, which settles every root of each square-free
+            // part at once or answers nothing. Newton's method is started inside a bounded region, and
+            // answered the roots it found there as though they were all: x^5 - 30x^4 + 1 = 0 has a root
+            // near 30, and was answered with one root of its five. It is numerical, so it is asked
+            // only where Newton's method would have been: turning that off asks for analytical answers.
+            if (MathS.Settings.AllowNewton && expr.Vars.Count == 1 && SumOverSet.NumericRoots(expr, x) is { Count: > 0 } numeric)
+                return numeric.Select(ent => TryDowncast(expr, x, ent)).ToSet();
+
             // An identity is satisfied by every x, and not by the points a numerical search
             // starts from: `sqrt(x)^2 - x` is zero wherever it is evaluated, so every start of
             // Newton's grid converged at once and each was kept, two hundred numbers for an
