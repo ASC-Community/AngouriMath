@@ -440,6 +440,17 @@ real radical form still takes it ([#2143](https://github.com/asc-community/Angou
 | `"sin(pi/18)".ToEntity().Simplify()` | `sqrt((1 - 1/4 * ((4 + 4 * sqrt(-3)) ^ (1/3) + (4 - 4 * sqrt(-3)) ^ (1/3))) / 2)` | `sin(pi / 18)` |
 | `"sin(pi/5)".ToEntity().Simplify()` | `1/4 * sqrt(10 - 2 * sqrt(5))` | `1/4 * sqrt(10 - 2 * sqrt(5))` |
 
+### A quotient is zero where its numerator is and its denominator is not
+
+**Silent: `N/D = 0` is solved as `N = 0` less the zeros of `D`, where it was left to the spellings.** One of those took
+`t = x^2` into half-integer powers of `t` and handed it to Newton's method, which answered near-copies of a root and left
+out others. A non-strict inequality takes the roots of its equation, so its answer was wrong with it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(18x^2 - 3x^3 - 4x^4 + x^5)/(9x^2 - 6x^4 + x^6) = 0".ToEntity().Solve("x")` | `{ 3 }` | `{ -2, 3 }` |
+| `"(108x^2 - 18x^3 - 24x^4 + 6x^5)/(27x^2 - 18x^4 + 3x^6) >= 0".ToEntity().Solve("x")` | `{ -sqrt(9.000000…), …, -3, … } \/ (-2; -sqrt(3)) \/ …`, with `-3`, where the quotient is negative, and without `-2` | `[-2; -sqrt(3)) \/ (-sqrt(3); 0) \/ (0; sqrt(3)) \/ (sqrt(3); +oo)` |
+
 ### A step function at a jump takes the side its argument arrives from
 
 **Silent: a limit of `floor`, `ceil` or `sgn` whose argument arrives on a jump is answered, where it was left
