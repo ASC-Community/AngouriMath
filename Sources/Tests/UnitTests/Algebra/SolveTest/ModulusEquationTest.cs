@@ -34,21 +34,51 @@ namespace AngouriMath.Tests.Algebra
             => Assert.IsType<ConditionalSet>(equation.ToEntity().Solve("x"));
 
         /// <summary>
-        /// <c>x</c> inside a function that is not holomorphic and outside it too: Newton's method
-        /// assumes a holomorphic function, and over the complex numbers <c>|u| = +-u</c> only where
-        /// <c>u</c> is real, which a root need not make it, so neither the search nor a split by the
-        /// sign finds every root. Left unsolved. The search's near-copies of a root came back as
-        /// roots: <c>x^2/|1 - x^2| = x</c> had <c>1.618 + 1.7e-9 i</c> beside <c>1.618</c>.
+        /// <c>x</c> inside a modulus, a conjugate, a real or an imaginary part and outside it too,
+        /// solved in the real and imaginary parts of <c>x</c>, exactly. Newton's method assumes a
+        /// holomorphic function, and its near-copies of a root came back as roots:
+        /// <c>x^2/|1 - x^2| = x</c> had <c>1.618 + 1.7e-9 i</c> beside <c>1.618</c>. Nor does a
+        /// split by the sign find every root, since over the complex numbers <c>|u| = +-u</c> only
+        /// where <c>u</c> is real: <c>x^2 + 1 = |x|</c> is solved by <c>+-0.618 i</c>.
         /// <a href="https://github.com/asc-community/AngouriMath/issues/2139">#2139</a>
         /// </summary>
         [Theory]
-        [InlineData("x^2/abs(1 - x^2) = x")]
-        [InlineData("abs(x^2 - 4) = 3 x")]
-        [InlineData("x^2 + 1 = abs(x)")]
-        [InlineData("x * abs(x) = 4")]
-        [InlineData("x + sgn(x) = 3")]
+        [InlineData("x^2/abs(1 - x^2) = x", "0", "(sqrt(5) - 1) / 2", "(sqrt(5) + 1) / 2")]
+        [InlineData("abs(x^2 - 4) = 3 x", "1", "4")]
+        [InlineData("x * abs(x) = 4", "2")]
+        [InlineData("x^2 + 1 = abs(x)", "i * (sqrt(5) - 1) / 2", "-i * (sqrt(5) - 1) / 2")]
+        [InlineData("x * (abs(x) - x^2) = 0", "0", "1", "-1")]
+        [InlineData("1 / abs(x) = x^2", "1", "-1")]
+        [InlineData("abs(1 / (x - 1)) = x", "(sqrt(5) + 1) / 2")]
+        [InlineData("conj(x) = x^2", "0", "1", "-1/2 + i * sqrt(3) / 2", "-1/2 - i * sqrt(3) / 2")]
+        [InlineData("x + Re(x) = 3 + i", "3/2 + i")]
+        [InlineData("Im(x)^2 + x = 1", "1")]
         [InlineData("x + conj(x) = 2 + i")]
-        public void OverTheComplexNumbersAnEquationInAndOutOfAModulusIsLeftUnsolved(string equation)
+        [InlineData("abs(x)^2 = x + i")]
+        [InlineData("x + sgn(x) = 3", "2")]
+        [InlineData("x * sgn(x) = 2", "2", "-2")]
+        [InlineData("x^2 = sgn(x)", "0", "1")]
+        [InlineData("sgn(x^2 - 1) = x")]
+        public void OverTheComplexNumbersAnEquationInAndOutOfAModulusIsSolvedInThePartsOfX(string equation, params string[] roots)
+        {
+            var answer = Assert.IsType<FiniteSet>(equation.ToEntity().Solve("x"));
+            Assert.Equal(roots.Length, answer.Count);
+            foreach (var root in roots)
+                Assert.Contains(answer, found => Entity.Number.IsZero((found - root.ToEntity()).EvalNumerical()));
+        }
+
+        /// <summary>
+        /// Left unsolved where the roots are not finitely many, as the ray <c>|x| = Re x</c>; where
+        /// one is not found exactly, as the real root of <c>x^5 - x - 1</c>; where the system is
+        /// too large to solve in the time an answer is worth; and with an argument, which is not a
+        /// polynomial in the parts of <c>x</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("abs(x) = Re(x)")]
+        [InlineData("x^5 = abs(x) + 1")]
+        [InlineData("x^7 = abs(x) + 1")]
+        [InlineData("x + arg(x) = 1")]
+        public void OverTheComplexNumbersTheRestIsLeftUnsolved(string equation)
             => Assert.IsType<ConditionalSet>(equation.ToEntity().Solve("x"));
 
         /// <summary>The variable only inside the modulus, or not in one at all, is answered as before.</summary>

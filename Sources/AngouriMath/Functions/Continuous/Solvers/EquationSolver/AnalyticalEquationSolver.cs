@@ -130,6 +130,16 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (MathS.Settings.Codomain.Value == Core.Domain.Real && ModulusSolver.SolveOverTheReals(expr, x) is { } overTheReals)
                 return overTheReals;
 
+            // Over the complex numbers, one with x inside a modulus, a conjugate, a real or an
+            // imaginary part and outside it as well is solved in the real and imaginary parts of
+            // x, exactly: x |x| = 4 is { 2 }. Asked here, of the equation as it was asked, rather
+            // than of each spelling below, every one of which would be the same system to solve.
+            // https://github.com/asc-community/AngouriMath/issues/2139
+            if (!compensateSolving && MathS.Settings.Codomain.Value != Core.Domain.Real
+                && ModulusSolver.IsInsideAndOutsideAFunctionThatIsNotHolomorphic(expr, x)
+                && ModulusSolver.SolveOverTheComplexNumbers(expr, x) is { } overTheComplexNumbers)
+                return overTheComplexNumbers;
+
             // Whether a candidate root really is one. The loose tolerance that guesses the
             // rational must not also be what decides this: at 1e-7, x^41 + 6x + 1 accepted
             // -1/6, whose residual is -1.25e-32 -- small, but the difference between an
@@ -395,8 +405,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // Over the complex numbers, x inside a modulus or another function that is not
             // holomorphic and outside it as well is not the search's either: Newton's method
             // assumes a holomorphic function, and its near-copies of a root came back as roots.
-            // Left unsolved; over the reals it is solved by cases, above.
-            // https://github.com/asc-community/AngouriMath/issues/2139
+            // Left unsolved where it is not solved in the parts of x, above; over the reals it is
+            // solved by cases. https://github.com/asc-community/AngouriMath/issues/2139
             if (MathS.Settings.Codomain.Value != Core.Domain.Real && ModulusSolver.IsInsideAndOutsideAFunctionThatIsNotHolomorphic(expr, x))
                 return Unsolved(expr, x);
 
