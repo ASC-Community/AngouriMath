@@ -177,6 +177,21 @@ as asked the limit of `ln(f)` again, through a limit node of its own
 | `"limit(ln(2 + sin(x)), x, +oo)".ToEntity().Simplify()` | stack overflow | `limit(ln(2 + sin(x)), x, +oo)` |
 | `"limitright(ln(sin(1/x) + 2), x, 0)".ToEntity().Simplify()` | stack overflow | `limitright(ln(2 + sin(1 / x)), x, 0)` |
 
+### An equation linear in logarithms is solved by exponentiating
+
+**Silent: an equation `k_1 log_b(P_1) + … + k_n log_b(P_n) = c`, with at least two logarithms of polynomials to one
+base and rational `k_i`, is answered exactly and completely, where Newton's method answered it in decimals and left out
+the roots it did not reach.** Every root is one of the polynomial equation `P_1^(k_1 L) … P_n^(k_n L) = b^(c L)`, for
+`L` the common denominator of the `k_i`, and each of those is put back into the equation as written under the
+principal logarithm, since over the complex numbers `ln(u) + ln(v)` is `ln(u v)` only up to `2 pi i`. Over the reals
+each argument is to be positive as well.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"ln(x) + ln(x + 1) = 0".ToEntity().Solve("x")` | `{ 0.6180339887498947… }` | `{ (-1 + sqrt(5)) / 2 }` |
+| `"ln(1 + 3x^2) - ln(4x) = 1".ToEntity().Solve("x")` | `{ 3.529945609977906… }` | `{ (-(-e * 4) - sqrt((-e * 4) ^ 2 - 12)) / 6, (-(-e * 4) + sqrt((-e * 4) ^ 2 - 12)) / 6 }` |
+| `"ln(x^2 + 1) - ln(x) = 1".ToEntity().Solve("x")` | `{ 0.4386714553485325…, 2.279610373110512… }` | `{ (e - sqrt((-e) ^ 2 - 4)) / 2, (e + sqrt((-e) ^ 2 - 4)) / 2 }` |
+
 ### Primality is decided by Miller–Rabin and Lucas–Lehmer, and finishes
 
 **Silent: a membership in `PP` left open past the machine word is decided where a test proves it, and one that did

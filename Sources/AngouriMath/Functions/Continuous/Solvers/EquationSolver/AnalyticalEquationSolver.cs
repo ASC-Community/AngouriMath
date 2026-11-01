@@ -140,6 +140,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 && ModulusSolver.SolveOverTheComplexNumbers(expr, x) is { } overTheComplexNumbers)
                 return overTheComplexNumbers;
 
+            // A sum of rational multiples of logarithms of polynomials to one base is a polynomial
+            // equation once exponentiated, and each of that one's roots is put back into this one,
+            // since over the complex numbers ln(u) + ln(v) is ln(u v) only up to 2 pi i:
+            // ln(x) + ln(x + 1) = 0 is { (sqrt(5) - 1) / 2 }, which Newton's method found in
+            // decimals. Asked of the equation as it was asked, as the route above is.
+            if (!compensateSolving && LogarithmSolver.Solve(expr, x) is { } byExponentiating)
+                return byExponentiating;
+
             // Whether a candidate root really is one. The loose tolerance that guesses the
             // rational must not also be what decides this: at 1e-7, x^41 + 6x + 1 accepted
             // -1/6, whose residual is -1.25e-32 -- small, but the difference between an
