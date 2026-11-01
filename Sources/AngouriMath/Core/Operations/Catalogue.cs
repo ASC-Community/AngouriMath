@@ -132,6 +132,21 @@ namespace AngouriMath.Core.Operations
             "sympy", "Writes the expression as Python code for SymPy.",
             static e => MathS.ToSympyCode(e));
 
+        [ConstantField]
+        private static readonly Parameter TheShaderNames = new("names", "What each variable is called in the shader, such as p.x, or none to keep its own name.");
+
+        /// <summary><see cref="MathS.Shaders.Hlsl(IReadOnlyList{KeyValuePair{string, Entity}}, IReadOnlyDictionary{Variable, string})"/>.</summary>
+        public static Query<Func<IReadOnlyList<KeyValuePair<string, Entity>>, IReadOnlyDictionary<Variable, string>?, GeneratedSource>> Hlsl { get; } = new(
+            "hlsl", "Writes expressions as straight-line HLSL, one assignment to each named output, or names the node it has no faithful form for.",
+            static (outputs, names) => MathS.Shaders.Hlsl(outputs, names),
+            TheShaderNames);
+
+        /// <summary><see cref="MathS.Shaders.Glsl(IReadOnlyList{KeyValuePair{string, Entity}}, IReadOnlyDictionary{Variable, string})"/>.</summary>
+        public static Query<Func<IReadOnlyList<KeyValuePair<string, Entity>>, IReadOnlyDictionary<Variable, string>?, GeneratedSource>> Glsl { get; } = new(
+            "glsl", "Writes expressions as straight-line GLSL, one assignment to each named output, or names the node it has no faithful form for.",
+            static (outputs, names) => MathS.Shaders.Glsl(outputs, names),
+            TheShaderNames);
+
         /// <summary><see cref="MathS.Boolean.BuildTruthTable(Entity, Variable[])"/>.</summary>
         public static Query<Func<Entity, IReadOnlyList<Variable>, Matrix?>> TruthTable { get; } = new(
             "truth_table", "Tabulates a statement over every assignment of true and false to its variables.",
@@ -244,7 +259,7 @@ namespace AngouriMath.Core.Operations
         public static IReadOnlyList<Operation> All { get; } =
         [
             Simplify, Normalize, Expand, Factorize, Differentiate, Integrate, Limit, Substitute,
-            Solve, SolveSystem, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, TruthTable, SatisfyingAssignments, Series,
+            Solve, SolveSystem, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, Hlsl, Glsl, TruthTable, SatisfyingAssignments, Series,
             ToBase, FromBase,
             Determinant, Inverse, Transpose, Rank, ReducedRowEchelonForm, Trace, TensorProduct,
             PrimeFactorization, Totient, GreatestCommonDivisor, DivisorCount, IsPrime,

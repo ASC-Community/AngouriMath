@@ -217,6 +217,12 @@ namespace AngouriMath.Tests.Core.Operations
             Assert.Equal(trigonometric.Alternate(2), Catalogue.Alternatives.Ask(trigonometric, 2));
             Assert.Equal(square.Latexize(), Catalogue.Latex.Ask(square));
             Assert.Equal(MathS.ToSympyCode(square), Catalogue.Sympy.Ask(square));
+            // HLSL has sincos and GLSL does not, so the two print a sine beside its cosine differently.
+            KeyValuePair<string, Entity>[] outputs = [new("r", "sin(x) * cos(x)")];
+            var names = new Dictionary<Variable, string> { [x] = "p.x" };
+            Assert.Equal(MathS.Shaders.Hlsl(outputs, names), Catalogue.Hlsl.Ask(outputs, names));
+            Assert.Equal(MathS.Shaders.Glsl(outputs, names), Catalogue.Glsl.Ask(outputs, names));
+            Assert.NotEqual(Catalogue.Hlsl.Ask(outputs, names), Catalogue.Glsl.Ask(outputs, names));
             Assert.Equal(MathS.Boolean.BuildTruthTable("a and not b", "a", "b"), Catalogue.TruthTable.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]));
             Assert.Equal(MathS.SolveBooleanTable("a and not b", "a", "b"), Catalogue.SatisfyingAssignments.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]));
             Assert.NotEqual(Catalogue.TruthTable.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]), Catalogue.SatisfyingAssignments.Ask("a and not b", [MathS.Var("a"), MathS.Var("b")]));

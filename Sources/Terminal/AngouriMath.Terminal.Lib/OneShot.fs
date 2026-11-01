@@ -68,7 +68,7 @@ let ownCommands =
 /// </summary>
 let notOffered =
     set [ "expand"; "factorize"; "integrate"; "limit"; "solve_system"; "evaluate_numerically"; "variables"
-          "alternatives"; "sympy"; "truth_table"; "satisfying_assignments"; "series"; "to_base"; "from_base"
+          "alternatives"; "sympy"; "hlsl"; "glsl"; "truth_table"; "satisfying_assignments"; "series"; "to_base"; "from_base"
           "determinant"; "inverse"; "transpose"; "rank"; "reduced_row_echelon_form"; "trace"; "tensor_product"
           "prime_factorization"; "totient"; "greatest_common_divisor"; "divisor_count"; "is_prime" ]
 

@@ -123,6 +123,8 @@ internal static class Tools
     /// <summary>The catalogue's entries that no tool offers, by name, each with the reason.</summary>
     public static readonly IReadOnlyDictionary<string, string> NotOffered = new Dictionary<string, string>
     {
+        [Catalogue.Hlsl.Name] = "waits for am_shader_source, https://github.com/asc-community/AngouriMath/issues/2298",
+        [Catalogue.Glsl.Name] = "waits for am_shader_source, https://github.com/asc-community/AngouriMath/issues/2298",
         [Catalogue.Normalize.Name] = "am_simplify offers the whole simplification, which starts with this pass",
         [Catalogue.Evaluate.Name] = "am_evaluate keeps an exact value exact, simplifying rather than evaluating, and adds a numeric value beside it",
     };
