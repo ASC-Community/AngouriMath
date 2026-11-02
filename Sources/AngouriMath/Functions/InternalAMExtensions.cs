@@ -1135,6 +1135,12 @@ namespace AngouriMath
         {
             if (n < 0)
                 throw new ArgumentOutOfRangeException(nameof(n), "Illegal factorial(n) for n < 0: n = " + n);
+            // Past the cached ones it is a balanced product, and it is not kept. The cache held
+            // every factorial up to the largest asked for, so (10^5)! left 8.6 GB behind after a
+            // full collection, and took 21 s multiplying the whole running product by one factor
+            // at a time. https://github.com/asc-community/AngouriMath/pull/2327#issuecomment-6575158568
+            if (n > MaxCachedFactorial)
+                return EInteger.FromBytes(ProductOfRange(1, n).ToByteArray(), littleEndian: true);
             // One volatile read, then an array that is never written again.
             var cache = factorialCache;
             if (n < cache.Length)
@@ -1154,6 +1160,33 @@ namespace AngouriMath
                 factorialCache = grown;
                 return grown[n];
             }
+        }
+
+        /// <summary>
+        /// The largest factorial kept in <see cref="factorialCache"/>. Every one below it is kept as
+        /// well, half a megabyte in all at this bound; their total size grows as the square of it.
+        /// </summary>
+        private const int MaxCachedFactorial = 1000;
+
+        /// <summary>
+        /// <c>from (from + 1) ... to</c>, for <c>1 &lt;= from &lt;= to + 1</c>, as a balanced tree of
+        /// products, so that the multiplications are of numbers of like size. Multiplying a running
+        /// product by one small factor at a time copies the whole product every time. In
+        /// <see cref="System.Numerics.BigInteger"/>, whose multiplication of large numbers is
+        /// subquadratic: 1 2 ... 10^5 takes 0.1 s and 7 MB there, and 0.44 s and 453 MB in
+        /// <see cref="EInteger"/>.
+        /// </summary>
+        private static System.Numerics.BigInteger ProductOfRange(int from, int to)
+        {
+            if (to - from < 16)
+            {
+                var product = System.Numerics.BigInteger.One;
+                for (var i = from; i <= to; i++)
+                    product *= i;
+                return product;
+            }
+            var middle = from + (to - from) / 2;
+            return ProductOfRange(from, middle) * ProductOfRange(middle + 1, to);
         }
 
         public static EInteger Factorial(this EInteger n) =>
