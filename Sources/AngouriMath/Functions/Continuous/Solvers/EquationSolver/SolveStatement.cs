@@ -205,6 +205,11 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (IsExactAndAlgebraic(substituted))
             {
                 var share = EDecimal.Create(EInteger.One, MathS.Settings.DecimalPrecisionContext.Value.Precision.Divide(2).Negate());
+                // No more than share^2, which a true root usually leaves, is under the bound whatever
+                // the terms are, so they are not evaluated again for their size: that cost nearly a
+                // tenth more allocation on solving x^2 + x + 1.
+                if (size.CompareTo(share.Multiply(share)) <= 0)
+                    return false;
                 return size.GreaterThan(EDecimal.Max(LargestTerm(substituted), share).Multiply(share));
             }
             if (size.LessThan(MathS.Settings.PrecisionErrorCommon))
@@ -218,14 +223,22 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// such as <c>pi</c> or a decimal is not: a special function may be evaluated in doubles, and
         /// a decimal is only as accurate as what found it.
         /// </summary>
+        /// <remarks>
+        /// Walked by hand rather than through <see cref="Entity.Nodes"/>: the tree is a fresh
+        /// substitution, so the lazy enumerators behind that are built anew for every root checked,
+        /// and they were a percent more allocation on solving <c>x^2 + x + 1</c>.
+        /// </remarks>
         private static bool IsExactAndAlgebraic(Entity expression)
-            => expression.Nodes.All(node => node switch
+            => expression switch
             {
                 Complex number => number.RealPart is Rational && number.ImaginaryPart is Rational,
-                Sumf or Minusf or Mulf or Divf => true,
-                Powf(_, Rational) => true,
+                Sumf(var augend, var addend) => IsExactAndAlgebraic(augend) && IsExactAndAlgebraic(addend),
+                Minusf(var minuend, var subtrahend) => IsExactAndAlgebraic(minuend) && IsExactAndAlgebraic(subtrahend),
+                Mulf(var multiplier, var multiplicand) => IsExactAndAlgebraic(multiplier) && IsExactAndAlgebraic(multiplicand),
+                Divf(var dividend, var divisor) => IsExactAndAlgebraic(dividend) && IsExactAndAlgebraic(divisor),
+                Powf(var @base, Rational) => IsExactAndAlgebraic(@base),
                 _ => false,
-            });
+            };
 
         /// <summary>
         /// The largest of the terms the equation adds up to at the root, which is the scale
