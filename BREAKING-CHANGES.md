@@ -282,6 +282,20 @@ powers of `x` found it.
 |---|---|---|
 | `"(3x - 4) * sqrt(x) + 3 + 3x - 4x^2 = 0".Solve("x")` | four roots, one of them 1.3233…, which is not a root | the other three |
 
+### A step function that has a limit from one side is that limit on that side
+
+**Silent: a limit of a power whose base is a `floor`, `ceil`, `round` or `sgn` that is 0 on the side approached is 0,
+where it was 1.** These functions take only whole values, so where one has a limit from a side it equals that limit on
+a whole interval on that side, and is now put in as it before the limit is taken. `floor(x)` is 0 on `(0, 1)`, so
+`floor(x)^x` there is 0 to a positive power; it was read as the form `0^0` through `e^(x ln(floor(x)))` and answered 1.
+Two-sided, each side is now taken with its own value, and `floor(x)^x` at 0 is 1 from the left and 0 from the right.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"floor(x)^x".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` | `0` |
+| `"floor(x)^tanh(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"floor(x)^x".ToEntity().Limit("x", 0)` | unevaluated | `NaN`, the sides differ |
+
 ### A limit of a logarithm that is not decided is left unevaluated
 
 **Not silent: what overflowed the stack now returns.** A limit of a logarithm whose argument has no limit, as

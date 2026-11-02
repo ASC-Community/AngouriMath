@@ -102,6 +102,28 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <paramref name="expr"/> with each <c>floor</c>, <c>ceil</c>, <c>round</c> and <c>sgn</c> of
+        /// <paramref name="x"/> whose limit from <paramref name="side"/> is a whole number put
+        /// in as that number. Each takes only whole values, so where it has a limit it takes
+        /// that value on the whole of some interval on that side: the substitution is exact
+        /// there, and not an approximation. Without it, <c>floor(x) ^ x</c> at 0+ was read as
+        /// the form 0^0 and answered 1 through <c>e ^ (x ln(floor(x)))</c>, where on (0, 1) it
+        /// is 0 to a positive power, which is 0.
+        /// </summary>
+        private static Entity WithStepsAtTheirLimits(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        {
+            if (!expr.Nodes.Any(node => node is Floorf or Ceilf or Roundf or Signumf))
+                return expr;
+            return expr.Replace(node =>
+                node is Floorf or Ceilf or Roundf or Signumf
+                && node.ContainsNode(x)
+                && node.ComputeLimitDivideEtImpera(x, dest, side) is { } limit
+                && limit.Evaled is Integer whole
+                ? whole
+                : node);
+        }
+
+        /// <summary>
         /// The limit where the two one-sided limits agree, asked of each side through the
         /// whole of <see cref="ComputeLimit"/>, or <see langword="null"/> where either side
         /// has no answer, the two differ, or the reading is not of real-valued functions.
@@ -278,6 +300,7 @@ namespace AngouriMath.Functions.Algebra
 
             if (side is ApproachFrom.Left or ApproachFrom.Right)
             {
+                expr = WithStepsAtTheirLimits(expr, x, dest, side);
                 var oneSided = expr.ComputeLimitDivideEtImpera(x, dest, side);
                 if (oneSided is { } found && (acceptNaN || found.Evaled != MathS.NaN))
                     return oneSided;
@@ -377,8 +400,10 @@ namespace AngouriMath.Functions.Algebra
                     // https://github.com/asc-community/AngouriMath/issues/1186
                     return atInfinity;
                 }
-                else if (expr.ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Left) is { } fromLeft
-                  && expr.ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Right) is { } fromRight)
+                // Each side with its own steps put in: floor(x) ^ x at 0 is 1 from the left and 0
+                // from the right, and read bare both sides were 1.
+                else if (WithStepsAtTheirLimits(expr, x, dest, ApproachFrom.Left).ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Left) is { } fromLeft
+                  && WithStepsAtTheirLimits(expr, x, dest, ApproachFrom.Right).ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Right) is { } fromRight)
                 {
                     if (fromLeft == fromRight && (acceptNaN || fromLeft.Evaled != MathS.NaN))
                         return fromLeft;
