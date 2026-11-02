@@ -6,6 +6,7 @@
 //
 
 using AngouriMath;
+using AngouriMath.Extensions;
 using Xunit;
 using static AngouriMath.Entity.Number;
 
@@ -68,6 +69,34 @@ namespace AngouriMath.Tests.Common
             Assert.Equal(
                 Rational.Create(expectedNum, expectedDen),
                 (Rational)Rational.Create(aNum, aDen) % (Rational)Rational.Create(bNum, bDen));
+
+        /// <summary>
+        /// Two ratios are divided as ratios however they are typed, in the operator and in
+        /// evaluation. Taken as decimals, 1/27 is rounded up in its last digit, the quotient of 6
+        /// by it falls just short of 162, and 6 % (1/27), which is 0, came back as 1/27. A
+        /// quotient wider than the working precision has no decimal remainder, and 10^200 % 7
+        /// was NaN. Found by a check of compiled expressions against evaluation; no issue was
+        /// filed.
+        /// </summary>
+        [Theory]
+        [InlineData("6 mod (1/27)", "0")]
+        [InlineData("(10^200) mod 7", "2")]
+        [InlineData("(10^200 + 3) mod (-10)", "-7")]
+        [InlineData("(10^100 + 1/2) mod 1", "1/2")]
+        [InlineData("(5/2) mod (1/6)", "0")]
+        [InlineData("(-5/2) mod (1/6)", "0")]
+        [InlineData("(7/3) mod (2/9)", "1/9")]
+        [InlineData("(-7/3) mod (2/9)", "1/9")]
+        [InlineData("(7/3) mod (-2/9)", "-1/9")]
+        public void ARemainderOfTwoRatiosIsExact(string expression, string expected)
+        {
+            Assert.Equal(expected.ToEntity(), expression.ToEntity().EvalNumerical());
+            Assert.Equal(expected.ToEntity(), expression.ToEntity().Simplify());
+        }
+
+        [Fact]
+        public void ARemainderOfTwoRatiosTypedAsRealsIsExact() =>
+            Assert.Equal(Integer.Zero, (Real)Integer.Create(6) % (Real)Rational.Create(1, 27));
 
         /// <summary>
         /// The remainder is always strictly smaller in magnitude than the divisor. That is what

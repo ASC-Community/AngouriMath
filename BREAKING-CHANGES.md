@@ -315,6 +315,22 @@ and a number that passes every round is left open, since passing is not a proof
 | `"(10^30 + 1) in PP".ToEntity().Evaled` | `1000000000000000000000000000001 in PP` | `False` |
 | `"(10^30 + 57) in PP".ToEntity().Evaled` | `1000000000000000000000000000057 in PP` | `1000000000000000000000000000057 in PP` |
 
+### A remainder of two ratios is exact
+
+**Silent: a remainder that came back as the divisor, or as NaN, is the remainder.** `%` on `Real`, `mod` and evaluation
+took the remainder of two numbers from their decimals. A ratio that does not end is rounded there, and a remainder jumps
+at every multiple of the divisor: `6 mod (1/27)` is 0, and with `1/27` rounded up in its last digit the quotient fell just
+short of 162, so the answer was `1/27`. A quotient wider than the working precision has no decimal remainder at all, so
+`10^200 mod 7` was NaN. Two ratios, whole numbers among them, are now divided exactly. No issue was filed; a check of
+compiled expressions against evaluation found it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"6 mod (1/27)".EvalNumerical()` | `1/27` | `0` |
+| `"(5/2) mod (1/6)".EvalNumerical()` | `1/6` | `0` |
+| `"(10^200) mod 7".EvalNumerical()` | `NaN` | `2` |
+| `"(10^100 + 1/2) mod 1".EvalNumerical()` | `NaN` | `1/2` |
+
 ### The row echelon forms divide exactly
 
 **Not silent for numbers: what threw or did not return now answers. Silent for symbols: the forms are written
