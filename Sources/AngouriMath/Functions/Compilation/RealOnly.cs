@@ -47,6 +47,26 @@ namespace AngouriMath.Core.Compilation
         }
 
         /// <summary>
+        /// The floored remainder of two reals, which takes the sign of the divisor, as
+        /// <see cref="Mod(NumericsComplex, NumericsComplex)"/> takes it. Written as
+        /// <c>((a % b) + b) % b</c> it is rounded a second time where the first remainder already
+        /// had the divisor's sign: <c>2 mod e</c> came out 1.9999999999999996, and
+        /// <c>floor(2 mod e)</c> 1, where both evaluate to 2.
+        /// </summary>
+        public static double Mod(double a, double b)
+        {
+            var truncated = a % b;
+            return (truncated is 0 || truncated < 0 == b < 0 ? truncated : truncated + b) + 0.0;
+        }
+
+        /// <summary>The floored remainder of two reals in single precision, as <see cref="Mod(double, double)"/>.</summary>
+        public static float Mod(float a, float b)
+        {
+            var truncated = a % b;
+            return (truncated is 0 || truncated < 0 == b < 0 ? truncated : truncated + b) + 0.0f;
+        }
+
+        /// <summary>
         /// The larger of two numbers, or NaN where they are not both real: the complex numbers are
         /// not ordered, and the interpreter leaves <c>max(2, 1 + i)</c> unevaluated and gives
         /// <c>max(i, i)</c> no value. Two equal complex arguments had themselves for a maximum

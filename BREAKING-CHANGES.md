@@ -660,6 +660,18 @@ Pythagorean identity with a coefficient is now a rule of its own, found wherever
 | `"2 + (-2)*cos(x)^2 + (-2)*sin(x)^2".Simplify()` | `2 + (-2) * cos(x) ^ 2 + (-2) * sin(x) ^ 2` | `0` |
 | `"2 + (-2) * cos(2 * x) + (-4) * sin(x) ^ 2".Simplify()` | unchanged | `0` |
 
+### A compiled remainder of two reals is rounded once
+
+**Silent: compiled over `double` or `float`, `a mod b` is the floored remainder rounded once, where it was rounded twice.**
+It was compiled as `((a % b) + b) % b`, which takes the remainder a second time even where the first already has the
+divisor's sign, and that second one rounds. Now the divisor is added only where the signs differ, as the compiled
+remainder over `Complex` already did.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"2 mod e".ToEntity().Compile<double, double>("x")(0)` | `1.9999999999999996` | `2` |
+| `"floor(2 mod e)".ToEntity().Compile<double, double>("x")(0)` | `1` | `2`, as evaluated |
+
 ### A compiled odd root of a negative real is real
 
 **Silent: compiled, a negative real to a rational power with an odd denominator below ten is the real root to the
