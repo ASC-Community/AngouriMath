@@ -53,6 +53,34 @@ namespace AngouriMath.Tests.Common
                     Assert.True(double.IsNaN(divided[i, j]), $"[{i}, {j}] is {divided[i, j]}");
         }
 
+        /// <summary>
+        /// A remainder by zero, the same. Of two integers the remainder is compiled over the integers, and the
+        /// runtime's % threw DivideByZeroException for a divisor of 0 when the function was called. Found by a check
+        /// of compiled expressions against evaluation; no issue was filed.
+        /// </summary>
+        [Theory]
+        [InlineData("2 mod 0")]
+        [InlineData("x + (2 mod 0)")]
+        [InlineData("abs(2) mod (2 mod (-1))")]
+        [InlineData("x mod 0")]
+        [InlineData("x mod (x - x)")]
+        public void ARemainderByZeroHasNoValue(string expression)
+        {
+            var entity = expression.ToEntity();
+            Assert.True(double.IsNaN(entity.Compile<double, double>("x")(0.7)), $"{expression} over double");
+            Assert.True(float.IsNaN(entity.Compile<float, float>("x")(0.7f)), $"{expression} over float");
+            Assert.True(double.IsNaN(entity.Compile<System.Numerics.Complex, System.Numerics.Complex>("x")(0.7).Real), $"{expression} over Complex");
+            Assert.True(double.IsNaN(entity.Compile("x").Call(0.7).Real), $"{expression} by FastExpression");
+            Assert.True(entity.Substitute("x", 0.7).Evaled.IsNaN, $"{expression} evaluates to a value");
+        }
+
+        [Theory]
+        [InlineData("7 mod 3 + x", 0.5, 1.5)]
+        [InlineData("(-7) mod 3 + x", 0.5, 2.5)]
+        [InlineData("7 mod (-3) + x", 0.5, -1.5)]
+        public void ARemainderOfIntegersIsTheFlooredOne(string expression, double at, double value)
+            => Assert.Equal(value, expression.ToEntity().Compile<double, double>("x")(at));
+
         [Theory]
         [InlineData("1/x", 4, 0.25)]
         [InlineData("x^(1/2)", 0, 0)]

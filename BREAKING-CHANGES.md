@@ -659,6 +659,18 @@ made `0^(-1)` an infinity and `0^0` 1 ([#2286](https://github.com/asc-community/
 | `"x^(-1)".Compile<double, double>("x")(0)` | `+Infinity` | `NaN` |
 | `"x^x".Compile<double, double>("x")(0)` | `1` | `NaN` |
 
+### A compiled remainder of two integers by zero has no value
+
+**Not silent: a compiled function that threw is `NaN`, as in evaluation.** The remainder of two integers is compiled
+over the integers, and the runtime's `%` throws for a divisor of 0. So `2 mod 0`, or `abs(2) mod (2 mod (-1))`, compiled
+by the LINQ compilers threw `DivideByZeroException` when the function was called. No issue was filed; a check of compiled
+expressions against evaluation found it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x + (2 mod 0)".Compile<double, double>("x")(1)` | `DivideByZeroException` | `NaN` |
+| `"x + (2 mod 0)".Compile<Complex, Complex>("x")(1)` | `DivideByZeroException` | `NaN` |
+
 ### `tanh` and `coth` of a large number are their limits
 
 **Silent: `tanh` and `coth` of a large positive number evaluate and compile to `1`, where they were `NaN`, and at
