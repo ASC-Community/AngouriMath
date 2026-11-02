@@ -280,8 +280,70 @@ namespace AngouriMath
             // Like division, undefined when the divisor is zero
             private protected override Entity IntrinsicCondition => !Divisor.EqualTo(0);
 
+            // The largest n for which n! mod m is multiplied out factor by factor, when n < |m|:
+            // in machine words under 2^31, where 10^7 factors take 0.06 s, and in EInteger above
+            // it, where they take 1 s and 2.3 GB of short-lived garbage. Past it the factorial is
+            // built whole, as before.
+            private const int MaxFactorialMultipliedModulo = 10_000_000;
+
+            /// <summary>
+            /// <c>b ^ e mod m</c> and <c>n! mod m</c>, for whole numbers <c>b</c>, <c>e &gt;= 0</c>,
+            /// <c>n &gt;= 0</c> and <c>m</c> not 0, reduced modulo <c>m</c> as they are built, so the
+            /// power or factorial is never written out: <c>2 ^ (10 ^ 8) mod 1000</c> took 29 s and
+            /// 13.9 GB, and <c>10 ^ (10 ^ 9) mod 7</c> did not finish in a minute. The remainder is
+            /// the floored one, as the operator's: <c>|m| | n!</c> once <c>n &gt;= |m|</c>, so that is
+            /// 0. Null otherwise, and for <c>0 ^ 0</c>, which has no value.
+            /// https://github.com/asc-community/AngouriMath/pull/2327#issuecomment-6575158568
+            /// </summary>
+            private static Entity? OfALargeWhole(Entity dividend, Entity divisor)
+            {
+                if (dividend is not (Powf or Factorialf) || divisor.Evaled is not Integer { EInteger: var m } || m.IsZero)
+                    return null;
+                var modulus = m.Abs();
+                PeterO.Numbers.EInteger? remainder = null;
+                if (dividend is Powf(var @base, var exponent)
+                    && @base.Evaled is Integer { EInteger: var b } && exponent.Evaled is Integer { EInteger: var e } && e.Sign >= 0
+                    && !(b.IsZero && e.IsZero))
+                {
+                    var reduced = b.Remainder(modulus);
+                    if (reduced.Sign < 0)
+                        reduced += modulus;
+                    remainder = reduced.ModPow(e, modulus).Remainder(modulus);
+                }
+                else if (dividend is Factorialf(var argument) && argument.Evaled is Integer { EInteger: var n } && n.Sign >= 0)
+                {
+                    if (n.CompareTo(modulus) >= 0)
+                        remainder = PeterO.Numbers.EInteger.Zero;
+                    else if (n.CompareTo(PeterO.Numbers.EInteger.FromInt32(MaxFactorialMultipliedModulo)) <= 0)
+                    {
+                        var last = n.ToInt32Checked();
+                        // Under 2^31 the running product times the next factor fits a long.
+                        if (modulus.CanFitInInt32())
+                        {
+                            var small = modulus.ToInt32Checked();
+                            var product = 1L % small;
+                            for (var k = 2; k <= last; k++)
+                                product = product * k % small;
+                            remainder = PeterO.Numbers.EInteger.FromInt64(product);
+                        }
+                        else
+                        {
+                            var product = PeterO.Numbers.EInteger.One.Remainder(modulus);
+                            for (var k = 2; k <= last; k++)
+                                product = (product * k).Remainder(modulus);
+                            remainder = product;
+                        }
+                    }
+                }
+                if (remainder is not { } r)
+                    return null;
+                // Floored: a remainder takes the divisor's sign, so a negative m moves it into (m, 0].
+                return Integer.Create(m.Sign < 0 && !r.IsZero ? r + m : r);
+            }
+
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
+                OfALargeWhole(Dividend, Divisor) ??
                 ExpandOnTwoArguments(Dividend, Divisor,
                 (a, b) => (a, b) switch
                 {
