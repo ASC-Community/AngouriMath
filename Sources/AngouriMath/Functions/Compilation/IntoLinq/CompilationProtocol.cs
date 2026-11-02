@@ -269,6 +269,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Modf { Divisor: var divisor } when IsIntegral(left.Type) && divisor.Vars.Count == 0
                     && divisor.Evaled is Integer { IsZero: true }
                     => Expression.Constant(double.NaN),
+                // Over the reals the remainder is taken once, and the divisor added only where the
+                // signs differ: the shortest expression below rounds a second time, which is exact
+                // for the integers and not for a double.
+                Modf when left.Type == typeof(double) && right.Type == typeof(double)
+                    => Expression.Call(realRemainderOfDoubles, left, right),
+                Modf when left.Type == typeof(float) && right.Type == typeof(float)
+                    => Expression.Call(realRemainderOfFloats, left, right),
                 Modf => Operator(ExpressionType.Modulo,
                                  Operator(ExpressionType.Add, Operator(ExpressionType.Modulo, left, right), right),
                                  right),
@@ -601,6 +608,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             ((MethodCallExpression)((Expression<Func<double, double, bool, double>>)((a, b, odd) => Core.Compilation.RealProducts.RealRootPower(a, b, odd))).Body).Method;
         [ConstantField] private static readonly MethodInfo complexRemainder =
             ((MethodCallExpression)((Expression<Func<System.Numerics.Complex, System.Numerics.Complex, System.Numerics.Complex>>)((a, b) => RealOnly.Mod(a, b))).Body).Method;
+
+        [ConstantField] private static readonly MethodInfo realRemainderOfDoubles = Call<double>((a, b) => RealOnly.Mod(a, b));
+        [ConstantField] private static readonly MethodInfo realRemainderOfFloats = Call<float>((a, b) => RealOnly.Mod(a, b));
 
         private static MethodInfo Call<T>(Expression<Func<T, T, T>> e) => ((MethodCallExpression)e.Body).Method;
 
