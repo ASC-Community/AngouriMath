@@ -105,6 +105,19 @@ root. An equation in a square root whose squared form is such a quartic was answ
 | `"31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/2 + -sqrt((27/62 + -8/31 * sqrt(2)) / 2), … }`, four real roots |
 | `"x^2 - x - 1 = 4x*sqrt(2x^2 - 4x + 2)".ToEntity().Solve("x")` | `{ }` | `{ 1/2 + -sqrt((27/62 + 8/31 * sqrt(2)) / 2) }` |
 
+### A real root just past where a radical's argument changes sign is found
+
+**Silent: an equation Newton's method answers gains a real root it missed, and over the reals is no longer answered
+`{ }`.** Newton's method, which `Solve` falls back to, also starts from each bracket where the expression changes sign
+along the real line, and started from the bracket's midpoint. Where a radical's argument crosses zero inside the
+bracket the slope there is unbounded, and from the midpoint the iteration left the real line and never came back, so a
+real root sitting just past that zero was not answered. The bracket is halved down to the root first.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(x^2 - 3x - 3)^(1/3) + sqrt(3x - 4) = 3".ToEntity().Solve("x")` | `{ 1.3099 - 2.3063i, 1.3099 + 2.3063i }` | also `3.7961670056822383` |
+| `"(x^2 - 3x - 3)^(1/3) + sqrt(3x - 4) = 3 provided x in RR".ToEntity().Solve("x")` | `{ }` | `{ 3.7961670056822383 }` |
+
 ### A quotient of logarithms is differentiated only where both diverge
 
 **Silent: a limit of a quotient of logarithms whose divisor tends to 0 is no longer answered by l'Hopital's rule, which

@@ -207,12 +207,40 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
                     yield return new NumericsComplex(at, 0);
                 else if (value is { } here && previous is { } there
                     && (here < 0) != (there < 0))
-                    // The midpoint, rather than either end: the bracket holds a root and
-                    // Newton converges fastest from as near it as we can say it is.
-                    yield return new NumericsComplex((at + previousAt) / 2, 0);
+                    // The bracket halved down to the root, rather than its midpoint: the
+                    // bracket holds a root and Newton converges fastest from as near it as we
+                    // can say it is. From the midpoint it could not converge at all where the
+                    // slope is unbounded inside the bracket -- (x^2 - 3x - 3)^(1/3)
+                    // + sqrt(3x - 4) = 3 has its root at 3.7962, past the cube root's zero at
+                    // 3.7913, and from 3.7 the iteration went off the real line and its one
+                    // real root was never answered. A pole between the two is halved down to as
+                    // well, and its value there rejects it as it did before.
+                    yield return new NumericsComplex(Halved(previousAt, there, at, RealValueAt), 0);
                 previousAt = at;
                 previous = value;
             }
+        }
+
+        /// <summary>
+        /// A point of <c>[low, high]</c>, or <c>[high, low]</c>, as near a sign change of
+        /// <paramref name="valueAt"/> as halving the interval gets in double precision, given
+        /// the value at <paramref name="low"/>. Stops where a midpoint has no real value.
+        /// </summary>
+        private static double Halved(double low, double atLow, double high, Func<double, double?> valueAt)
+        {
+            for (var step = 0; step < 64; step++)
+            {
+                var middle = (low + high) / 2;
+                if (middle == low || middle == high || valueAt(middle) is not { } here)
+                    return middle;
+                if (here == 0)
+                    return middle;
+                if ((here < 0) == (atLow < 0))
+                    (low, atLow) = (middle, here);
+                else
+                    high = middle;
+            }
+            return (low + high) / 2;
         }
 
         /// <summary>
