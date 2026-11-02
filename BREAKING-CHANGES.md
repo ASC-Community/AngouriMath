@@ -234,6 +234,18 @@ the square root the solver takes after solving for `x^2`, where an equation has 
 | `"x^4 - (a^2 + b^2)*x^2 + a^2*b^2 = 0".Solve("x")` | `{ sqrt((a ^ 2 + b ^ 2 - sqrt((-(a ^ 2 + b ^ 2)) ^ 2 - 4 * a ^ 2 * b ^ 2)) / 2), … }` | `{ -b, b, -a, a }` |
 | `"sin(x)^2 = (a + 1)^2".Solve("x")` | `{ arcsin(sqrt((a + 1) ^ 2)) + 2 * pi * n_1, … }` | `{ arcsin(-a - 1) + 2 * pi * n_1, … }` |
 
+### A root of a raised radical equation with a parameter is provided it is one
+
+**Silent: a root of an equation in a radical and another name gains the condition that it is a root.** The equation
+is raised to a power, which adds roots, and each root is put back into the equation to be dropped where it fails. With
+another name left in, that cannot be decided, and every root of the raised equation was answered as a root of the
+equation. Each is now provided it is one, so giving the name a value keeps the roots and drops the rest.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sqrt(x + 1) + a + x = 0".ToEntity().Solve("x").Substitute("a", 2).Simplify()` | two roots, neither a root | `{ }` |
+| `"sqrt(x + 1) + a + x = 0".ToEntity().Solve("x").Substitute("a", -5).Simplify()` | `{ 3, 8 }`; 8 is not a root | `{ 3 }` |
+
 ### A fractional power is inverted where its values lie
 
 **Silent: a root gains the condition under which it is one.** The principal power `z^p` has argument `p arg(z)`, so
