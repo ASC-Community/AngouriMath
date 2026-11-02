@@ -257,9 +257,17 @@ namespace AngouriMath
                 /// with the same operator on <see cref="Integer"/> and on
                 /// <see cref="Rational"/> -- which one applied depended on the static type at
                 /// the call site rather than on the values.
+                /// <para/>
+                /// Two ratios are divided as ratios, whatever their static type. Their decimals
+                /// are rounded, and a remainder jumps at every multiple of the divisor: 6 % (1/27)
+                /// is 0, and with 1/27 rounded up in its last digit the quotient fell just short
+                /// of 162, so it came back as 1/27. And a quotient wider than the working
+                /// precision has no decimal remainder at all, so 10^200 % 7 was NaN.
                 /// </remarks>
                 public static Real operator %(Real a, Real b)
-                    => a.EDecimal.Remainder(b.EDecimal, MathS.Settings.DecimalPrecisionContext)
+                    => a is Rational ratioA && b is Rational { ERational.IsZero: false } ratioB
+                    ? ratioA % ratioB
+                    : a.EDecimal.Remainder(b.EDecimal, MathS.Settings.DecimalPrecisionContext)
                         .Alias(out var truncated)
                         .IsZero || truncated.IsNegative == b.EDecimal.IsNegative
                         ? truncated
