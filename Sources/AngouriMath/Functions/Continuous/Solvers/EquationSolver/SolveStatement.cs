@@ -118,6 +118,9 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// 1e-15, while every spurious one sits between 1.5 and 2. This is a hundredth:
         /// twenty times above the worst genuine root and a hundred and fifty times below
         /// the mildest spurious one.
+        ///
+        /// It is a bound for roots found numerically. An equation and a root that are exact numbers
+        /// are held to the working precision instead, in <see cref="IsEvidenceAgainst"/>.
         /// </remarks>
         [ConstantField] private static readonly EDecimal RelativeResidualTolerance = EDecimal.FromString("0.01");
 
@@ -194,10 +197,48 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (substituted.Evaled is not Number.Complex residual || !residual.IsFinite)
                 return false;
             var size = residual.Abs().EDecimal;
+            // Exact numbers in sums, products, quotients and rational powers are evaluated to the
+            // working precision, so what they leave is either what rounding leaves of zero or a whole
+            // quantity, and a percent is no bound for it. (3x - 4) sqrt(x) + 3 + 3x - 4x^2 = 0, raised
+            // to a quartic, has a root of the quartic in radicals at 1.3233 that leaves 0.069 against
+            // terms of 7, which a percent of them kept.
+            if (IsExactAndAlgebraic(substituted))
+            {
+                var share = EDecimal.Create(EInteger.One, MathS.Settings.DecimalPrecisionContext.Value.Precision.Divide(2).Negate());
+                // No more than share^2, which a true root usually leaves, is under the bound whatever
+                // the terms are, so they are not evaluated again for their size: that cost nearly a
+                // tenth more allocation on solving x^2 + x + 1.
+                if (size.CompareTo(share.Multiply(share)) <= 0)
+                    return false;
+                return size.GreaterThan(EDecimal.Max(LargestTerm(substituted), share).Multiply(share));
+            }
             if (size.LessThan(MathS.Settings.PrecisionErrorCommon))
                 return false;
             return size.GreaterThan(LargestTerm(substituted).Multiply(RelativeResidualTolerance));
         }
+
+        /// <summary>
+        /// Whether <paramref name="expression"/> is exact numbers in sums, products, quotients and
+        /// rational powers, which evaluation carries to the working precision. A function, a constant
+        /// such as <c>pi</c> or a decimal is not: a special function may be evaluated in doubles, and
+        /// a decimal is only as accurate as what found it.
+        /// </summary>
+        /// <remarks>
+        /// Walked by hand rather than through <see cref="Entity.Nodes"/>: the tree is a fresh
+        /// substitution, so the lazy enumerators behind that are built anew for every root checked,
+        /// and they were a percent more allocation on solving <c>x^2 + x + 1</c>.
+        /// </remarks>
+        private static bool IsExactAndAlgebraic(Entity expression)
+            => expression switch
+            {
+                Complex number => number.RealPart is Rational && number.ImaginaryPart is Rational,
+                Sumf(var augend, var addend) => IsExactAndAlgebraic(augend) && IsExactAndAlgebraic(addend),
+                Minusf(var minuend, var subtrahend) => IsExactAndAlgebraic(minuend) && IsExactAndAlgebraic(subtrahend),
+                Mulf(var multiplier, var multiplicand) => IsExactAndAlgebraic(multiplier) && IsExactAndAlgebraic(multiplicand),
+                Divf(var dividend, var divisor) => IsExactAndAlgebraic(dividend) && IsExactAndAlgebraic(divisor),
+                Powf(var @base, Rational) => IsExactAndAlgebraic(@base),
+                _ => false,
+            };
 
         /// <summary>
         /// The largest of the terms the equation adds up to at the root, which is the scale
