@@ -169,6 +169,27 @@ answered 5 numbers that are not roots. Now 2 roots are missing and none is wrong
 | `"sqrt(x) - 1/x - 1 = 0".Solve("x")` | `{ 2.1478… }` | that root in radicals |
 | `"(3 - x)*sqrt(x) - x = 0".Solve("x")` | `{ 0, (7 - sqrt(13)) / 2 }` | `{ 0, (-7 + sqrt(13)) / (-2) }` |
 
+### A radical of a constant is a coefficient
+
+**Not silent: an equation that ended the process with a stack overflow is answered, and a polynomial with a radical
+or another real constant among its coefficients has all its roots.** The solver raises an equation to a power to remove
+a radical, and it took a radical of a constant, such as `sqrt(2)`, for one. Raising `x^5 + x - sqrt(2) = 0` gives
+`(x^5 + x)^2 = 2`, and the substitution that solves that gives back `x^5 + x = sqrt(2)`, the equation it started from,
+so the solver recursed until the stack ran out. A radical of a constant is now a coefficient. No issue was filed; a
+check of systems built from known solutions found it, eliminating `y` from `sqrt(y) - x = sqrt(2) - 1, |x| + y = 3`.
+
+A polynomial with such a coefficient and no roots in closed form went to Newton's method, which starts inside a
+bounded region and misses a root outside it. It is now solved as one with rational coefficients is, by the
+Durand–Kerner iteration, which answers all its roots or none.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^5 + x - sqrt(2) = 0".Solve("x")` | stack overflow | five roots |
+| `"x^5 + x^2 - 3 * sqrt(2) = 0".Solve("x")` | three roots of five | five roots |
+| `"x^5 - 30 * x^4 + sqrt(2) = 0".Solve("x")` | one root of five | five roots |
+| `"x^5 - 30 * x^4 + pi = 0".Solve("x")` | eight numbers, none of them the root near 30 | five roots |
+| `"2 * x^5 + 37 * x^4 - x^3 - 4 * x^2 - 2 * sqrt(2) * x + 4 = 0".Solve("x")` | four roots of five | five roots |
+
 ### A cube shifted is solved
 
 **Silent: a cubic `a(x + h)^3 = k` written out, with `b^2 = 3ac`, is solved where it was answered `{ }`.** Cardano's

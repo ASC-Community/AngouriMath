@@ -51,5 +51,65 @@ namespace AngouriMath.Tests.Algebra
             if (among is { })
                 Assert.Contains(roots, root => (root - among.ToEntity()).Simplify() == 0);
         }
+
+        /// <summary>
+        /// A radical of a constant is a coefficient, not a radical to raise. Taken for one,
+        /// <c>-2 sqrt(2) + |x| + (2 sqrt(2) - 2) x + x^2 = 0</c> was squared into
+        /// <c>(|x| + ...)^2 = 8</c>, whose substitution gave back the equation it started from, and
+        /// the solver recursed until the stack ran out: the process ended. It is met eliminating
+        /// <c>y</c> from <c>sqrt(y) - x = sqrt(2) - 1, |x| + y = 3</c>, which a check of systems built
+        /// from known solutions found; no issue was filed.
+        /// </summary>
+        [Theory]
+        [InlineData("sqrt(3 - abs(x)) - x - sqrt(2) + 1 = 0")]
+        [InlineData("abs(x) + x^2 - 2 * sqrt(2) = 0")]
+        [InlineData("x^5 + x - sqrt(2) = 0")]
+        public void ARadicalOfAConstantIsNotRaised(string equation)
+        {
+            var solving = System.Threading.Tasks.Task.Run(() => equation.ToEntity().Solve("x"));
+            Assert.True(solving.Wait(System.TimeSpan.FromMinutes(1)), $"{equation} did not finish");
+        }
+
+        /// <summary>A polynomial with sqrt(2) among its coefficients met the same loop.</summary>
+        [Fact]
+        public void APolynomialWithARadicalCoefficientIsAnswered()
+        {
+            var roots = Assert.IsType<Set.FiniteSet>("x^5 + x - sqrt(2) = 0".ToEntity().Solve("x"));
+            Assert.Equal(5, roots.Count);
+            foreach (var root in roots)
+            {
+                var value = "x^5 + x - sqrt(2)".ToEntity().Substitute("x", root).EvalNumerical();
+                Assert.True(Complex.Abs(value).EDecimal.CompareTo(EDecimal.FromString("1E-10")) < 0, $"{root} leaves {value}");
+            }
+        }
+
+        /// <summary>
+        /// And one whose coefficients are real constants has all its roots, as one with rational
+        /// coefficients does. Newton's method answered it, from starts inside a bounded region, and
+        /// missed the root outside it: 30 for the first two and -18.5 for the third.
+        /// </summary>
+        [Theory]
+        [InlineData("x^5 - 30 * x^4 + sqrt(2)")]
+        [InlineData("x^5 - 30 * x^4 + pi")]
+        [InlineData("2 * x^5 + 37 * x^4 - x^3 - 4 * x^2 - 2 * sqrt(2) * x + 4")]
+        public void APolynomialWithRealCoefficientsHasAllItsRoots(string polynomial)
+        {
+            var solving = System.Threading.Tasks.Task.Run(() => $"{polynomial} = 0".ToEntity().Solve("x"));
+            Assert.True(solving.Wait(System.TimeSpan.FromMinutes(1)), $"{polynomial} = 0 did not finish");
+            var roots = Assert.IsType<Set.FiniteSet>(solving.Result);
+            Assert.Equal(5, roots.Count);
+            foreach (var root in roots)
+            {
+                var value = polynomial.ToEntity().Substitute("x", root).EvalNumerical();
+                Assert.True(Complex.Abs(value).EDecimal.CompareTo(EDecimal.FromString("1E-10")) < 0, $"{root} leaves {value}");
+            }
+        }
+
+        [Fact]
+        public void ASystemThatEliminatesToOneFinishes()
+        {
+            var solving = System.Threading.Tasks.Task.Run(() => MathS.Equations("sqrt(y) - x - sqrt(2) + 1", "abs(x) + y - 3").Solve("x", "y"));
+            Assert.True(solving.Wait(System.TimeSpan.FromMinutes(1)), "the system did not finish");
+        }
     }
 }
