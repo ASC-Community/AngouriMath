@@ -390,6 +390,19 @@ mentions answers it as a parameter, as a short system does, where it was `null`
 | `MathS.Equations("x - 1", "x^2 - 1").Solve("x", "y")` | `null` | `[[1, t_1]]` |
 | `MathS.Equations("a - 1", "b * 0").Solve("a", "b")` | `null` | `[[1, t_1]]` |
 
+### A limit on an arctangent's cut is not read off the principal value
+
+**Silent: a limit of `arctan` whose argument arrives on the arctangent's cut, the imaginary axis past `i` and `-i`, is
+left unevaluated, where it was the principal value there.** That value is the limit from one side of the cut only, and
+which side the argument comes from was not asked. `log(2, x)` comes to `i pi / ln(2)` from the left half-plane as x comes
+up to -1, so `arctan(log(2, x))` tends to `-pi/2 + 0.224i` there, and the answer was `pi/2 + 0.224i`. A limit from the
+side where the principal value is right is declined as well, as it is for the logarithm.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"arctan(log(2, x))".ToEntity().Limit("x", -1, ApproachFrom.Right)` | `arctan(ln(-1) / ln(2))`, `pi/2 + 0.224i` | unevaluated |
+| `"arctan(2i + x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `arctan(2i)`, `pi/2 + 0.549i` | unevaluated |
+
 ### A limit on a logarithm's cut is not read off the principal value
 
 **Silent: a limit of a logarithm, or of a power to an exponent that is not whole, whose argument arrives on the negative
