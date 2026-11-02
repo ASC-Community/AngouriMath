@@ -150,8 +150,8 @@ namespace AngouriMath.Functions.Algebra
         /// </remarks>
         private static Entity? WhereBothSidesAgree(Entity expr, Variable x, Entity dest)
         {
-            if (MathS.Settings.Codomain.Value is not AngouriMath.Core.Domain.Real
-                || bothSidesDepth >= MaxBothSidesDepth)
+            if (bothSidesDepth >= MaxBothSidesDepth
+                || MathS.Settings.Codomain.Value is not AngouriMath.Core.Domain.Real && !IsRealOnBothSides(expr, x, dest))
                 return null;
             bothSidesDepth++;
             try
@@ -166,6 +166,45 @@ namespace AngouriMath.Functions.Algebra
                     ? fromLeft : null;
             }
             finally { bothSidesDepth--; }
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is real on both sides of a real <paramref name="dest"/>,
+        /// close enough to it, decided structurally: every power to an exponent that is not whole,
+        /// and every logarithm, has a base and an argument positive on both sides, by
+        /// <see cref="SignNear"/>. Where it is, its one-sided limits are limits of real values from
+        /// either side, and their agreeing is the two-sided limit under any codomain. <c>x^x</c>
+        /// is not, its base being negative on the left, and stays without one; <c>(x^2)^x</c> is,
+        /// and was NaN at 0 where each side is 1. Anything else unlisted is not real, which costs
+        /// coverage and never correctness.
+        /// </summary>
+        private static bool IsRealOnBothSides(Entity expr, Variable x, Entity dest)
+        {
+            if (dest.Evaled is not Real { IsFinite: true })
+                return false;
+            return RealThere(expr);
+            bool RealThere(Entity node)
+            {
+                if (!node.ContainsNode(x))
+                    return node.Evaled is Real { IsFinite: true };
+                return node switch
+                {
+                    Variable variable => variable == x,
+                    Sumf(var augend, var addend) => RealThere(augend) && RealThere(addend),
+                    Minusf(var minuend, var subtrahend) => RealThere(minuend) && RealThere(subtrahend),
+                    Mulf(var multiplier, var multiplicand) => RealThere(multiplier) && RealThere(multiplicand),
+                    Divf(var dividend, var divisor) => RealThere(dividend) && RealThere(divisor),
+                    Powf(var @base, Integer) => RealThere(@base),
+                    Powf(var @base, var exponent) => RealThere(@base) && RealThere(exponent) && PositiveOnBothSides(@base),
+                    Logf(var @base, var antilogarithm) => RealThere(@base) && RealThere(antilogarithm)
+                                                          && PositiveOnBothSides(@base) && PositiveOnBothSides(antilogarithm),
+                    _ => false
+                };
+            }
+            bool PositiveOnBothSides(Entity node)
+                => !node.ContainsNode(x)
+                   ? node.Evaled is Real { IsPositive: true }
+                   : SignNear(node, x, dest, ApproachFrom.Left) is 1 && SignNear(node, x, dest, ApproachFrom.Right) is 1;
         }
 
         /// <summary>
