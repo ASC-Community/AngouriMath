@@ -162,6 +162,19 @@ did, and `ln(x + 2) / ln(x + 3)` at 0 was `ln(2) / ln(3)`. With symbols it was n
 | `"limit(ln(a + 1/x) / ln(b + 1/x), x, +oo)".ToEntity().Simplify()` | `a / b` | `ln(a) / ln(b)` |
 | `"limit(ln(1 + x) / ln(y + x), x, 0)".ToEntity().Simplify()` | `1 / y` | `0 provided not ln(y) = 0` |
 
+### An equation in two different square roots is solved exactly
+
+**Silent: an equation `m_1 sqrt(A) + m_2 sqrt(B) + P = 0` in x alone, with two different square roots, is answered in
+radicals, where it was answered in decimals by Newton's method or left unsolved.** It is squared twice into a
+polynomial, `4 P^2 m_2^2 B = (m_1^2 A - P^2 - m_2^2 B)^2`, and each of that polynomial's roots is put back into the
+equation. Newton's method cannot reach a root where a radicand is 0, and 2.6.0 found the one below only because a
+compiled `0^(-1/2)` was 0; since that is `NaN`, the root was missed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sqrt(-4 - 4x) + sqrt(2 + x) = -3 - 4x".ToEntity().Solve("x")` | `{ -1.1951718122545800, -1 }` | `{ -1, … }`, the second root in radicals |
+| `"sqrt(x + 5) + sqrt(x) = x".ToEntity().Solve("x")` | `{ 5.6349218075063181 }` | the same root in radicals |
+
 ### A radical times a power of its variable is solved exactly
 
 **Silent: an equation in `sqrt(x)` or a cube root of `x` beside powers of `x` is answered in radicals and with all its
