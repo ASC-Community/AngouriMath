@@ -411,7 +411,12 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // answered the roots it found there as though they were all: x^5 - 30x^4 + 1 = 0 has a root
             // near 30, and was answered with one root of its five. It is numerical, so it is asked
             // only where Newton's method would have been: turning that off asks for analytical answers.
-            if (MathS.Settings.AllowNewton && expr.Vars.Count == 1 && SumOverSet.NumericRoots(expr, x) is { Count: > 0 } numeric)
+            // So does one whose coefficients are real constants, sqrt(2) or pi among them, which
+            // Newton's method left the same way: x^5 + 37x^4 - 4x^2 - 2 sqrt(2) x + 4 = 0 has a root
+            // near -18.5, and was answered with four roots of its five.
+            if (MathS.Settings.AllowNewton && expr.Vars.Count == 1
+                && (SumOverSet.NumericRoots(expr, x)
+                    ?? Algebra.NumericalSolving.DurandKerner.RootsOf(expr, x, MathS.Settings.DecimalPrecisionContext.Value)) is { Count: > 0 } numeric)
                 return numeric.Select(ent => TryDowncast(expr, x, ent)).ToSet();
 
             // An identity is satisfied by every x, and not by the points a numerical search
