@@ -889,6 +889,13 @@ namespace AngouriMath.Functions.Algebra
             {
                 Logf(var @base, var antilogarithm) => OnTheCut(@base) || OnTheCut(antilogarithm),
                 Powf(var @base, var exponent) => exponent.Substitute(x, dest).Evaled is not Integer && OnTheCut(@base),
+                // The arctangent's cut is the imaginary axis past i and -i, which no argument real on
+                // the approach reaches, and its value there is the limit from one side only:
+                // arctan(log(2, x)) at -1+ has its argument arriving at i pi / ln(2) from the left
+                // half-plane, and tends to -pi/2 + 0.224i, where the value there is pi/2 + 0.224i.
+                Arctanf(var argument) => argument.ContainsNode(x)
+                    && argument.Substitute(x, dest).Evaled is Complex { RealPart.IsZero: true, ImaginaryPart: var imaginary }
+                    && imaginary.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.One) > 0,
                 _ => false
             };
             bool OnTheCut(Entity argument) => ArrivesOnTheCutOffTheRealLine(argument, argument.Substitute(x, dest), x, dest);
