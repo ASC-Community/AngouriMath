@@ -217,6 +217,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 ? ConvertType(expr, typeof(double))
                 : expr;
 
+        private static bool IsIntegral(Type type)
+            => type == typeof(int) || type == typeof(long) || type == typeof(BigInteger);
+
         private Expression ShouldBeAtLeastDouble(Expression expr)
         {
             if (typeLevelInHierarchy[expr.Type] < typeLevelInHierarchy[typeof(double)])
@@ -259,6 +262,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 // https://github.com/asc-community/AngouriMath/issues/2195
                 Modf when left.Type == typeof(System.Numerics.Complex) && right.Type == typeof(System.Numerics.Complex)
                     => Expression.Call(complexRemainder, left, right),
+                // A remainder by zero has no value, as in evaluation. Of two integers, which over
+                // double or Complex are constants, it is compiled over the integers, where the
+                // runtime's % throws for a divisor of 0: 2 mod 0 over double threw
+                // DivideByZeroException when called.
+                Modf { Divisor: var divisor } when IsIntegral(left.Type) && divisor.Vars.Count == 0
+                    && divisor.Evaled is Integer { IsZero: true }
+                    => Expression.Constant(double.NaN),
                 Modf => Operator(ExpressionType.Modulo,
                                  Operator(ExpressionType.Add, Operator(ExpressionType.Modulo, left, right), right),
                                  right),
