@@ -296,6 +296,19 @@ Two-sided, each side is now taken with its own value, and `floor(x)^x` at 0 is 1
 | `"floor(x)^tanh(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
 | `"floor(x)^x".ToEntity().Limit("x", 0)` | unevaluated | `NaN`, the sides differ |
 
+### A two-sided limit of an expression real on both sides is where its sides agree
+
+**Silent: a two-sided limit that was `NaN` although both sides agree has their value, where the expression is real on
+both sides.** Under the complex codomain, the default, two one-sided limits that agree were not taken to be the
+two-sided limit: `x^x` has a limit from the left only through its complex values, and it has no two-sided limit over the
+reals. Now they are taken to be where every power to an exponent that is not whole, and every logarithm, has a base
+positive on both sides. `x^x` is still `NaN` at 0.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(x^2)^x".ToEntity().Limit("x", 0)` | `NaN` | `1` |
+| `"(x*x)^(x - 1)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+
 ### A limit of a logarithm that is not decided is left unevaluated
 
 **Not silent: what overflowed the stack now returns.** A limit of a logarithm whose argument has no limit, as
