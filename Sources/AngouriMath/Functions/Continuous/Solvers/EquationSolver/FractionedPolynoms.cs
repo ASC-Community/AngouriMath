@@ -92,16 +92,29 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                         return false;
                 return true;
             }
-            for (int i = 1; i < fractioned.Count; i++)
+            // Terms under one radical are gathered into one term.
+            var groups = new List<(Entity multiplier, List<(Entity main, Integer pow)> fracs)>();
+            foreach (var term in fractioned)
             {
-                if (BasesAreEqual(fractioned[i].fracs, fractioned[0].fracs))
-                {
-                    var were = fractioned[0];
-                    fractioned[0] = (were.multiplier + fractioned[i].multiplier, were.fracs);
-                }
+                var same = groups.FindIndex(group => BasesAreEqual(group.fracs, term.fracs));
+                if (same < 0)
+                    groups.Add(term);
                 else
-                    return false;
+                    groups[same] = (groups[same].multiplier + term.multiplier, groups[same].fracs);
             }
+            // Only with no other name in the equation: squaring adds roots, and each is put back
+            // into the equation to be dropped where it fails, which with a parameter left in cannot
+            // be decided. sqrt(x + 1) + sqrt(x + 2) + a + x = 0 kept all four roots of its square,
+            // and at a = 2 none of them is a root.
+            if (groups.Count == 2 && expr.Vars.Count == 1
+                && TwoSquareRootsSquaredAway(groups[0], groups[1], normalPolynom) is { } squared)
+            {
+                dst = (Set)AnalyticalEquationSolver.Solve(squared, x).InnerSimplified;
+                return true;
+            }
+            if (groups.Count != 1)
+                return false;
+            fractioned = groups;
 
             var (multiplier, fracs) = fractioned[0];
 
@@ -125,6 +138,30 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (expr.Vars.Count > 1 && dst is Set.FiniteSet candidates)
                 dst = new Set.FiniteSet(candidates.Select(root => (Entity)root.Provided(expr.Substitute(x, root).EqualTo(Integer.Zero))));
             return true;
+        }
+
+        /// <summary>
+        /// <c>m_1 sqrt(A) + m_2 sqrt(B) + P = 0</c>, two different square roots and nothing else
+        /// fractional, squared until neither is left: <c>m_1^2 A = (P + m_2 sqrt(B))^2</c>, so
+        /// <c>2 P m_2 sqrt(B) = m_1^2 A - P^2 - m_2^2 B</c>, and squared again
+        /// <c>4 P^2 m_2^2 B = (m_1^2 A - P^2 - m_2^2 B)^2</c>. Each squaring keeps every root of
+        /// the equation it squares, so this has all of them, and the roots it adds are not the
+        /// equation's; the caller puts each back in. Without it two different radicals were not
+        /// raised at all, and sqrt(-4 - 4x) + sqrt(2 + x) = -3 - 4x went to Newton's method, which
+        /// answered its root -1.195 and not its root -1, where the first radical's argument is 0.
+        /// Null where either is not a lone square root.
+        /// </summary>
+        private static Entity? TwoSquareRootsSquaredAway(
+            (Entity multiplier, List<(Entity main, Integer pow)> fracs) first,
+            (Entity multiplier, List<(Entity main, Integer pow)> fracs) second,
+            Entity rest)
+        {
+            if (first.fracs is not [(var a, Integer(2))] || second.fracs is not [(var b, Integer(2))])
+                return null;
+            var m1 = first.multiplier;
+            var m2 = second.multiplier;
+            var once = m1 * m1 * a - rest * rest - m2 * m2 * b;
+            return (4 * rest * rest * m2 * m2 * b - once * once).InnerSimplified;
         }
     }
 }
