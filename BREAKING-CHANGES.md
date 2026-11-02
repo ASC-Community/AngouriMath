@@ -72,6 +72,27 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A polynomial with no roots in closed form is answered with all of them
+
+**Silent: a polynomial equation with rational coefficients and no roots in closed form is answered with every root,
+where it could be answered with some.** Two defects lost them. An equation in powers of `x` was solved through `x` to
+the least of its powers, so `x^5 - 30x^4 + 1` was written in `t = x^4` with `x^5` as `t^(5/4)`, which is not `x^5` off
+the positive reals; the substitution is now `x` to the greatest common divisor of the powers, and none where that is 1.
+And where no route writes the roots in radicals, a polynomial went to Newton's method. It starts from points inside a
+bounded region and answered the roots it found there as if they were all. `x^5 - 30x^4 + 1 = 0` has three real roots,
+one of them near 30, and two off the real line, and was answered with one root. The roots now come from the
+Durand–Kerner iteration, which settles every root of each square-free part at once or answers nothing, to
+`MathS.Settings.DecimalPrecisionContext`'s digits. So a polynomial Newton's method did answer in full has the same roots
+with more digits. No issue was filed; it was found following an equation in `x^(1/3)` that cubes to a polynomial with a
+root near 23.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^5 - 30x^4 + 1 = 0".Solve("x")` | one root | five roots, one of them `29.9999987…` |
+| `"x^7 - 30x^6 + 1 = 0".Solve("x")` | one root | seven roots |
+| `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
+| `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
+
 ### A quartic that is biquadratic once depressed is solved
 
 **Silent: a quartic whose depressed form `y^4 + alpha y^2 + gamma`, for `y = x + b/(4a)`, has no cubic term is solved,
@@ -147,6 +168,27 @@ answered 5 numbers that are not roots. Now 2 roots are missing and none is wrong
 | `"sqrt(x) + 1/x = 0".Solve("x")` | `{ -0.5 - 0.8660…i, -0.5 + 0.8660…i }` | `{ -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"sqrt(x) - 1/x - 1 = 0".Solve("x")` | `{ 2.1478… }` | that root in radicals |
 | `"(3 - x)*sqrt(x) - x = 0".Solve("x")` | `{ 0, (7 - sqrt(13)) / 2 }` | `{ 0, (-7 + sqrt(13)) / (-2) }` |
+
+### A radical of a constant is a coefficient
+
+**Not silent: an equation that ended the process with a stack overflow is answered, and a polynomial with a radical
+or another real constant among its coefficients has all its roots.** The solver raises an equation to a power to remove
+a radical, and it took a radical of a constant, such as `sqrt(2)`, for one. Raising `x^5 + x - sqrt(2) = 0` gives
+`(x^5 + x)^2 = 2`, and the substitution that solves that gives back `x^5 + x = sqrt(2)`, the equation it started from,
+so the solver recursed until the stack ran out. A radical of a constant is now a coefficient. No issue was filed; a
+check of systems built from known solutions found it, eliminating `y` from `sqrt(y) - x = sqrt(2) - 1, |x| + y = 3`.
+
+A polynomial with such a coefficient and no roots in closed form went to Newton's method, which starts inside a
+bounded region and misses a root outside it. It is now solved as one with rational coefficients is, by the
+Durand–Kerner iteration, which answers all its roots or none.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^5 + x - sqrt(2) = 0".Solve("x")` | stack overflow | five roots |
+| `"x^5 + x^2 - 3 * sqrt(2) = 0".Solve("x")` | three roots of five | five roots |
+| `"x^5 - 30 * x^4 + sqrt(2) = 0".Solve("x")` | one root of five | five roots |
+| `"x^5 - 30 * x^4 + pi = 0".Solve("x")` | eight numbers, none of them the root near 30 | five roots |
+| `"2 * x^5 + 37 * x^4 - x^3 - 4 * x^2 - 2 * sqrt(2) * x + 4 = 0".Solve("x")` | four roots of five | five roots |
 
 ### A cube shifted is solved
 

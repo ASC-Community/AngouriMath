@@ -51,12 +51,77 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
             var degree = squareFree.Degree;
             if (degree < 1)
                 return null;
+            var coefficients = new EDecimal[degree + 1];
+            for (var i = 0; i <= degree; i++)
+                coefficients[i] = EDecimal.FromEInteger(squareFree[i]);
+            // Distinct to half the working precision, which a square-free polynomial's roots are
+            // unless the iteration has not separated two of them.
+            return Roots(coefficients, context, context.Precision.ToInt32Checked() / 2);
+        }
+
+        /// <summary>
+        /// The roots of <paramref name="polynomial"/> in <paramref name="w"/> at the precision of
+        /// <paramref name="context"/>, where it is a polynomial whose coefficients are real
+        /// constants and not all of them rational, <c>x^5 - sqrt(2) x + 1</c> or <c>x^5 + pi</c>;
+        /// <see langword="null"/> otherwise, and where they are not settled.
+        /// </summary>
+        /// <remarks>
+        /// The coefficients are known to the working precision and not exactly, so a repeated root
+        /// cannot be told from a cluster: perturbed by that error, a root of multiplicity <c>m</c>
+        /// splits into <c>m</c> roots about its <c>m</c>-th root apart, and <c>m</c> is at most
+        /// the degree <c>n</c>. Approximations closer than <c>10^(-digits / (2 n))</c> are taken
+        /// not to be separated then, where a polynomial known to be square-free is held to half
+        /// the digits. And a coefficient smaller than the largest by more than half the digits may
+        /// be a zero that was not simplified to one, which as the leading coefficient would put
+        /// roots beyond any bound, so it answers nothing then.
+        /// </remarks>
+        internal static IReadOnlyList<Complex>? RootsOf(Entity polynomial, Entity.Variable w, EContext context)
+        {
+            if (!TreeAnalyzer.TryGetPolynomial(polynomial, w, out var monomials))
+                return null;
+            var values = new Dictionary<int, EDecimal>();
+            var rational = true;
+            foreach (var monomial in monomials)
+            {
+                if (monomial.Key.Sign < 0 || monomial.Key.CompareTo(IntegerPolynomial.MaxDegree) > 0
+                    || monomial.Value.Vars.Count > 0
+                    || monomial.Value.EvalNumerical() is not Real { EDecimal: { IsFinite: true } value })
+                    return null;
+                rational &= monomial.Value.InnerSimplified is Rational;
+                if (!value.IsZero)
+                    values[monomial.Key.ToInt32Checked()] = value;
+            }
+            if (rational || values.Count == 0)
+                return null;
+            var degree = values.Keys.Max();
+            if (degree < 1)
+                return null;
+            var digits = context.Precision.ToInt32Checked();
+            var largest = values.Values.Aggregate(EDecimal.Zero, static (max, c) => EDecimal.Max(max, c.Abs()));
+            var smallest = largest.Multiply(EDecimal.Create(EInteger.One, EInteger.FromInt32(-(digits / 2))), context);
+            if (values.Values.Any(c => c.Abs().CompareTo(smallest) < 0))
+                return null;
+            var coefficients = new EDecimal[degree + 1];
+            for (var i = 0; i <= degree; i++)
+                coefficients[i] = values.TryGetValue(i, out var c) ? c : EDecimal.Zero;
+            return Roots(coefficients, context, digits / (2 * degree));
+        }
+
+        /// <summary>
+        /// The roots of the polynomial with real <paramref name="coefficients"/>, lowest power first,
+        /// at the precision of <paramref name="context"/>, each approximation at least
+        /// <c>10^-separationDigits</c> from the others; <see langword="null"/> where they are not
+        /// settled or not that far apart.
+        /// </summary>
+        private static IReadOnlyList<Complex>? Roots(EDecimal[] coefficients, EContext context, int separationDigits)
+        {
+            var degree = coefficients.Length - 1;
             var digits = context.Precision.ToInt32Checked();
             var work = context.WithPrecision(digits + GuardDigits);
-            var lead = EDecimal.FromEInteger(squareFree[degree]);
+            var lead = coefficients[degree];
             var monic = new EDecimal[degree];
             for (var i = 0; i < degree; i++)
-                monic[i] = EDecimal.FromEInteger(squareFree[i]).Divide(lead, work);
+                monic[i] = coefficients[i].Divide(lead, work);
 
             // Cauchy's bound: every root is within 1 + max |a_i / a_n| of zero. The approximations
             // start spread round that circle, turned off the axes so that no two start as a
@@ -104,9 +169,7 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
             if (!settled)
                 return null;
 
-            // Distinct to half the working precision, which a square-free polynomial's roots are
-            // unless the iteration has not separated two of them.
-            var separation = EDecimal.Create(EInteger.One, EInteger.FromInt32(-(digits / 2)));
+            var separation = EDecimal.Create(EInteger.One, EInteger.FromInt32(-separationDigits));
             for (var i = 0; i < degree; i++)
                 for (var j = i + 1; j < degree; j++)
                     if (re[i].Subtract(re[j], work).Abs().Add(im[i].Subtract(im[j], work).Abs(), work).CompareTo(separation) <= 0)

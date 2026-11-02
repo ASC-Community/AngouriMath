@@ -7,6 +7,7 @@
 
 using AngouriMath.Core.Multithreading;
 using AngouriMath.Extensions;
+using PeterO.Numbers;
 using System;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Set;
@@ -192,14 +193,34 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // handle special case when all bases are numerical
             if (innerPowerList.All(e => e.EvaluableNumerical && e.Evaled is Real))
             {
-                var minPow = innerPowerList.Aggregate((a, b)
-                    => (a.EvalNumerical() < b.EvalNumerical()).EvalBoolean() ? a : b);
+                // Each power is to be a whole power of the substitution. x^5 written as (x^4)^(5/4) is
+                // not x^5 off the positive reals, and solved through it x^5 - 30x^4 + 1 = 0 lost roots;
+                // so the substitution is x to the greatest common divisor of the powers where they are
+                // rational, and to the least of them only where each is a whole multiple of it. A
+                // divisor of 1 is no substitution: the equation is a polynomial in x as it stands.
+                Entity unit;
+                if (innerPowerList.All(e => e.InnerSimplified is Rational))
+                {
+                    var powers = innerPowerList.Select(e => ((Rational)e.InnerSimplified).ERational).ToList();
+                    var denominator = powers.Select(r => r.Denominator)
+                        .Aggregate((a, b) => a.Divide(a.GreatestCommonDivisor(b)).Multiply(b));
+                    var numerator = powers.Select(r => r.Numerator.Multiply(denominator).Divide(r.Denominator).Abs())
+                        .Aggregate((a, b) => a.GreatestCommonDivisor(b));
+                    if (numerator.Equals(denominator))
+                        return null;
+                    unit = Rational.Create(ERational.Create(numerator, denominator));
+                }
+                else
+                    unit = innerPowerList.Aggregate((a, b)
+                        => (a.EvalNumerical() < b.EvalNumerical()).EvalBoolean() ? a : b);
 
-                substitution = MathS.Pow(x, minPow).InnerSimplified;
+                substitution = MathS.Pow(x, unit).InnerSimplified;
 
                 foreach (var pow in innerPowerList)
                 {
-                    var divided = (pow / minPow).InnerSimplified;
+                    var divided = (pow / unit).InnerSimplified;
+                    if (divided is not Integer)
+                        return null;
                     expr = expr.Substitute(MathS.Pow(x, pow.InnerSimplified), MathS.Pow(substitution, divided));
                 }
 

@@ -39,7 +39,11 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     // whose exponent is a sum, and read as it stands that was no fractional power, so
                     // sqrt(x) - 1/x - 1 - i = 0, cleared of its denominator, went to Newton's method and
                     // was answered without its root -1.
-                    if (!(mpChild is Powf(var @base, var exponent) && exponent.InnerSimplified is Number num and not Integer)) // (x + 3) ^ 3
+                    // And only a power of something in x is a radical to raise. sqrt(2) is a coefficient:
+                    // taken for one, -2 sqrt(2) + |x| + (2 sqrt(2) - 2) x + x^2 = 0 was squared into
+                    // (|x| + ...)^2 = 8, whose substitution gave back the equation it started from, and
+                    // the solver recursed until the stack ran out.
+                    if (!(mpChild is Powf(var @base, var exponent) && @base.ContainsNode(x) && exponent.InnerSimplified is Number num and not Integer)) // (x + 3) ^ 3
                     {
                         potentialFraction.multiplier *= mpChild;
                         continue;
