@@ -107,6 +107,17 @@ namespace AngouriMath.Core.Compilation
                 && exponent.Denominator.CompareTo(PeterO.Numbers.EInteger.FromInt32(10)) < 0;
 
         /// <summary>
+        /// The rational <paramref name="exponent"/> is, where it is one that
+        /// <see cref="TakesTheRealRootOfANegative"/>, or null. One with no variable is read for its value,
+        /// as evaluation reads it: written otherwise than as a rational, <c>x^(1/(1 + 2))</c> and
+        /// <c>x^((1/3) provided 2 &gt; 1)</c> compiled to the principal power, <c>1 + 1.73i</c> at -8,
+        /// where evaluation takes the exponent <c>1/3</c> and is -2.
+        /// </summary>
+        internal static PeterO.Numbers.ERational? RealRootExponent(Entity exponent)
+            => (exponent is Entity.Number.Rational || exponent.Vars.Count > 0 ? exponent : exponent.InnerSimplified)
+                is Entity.Number.Rational { ERational: var ratio } && TakesTheRealRootOfANegative(ratio) ? ratio : null;
+
+        /// <summary>
         /// A whole power of a number that is not real, as a product of its factors, which is how evaluation takes it.
         /// <see cref="System.Numerics.Complex.Pow(System.Numerics.Complex, System.Numerics.Complex)"/> takes <c>e^(n ln z)</c>,
         /// whose rounded angle leaves a part that should be 0 at about <c>1e-16</c>: <c>i^2</c> was <c>(-1, 1.2e-16)</c>, which is

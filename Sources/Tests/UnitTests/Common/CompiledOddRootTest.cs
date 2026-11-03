@@ -31,6 +31,12 @@ namespace AngouriMath.Tests.Common
         [InlineData("x^(4/3)", -8)]
         [InlineData("x^(3/5)", -32)]
         [InlineData("(1 + x)^(1/3) + 2", -9)]
+        // An exponent with no variable is read for its value, as evaluation reads it: written
+        // otherwise than as a rational, it took the principal power, 1 + 1.73i.
+        [InlineData("x^(1/(1 + 2))", -8)]
+        [InlineData("x^(3^(-1))", -8)]
+        [InlineData("x^(1/(3 provided 3 > 1))", -8)]
+        [InlineData("x^((2/3) provided 2 > 1)", -8)]
         public void TheCompiledFormsTakeTheRealRoot(string expression, double at)
         {
             var entity = expression.ToEntity();
