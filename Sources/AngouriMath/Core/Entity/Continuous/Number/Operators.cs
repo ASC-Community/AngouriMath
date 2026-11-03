@@ -151,9 +151,39 @@ namespace AngouriMath
                             a.IsInfinity() && b.IsZero || b.IsInfinity() && a.IsZero ? EDecimal.Zero : CtxMultiply(a, b);
                         var (ac, bd) = (ModifiedMultiply(a.RealPart.EDecimal, b.RealPart.EDecimal), ModifiedMultiply(a.ImaginaryPart.EDecimal, b.ImaginaryPart.EDecimal));
                         var (ad, bc) = (ModifiedMultiply(a.RealPart.EDecimal, b.ImaginaryPart.EDecimal), ModifiedMultiply(a.ImaginaryPart.EDecimal, b.RealPart.EDecimal));
-                        return Complex.CreateAtScales(CtxSubtract(ac, bd), CtxAdd(ad, bc), CancelledScaleOfADifference(ac, bd), CancelledScale(ad, bc));
+                        var (real, imaginary) = (CtxSubtract(ac, bd), CtxAdd(ad, bc));
+                        if (!(real.IsFinite && imaginary.IsFinite) && a.IsFinite && b.IsFinite)
+                            return ProductPastTheRange(a, b);
+                        return Complex.CreateAtScales(real, imaginary, CancelledScaleOfADifference(ac, bd), CancelledScale(ad, bc));
                     }
                     );
+
+            /// <summary>
+            /// Whether both parts are finite, read from the parts: <see cref="Entity.IsFinite"/> is a cache made on
+            /// an entity's first read of it, and asked of every power built, and of every exact value an evaluation
+            /// takes, it was half a megabyte on each solve of the kernel benchmark's SolveHard. A rational part is
+            /// finite and is not written out to a decimal to say so.
+            /// </summary>
+            internal static bool PartsAreFinite(Complex number) => PartIsFinite(number.RealPart) && PartIsFinite(number.ImaginaryPart);
+
+            private static bool PartIsFinite(Real part) => part is Rational || part.EDecimal.IsFinite;
+
+            /// <summary>
+            /// The product of two finite numbers a part of which leaves the context's exponent range. Within it,
+            /// <c>(1e600 + 1e600 i)^2</c> had <c>1e1200 - 1e1200</c> for its real part, which is <c>oo - oo</c> there,
+            /// and the product was NaN; the parts are formed past the range and rounded into it, so that it is
+            /// <c>2e1200 i</c> rounded, <c>oo i</c>, as a real product past the range is <c>+oo</c>.
+            /// </summary>
+            private static Complex ProductPastTheRange(Complex a, Complex b)
+            {
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                var unbounded = InternalAMExtensions.WithUnboundedExponents(context);
+                var (ar, ai, br, bi) = (a.RealPart.EDecimal, a.ImaginaryPart.EDecimal, b.RealPart.EDecimal, b.ImaginaryPart.EDecimal);
+                var (ac, bd) = (ar.Multiply(br, unbounded), ai.Multiply(bi, unbounded));
+                var (ad, bc) = (ar.Multiply(bi, unbounded), ai.Multiply(br, unbounded));
+                return Complex.CreateAtScales(ac.Subtract(bd, unbounded).RoundToPrecision(context), ad.Add(bc, unbounded).RoundToPrecision(context),
+                    CancelledScaleOfADifference(ac, bd), CancelledScale(ad, bc));
+            }
 
             internal static Complex OpDiv<T>(T a, T b) where T : Number =>
                 SuperSwitch<Complex>(a, b,
@@ -615,7 +645,18 @@ namespace AngouriMath
                         var raised = decimalBase.Pow(pow.Abs().ToInt32Checked(), wholeContext);
                         return Real.CreateAtScale(pow.Sign < 0 ? EDecimal.One.Divide(raised, wholeContext) : raised, EDecimal.Zero);
                     }
-                    return BinaryIntPow(@base, pow);
+                    var built = BinaryIntPow(@base, pow);
+                    if (@base is Real || PartsAreFinite(built))
+                        return built;
+                    // A finite complex base whose power leaves the exponent range on the way: each squaring past
+                    // it was oo - oo in a part, and (3 + 4i)^2000 and (1 + i)^(10^6) were NaN. The squarings are
+                    // made past the range and the parts rounded into it at the end.
+                    var rangeContext = MathS.Settings.DecimalPrecisionContext.Value;
+                    Complex pastTheRange;
+                    using (MathS.Settings.DecimalPrecisionContext.Set(InternalAMExtensions.WithUnboundedExponents(rangeContext)))
+                        pastTheRange = BinaryIntPow(@base, pow);
+                    return Complex.Create(pastTheRange.RealPart.EDecimal.RoundToPrecision(rangeContext),
+                        pastTheRange.ImaginaryPart.EDecimal.RoundToPrecision(rangeContext));
                 }
 
                 // A half power of a nonnegative decimal is its square root, not its exponential
@@ -715,7 +756,7 @@ namespace AngouriMath
             /// The most bits an exact power is built to: <c>3^(10^7)</c>, at 15.8 million, takes three seconds,
             /// and each doubling of the exponent doubles the size and more than doubles the time.
             /// </summary>
-            [ConstantField] private static readonly EInteger MaxExactPowerBits = EInteger.FromInt32(1 << 24);
+            private const long MaxExactPowerBits = 1 << 24;
 
             /// <summary>
             /// About how many bits an exact <paramref name="base"/> to the whole <paramref name="power"/> has: for
@@ -724,20 +765,21 @@ namespace AngouriMath
             /// and a power of one is as small as it is. A base that is not exact is 0, being a decimal.
             /// </summary>
             internal static bool IsTooLargeToBuild(Complex @base, EInteger power)
-                => ExactPowerBits(@base, power).CompareTo(MaxExactPowerBits) > 0;
-
-            private static EInteger ExactPowerBits(Complex @base, EInteger power)
             {
+                // In longs: the bound is asked of every exact power, and as EIntegers it was a quarter of a
+                // megabyte on each solve of the kernel benchmark's SolveHard.
                 if (@base.RealPart is not Rational { ERational: var re } || @base.ImaginaryPart is not Rational { ERational: var im })
-                    return EInteger.Zero;
-                static EInteger Bits(ERational part)
-                    => part.IsZero ? EInteger.Zero
-                       : part.Numerator.Abs().GetUnsignedBitLengthAsEInteger().Subtract(1)
-                         .Add(part.Denominator.GetUnsignedBitLengthAsEInteger().Subtract(1));
-                var bits = Bits(re).CompareTo(Bits(im)) >= 0 ? Bits(re) : Bits(im);
-                if (!re.IsZero && !im.IsZero)
-                    bits = bits.Add(1);
-                return bits.Multiply(power.Abs());
+                    return false;
+                static long Bits(ERational part)
+                    => part.IsZero ? 0 : part.Numerator.GetUnsignedBitLengthAsInt64() - 1 + part.Denominator.GetUnsignedBitLengthAsInt64() - 1;
+                var bits = Math.Max(Bits(re), Bits(im)) + (!re.IsZero && !im.IsZero ? 1 : 0);
+                if (bits == 0)
+                    return false;
+                var powerBits = power.GetUnsignedBitLengthAsInt64();
+                if (powerBits > 40)
+                    return true;
+                var magnitude = power.Sign < 0 ? -power.ToInt64Unchecked() : power.ToInt64Unchecked();
+                return magnitude > MaxExactPowerBits / bits;
             }
 
             /// <summary>e.g. Log(2, 32) = 5</summary>

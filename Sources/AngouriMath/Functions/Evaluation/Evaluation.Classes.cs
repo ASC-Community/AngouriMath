@@ -56,17 +56,22 @@ namespace AngouriMath
                && (node is Mulf or Divf or Powf && CannotBeZero(node) || node is Sumf or Minusf && SignOfANonzero(node) is not null);
 
         /// <summary>
-        /// Whether <paramref name="value"/> is an infinity that only the decimals made: an exact power too
-        /// large to build is evaluated as a decimal, which is <c>+oo</c> past the context's range, and an
-        /// infinity counts as exact, so that <c>2^(10^10)</c>, and every expression holding it, was
-        /// simplified to <c>+oo</c>. Asked only of a value that is not finite.
+        /// Whether <paramref name="value"/> is an infinity that only the decimals made. A sum, a product or a
+        /// power of exact finite numbers, the power's base not zero, is exact and finite, and is an infinity only
+        /// where the context's exponent range rounds it onto one: an exact power too large to build is the
+        /// decimal, and a complex product's parts are decimals, so <c>2^(10^10)</c> and <c>(3 + 4i)^2000</c> are
+        /// infinite as evaluated. An infinity counts as exact, and every expression holding one was simplified to
+        /// it. An operand that is a decimal already is not asked about: its power past the range is the
+        /// decimal's <c>+oo</c>, as it was. Asked only of a value that is not finite.
         /// </summary>
         private static bool IsAnInfinityOnlyRoundingMade(Entity node, Entity value)
-            => value is Complex { IsFinite: false } && !value.IsNaN
-               && node.Nodes.Any(static part => part is Powf(var @base, var exponent)
-                   && @base.Evaled is Complex { IsExact: true, IsFinite: true } exactBase
-                   && exponent.Evaled is Integer { EInteger: var power }
-                   && Number.IsTooLargeToBuild(exactBase, power));
+            => value is Complex number && !Number.PartsAreFinite(number) && !value.IsNaN && node.Nodes.Any(IsFiniteRoundedOntoAnInfinity);
+
+        private static bool IsFiniteRoundedOntoAnInfinity(Entity part)
+            => part is Sumf or Minusf or Mulf or Powf
+               && part.Evaled is Complex { IsFinite: false } evaluated && !evaluated.IsNaN
+               && part.DirectChildren.All(static operand => operand.Evaled is Complex { IsFinite: true, IsExact: true })
+               && !(part is Powf(var @base, _) && @base.Evaled is Complex { IsZero: true });
 
         /// <summary>
         /// Whether <paramref name="expr"/> is a number or a constant that is not zero, or a product,
