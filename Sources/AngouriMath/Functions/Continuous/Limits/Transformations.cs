@@ -1113,6 +1113,15 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// <paramref name="expr"/> at the decimal 10^6 with the downcasting off, so that a factorial or a power of the
+        /// variable is taken in decimals: at the integer 10^6, 1/x! built a number of five and a half million digits, and
+        /// asking whether floor(1/x!) was real short of +oo took four seconds.
+        /// </summary>
+        internal static Entity AtALargeDecimal(Entity expr, Variable x)
+            => MathS.Settings.DowncastingEnabled.As(false,
+                () => expr.Substitute(x, Real.Create(PeterO.Numbers.EDecimal.FromString("1E6"))).Evaled);
+
+        /// <summary>
         /// The sign an expression keeps throughout a punctured one-sided neighbourhood of the
         /// destination, or <see langword="null"/> where it cannot be read off.
         /// </summary>

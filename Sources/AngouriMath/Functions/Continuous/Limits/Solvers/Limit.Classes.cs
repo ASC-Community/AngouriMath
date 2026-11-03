@@ -548,14 +548,11 @@ namespace AngouriMath
                     ApproachFrom.Right => new[] { 1 },
                     _ => new[] { -1, 1 },
                 };
+                if (dist == Real.PositiveInfinity || dist == Real.NegativeInfinity)
+                    return AtALargeDecimal(dist == Real.PositiveInfinity ? argument : argument.Substitute(x, -x), x) is Real;
                 foreach (var offset in offsets)
-                {
-                    Entity at = dist == Real.PositiveInfinity ? Integer.Create(1000000)
-                        : dist == Real.NegativeInfinity ? Integer.Create(-1000000)
-                        : dist + Rational.Create(offset, 1000000);
-                    if (argument.Substitute(x, at).Evaled is not Real)
+                    if (argument.Substitute(x, dist + Rational.Create(offset, 1000000)).Evaled is not Real)
                         return false;
-                }
                 return true;
             }
 
