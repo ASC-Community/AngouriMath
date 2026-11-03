@@ -445,6 +445,23 @@ value too. No issue was filed; a check of compiled expressions against evaluatio
 | `"binomial(10000, 1.43)".EvalNumerical()` | throws `CannotEvalException` | `414189.539...` |
 | `"binomial(pi, 2000)".EvalNumerical()` | `NaN` | `2.10439...E-14` |
 
+### A symbolic matrix's rank and row echelon forms are decided pivot by pivot
+
+**Silent: a different answer.** The elimination asked whether a pivot was the literal 0. An entry it had made itself,
+like `c + -c / a * a`, is 0 without being written so, and it was chosen and divided by: the rank of `[[a, b], [2a, 2b]]`,
+whose second row is twice the first, was 2, and the reduced form of every symbolic matrix in the table simplified to
+`NaN`. Each entry the elimination makes is now normalised, a rational function over the rationals to its canonical
+quotient, where 0 is the literal 0, and anything else is simplified before it is taken for a pivot. A symbolic
+matrix's rank is its rank for general values of its symbols. Matrices of numbers are reduced as before.
+https://github.com/asc-community/AngouriMath/issues/2345
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `[[a, b], [2a, 2b]].Rank` | `2` | `1` |
+| `[[a, b, c], [d, f, g], [a + d, b + f, c + g]].Rank` | `3` | `2` |
+| `[[x, x^2], [1, x]].Rank` | `2` | `1` |
+| `[[a, b], [c, d]].ReducedRowEchelonForm.Simplify()` | `NaN` | `[[1, 0], [0, 1]]` |
+
 ### The row echelon forms divide exactly
 
 **Not silent for numbers: what threw or did not return now answers. Silent for symbols: the forms are written
