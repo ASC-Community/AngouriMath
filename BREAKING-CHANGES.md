@@ -307,6 +307,20 @@ powers of `x` found it.
 |---|---|---|
 | `"(3x - 4) * sqrt(x) + 3 + 3x - 4x^2 = 0".Solve("x")` | four roots, one of them 1.3233…, which is not a root | the other three |
 
+### A floor or a ceil of a complex argument near a real limit is not the step of the limit
+
+**Silent: a different answer.** The limit of a floor or a ceil read its argument as real along the path. `4^((-1)^x)`
+at 1 from the right tends to 1/4 from below the real line, where every floor is `-i`, and the limit was the floor of 1/4,
+`0`. An argument that is complex just off the destination now has its imaginary part's side asked, and where that is
+not decided the limit is left unevaluated. Here it is not decided, so the side whose answer was right, the left, is left
+unevaluated too. An argument real near the destination is read as before.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `limitright(floor(4^((-1)^x)), x, 1)` | `0` | unevaluated |
+| `limitleft(ceil(4^((-1)^x)), x, 1)` | `1` | unevaluated |
+| `limitleft(floor(4^((-1)^x)), x, 1)` | `0` | unevaluated |
+
 ### A step function that has a limit from one side is that limit on that side
 
 **Silent: a limit of a power whose base is a `floor`, `ceil`, `round` or `sgn` that is 0 on the side approached is 0,
