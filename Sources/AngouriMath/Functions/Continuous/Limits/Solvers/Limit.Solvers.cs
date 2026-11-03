@@ -50,6 +50,13 @@ namespace AngouriMath.Functions.Algebra
             // https://github.com/asc-community/AngouriMath/issues/2266
             if (res.Nodes.Any(SitsOnAJump))
                 return null;
+            // Nor where a step's argument is real at the destination and complex just short of it, which the node
+            // declines too (LimitOfAStepFunction): x / floor(arcsin(x)) at 1 from the right is x / floor(arcsin(1 + 1/t))
+            // here, whose arcsin(1) = pi/2 has the floor 1, where the floor all the way in is 1 - i, and the quotient was
+            // answered 1 where it is (1 + i)/2.
+            if (expr.Nodes.Any(node => node is Floorf or Ceilf or Roundf && node.ContainsNode(x)
+                    && IsComplexJustShortOfInfinity(node.DirectChildren[0], x)))
+                return null;
             if (res.Evaled is Complex limit)
             {
                 MultithreadingFunctional.ExitIfCancelled();
@@ -76,6 +83,11 @@ namespace AngouriMath.Functions.Algebra
             }
             return null;
         }
+
+        /// <summary>Whether <paramref name="argument"/> is real at +oo and not at a large finite point short of it.</summary>
+        private static bool IsComplexJustShortOfInfinity(Entity argument, Variable x)
+            => argument.Substitute(x, Infinity).Evaled is Real { IsNaN: false }
+               && LimitFunctional.AtALargeDecimal(argument, x) is Complex and not Real;
 
         /// <summary>
         /// Whether <paramref name="node"/> is a step function whose argument evaluates to one of its jumps: an integer for

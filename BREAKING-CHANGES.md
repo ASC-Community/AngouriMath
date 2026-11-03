@@ -313,13 +313,16 @@ powers of `x` found it.
 at 1 from the right tends to 1/4 from below the real line, where every floor is `-i`, and the limit was the floor of 1/4,
 `0`. An argument that is complex just off the destination now has its imaginary part's side asked, and where that is
 not decided the limit is left unevaluated. Here it is not decided, so the side whose answer was right, the left, is left
-unevaluated too. An argument real near the destination is read as before.
+unevaluated too. An argument real near the destination is read as before. The value at the destination is not read
+off an expression holding such a step either, which is how `x / floor(arcsin(x))` was answered.
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `limitright(floor(4^((-1)^x)), x, 1)` | `0` | unevaluated |
 | `limitleft(ceil(4^((-1)^x)), x, 1)` | `1` | unevaluated |
 | `limitleft(floor(4^((-1)^x)), x, 1)` | `0` | unevaluated |
+| `limitright(x / floor(arcsin(x)), x, 1)` | `1`, where it is `(1 + i)/2` | unevaluated |
+| `limitleft(x / floor(arcsin(x)), x, -1)` | `1/2`, where it is `(2 - i)/5` | unevaluated |
 
 ### A step function that has a limit from one side is that limit on that side
 
