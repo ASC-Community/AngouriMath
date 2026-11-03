@@ -65,7 +65,7 @@ namespace AngouriMath
         /// decimal's <c>+oo</c>, as it was. Asked only of a value that is not finite.
         /// </summary>
         private static bool IsAnInfinityOnlyRoundingMade(Entity node, Entity value)
-            => value is Complex { IsFinite: false } && !value.IsNaN && node.Nodes.Any(IsFiniteRoundedOntoAnInfinity);
+            => value is Complex number && !Number.PartsAreFinite(number) && !value.IsNaN && node.Nodes.Any(IsFiniteRoundedOntoAnInfinity);
 
         private static bool IsFiniteRoundedOntoAnInfinity(Entity part)
             => part is Sumf or Minusf or Mulf or Powf
