@@ -14,10 +14,35 @@ namespace AngouriMath.Functions
     using static Entity;
     internal static class BaseConversion
     {
-        // TODO: add more digits
-        [ConstantField] internal static readonly string ALPHABET_TOCHAR = "0123456789ABCDEF";
-        [ConstantField] internal static readonly Dictionary<char, int> ALPHABET_FROMCHAR =
-            ALPHABET_TOCHAR.ToDictionary(c => c, ALPHABET_TOCHAR.IndexOf);
+        /// <summary>
+        /// The digits, to base 36, as the catalogue's <c>to_base</c> and <c>from_base</c> and the MCP server's
+        /// <c>am_represent</c> offer: the table stopped at F, so base 17 threw and <c>G</c> could not be read.
+        /// https://github.com/asc-community/AngouriMath/issues/2343,
+        /// https://github.com/asc-community/AngouriMath/issues/2344
+        /// </summary>
+        [ConstantField] internal static readonly string ALPHABET_TOCHAR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        /// <summary>The value of <paramref name="digit"/> in base <paramref name="N"/>, a letter in either case.</summary>
+        private static int DigitValue(char digit, int N)
+        {
+            var value = digit switch
+            {
+                >= '0' and <= '9' => digit - '0',
+                >= 'A' and <= 'Z' => digit - 'A' + 10,
+                >= 'a' and <= 'z' => digit - 'a' + 10,
+                _ => -1,
+            };
+            if (value < 0 || value >= N)
+                throw new InvalidNumericSystemException($"'{digit}' is not a digit in base {N}");
+            return value;
+        }
+
+        private static void CheckBase(int N)
+        {
+            if (N < 2 || N > ALPHABET_TOCHAR.Length)
+                throw new InvalidNumericSystemException(
+                    $"The base has to be from 2 to {ALPHABET_TOCHAR.Length}, since that is how many digits there are, and {N} was given");
+        }
 
         /// <summary>Transforms an integer to the corresponding base (in string)</summary>
         internal static string IntToBaseN(EInteger num, int N)
@@ -95,9 +120,7 @@ namespace AngouriMath.Functions
         /// </summary>
         internal static string ToBaseN(EDecimal num, int N)
         {
-            if (N > ALPHABET_TOCHAR.Length)
-                throw new InvalidNumericSystemException(
-                    $"The base has to be at most {ALPHABET_TOCHAR.Length}, since that is how many digits there are, and {N} was given");
+            CheckBase(N);
             string sign = num.IsNegative ? "-" : "";
             num = num.Abs();
             var (intPart, floatPart) = num.SplitDecimal();
@@ -108,36 +131,59 @@ namespace AngouriMath.Functions
             return leftPart + rightPart;
         }
 
-        /// <summary>Gets an integer from a string which should not contain any of ,.-</summary>
-        internal static int IntFromBaseN(string num, int N)
+        /// <summary>
+        /// A rational in base <paramref name="N"/>, each digit of the fraction by long division of its numerator by its
+        /// denominator: exact, so that <c>1/7</c> in base 7 is <c>0.1</c>, where through its decimal, rounded to the
+        /// precision and the rounding multiplied up digit by digit, it ran to 119 digits and ended on a wrong one. A
+        /// repeating expansion is cut where <see cref="FloatToBaseN"/> cuts it.
+        /// https://github.com/asc-community/AngouriMath/issues/2344
+        /// </summary>
+        internal static string ToBaseN(ERational num, int N)
         {
-            int res = 0;
-            for (int i = 0; i < num.Length; i++)
+            CheckBase(N);
+            var sign = num.IsNegative ? "-" : "";
+            num = num.Abs();
+            var whole = num.Numerator.Divide(num.Denominator);
+            var remainder = num.Numerator.Remainder(num.Denominator);
+            if (remainder.IsZero)
+                return sign + IntToBaseN(whole, N);
+            var digits = new System.Text.StringBuilder();
+            var maxDigits = MaxFractionalDigits(N);
+            while (!remainder.IsZero && digits.Length < maxDigits)
             {
-                int id = num.Length - i - 1;
-                char digit = num[id];
-                res += ALPHABET_FROMCHAR[digit] * (int)Math.Pow(N, i);
+                remainder *= N;
+                digits.Append(ALPHABET_TOCHAR[remainder.Divide(num.Denominator).ToInt32Checked()]);
+                remainder = remainder.Remainder(num.Denominator);
             }
+            return sign + IntToBaseN(whole, N) + "." + digits;
+        }
+
+        /// <summary>
+        /// The whole number written in <paramref name="num"/>, which holds no sign and no point. By Horner's rule in
+        /// <see cref="EInteger"/>: added up in an <c>int</c>, with <c>(int)Math.Pow(N, i)</c> for the place value, a sum
+        /// past 2^31 wrapped and a place value past it saturated, so <c>FromBaseN("80000000", 16)</c> was
+        /// <c>-2147483648</c>. https://github.com/asc-community/AngouriMath/issues/2343
+        /// </summary>
+        internal static EInteger IntFromBaseN(string num, int N)
+        {
+            var res = EInteger.Zero;
+            foreach (var digit in num)
+                res = res * N + DigitValue(digit, N);
             return res;
         }
 
-        /// <summary>if num is ABC, the initial number was 0.ABC</summary>
-        internal static EDecimal FloatFromBaseN(string num, int N)
-        {
-            EDecimal res = 0;
-            for (int i = 0; i < num.Length; i++)
-            {
-                char digit = num[i];
-                res = Number.CtxAdd(res, Number.CtxDivide(ALPHABET_FROMCHAR[digit], EDecimal.FromInt32(N).Pow(i + 1)));
-            }
-            return res;
-        }
+        /// <summary>if num is ABC, the initial number was 0.ABC, as the exact quotient of ABC by N^3</summary>
+        internal static ERational FloatFromBaseN(string num, int N)
+            => ERational.Create(IntFromBaseN(num, N), EInteger.FromInt32(N).Pow(num.Length));
 
         /// <summary>
         /// Performs operations on both the integer and floating parts of a number and concatenates
         /// </summary>
         internal static EDecimal FromBaseN(string num, int N)
         {
+            CheckBase(N);
+            if (num.Length == 0 || num == "-")
+                throw new InvalidNumericSystemException($"'{num}' has no digits");
             int sign = num[0] == '-' ? -1 : 1;
             num = num[0] == '-' ? num.Substring(1) : num;
             int pos = num.IndexOf('.');
@@ -153,7 +199,11 @@ namespace AngouriMath.Functions
                 leftPart = num;
                 rightPart = "";
             }
-            return sign * (IntFromBaseN(leftPart, N) + (rightPart == "" ? 0 : FloatFromBaseN(rightPart, N)));
+            // Summed exactly and rounded once, into the precision context.
+            var value = ERational.FromEInteger(IntFromBaseN(leftPart, N));
+            if (rightPart != "")
+                value = value.Add(FloatFromBaseN(rightPart, N));
+            return (sign < 0 ? value.Negate() : value).ToEDecimal(MathS.Settings.DecimalPrecisionContext);
         }
     }
 }

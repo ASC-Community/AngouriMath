@@ -459,6 +459,23 @@ small rationals, the reduced form and `Rank` could throw `InvalidCastException`,
 | the same, `.ReducedRowEchelonForm` | throws `InvalidCastException` | the identity |
 | `"[[a, b], [c, d]]"`, `.RowEchelonForm` | `[[a, b], [(c * a + -c * a) / a, (d * a + -c * b) / a]]` | `[[a, b], [c + -c / a * a, d + -c / a * b]]` |
 
+### Base conversion reads past 2^31, to base 36, and refuses a digit not in the base
+
+**Silent: a different answer.** `FromBaseN` added its digits up in an `int`, so a number past 2^31 wrapped, and it read
+a digit that is not in the base as its value. It now adds them up exactly and throws `InvalidNumericSystemException` for
+a digit not below the base, or a base outside 2 to 36. The digits go to `Z` in both directions, in either case, as the
+catalogue and the MCP server already offered. `ToBaseN` of a rational divides it out in the base, exactly, where it went
+through the rounded decimal. https://github.com/asc-community/AngouriMath/issues/2343,
+https://github.com/asc-community/AngouriMath/issues/2344
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.FromBaseN("80000000", 16)` | `-2147483648` | `2147483648` |
+| `MathS.FromBaseN("102", 2)` | `6` | `InvalidNumericSystemException` |
+| `MathS.FromBaseN("ff", 16)` | `KeyNotFoundException` | `255` |
+| `MathS.ToBaseN(35, 36)` | `InvalidNumericSystemException` | `Z` |
+| `MathS.ToBaseN(1/7, 7)` | 121 characters, the last digit wrong | `0.1` |
+
 ### `arcsin` and `arccos` of a real number past 1 have their value
 
 **Silent: `arcsin(x)` and `arccos(x)` of a real `x` past 1 are `sign(x) pi/2 - i arccosh|x|` and `pi/2 - arcsin(x)`,

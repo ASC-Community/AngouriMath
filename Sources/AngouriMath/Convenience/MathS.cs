@@ -4613,7 +4613,8 @@ namespace AngouriMath
         /// </code>
         /// </example>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string ToBaseN(Real num, int N) => BaseConversion.ToBaseN(num.EDecimal, N);
+        public static string ToBaseN(Real num, int N)
+            => num is Rational rational ? BaseConversion.ToBaseN(rational.ERational, N) : BaseConversion.ToBaseN(num.EDecimal, N);
 
         /// <summary>Translates a number in base <paramref name="N"/> into base 10</summary>
         /// <param name="num">A <see cref="Real"/> in base <paramref name="N"/> to be translated into base 10</param>
