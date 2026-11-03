@@ -34,7 +34,7 @@ namespace AngouriMath.Numerics
         {
             whole = 0;
             if (z.Imaginary != 0 || double.IsNaN(z.Real) || double.IsInfinity(z.Real)
-                || Math.Floor(z.Real) != z.Real || Math.Abs(z.Real) > 9e15)
+                || Math.Floor(z.Real) != z.Real || Math.Abs(z.Real) > LongestWhole)
                 return false;
             whole = (long)z.Real;
             return true;
@@ -54,10 +54,20 @@ namespace AngouriMath.Numerics
                     return 0;
                 if (IsWhole(n, out var whole))
                     return WholeBinomial(whole, lower);
+                if (OfALargeWholeOrder(n, k.Real) is { } large)
+                    return large;
                 NumericsComplex product = 1;
                 for (long i = 0; i < lower && product != 0 && !IsInfinite(product); i++)
                     product *= (n - i) / (i + 1);
                 return product;
+            }
+            // Every double past the longs is whole: the cases above, for an order there.
+            if (k.Imaginary == 0 && Math.Abs(k.Real) > LongestWhole && !double.IsInfinity(k.Real))
+            {
+                if (k.Real < 0 || n.Imaginary == 0 && Math.Floor(n.Real) == n.Real && n.Real >= 0 && k.Real > n.Real)
+                    return 0;
+                if (OfALargeWholeOrder(n, k.Real) is { } large)
+                    return large;
             }
             if (IsWhole(n, out var negative) && negative < 0)
                 return NaN;
@@ -270,6 +280,53 @@ namespace AngouriMath.Numerics
         /// and <c>216!</c> about <c>1e408</c>, so the ratio was <c>∞/∞</c>, <c>NaN</c>. None of the ratios is 0 away from a
         /// pole, so a 0 is one whose terms were under the doubles. https://github.com/asc-community/AngouriMath/issues/2248
         /// </summary>
+        // The largest whole number IsWhole takes.
+        private const double LongestWhole = 9e15;
+
+        // From this order on, a binomial whose n is far below it is taken through the logarithm of a ratio of gammas.
+        private const double LargeOrder = 1e6;
+
+        /// <summary>
+        /// <c>binomial(n, k)</c> for a whole <paramref name="k"/> of at least a million and an <paramref name="n"/>
+        /// at most half of it that is not a whole number at least 0: <c>(-1)^k Γ(k - n)/(Γ(k + 1) Γ(-n))</c>, with
+        /// the logarithm of <c>Γ(k - n)/Γ(k + 1)</c> by <see cref="LogGammaRatio"/>; null for any other. As a product
+        /// it took k steps, which for <c>binomial(-1/2, 10^12)</c>, whose factors never take it to 0, is 10^12; and past
+        /// the longs it went through the gamma function, whose two logarithms near <c>k ln k</c> cancelled to their
+        /// rounding error: <c>binomial(-5/2, 10^20)</c> was 1, where it is <c>7.52e29</c>.
+        /// </summary>
+        private static NumericsComplex? OfALargeWholeOrder(NumericsComplex n, double k)
+        {
+            if (k < LargeOrder || n.Magnitude > k / 2 || n.Imaginary == 0 && Math.Floor(n.Real) == n.Real && n.Real >= 0)
+                return null;
+            var value = FromLogarithm(LogGammaRatio(-n, 1, k) - SpecialFunctions.LogFactorial(-n - 1), n.Imaginary == 0);
+            // Past 2^53 every double is even.
+            return k < ExactBelow && ((long)k & 1) == 1 ? -value : value;
+        }
+
+        /// <summary>
+        /// <c>ln Γ(k + a) - ln Γ(k + b)</c> for a <paramref name="k"/> of at least a million and an <paramref name="a"/>
+        /// and <paramref name="b"/> at most half of it, by Stirling's series written as differences, so that nothing
+        /// near <c>k ln k</c> is subtracted: <c>(a - b) ln k + (k + a - 1/2) ln(1 + a/k) - (k + b - 1/2) ln(1 + b/k)
+        /// - (a - b)</c> and the series' next two terms, whose remainder at <c>k/2</c> is below <c>10^-30</c>.
+        /// </summary>
+        private static NumericsComplex LogGammaRatio(NumericsComplex a, NumericsComplex b, double k)
+        {
+            NumericsComplex za = k + a, zb = k + b;
+            return (a - b) * Math.Log(k) + (za - 0.5) * LogOnePlus(a / k) - (zb - 0.5) * LogOnePlus(b / k) - (a - b)
+                + (1 / za - 1 / zb) / 12 - (1 / (za * za * za) - 1 / (zb * zb * zb)) / 360;
+        }
+
+        /// <summary><c>ln(1 + z)</c>, by its series where <c>z</c> is small, which <c>ln</c> of <c>1 + z</c> would round away.</summary>
+        private static NumericsComplex LogOnePlus(NumericsComplex z)
+        {
+            if (z.Magnitude > 1e-3)
+                return NumericsComplex.Log(1 + z);
+            NumericsComplex sum = 0, power = z;
+            for (var i = 1; i <= 7; i++, power *= -z)
+                sum += power / i;
+            return sum;
+        }
+
         private static bool InTheDoubles(NumericsComplex ratio)
             => ratio != 0 && !IsInfinite(ratio) && !double.IsNaN(ratio.Real) && !double.IsNaN(ratio.Imaginary);
 
