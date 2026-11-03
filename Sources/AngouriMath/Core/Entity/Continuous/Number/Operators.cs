@@ -586,6 +586,21 @@ namespace AngouriMath
                         return Integer.Zero;
                     return infinite.IsNegative && !wholeOfInfinity.IsEven ? Real.NegativeInfinity : Real.PositiveInfinity;
                 }
+                // An exact power past MaxExactPowerBits is not built: 46655^(10^20) would have 4.7e20
+                // digits, and the multiplications for it never returned or stopped when cancelled, so
+                // a simplification of the expression did not either. It is the decimal, as the same
+                // power with a half added is: +oo past the context's range, 0 below it.
+                if (@base.IsFinite && pow is { } && IsTooLargeToBuild(@base, pow))
+                {
+                    var largeContext = MathS.Settings.DecimalPrecisionContext;
+                    if (@base is Real { EDecimal: var realOfLarge })
+                    {
+                        var magnitude = PowerOfReals(realOfLarge.Abs(), EDecimal.FromEInteger(pow), largeContext);
+                        return Real.CreateAtScale(realOfLarge.IsNegative && !pow.IsEven ? magnitude.Negate() : magnitude, EDecimal.Zero);
+                    }
+                    return ByThePolarForm(@base.RealPart.EDecimal, @base.ImaginaryPart.EDecimal, @base.Abs().EDecimal,
+                        EDecimal.FromEInteger(pow), EDecimal.Zero, largeContext);
+                }
                 if (@base.IsFinite && pow is { })
                 {
                     // A real base that is not exact -- a decimal, which is what a numerical
@@ -680,7 +695,13 @@ namespace AngouriMath
                 if (baseReal.IsZero && baseImaginary.IsZero)
                     return Integer.Zero;
 
-                var rho = @base.Abs().EDecimal;
+                return ByThePolarForm(baseReal, baseImaginary, @base.Abs().EDecimal, powerReal, powerImaginary, context);
+            }
+
+            /// <summary><c>base^power</c> by the polar form, for a base that is not 0 with modulus <paramref name="rho"/>.</summary>
+            private static Complex ByThePolarForm(EDecimal baseReal, EDecimal baseImaginary, EDecimal rho,
+                EDecimal powerReal, EDecimal powerImaginary, EContext context)
+            {
                 var theta = baseImaginary.Arctan2(baseReal, context);
                 var newRho = powerReal.MultiplyAndAdd(theta, powerImaginary.Multiply(rho.NaturalLogarithm(context), context), context);
                 var t = PowerOfReals(rho, powerReal, context).Multiply(powerImaginary.Multiply(-theta, context).Exponential(context), context);
@@ -688,6 +709,35 @@ namespace AngouriMath
                 // The residual of a cosine or a sine is the modulus's.
                 var modulusScale = t.Abs();
                 return Complex.CreateAtScales(t.Multiply(newRho.Cos(context), context), t.Multiply(newRho.Sin(context), context), modulusScale, modulusScale);
+            }
+
+            /// <summary>
+            /// The most bits an exact power is built to: <c>3^(10^7)</c>, at 15.8 million, takes three seconds,
+            /// and each doubling of the exponent doubles the size and more than doubles the time.
+            /// </summary>
+            [ConstantField] private static readonly EInteger MaxExactPowerBits = EInteger.FromInt32(1 << 24);
+
+            /// <summary>
+            /// About how many bits an exact <paramref name="base"/> to the whole <paramref name="power"/> has: for
+            /// each part of the base, the bits of its numerator and of its denominator past the first, the larger
+            /// part's, and one more where both parts are not 0, times the power. Each of -1, i and -i has none,
+            /// and a power of one is as small as it is. A base that is not exact is 0, being a decimal.
+            /// </summary>
+            internal static bool IsTooLargeToBuild(Complex @base, EInteger power)
+                => ExactPowerBits(@base, power).CompareTo(MaxExactPowerBits) > 0;
+
+            private static EInteger ExactPowerBits(Complex @base, EInteger power)
+            {
+                if (@base.RealPart is not Rational { ERational: var re } || @base.ImaginaryPart is not Rational { ERational: var im })
+                    return EInteger.Zero;
+                static EInteger Bits(ERational part)
+                    => part.IsZero ? EInteger.Zero
+                       : part.Numerator.Abs().GetUnsignedBitLengthAsEInteger().Subtract(1)
+                         .Add(part.Denominator.GetUnsignedBitLengthAsEInteger().Subtract(1));
+                var bits = Bits(re).CompareTo(Bits(im)) >= 0 ? Bits(re) : Bits(im);
+                if (!re.IsZero && !im.IsZero)
+                    bits = bits.Add(1);
+                return bits.Multiply(power.Abs());
             }
 
             /// <summary>e.g. Log(2, 32) = 5</summary>

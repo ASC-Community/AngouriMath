@@ -380,6 +380,22 @@ and a number that passes every round is left open, since passing is not a proof
 | `"(10^30 + 1) in PP".ToEntity().Evaled` | `1000000000000000000000000000001 in PP` | `False` |
 | `"(10^30 + 57) in PP".ToEntity().Evaled` | `1000000000000000000000000000057 in PP` | `1000000000000000000000000000057 in PP` |
 
+### An exact power too large to build is the decimal
+
+**Not silent: what did not return now answers.** An exact number to a whole power was built exactly however large it
+was. `46655^(10^20)` has 4.7e20 digits, and its evaluation neither returned nor stopped when cancelled. Nor did a
+`Simplify` of anything holding it. Past sixteen million bits, about five million digits, a power is now evaluated as the
+decimal, as the same power with a half added already was: `+oo` past the context's range, `-oo` for a negative base to
+an odd power, and `0` below the range. An exact simplification leaves it as written, since the infinity is the
+decimal's. Each of -1, i and -i keeps its exact power. No issue was filed; a check of compiled expressions against
+evaluation found it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"46655^(10^20)".EvalNumerical()` | does not return | `+oo` |
+| `"(5/2)^(10^7)".EvalNumerical()` | does not return | `+oo` |
+| `"2^(10^10)".Simplify()` | does not return | `2 ^ 10000000000` |
+
 ### A remainder of two ratios is exact
 
 **Silent: a remainder that came back as the divisor, or as NaN, is the remainder.** `%` on `Real`, `mod` and evaluation
