@@ -322,85 +322,141 @@ namespace AngouriMath
             n.Factorial() / ((n - k).Factorial() * k.Factorial());
 
         /// <summary>
+        /// Euler's totient of <paramref name="n"/>, 0 for an <paramref name="n"/> that is not positive, or
+        /// <see langword="null"/> where <paramref name="n"/> cannot be factorised (<see cref="TryFactorize"/>).
+        /// <a href="https://en.wikipedia.org/wiki/Euler%27s_totient_function"/>
+        /// </summary>
+        internal static EInteger? TryPhi(this EInteger n)
+        {
+            if (n.Sign <= 0)
+                return EInteger.Zero;
+            if (n.TryFactorize() is not { } factors)
+                return null;
+            var result = EInteger.One;
+            foreach (var (prime, power) in factors)
+                result *= prime.Pow(power - 1) * (prime - 1);
+            return result;
+        }
+
+        /// <summary>
         /// Computes Euler phi function
         /// <a href="https://en.wikipedia.org/wiki/Euler%27s_totient_function"/>
         /// </summary>
         /// If integer x is non-positive, the result will be 0
         public static EInteger Phi(this EInteger n)
-        {
-            if (n <= 0)
-                return 0;
-
-            var result = n.ToInt64Checked();
-            var original = result;
-
-            for (long i = 2; i * i <= result; i++) {
-                if (original % i == 0)
-                {
-                    while (original % i == 0) original /= i;
-                    result -= result / i;
-                }
-            }
-
-            if (original > 1)
-                result -= result / original;
-
-            return result;
-        }
-        /// <summary>
-        /// Computes Euler phi function (for long)
-        /// <a href="https://en.wikipedia.org/wiki/Euler%27s_totient_function"/>
-        /// </summary>
-        /// If integer x is non-positive, the result will be 0
-        public static long Phi(this long n)
-        {
-            if (n <= 0)
-                return 0;
-
-            var result = n;
-            var original = result;
-
-            for (long i = 2; i * i <= result; i++)
-            {
-                if (original % i == 0)
-                {
-                    while (original % i == 0) original /= i;
-                    result -= result / i;
-                }
-            }
-
-            if (original > 1)
-                result -= result / original;
-
-            return result;
-        }
+            => n.TryPhi() ?? throw Unfactorised(n);
 
         /// <summary>
         /// Factorization of integer
         /// </summary>
-        public static IEnumerable<(long prime, long power)> Factorize(this EInteger n)
+        public static IEnumerable<(EInteger prime, EInteger power)> Factorize(this EInteger n)
+            => n.TryFactorize() ?? throw Unfactorised(n);
+
+        private static NotSufficientlySupportedException Unfactorised(EInteger n)
+            => new($"{n} has a factor that is neither proven prime nor split, and is not factorised");
+
+        /// <summary>How far trial division goes before the rest is asked whether it is prime.</summary>
+        private const int TrialDivisionLimit = 1 << 16;
+
+        /// <summary>How many steps Pollard's rho takes, for each of its constants, before it gives up on a split.</summary>
+        private const int RhoSteps = 1 << 18;
+
+        /// <summary>
+        /// The prime factorisation of <paramref name="n"/>, the primes in increasing order, empty for an
+        /// <paramref name="n"/> below 2, or <see langword="null"/> where a factor is neither proven prime nor split.
+        /// </summary>
+        /// <remarks>
+        /// This was trial division over <c>long</c>, and for every <paramref name="n"/> past 2^63 it threw
+        /// <c>OverflowException</c>, though the first division finds a factor like 2 or 7 at any size: <c>phi(7^30)</c>
+        /// threw from <c>Simplify</c>. Its loop ran while the square of the divisor was at most the running totient,
+        /// not what was left to factor, so <c>2^62</c> took 1.5e9 divisions after the first had divided every 2 out;
+        /// and past 3037000499 that square wrapped negative, so the largest prime below 2^63 never finished. Now trial
+        /// division in <see cref="EInteger"/> to <see cref="TrialDivisionLimit"/>, bounded by what is left, then
+        /// <see cref="Primes.IsPrime"/>, Miller–Rabin and Lucas–Lehmer, for the rest, and Pollard's rho to split a
+        /// rest that is composite. https://github.com/asc-community/AngouriMath/issues/2342
+        /// </remarks>
+        internal static List<(EInteger Prime, EInteger Power)>? TryFactorize(this EInteger n)
         {
-            var result = n.ToInt64Checked();
-            var original = result;
-
-            for (long i = 2; i * i <= result; i++)
+            var byPrime = new SortedDictionary<EInteger, EInteger>();
+            if (n.CompareTo(EInteger.FromInt32(2)) < 0)
+                return new();
+            var rest = n;
+            void Add(EInteger prime, EInteger power)
+                => byPrime[prime] = (byPrime.TryGetValue(prime, out var already) ? already : EInteger.Zero) + power;
+            for (var divisor = 2; divisor <= TrialDivisionLimit; divisor += divisor == 2 ? 1 : 2)
             {
-                if (original % i == 0)
+                var asInteger = EInteger.FromInt32(divisor);
+                if (asInteger * asInteger > rest)
+                    break;
+                var power = EInteger.Zero;
+                while (rest.Remainder(asInteger).IsZero)
                 {
-                    long power = 0;
-                    while (original % i == 0)
-                    {
-                        original /= i;
-                        power++;
-                    }
-
-                    result -= result / i;
-                    yield return (i, power);
+                    rest /= asInteger;
+                    power += 1;
                 }
+                if (!power.IsZero)
+                    Add(asInteger, power);
             }
+            var pending = new Stack<EInteger>();
+            if (!rest.Equals(EInteger.One))
+                pending.Push(rest);
+            while (pending.Count > 0)
+            {
+                Core.Multithreading.MultithreadingFunctional.ExitIfCancelled();
+                var factor = pending.Pop();
+                // Past the trial division a factor whose square is past it has no divisor it did not try.
+                var limit = EInteger.FromInt32(TrialDivisionLimit);
+                var isPrime = factor.CompareTo(limit * limit) <= 0 ? true : Primes.IsPrime(factor);
+                if (isPrime is true)
+                {
+                    Add(factor, EInteger.One);
+                    continue;
+                }
+                if (isPrime is null || PollardRho(factor) is not { } split)
+                    return null;
+                pending.Push(split);
+                pending.Push(factor / split);
+            }
+            var factors = new List<(EInteger, EInteger)>(byPrime.Count);
+            foreach (var pair in byPrime)
+                factors.Add((pair.Key, pair.Value));
+            return factors;
+        }
 
-            if (original > 1)
-                yield return (original, 1L);
+        /// <summary>A proper divisor of the odd composite <paramref name="n"/>, or <see langword="null"/>.</summary>
+        private static EInteger? PollardRho(EInteger n)
+        {
+            for (var constant = 1; constant <= 4; constant++)
+            {
+                var c = EInteger.FromInt32(constant);
+                EInteger Step(EInteger x) => (x * x + c).Remainder(n);
+                var (slow, fast, divisor) = (EInteger.FromInt32(2), EInteger.FromInt32(2), EInteger.One);
+                for (var step = 0; step < RhoSteps && divisor.Equals(EInteger.One); step++)
+                {
+                    slow = Step(slow);
+                    fast = Step(Step(fast));
+                    divisor = (slow - fast).Abs().Gcd(n);
+                }
+                if (!divisor.Equals(EInteger.One) && !divisor.Equals(n))
+                    return divisor;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The number of divisors of <paramref name="n"/>, 0 for an <paramref name="n"/> that is not positive, or
+        /// <see langword="null"/> where it cannot be factorised.
+        /// </summary>
+        internal static EInteger? TryCountDivisors(this EInteger n)
+        {
+            if (n.Sign <= 0)
+                return EInteger.Zero;
+            if (n.TryFactorize() is not { } factors)
+                return null;
+            var result = EInteger.One;
+            foreach (var (_, power) in factors)
+                result *= power + 1;
+            return result;
         }
 
         /// <summary>
@@ -408,18 +464,7 @@ namespace AngouriMath
         /// </summary>
         /// If integer x is non-positive, the result will be 0
         public static EInteger CountDivisors(this EInteger n)
-        {
-            if (n <= 0)
-                return 0;
-
-            EInteger result = 1;
-            foreach ((var prime, var power) in Factorize(n))
-            {
-                result *= power + 1;
-            }
-
-            return result;
-        }
+            => n.TryCountDivisors() ?? throw Unfactorised(n);
 
         public static bool GreaterThan(this EDecimal bigDecimalOne, EDecimal bigDecimalTwo) =>
             bigDecimalOne.CompareTo(bigDecimalTwo) > 0;

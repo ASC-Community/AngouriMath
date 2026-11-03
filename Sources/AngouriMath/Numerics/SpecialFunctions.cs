@@ -503,7 +503,8 @@ namespace AngouriMath.Numerics
         public static NumericsComplex Phi(NumericsComplex z) => z.Imaginary == 0 ? Phi(z.Real) : NaN;
 
         public static double Phi(double x)
-            => x == Math.Floor(x) && x >= long.MinValue && x < long.MaxValue ? ((long)x).Phi() : double.NaN;
+            => x == Math.Floor(x) && x >= long.MinValue && x < long.MaxValue && PeterO.Numbers.EInteger.FromInt64((long)x).TryPhi() is { } totient
+                ? PeterO.Numbers.EDecimal.FromEInteger(totient).ToDouble() : double.NaN;
 
         /// <summary>
         /// Half of <paramref name="value"/>, part by part: dividing a complex number by 2 multiplies it

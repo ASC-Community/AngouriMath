@@ -89,7 +89,16 @@ namespace AngouriMath
                 /// <summary>
                 /// Detemine whether integer is prime or not.
                 /// </summary>
-                public bool IsPrime => CountDivisors() == 2;
+                /// <remarks>
+                /// By Miller–Rabin and Lucas–Lehmer, as membership in <c>PP</c> is. It was whether the number had two
+                /// divisors, by trial division over <c>long</c>, so <c>2^89 - 1</c> threw <c>OverflowException</c> and the
+                /// largest prime below 2^63 did not finish. Where primality is not decided -- past
+                /// <c>3317044064679887385961981</c>, for a number that is not a Mersenne number and passes every test --
+                /// it throws <see cref="Core.Exceptions.NotSufficientlySupportedException"/>.
+                /// https://github.com/asc-community/AngouriMath/issues/2341
+                /// </remarks>
+                public bool IsPrime => Functions.Primes.IsPrime(EInteger)
+                    ?? throw new Core.Exceptions.NotSufficientlySupportedException($"Whether {EInteger} is prime is not decided");
 
                 /// <summary>
                 /// Deconstructs as record
