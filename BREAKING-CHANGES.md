@@ -351,6 +351,20 @@ positive on both sides. `x^x` is still `NaN` at 0.
 | `"(x^2)^x".ToEntity().Limit("x", 0)` | `NaN` | `1` |
 | `"(x*x)^(x - 1)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
 
+### A 0^0 limit whose l'Hopital chain doubles its powers has its value
+
+**Silent: a different answer.** l'Hopital's rule was turned away where a
+quotient grew in nodes, and a chain whose divisor is a reciprocal power, `x^n / (1 / g^k)`, grows in its exponents
+instead: the derivative of `1/g^k` is over `g^(2k)`, so k doubled at each step and the chain never ended. The whole
+exponents are measured as the nodes are now, with the same room, and the limits below have their value. No issue was
+filed; a check of limits against values near the destination found it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `limitright((log(x, 1/2))^(exp(x) - sgn(x)), x, 0)` | `0` | `1` |
+
+The same spelled `(-ln(2)/ln(x))^(exp(x) - 1)` was `1` in 2.6.0 and did not return after it; it is `1` again.
+
 ### A limit of a logarithm that is not decided is left unevaluated
 
 **Not silent: what overflowed the stack now returns.** A limit of a logarithm whose argument has no limit, as

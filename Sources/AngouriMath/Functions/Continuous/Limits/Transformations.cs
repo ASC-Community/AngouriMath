@@ -1264,7 +1264,23 @@ namespace AngouriMath.Functions.Algebra
         /// unchanged at 112/117 and, in total time, within noise of where it was.
         /// </remarks>
         private static bool GrewTooMuch(Entity quotient, Entity applied)
-            => applied.Nodes.Count() > Math.Max(quotient.Nodes.Count() + 8, quotient.Nodes.Count() * 8 / 5);
+            => applied.Nodes.Count() > Math.Max(quotient.Nodes.Count() + 8, quotient.Nodes.Count() * 8 / 5)
+               || WholePowers(applied) > Math.Max(WholePowers(quotient) + 8, WholePowers(quotient) * 8 / 5);
+
+        /// <summary>
+        /// The whole exponents of <paramref name="expr"/>'s powers, added up: the growth a node count does not see.
+        /// </summary>
+        /// <remarks>
+        /// <c>(e^(-1/x) - 1)^12</c> and <c>(e^(-1/x) - 1)^24</c> have the same nodes, and a chain whose divisor is
+        /// a reciprocal power, <c>x^n / (1 / g^k)</c>, doubles k at every step, since the derivative of
+        /// <c>1/g^k</c> is over <c>g^(2k)</c>: the limit of <c>(-ln(2)/ln(x))^(e^x - 1)</c> at 0 from the right
+        /// went 6, 12, 24, ... and did not finish in ten minutes, the inner limits expanding the powers. A
+        /// derivative lowers the degrees of a chain that is getting somewhere; so the same room as for the
+        /// nodes, the larger of eight more and three fifths again.
+        /// </remarks>
+        private static int WholePowers(Entity expr)
+            => expr.Nodes.Sum(static node => node is Powf(_, Integer { EInteger: var exponent }) && exponent.CanFitInInt32()
+                ? Math.Abs(exponent.ToInt32Unchecked()) : 0);
 
         [ThreadStatic] private static bool suppresslHopital;
 
