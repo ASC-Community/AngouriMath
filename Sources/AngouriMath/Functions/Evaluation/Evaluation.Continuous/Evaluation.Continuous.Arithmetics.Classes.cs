@@ -649,19 +649,34 @@ namespace AngouriMath
                         // Through the gamma function only numerically: there is no exact form. A whole n
                         // takes it too: binomial(3, 1/2) is 32/(5 pi).
                         (Complex top, Complex bottom) when !isExact
-                            && Number.Factorial(top) is var topF && Number.Factorial(bottom) is var bottomF
-                            && Number.Factorial(top - bottom) is var restF && !topF.IsNaN && !bottomF.IsNaN && !restF.IsNaN
-                            => topF / (bottomF * restF),
+                            && FactorialPowers.QuotientOfFactorials([top], [bottom, top - bottom]) is { } quotient
+                            => quotient,
                         _ => null
                     },
                     (@this, a, b) => ((Binomialf)@this).New(a, b), isExact);
 
+            // As binomial(n, i) for each i up to k, each the last times (n - i)/(i + 1), with no bound
+            // on the exponent and rounded into the caller's context at the end. As the falling
+            // factorial over k!, both left the range long before the quotient did: binomial(pi, 2000)
+            // was +oo/+oo, which is NaN, where it is 2.1e-14; and k! was built exactly to be divided.
             private static Entity FallingFactorialOver(Number n, int k)
             {
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
                 Entity product = Integer.Create(1);
-                for (var i = 0; i < k; i++)
-                    product = (product * (n - Integer.Create(i))).Evaled;
-                return (product / Integer.Create(PeterO.Numbers.EInteger.FromInt32(k).Factorial())).Evaled;
+                using (MathS.Settings.DecimalPrecisionContext.Set(InternalAMExtensions.WithUnboundedExponents(context)))
+                    for (var i = 0; i < k; i++)
+                    {
+                        product = (product * (n - Integer.Create(i)) / Integer.Create(i + 1)).Evaled;
+                        Core.Multithreading.MultithreadingFunctional.ExitIfCancelled();
+                    }
+                return product switch
+                {
+                    Rational exact => exact,
+                    Real real => Real.Create(real.EDecimal.RoundToPrecision(context)),
+                    Complex complex => Complex.Create(complex.RealPart.EDecimal.RoundToPrecision(context),
+                                                      complex.ImaginaryPart.EDecimal.RoundToPrecision(context)),
+                    var other => other,
+                };
             }
         }
 
@@ -686,8 +701,8 @@ namespace AngouriMath
                         (Integer { EInteger.Sign: < 0 }, Number) => MathS.NaN,
                         (Number value, Number order) when (value - order).Evaled is Integer { EInteger.Sign: < 0 } => Integer.Zero,
                         (Complex value, Complex order) when !isExact
-                            && Number.Factorial(value) is var top && Number.Factorial(value - order) is var bottom && !top.IsNaN && !bottom.IsNaN
-                            => top / bottom,
+                            && FactorialPowers.QuotientOfFactorials([value], [value - order]) is { } quotient
+                            => quotient,
                         _ => null
                     },
                     (@this, x, n) => ((FallingFactorialf)@this).New(x, n), isExact);
@@ -714,8 +729,8 @@ namespace AngouriMath
                         (Number value, Number order) when (value + order).Evaled is Integer { EInteger.Sign: <= 0 } => MathS.NaN,
                         (Integer { EInteger.Sign: <= 0 }, Number) => Integer.Zero,
                         (Complex value, Complex order) when !isExact
-                            && Number.Factorial(value + order - 1) is var top && Number.Factorial(value - 1) is var bottom && !top.IsNaN && !bottom.IsNaN
-                            => top / bottom,
+                            && FactorialPowers.QuotientOfFactorials([value + order - 1], [value - 1]) is { } quotient
+                            => quotient,
                         _ => null
                     },
                     (@this, x, n) => ((RisingFactorialf)@this).New(x, n), isExact);
@@ -747,6 +762,53 @@ namespace AngouriMath
                     product = (product * factor).Evaled;
                 }
                 return n > 0 ? product : (Integer.One / product).Evaled;
+            }
+
+            /// <summary>
+            /// The product of the factorials of <paramref name="over"/> over that of <paramref name="under"/>,
+            /// numerically, or null where one of them has no value. Each factorial and the quotient are
+            /// taken at the caller's precision with no bound on the exponent, and rounded into the
+            /// caller's context only at the end: the factorials leave its range long before the quotient
+            /// does, and in it <c>binomial(10000, 1.43)</c> was <c>+oo/+oo</c>, which is <c>NaN</c>, where
+            /// it is about 414190. A whole number is taken as a decimal, whose factorial is not built
+            /// exactly once it is large. Real arguments are taken as decimals throughout: a complex
+            /// product adds a zero imaginary part's terms, and adding to a number whose exponent is in
+            /// the millions aligns the two digit by digit, which made <c>binomial(10000000, 1.43)</c>
+            /// take longer than twenty seconds.
+            /// </summary>
+            internal static Complex? QuotientOfFactorials(Complex[] over, Complex[] under)
+            {
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                var unbounded = InternalAMExtensions.WithUnboundedExponents(context);
+                if (over.All(static x => x is Real) && under.All(static x => x is Real))
+                {
+                    var real = PeterO.Numbers.EDecimal.One;
+                    using (MathS.Settings.DecimalPrecisionContext.Set(unbounded))
+                    {
+                        foreach (var x in over)
+                            if (((Real)x).EDecimal.Factorial(unbounded) is { IsFinite: true } factorial) real = real.Multiply(factorial, unbounded); else return null;
+                        foreach (var x in under)
+                            if (((Real)x).EDecimal.Factorial(unbounded) is { IsFinite: true } factorial) real = real.Divide(factorial, unbounded); else return null;
+                    }
+                    return Real.Create(real.RoundToPrecision(context));
+                }
+                Complex quotient = Integer.One;
+                using (MathS.Settings.DowncastingEnabled.Set(false))
+                using (MathS.Settings.DecimalPrecisionContext.Set(unbounded))
+                {
+                    foreach (var x in over)
+                        if (FactorialOf(x, unbounded) is { } factorial) quotient *= factorial; else return null;
+                    foreach (var x in under)
+                        if (FactorialOf(x, unbounded) is { } factorial) quotient /= factorial; else return null;
+                }
+                return Complex.Create(quotient.RealPart.EDecimal.RoundToPrecision(context),
+                                      quotient.ImaginaryPart.EDecimal.RoundToPrecision(context));
+            }
+
+            private static Complex? FactorialOf(Complex x, PeterO.Numbers.EContext context)
+            {
+                var factorial = x is Real real ? Real.Create(real.EDecimal.Factorial(context)) : Number.Factorial(x);
+                return factorial.IsNaN ? null : factorial;
             }
         }
 

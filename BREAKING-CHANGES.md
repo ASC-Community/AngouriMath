@@ -396,6 +396,23 @@ compiled expressions against evaluation found it.
 | `"(10^200) mod 7".EvalNumerical()` | `NaN` | `2` |
 | `"(10^100 + 1/2) mod 1".EvalNumerical()` | `NaN` | `1/2` |
 
+### A binomial whose factorials leave the exponent range has its value
+
+**Silent: a binomial that was `+oo` or NaN is its value.** `binomial(n, k)` for a `k` that is not whole is
+`Γ(n + 1)/(Γ(k + 1) Γ(n - k + 1))`, and its factorials were each rounded into the evaluation's exponent range, which ends at
+`1e1000`. Past `n` of about 450 the numerator overflowed, so the binomial was `+oo`, and a little further the
+denominator did as well, and `+oo/+oo` is NaN. They are now divided before the quotient is rounded, as are the falling
+and the rising factorial's. A whole `k` with a decimal `n` was the falling factorial over `k!`, which overflowed the
+same way, and is now built one factor at a time. A whole `n` with such a `k`, which 2.6.0 left unevaluated, has its
+value too. No issue was filed; a check of compiled expressions against evaluation found it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"binomial(450.5, 3.25)".EvalNumerical()` | `+oo` | `50428864.5080...` |
+| `"binomial(2500.5, 3.25)".EvalNumerical()` | `NaN` | `13324626798.1423...` |
+| `"binomial(10000, 1.43)".EvalNumerical()` | throws `CannotEvalException` | `414189.539...` |
+| `"binomial(pi, 2000)".EvalNumerical()` | `NaN` | `2.10439...E-14` |
+
 ### The row echelon forms divide exactly
 
 **Not silent for numbers: what threw or did not return now answers. Silent for symbols: the forms are written

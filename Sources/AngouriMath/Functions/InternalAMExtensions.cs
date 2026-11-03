@@ -456,6 +456,15 @@ namespace AngouriMath
         [ConstantField] private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<EContext, EContext> twelveMoreDigits = new();
 
         /// <summary>
+        /// <paramref name="context"/> with no bound on the exponent, one per context instance for the
+        /// reason <see cref="WithGuardDigits"/> gives: for a quotient whose terms leave the caller's
+        /// range when the quotient does not.
+        /// </summary>
+        internal static EContext WithUnboundedExponents(EContext context)
+            => unboundedExponents.GetValue(context, static c => c.WithUnlimitedExponents());
+        [ConstantField] private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<EContext, EContext> unboundedExponents = new();
+
+        /// <summary>
         /// The sine and the cosine of <paramref name="x"/> together, each to the precision of
         /// <paramref name="context"/>: the argument reduced to <c>[-pi, pi]</c> and then halved
         /// until it is below a twentieth, two Taylor series of a dozen terms there, and the
@@ -1227,9 +1236,11 @@ namespace AngouriMath
                 return x;
             if (!x.IsFinite)
                 return EDecimal.NaN;
-            // An integer that fits in an int32 is answered exactly; ToInt32IfExact would throw
-            // for anything else, and the approximation below takes that.
-            if (x.IsInteger() && x.CompareTo(EDecimal.FromInt32(int.MinValue)) >= 0 && x.CompareTo(EDecimal.FromInt32(int.MaxValue)) <= 0)
+            // A whole number is answered exactly while its factorial is cached, and a negative one
+            // has none; past the cache the approximation below takes it, as it took anything past
+            // an int32, since an exact factorial only to be rounded costs its every digit: that of
+            // 479001600 has four billion, and was built before rounding to a hundred.
+            if (x.IsInteger() && x.CompareTo(EDecimal.FromInt32(int.MinValue)) >= 0 && x.CompareTo(EDecimal.FromInt32(MaxCachedFactorial)) <= 0)
             {
                 var @int = x.ToInt32Unchecked();
                 if (@int < 0) return EDecimal.NaN; // Will become ±∞ if we don't insert this line
