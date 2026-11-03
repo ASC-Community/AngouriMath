@@ -498,20 +498,66 @@ namespace AngouriMath
             // genuinely complex limit has an imaginary part that can arrive at an integer from
             // one side or the other.
             //
-            // Like the Absf and Signumf overrides above, this reads the argument as real-valued
-            // along the path. An argument that is complex near the destination and real at it
-            // can still be answered here when it should not be; that is the assumption those
-            // two already make, and narrowing it wants a way to decide realness that this
-            // library does not have yet -- https://github.com/asc-community/AngouriMath/issues/721.
+            // The Absf and Signumf overrides above read the argument as real-valued along the path.
+            // This one asks: an argument that is complex near the destination and real at it is
+            // read below by the side its imaginary part arrives from.
             if (value is not Complex { RealPart: var real, ImaginaryPart: var imaginary })
                 return null;
+            // A real limit of an argument that is not real near the destination has an imaginary
+            // part tending to 0, which is a jump of its own: floor(4^((-1)^x)) at 1 from the right
+            // tends to 1/4 from below the real line, where every value's floor is -i, and the
+            // floor of the limit, 0, was the answer. Where the argument is real near the
+            // destination -- every argument this read as real before, sqrt(x) at 4 among them --
+            // nothing is added; where it is not, the side the imaginary part arrives from decides
+            // the step, and where that is not decided the limit is declined.
+            Entity imaginaryStep = Integer.Zero;
+            if (value is Real)
+            {
+                if (ImaginaryStep() is not { } step)
+                    return null;
+                imaginaryStep = step;
+            }
+            Entity WithTheImaginaryStep(Entity realAnswer)
+                => imaginaryStep is Integer { IsZero: true } ? realAnswer : realAnswer + imaginaryStep * MathS.i;
             if (SitsOnAJump(real))
                 return value is Integer jump && SignNear(argument - jump, x, dist, side) is { } arrivesFrom
-                    ? atAJump(jump, arrivesFrom)
+                    ? WithTheImaginaryStep(atAJump(jump, arrivesFrom))
                     : null;
             if (value is not Real && SitsOnAJump(imaginary))
                 return null;
-            return rebuild(limit);
+            return WithTheImaginaryStep(rebuild(limit));
+
+            // Real near the destination where it is real at a point just off it on each side
+            // approached: realness is not decided for every shape -- x^x is outside what
+            // TreeAnalyzer lists -- and a sample only ever sends the limit to the question of the
+            // imaginary part's side, or to declining, never to an answer of its own.
+            Entity? ImaginaryStep()
+            {
+                if (Functions.TreeAnalyzer.IsRealValued(argument, x) || IsRealJustOff())
+                    return Integer.Zero;
+                return SignNear(MathS.Im(argument), x, dist, side) is { } arrivesFrom && arrivesFrom != 0
+                    ? atAJump(Integer.Zero, arrivesFrom)
+                    : null;
+            }
+
+            bool IsRealJustOff()
+            {
+                var offsets = side switch
+                {
+                    ApproachFrom.Left => new[] { -1 },
+                    ApproachFrom.Right => new[] { 1 },
+                    _ => new[] { -1, 1 },
+                };
+                foreach (var offset in offsets)
+                {
+                    Entity at = dist == Real.PositiveInfinity ? Integer.Create(1000000)
+                        : dist == Real.NegativeInfinity ? Integer.Create(-1000000)
+                        : dist + Rational.Create(offset, 1000000);
+                    if (argument.Substitute(x, at).Evaled is not Real)
+                        return false;
+                }
+                return true;
+            }
 
             static bool SitsOnAJump(Real part) =>
                 part is Integer || part.EDecimal.CompareTo(part.EDecimal.Floor()) == 0;
