@@ -583,41 +583,126 @@ namespace AngouriMath
             /// Matrix's form, transformed via Gaussian elimination.
             /// </summary>
             /// <remarks>
-            /// Both forms divide as they go. GenericTensor's SafeDivision variants keep every entry as a numerator and a
-            /// denominator that are never reduced against each other, which is for element types whose division truncates,
-            /// and an Entity divides exactly. Unreduced, the pairs grew with every row operation and the back substitution
-            /// squared them: one 7x7 of small entries took two minutes, and an 8x8 did not return in ten, and the 4x4
-            /// of https://github.com/asc-community/AngouriMath/issues/2270 ended with a denominator near 1e-246, which
-            /// https://github.com/asc-community/AngouriMath/issues/2277 made a NaN.
+            /// Both forms divide as they go, each entry an exact quotient: GenericTensor's SafeDivision variants kept
+            /// every entry as a numerator and a denominator never reduced against each other, the pairs grew with every
+            /// row operation, and the 4x4 of https://github.com/asc-community/AngouriMath/issues/2270 ended with a
+            /// denominator near 1e-246, which https://github.com/asc-community/AngouriMath/issues/2277 made a NaN. A
+            /// pivot is the first entry of its column, from the current row down, that is not zero, and a symbolic
+            /// entry is simplified to say so; see <see cref="Eliminate"/>.
             /// </remarks>
             public Matrix RowEchelonForm =>
                 @ref.GetValue(static @this =>
-                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.RowEchelonFormSimple()).InnerSimplified),
+                    OfTheShapeOf(@this, MathS.Matrix(Eliminate(@this, reduced: false).Entries).InnerSimplified),
                     this);
             private LazyPropertyA<Matrix> @ref;
 
             /// <summary>
             /// Reduced row echelon form via Gaussian elimination.
             /// </summary>
+            /// <remarks>
+            /// Each pivot row is divided by its pivot, so that where a pivot is symbolic the form holds where that
+            /// pivot is not 0, and the quotients say so as their simplification does.
+            /// </remarks>
             public Matrix ReducedRowEchelonForm =>
                 rref.GetValue(static @this =>
-                    OfTheShapeOf(@this, new Matrix(@this.InnerMatrix.ReducedRowEchelonFormSimple()).InnerSimplified),
+                    OfTheShapeOf(@this, MathS.Matrix(Eliminate(@this, reduced: true).Entries).InnerSimplified),
                     this);
             private LazyPropertyA<Matrix> rref;
 
             /// <summary>
-            /// The number of linearly independent rows
+            /// The number of linearly independent rows: of the elimination's pivots. For a symbolic matrix it is the
+            /// rank for general values of the symbols, as over the field of rational functions in them: the rank of
+            /// <c>[[a, b], [2 a, 2 b]]</c> is 1, which is 0 where <c>a = b = 0</c>.
             /// </summary>
             public int Rank =>
-                rank.GetValue(static @this =>
-                {
-                    for (int i = 0; i < @this.RowCount; i++)
-                        if (@this.ReducedRowEchelonForm.InnerMatrix.RowGetLeadingElement(i) is null)
-                            return i;
-                    return @this.RowCount;
-                }
-                , this);
+                rank.GetValue(static @this => Eliminate(@this, reduced: false).Pivots, this);
             private LazyPropertyA<int> rank;
+
+            /// <summary>
+            /// Gaussian elimination over the entries, to the row echelon form, or with <paramref name="reduced"/> to the
+            /// reduced one, and the number of pivots it found.
+            /// </summary>
+            /// <remarks>
+            /// GenericTensor's elimination asked whether a pivot was the literal 0, and an entry the elimination had
+            /// itself made, like <c>c + -c / a * a</c>, is 0 without being written so: it was chosen and divided by, and
+            /// the reduced form of <c>[[a, b], [c, d]]</c> simplified to NaN and the rank of <c>[[a, b], [2 a, 2 b]]</c>
+            /// was 2. Each entry the elimination makes is normalised, a rational function over the rationals to its
+            /// canonical quotient (<see cref="Functions.RationalFunction"/>), where being 0 is being the literal 0, and
+            /// the third row of <c>[[a, b, c], [d, e, f], [a + d, b + e, c + f]]</c> is 0 as it should be; anything
+            /// else is simplified when it is asked whether it is 0.
+            /// https://github.com/asc-community/AngouriMath/issues/2345
+            /// </remarks>
+            private static (Entity[,] Entries, int Pivots) Eliminate(Matrix matrix, bool reduced)
+            {
+                var (rows, columns) = (matrix.RowCount, matrix.ColumnCount);
+                var entries = new Entity[rows, columns];
+                for (var r = 0; r < rows; r++)
+                    for (var c = 0; c < columns; c++)
+                        entries[r, c] = matrix[r, c];
+                var row = 0;
+                for (var column = 0; column < columns && row < rows; column++)
+                {
+                    var pivotRow = -1;
+                    for (var r = row; r < rows && pivotRow < 0; r++)
+                        if (IsZeroEntry(entries[r, column]))
+                            entries[r, column] = Number.Integer.Zero;
+                        else
+                            pivotRow = r;
+                    if (pivotRow < 0)
+                        continue;
+                    if (pivotRow != row)
+                        for (var c = 0; c < columns; c++)
+                            (entries[row, c], entries[pivotRow, c]) = (entries[pivotRow, c], entries[row, c]);
+                    var pivot = entries[row, column];
+                    if (reduced)
+                    {
+                        for (var c = column + 1; c < columns; c++)
+                            entries[row, c] = Normalised(entries[row, c] / pivot);
+                        entries[row, column] = pivot = Number.Integer.One;
+                    }
+                    for (var r = reduced ? 0 : row + 1; r < rows; r++)
+                    {
+                        if (r == row || entries[r, column] is Number.Complex { IsZero: true })
+                            continue;
+                        var factor = Normalised(entries[r, column] / pivot);
+                        for (var c = column + 1; c < columns; c++)
+                            entries[r, c] = Normalised(entries[r, c] - factor * entries[row, c]);
+                        entries[r, column] = Number.Integer.Zero;
+                    }
+                    row++;
+                }
+                return (entries, row);
+            }
+
+            /// <summary>
+            /// An entry the elimination made, normalised: a number as it is, a rational function over the rationals as
+            /// its canonical quotient, which keeps the entries from growing with each row operation, and anything else
+            /// as its inner simplification.
+            /// </summary>
+            private static Entity Normalised(Entity entry)
+            {
+                var inner = entry.InnerSimplified;
+                if (inner is Number)
+                    return inner;
+                return Functions.RationalFunction.TryCanonicalize(inner, out var canonical, wholeCoefficients: true) ? canonical : inner;
+            }
+
+            /// <summary>
+            /// Whether an entry is 0: a number exactly, a rational function over the rationals by its canonical quotient,
+            /// and anything else once simplified, a condition on the zero set aside, since an entry that is 0 wherever
+            /// it has a value is no pivot to divide by.
+            /// </summary>
+            private static bool IsZeroEntry(Entity entry)
+            {
+                if (entry is Number.Complex number)
+                    return number.IsZero;
+                if (Functions.RationalFunction.TryCanonicalize(entry, out var canonical))
+                    return canonical is Number.Complex { IsZero: true };
+                var simplified = entry.Simplify();
+                while (simplified is Providedf(var expression, _))
+                    simplified = expression;
+                return simplified is Number.Complex { IsZero: true };
+            }
 
             /// <summary>
             /// Adjugate form of a matrix
