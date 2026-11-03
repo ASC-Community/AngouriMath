@@ -131,6 +131,12 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var finalExpr = MathS.Pow(normalPolynom, intLcm) - mp;
 
             dst = (Set)AnalyticalEquationSolver.Solve(finalExpr, x).InnerSimplified;
+            // Raising adds roots, and each is put back into the equation to be dropped where it
+            // fails. With another name in the equation that cannot be decided, and every root of the
+            // raised equation was answered: sqrt(x + 1) + a + x = 0 had both roots of its square,
+            // and for each a one of them is not a root. Each is now provided it is one.
+            if (expr.Vars.Count > 1 && dst is Set.FiniteSet candidates)
+                dst = new Set.FiniteSet(candidates.Select(root => (Entity)root.Provided(expr.Substitute(x, root).EqualTo(Integer.Zero))));
             return true;
         }
 
