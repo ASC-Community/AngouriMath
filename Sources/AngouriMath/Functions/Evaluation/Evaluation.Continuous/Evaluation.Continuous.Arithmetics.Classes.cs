@@ -672,9 +672,10 @@ namespace AngouriMath
                 return product switch
                 {
                     Rational exact => exact,
-                    Real real => Real.Create(real.EDecimal.RoundToPrecision(context)),
-                    Complex complex => Complex.Create(complex.RealPart.EDecimal.RoundToPrecision(context),
-                                                      complex.ImaginaryPart.EDecimal.RoundToPrecision(context)),
+                    Real real => Real.CreateAtScale(real.EDecimal.RoundToPrecision(context), PeterO.Numbers.EDecimal.Zero),
+                    Complex complex => Complex.CreateAtScales(complex.RealPart.EDecimal.RoundToPrecision(context),
+                                                              complex.ImaginaryPart.EDecimal.RoundToPrecision(context),
+                                                              PeterO.Numbers.EDecimal.Zero, PeterO.Numbers.EDecimal.Zero),
                     var other => other,
                 };
             }
@@ -774,7 +775,9 @@ namespace AngouriMath
             /// exactly once it is large. Real arguments are taken as decimals throughout: a complex
             /// product adds a zero imaginary part's terms, and adding to a number whose exponent is in
             /// the millions aligns the two digit by digit, which made <c>binomial(10000000, 1.43)</c>
-            /// take longer than twenty seconds.
+            /// take longer than twenty seconds. The quotient is made as one that cancels nothing, and is
+            /// never rounded onto zero: made as any number, a value under the downcasting tolerance was
+            /// taken for a residual, and <c>fallingfactorial(0.5, -100.5)</c>, 9.4e-161, was <c>0</c>.
             /// </summary>
             internal static Complex? QuotientOfFactorials(Complex[] over, Complex[] under)
             {
@@ -790,7 +793,7 @@ namespace AngouriMath
                         foreach (var x in under)
                             if (((Real)x).EDecimal.Factorial(unbounded) is { IsFinite: true } factorial) real = real.Divide(factorial, unbounded); else return null;
                     }
-                    return Real.Create(real.RoundToPrecision(context));
+                    return Real.CreateAtScale(real.RoundToPrecision(context), PeterO.Numbers.EDecimal.Zero);
                 }
                 Complex quotient = Integer.One;
                 using (MathS.Settings.DowncastingEnabled.Set(false))
@@ -801,8 +804,9 @@ namespace AngouriMath
                     foreach (var x in under)
                         if (FactorialOf(x, unbounded) is { } factorial) quotient /= factorial; else return null;
                 }
-                return Complex.Create(quotient.RealPart.EDecimal.RoundToPrecision(context),
-                                      quotient.ImaginaryPart.EDecimal.RoundToPrecision(context));
+                return Complex.CreateAtScales(quotient.RealPart.EDecimal.RoundToPrecision(context),
+                                              quotient.ImaginaryPart.EDecimal.RoundToPrecision(context),
+                                              PeterO.Numbers.EDecimal.Zero, PeterO.Numbers.EDecimal.Zero);
             }
 
             private static Complex? FactorialOf(Complex x, PeterO.Numbers.EContext context)
@@ -831,16 +835,35 @@ namespace AngouriMath
                         Integer { EInteger: var n } when n.Equals(PeterO.Numbers.EInteger.FromInt32(-1)) => Rational.Create(-1, 2),
                         Integer => Integer.Zero,
                         Number value when (value + Rational.Create(1, 2)).Evaled is Integer { EInteger.Sign: <= 0 } => MathS.NaN,
+                        // The two gammas as one quotient, and 4^n times it with no bound on the exponent:
+                        // each gamma left the range from n near 450, where the number is near 1e267, and
+                        // catalannumber(500.5) was +oo/+oo, which is NaN.
                         Complex value when !isExact
-                            && Number.Factorial((Complex)(value - Rational.Create(1, 2)).Evaled) is var top && Number.Factorial((Complex)(value + 1).Evaled) is var bottom
-                            && !top.IsNaN && !bottom.IsNaN
-                            => (MathS.Pow(4, value) * top / (MathS.Sqrt(MathS.pi) * bottom)).Evaled,
+                            && FactorialPowers.QuotientOfFactorials([(Complex)(value - Rational.Create(1, 2)).Evaled], [(Complex)(value + 1).Evaled]) is { } quotient
+                            => FourToThePowerTimes(value, quotient),
                         _ => null
                     },
                     (@this, a) => ((CatalanNumberf)@this).New(a), isExact);
 
             /// <summary>How far a Catalan number is computed exactly before the node is left as written.</summary>
             private const int LargestIndex = 1000;
+
+            /// <summary>
+            /// <c>4^n quotient / √π</c>. For a real <paramref name="n"/>, formed in decimals with no bound on the exponent
+            /// and rounded into the context: no number is made of the power itself, which for <c>n = 10^20</c> has an
+            /// exponent near 6e19 and cannot be read as the integer a number checks it for. A complex one is formed in
+            /// the context, as it was.
+            /// </summary>
+            private static Entity FourToThePowerTimes(Complex n, Complex quotient)
+            {
+                if (n is not Real { EDecimal: var power } || quotient is not Real { EDecimal: var ratio })
+                    return (MathS.Pow(4, n) * quotient / MathS.Sqrt(MathS.pi)).Evaled;
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                var unbounded = InternalAMExtensions.WithUnboundedExponents(context);
+                var value = PeterO.Numbers.EDecimal.FromInt32(4).Pow(power, unbounded).Multiply(ratio, unbounded)
+                    .Divide(PeterO.Numbers.EDecimal.PI(unbounded).Sqrt(unbounded), unbounded);
+                return Real.CreateAtScale(value.RoundToPrecision(context), PeterO.Numbers.EDecimal.Zero);
+            }
         }
 
         public partial record HarmonicNumberf
