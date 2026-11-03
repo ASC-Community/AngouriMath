@@ -151,9 +151,29 @@ namespace AngouriMath
                             a.IsInfinity() && b.IsZero || b.IsInfinity() && a.IsZero ? EDecimal.Zero : CtxMultiply(a, b);
                         var (ac, bd) = (ModifiedMultiply(a.RealPart.EDecimal, b.RealPart.EDecimal), ModifiedMultiply(a.ImaginaryPart.EDecimal, b.ImaginaryPart.EDecimal));
                         var (ad, bc) = (ModifiedMultiply(a.RealPart.EDecimal, b.ImaginaryPart.EDecimal), ModifiedMultiply(a.ImaginaryPart.EDecimal, b.RealPart.EDecimal));
-                        return Complex.CreateAtScales(CtxSubtract(ac, bd), CtxAdd(ad, bc), CancelledScaleOfADifference(ac, bd), CancelledScale(ad, bc));
+                        var (real, imaginary) = (CtxSubtract(ac, bd), CtxAdd(ad, bc));
+                        if (!(real.IsFinite && imaginary.IsFinite) && a.IsFinite && b.IsFinite)
+                            return ProductPastTheRange(a, b);
+                        return Complex.CreateAtScales(real, imaginary, CancelledScaleOfADifference(ac, bd), CancelledScale(ad, bc));
                     }
                     );
+
+            /// <summary>
+            /// The product of two finite numbers a part of which leaves the context's exponent range. Within it,
+            /// <c>(1e600 + 1e600 i)^2</c> had <c>1e1200 - 1e1200</c> for its real part, which is <c>oo - oo</c> there,
+            /// and the product was NaN; the parts are formed past the range and rounded into it, so that it is
+            /// <c>2e1200 i</c> rounded, <c>oo i</c>, as a real product past the range is <c>+oo</c>.
+            /// </summary>
+            private static Complex ProductPastTheRange(Complex a, Complex b)
+            {
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                var unbounded = InternalAMExtensions.WithUnboundedExponents(context);
+                var (ar, ai, br, bi) = (a.RealPart.EDecimal, a.ImaginaryPart.EDecimal, b.RealPart.EDecimal, b.ImaginaryPart.EDecimal);
+                var (ac, bd) = (ar.Multiply(br, unbounded), ai.Multiply(bi, unbounded));
+                var (ad, bc) = (ar.Multiply(bi, unbounded), ai.Multiply(br, unbounded));
+                return Complex.CreateAtScales(ac.Subtract(bd, unbounded).RoundToPrecision(context), ad.Add(bc, unbounded).RoundToPrecision(context),
+                    CancelledScaleOfADifference(ac, bd), CancelledScale(ad, bc));
+            }
 
             internal static Complex OpDiv<T>(T a, T b) where T : Number =>
                 SuperSwitch<Complex>(a, b,
@@ -615,7 +635,18 @@ namespace AngouriMath
                         var raised = decimalBase.Pow(pow.Abs().ToInt32Checked(), wholeContext);
                         return Real.CreateAtScale(pow.Sign < 0 ? EDecimal.One.Divide(raised, wholeContext) : raised, EDecimal.Zero);
                     }
-                    return BinaryIntPow(@base, pow);
+                    var built = BinaryIntPow(@base, pow);
+                    if (built.IsFinite || @base is Real)
+                        return built;
+                    // A finite complex base whose power leaves the exponent range on the way: each squaring past
+                    // it was oo - oo in a part, and (3 + 4i)^2000 and (1 + i)^(10^6) were NaN. The squarings are
+                    // made past the range and the parts rounded into it at the end.
+                    var rangeContext = MathS.Settings.DecimalPrecisionContext.Value;
+                    Complex pastTheRange;
+                    using (MathS.Settings.DecimalPrecisionContext.Set(InternalAMExtensions.WithUnboundedExponents(rangeContext)))
+                        pastTheRange = BinaryIntPow(@base, pow);
+                    return Complex.Create(pastTheRange.RealPart.EDecimal.RoundToPrecision(rangeContext),
+                        pastTheRange.ImaginaryPart.EDecimal.RoundToPrecision(rangeContext));
                 }
 
                 // A half power of a nonnegative decimal is its square root, not its exponential

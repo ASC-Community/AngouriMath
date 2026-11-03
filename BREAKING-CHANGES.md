@@ -412,6 +412,22 @@ compiled expressions against evaluation found it.
 | `"(10^200) mod 7".EvalNumerical()` | `NaN` | `2` |
 | `"(10^100 + 1/2) mod 1".EvalNumerical()` | `NaN` | `1/2` |
 
+### A complex product past the exponent range has its parts, not NaN
+
+**Silent: a different answer.** A complex number's parts are decimals in the precision context, whose exponents end at
+a thousand. A product or a whole power of finite numbers, a part of which passed that end on the way, had `oo - oo` in
+it and was `NaN`, which says the value does not exist; `Simplify` returned that `NaN` as well. Each part past the range
+is the infinity of its sign now, as a real past it is `+oo`, and a part within it keeps its value. An exact
+simplification leaves the expression as written, since the infinity is the context's and not the value's. No issue was
+filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(3+4i)^2000".EvalNumerical()` | `NaN` | `+oo + +ooi` |
+| `"(1+i)^(10^6)".EvalNumerical()` | `NaN` | `+oo` |
+| `"(1e600+1e600i)*(1e600+1e600i)".EvalNumerical()` | `NaN` | `+ooi` |
+| `"(3+4i)^2000".Simplify()` | `NaN` | `(3 + 4i) ^ 2000` |
+
 ### A binomial whose factorials leave the exponent range has its value
 
 **Silent: a binomial that was `+oo` or NaN is its value.** `binomial(n, k)` for a `k` that is not whole is
