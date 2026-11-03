@@ -281,7 +281,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                                  right),
                 // A rational exponent with an odd denominator below ten takes the real root of a negative
                 // real, as evaluation does: (-8)^(1/3) is -2, which was 1 + 1.73i, and NaN over double.
-                Powf { Exponent: Rational { ERational: var ratio } } when Core.Compilation.RealProducts.TakesTheRealRootOfANegative(ratio)
+                Powf { Exponent: var exponent } when Core.Compilation.RealProducts.RealRootExponent(exponent) is { } ratio
                     && ShouldBeAtLeastDouble(left) is var newLeft
                     && ShouldBeAtLeastDouble(right) is var newRight
                     && (newLeft.Type == typeof(System.Numerics.Complex) || newLeft.Type == typeof(double))

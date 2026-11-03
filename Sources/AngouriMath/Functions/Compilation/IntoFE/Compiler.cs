@@ -173,7 +173,7 @@ namespace AngouriMath
                 Exponent.InnerCompile(compiler);
                 Base.InnerCompile(compiler);
                 compiler.Instructions.Add(
-                    Exponent is Rational { ERational: var ratio } && Core.Compilation.RealProducts.TakesTheRealRootOfANegative(ratio)
+                    Core.Compilation.RealProducts.RealRootExponent(Exponent) is { } ratio
                         ? new(InstructionType.CALL_REAL_ROOT_POW, ratio.Numerator.IsEven ? 0 : 1)
                         : new(InstructionType.CALL_POW));
             }
