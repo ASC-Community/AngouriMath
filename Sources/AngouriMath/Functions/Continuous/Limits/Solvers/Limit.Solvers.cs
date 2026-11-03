@@ -331,9 +331,12 @@ namespace AngouriMath.Functions.Algebra
                     if (upperDerivative.Nodes.Any(node => node is Derivativef)
                         || lowerDerivative.Nodes.Any(node => node is Derivativef))
                         return null;
-                    var p = (upperDerivative / upperLogArgument).InnerSimplified;
-                    var q = (lowerDerivative / lowerLogArgument).InnerSimplified;
-                    return LimitFunctional.ComputeLimit(p / q, x, Real.PositiveInfinity);
+                    // (u'/u) / (v'/v) asked as the one quotient u' v / (u v'): asked as a quotient of
+                    // quotients, the limit of ln(x - 1) / ln(ln(x)) at 1 from the left took twelve
+                    // seconds over (1/(x - 1)) / ((1/x) / ln(x)), where x ln(x) / (x - 1) takes a
+                    // hundredth of one. It took 14 ms before #2275 sent it to this rule.
+                    var ratio = (upperDerivative * lowerLogArgument / (upperLogArgument * lowerDerivative)).InnerSimplified;
+                    return LimitFunctional.ComputeLimit(ratio, x, Real.PositiveInfinity);
                 }
                 else
 
