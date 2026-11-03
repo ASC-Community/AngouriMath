@@ -443,19 +443,25 @@ namespace AngouriMath
             private LazyPropertyA<Set?> eigenvalues;
 
             /// <summary>Returns an inverse matrix if it exists</summary>
+            /// <remarks>
+            /// The <see cref="Adjugate"/> over the <see cref="Determinant"/>, entry by entry. GenericTensor's inversion
+            /// took the determinant by elimination, which divides by the first pivot and multiplies it back: the
+            /// determinant of <c>[[a, b], [c, d]]</c> came to <c>a * (d * a + -c * b) / a</c>, and simplifying its
+            /// <c>a / a</c> wrote <c>provided not a = 0</c> on every entry of the inverse, which exists wherever the
+            /// determinant is not 0, <c>a = 0</c> included; the rotation's inverse carried <c>cos t ≠ 0</c>. The
+            /// determinant here is a polynomial in the entries and the adjugate's are cofactors, so neither divides.
+            /// https://github.com/asc-community/AngouriMath/issues/2346
+            /// </remarks>
             public Matrix? Inverse => inverse.GetValue(static @this =>
             {
-                var cp = @this.InnerMatrix.Copy(false);
                 if (!@this.IsSquare)
                     return null;
-                if (@this.Determinant is null)
+                if (@this.Determinant is not { } determinant || determinant == 0)
                     return null;
-                if (@this.Determinant == 0)
+                if (@this.Adjugate is not { } adjugate)
                     return null;
-                // Inverting goes through the adjugate, which takes its minors in the same
-                // process-wide scratch matrix the determinant does. See Functions.GenTensorGuard.
-                Functions.GenTensorGuard.InvertMatrix(cp);
-                return ToMatrix(new Matrix(cp).InnerSimplified);
+                return OfTheShapeOf(@this, MathS.Matrix(@this.RowCount, @this.ColumnCount,
+                    (row, column) => adjugate[row, column] / determinant).InnerSimplified);
             }, this);
             private LazyPropertyA<Matrix?> inverse;
 

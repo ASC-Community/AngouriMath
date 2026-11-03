@@ -396,6 +396,19 @@ evaluation found it.
 | `"(5/2)^(10^7)".EvalNumerical()` | does not return | `+oo` |
 | `"2^(10^10)".Simplify()` | does not return | `2 ^ 10000000000` |
 
+### The inverse of a symbolic matrix carries no condition of a pivot
+
+**Silent: a different answer.** The inverse took its determinant by elimination, which divides by the first pivot and
+multiplies it back, and simplifying that wrote the pivot's condition on every entry: `a ≠ 0` for `[[a, b], [c, d]]`,
+`cos t ≠ 0` for a rotation. Each inverse exists wherever the determinant is not 0, and at `t = π/2` the rotation's is
+`[[0, 1], [-1, 0]]`. The inverse is the adjugate over the determinant now, neither of which divides.
+https://github.com/asc-community/AngouriMath/issues/2346
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `[[a, b], [c, d]].Inverse.Simplify()` | each entry `… provided not a = 0` | `[[d / (a * d - b * c), …]]`, with no condition |
+| `[[cos(t), -sin(t)], [sin(t), cos(t)]].Inverse.Simplify()` | `[[cos(t), sin(t) provided not cos(t) = 0], …]` | `[[cos(t), sin(t)], [-sin(t), cos(t)]]` |
+
 ### A remainder of two ratios is exact
 
 **Silent: a remainder that came back as the divisor, or as NaN, is the remainder.** `%` on `Real`, `mod` and evaluation

@@ -43,12 +43,12 @@ namespace AngouriMath.Functions
     {
         /// <summary>
         /// Held across any call that reaches GenericTensor's shared scratch-matrix pool -- which
-        /// is <c>DeterminantLaplace</c>, <c>Adjoint</c>, and <c>InvertMatrix</c>, since inverting
-        /// goes through the adjugate. <c>DeterminantGaussianSafeDivision</c> and
+        /// is <c>DeterminantLaplace</c> and <c>Adjoint</c>; <c>InvertMatrix</c> goes through the
+        /// adjugate too, and the inverse is no longer taken from it. <c>DeterminantGaussianSafeDivision</c> and
         /// <c>MatrixMultiply</c> do not touch the pool and are deliberately not covered.
         /// </summary>
         /// <remarks>
-        /// It is private, and the three operations below are the whole surface, because mutual
+        /// It is private, and the operations below are the whole surface, because mutual
         /// exclusion here is not a property any one caller can hold up: a single call that skips
         /// the lock corrupts every call that takes it, and reads corrupted minors back. Exposing
         /// the lock lets a caller reach GenericTensor without it; exposing only the operations
@@ -83,15 +83,6 @@ namespace AngouriMath.Functions
                 return new Entity.Matrix(matrix.Adjoint()).InnerSimplified;
         }
 
-        /// <summary>
-        /// Inversion in place, serialised on <see cref="ScratchPool"/> -- it goes through the
-        /// adjugate, so it takes its minors in the same pool.
-        /// </summary>
-        internal static void InvertMatrix(GenTensor matrix)
-        {
-            lock (ScratchPool)
-                matrix.InvertMatrix();
-        }
 
         [ConstantField] private static readonly Lazy<bool> piecewiseCache =
             new Lazy<bool>(WarmPiecewiseCache, LazyThreadSafetyMode.ExecutionAndPublication);
