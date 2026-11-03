@@ -506,6 +506,23 @@ arcsine of that is `NaN`. Of `arcsin(k + c)` for `k` from 1 to 40 and `c` in `pi
 | `"arcsin(6 + pi)".ToEntity().Evaled` | `NaN` | `1.5707963267948966 - 2.902976737696685i`, to 15 digits |
 | `"arccos(6 + pi)".ToEntity().Evaled` | `NaN` | `2.902976737696685i`, to 15 digits |
 
+### Factorisation, the divisor count, the totient and `IsPrime` answer past 2^63
+
+**Not silent: what threw or did not return now answers.** The three trial-divided over `long`, and `IsPrime` was
+whether the divisor count was 2: past 2^63 each threw `OverflowException`, `phi(7^30)` out of `Simplify` among them,
+and the largest prime below 2^63 did not finish. They divide in `EInteger` now, as far as 65536, and ask
+Miller–Rabin and Lucas–Lehmer of what is left, splitting a composite rest by Pollard's rho. Where a factor is neither
+proven prime nor split, `Factorize`, `CountDivisors`, `Phi` and `IsPrime` throw `NotSufficientlySupportedException`,
+and `phi(n)` in an expression is left as written. https://github.com/asc-community/AngouriMath/issues/2341,
+https://github.com/asc-community/AngouriMath/issues/2342
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `MathS.NumberTheory.Factorize(2^64)` | `OverflowException` | `(2, 64)` |
+| `"phi(7^30)".Simplify()` | `OverflowException` | `19319434534879078361025642` |
+| `(2^89 - 1).IsPrime` | `OverflowException` | `true` |
+| `MathS.NumberTheory.Factorize(9223372036854775783)` | does not return | `(9223372036854775783, 1)` |
+
 ### An exact rational is zero, positive or negative as it is
 
 **Silent: 0 divided by a rational smaller than about 1e-199 is 0, where it was NaN.** Whether an exact rational was zero,

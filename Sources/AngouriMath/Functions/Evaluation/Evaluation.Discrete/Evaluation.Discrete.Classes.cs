@@ -786,7 +786,9 @@ namespace AngouriMath
                 => ExpandOnOneArgument(Argument,
                     a => a switch
                     {
-                        Integer integer => integer.Phi(),
+                        // Left as written where the argument cannot be factorised, rather than throwing out of a
+                        // simplification. https://github.com/asc-community/AngouriMath/issues/2342
+                        Integer integer => integer.EInteger.TryPhi() is { } totient ? Integer.Create(totient) : null,
                         Number n => MathS.NaN,
                         _ => null
                     },

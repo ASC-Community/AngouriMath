@@ -14,7 +14,7 @@ namespace AngouriMath.Functions
         [AddressableRules]
         internal static Entity PhiFunctionRules(Entity x) => x switch
         {
-            Phif(Powf(Integer prime, var variable)) when prime.IsPrime => new Powf(prime, variable - 1) * (prime - 1), 
+            Phif(Powf(Integer prime, var variable)) when Primes.IsPrime(prime.EInteger) is true => new Powf(prime, variable - 1) * (prime - 1), 
             _ => x
         };
     }

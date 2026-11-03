@@ -306,8 +306,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex Phi(System.Numerics.Complex a) => AngouriMath.Numerics.SpecialFunctions.Phi(a);
         public static double Phi(double a) => AngouriMath.Numerics.SpecialFunctions.Phi(a);
         public static float Phi(float a) => (float)AngouriMath.Numerics.SpecialFunctions.Phi(a);
-        public static long Phi(long a) => a.Phi();
-        public static int Phi(int a) => (int)((long)a).Phi();
+        public static long Phi(long a) => PeterO.Numbers.EInteger.FromInt64(a).Phi().ToInt64Checked();
+        public static int Phi(int a) => PeterO.Numbers.EInteger.FromInt32(a).Phi().ToInt32Checked();
         public static BigInteger Phi(BigInteger a) => PeterO.Numbers.EInteger.FromBytes(a.ToByteArray(), littleEndian: true).Phi().ToBigInteger();
 
         // The special functions, in double precision as the kernels define them, and the factorial,

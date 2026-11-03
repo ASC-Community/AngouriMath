@@ -584,7 +584,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 "eulers-totient-of-a-prime-power",
                 MatchPattern.Node<Phif>(
                     MatchPattern.Node<Powf>(
-                        MatchPattern.Any<Integer>("p", p => p.IsPrime),
+                        MatchPattern.Any<Integer>("p", p => Functions.Primes.IsPrime(p.EInteger) is true),
                         MatchPattern.Any("k"))),
                 // (Integer) on the prime and not on the exponent, and the difference is the
                 // point: p - 1 is arithmetic that folds to a number, k - 1 is a tree because k

@@ -425,9 +425,9 @@ namespace AngouriMath.Functions
             {
                 var extended = new List<EInteger>(divisors);
                 var multiplier = EInteger.One;
-                for (long i = 0; i < power; i++)
+                for (var i = EInteger.Zero; i < power; i += 1)
                 {
-                    multiplier = multiplier.Multiply(EInteger.FromInt64(prime));
+                    multiplier = multiplier.Multiply(prime);
                     foreach (var divisor in divisors)
                         extended.Add(divisor.Multiply(multiplier));
                 }
