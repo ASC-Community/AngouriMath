@@ -27,23 +27,13 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("tan(x^2 + x - 1)", ApproachFrom.Left)]
         [InlineData("sin(x^2 + x - 1) / cos(x^2 + x - 1)", ApproachFrom.Left)]
         [InlineData("tan(x^2 + x - 1)", ApproachFrom.Right)]
+        [InlineData("tan(x^2 - x - 1)", ApproachFrom.Left)]
+        [InlineData("tan(x^2 + x - 1)", ApproachFrom.BothSides)]
         public void IsTheTangent(string input, ApproachFrom side)
         {
             var limit = MathS.FromString(input).Limit("x", 0, side);
             Assert.False(limit is Limitf, $"lim {side} x->0 {input} was left unevaluated");
             AssertIsTheTangent(input, side, limit);
-        }
-
-        // These come back unevaluated: the parts' own limits from the left are not taken, and that is a decline, not a
-        // wrong answer. What they must not be is the quotient of the derivatives, as the first was before.
-        [Theory]
-        [InlineData("tan(x^2 - x - 1)", ApproachFrom.Left)]
-        [InlineData("tan(x^2 + x - 1)", ApproachFrom.BothSides)]
-        public void IsTheTangentOrUnevaluated(string input, ApproachFrom side)
-        {
-            var limit = MathS.FromString(input).Limit("x", 0, side);
-            if (limit is not Limitf)
-                AssertIsTheTangent(input, side, limit);
         }
 
         // An infinity has one side, and asking for it one-sidedly was left unevaluated where the limit is a value. The

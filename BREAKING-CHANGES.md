@@ -93,6 +93,23 @@ root near 23.
 | `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
 | `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
 
+### A trigonometric function reads the value its argument tends to
+
+**A one-sided limit at a finite point of a trigonometric function is answered, where it was left unevaluated.** The
+limit is taken by moving the variable out to infinity, and the value read off there kept the infinity in it:
+`x^2 + x - 1` from the left at 0 came back as `-1 - 1/+oo + 1/+oo^2`. The function above it asked whether that was
+finite, was told no, and declined. A trigonometric function's argument now has the infinities folded out of its limit.
+A function with a cut, such as the arctangent or the logarithm, still declines there: it is not continuous on its cut,
+and folding would answer with the value on it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(x^2 + x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(sin(x ^ 2 + x - 1), x, 0)` | `sin(-1)` |
+| `"sin(x^2 + x - 1)".ToEntity().Limit("x", 0)` | `limit(sin(x ^ 2 + x - 1), x, 0)` | `sin(-1)` |
+| `"cos(x^2 + x + 2)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(cos(x ^ 2 + x + 2), x, 0)` | `cos(2)` |
+| `"tan(x^2 + x + 2)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(tan(x ^ 2 + x + 2), x, 0)`, in 4.3 s | `sin(2) / cos(2)` |
+| `"tan(x^2 + x - 1)".ToEntity().Limit("x", 0)` | `limit(tan(x ^ 2 + x - 1), x, 0)` | `sin(-1) / cos(-1)` |
+
 ### A quartic that is biquadratic once depressed is solved
 
 **Silent: a quartic whose depressed form `y^4 + alpha y^2 + gamma`, for `y = x + b/(4a)`, has no cubic term is solved,
@@ -150,7 +167,7 @@ the left at -1, which is `-1 - 0.129 i`, and which 2.7.0's previous changes had 
 |---|---|---|
 | `"tan(x^2 + x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-cos(-1) / sin(-1)` | `tan(-1)` |
 | `"sin(x^2 + x - 1) / cos(x^2 + x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-cos(-1) / sin(-1)` | `tan(-1)` |
-| `"tan(x^2 - x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-cos(-1) / sin(-1)` | `limitleft(tan(x ^ 2 - x - 1), x, 0)` |
+| `"tan(x^2 - x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-cos(-1) / sin(-1)` | `sin(-1) / cos(-1)`, with the entry below |
 | `"-x + ln(2*pi*x)/2".ToEntity().Limit("x", "+oo", ApproachFrom.Left)` | `limitleft(-x + ln(2 * pi * x) / 2, x, +oo)` | `-oo` |
 | `"x - sqrt(x^2 + x)".ToEntity().Limit("x", "+oo", ApproachFrom.Left)` | `limitleft(x - sqrt(x ^ 2 + x), x, +oo)` | `-1/2` |
 | `"e^x * x".ToEntity().Limit("x", "-oo", ApproachFrom.Right)` | `limitright(e ^ x * x, x, -oo)` | `0` |
