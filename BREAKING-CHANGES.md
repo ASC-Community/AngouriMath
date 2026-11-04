@@ -133,6 +133,31 @@ and some are left unevaluated ([#2267](https://github.com/asc-community/AngouriM
 | `"limitright(ln(sin(x)) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `+oo` |
 | `"limit(ln(x^2) / ln(cos(x)), x, 0)".ToEntity().Simplify()` | `-oo` | `+oo`, by [#2274](https://github.com/asc-community/AngouriMath/issues/2274) |
 
+### A limit nobody could take is not read as infinite, and an infinity has one side
+
+**Silent: a quotient whose parts' limits were both left unevaluated is no longer answered by l'Hopital's rule, which
+gave it a wrong value.** Whether a part diverges was read off whether an infinity occurs in its limit, and an unevaluated
+`limit(sin(u), x, +oo)` holds one, as its destination. So `sin(u) / cos(u)`, with neither limit taken, was taken for
+`oo / oo` and its derivatives' ratio answered `-cos(-1) / sin(-1)` for `tan(x^2 + x - 1)` from the left at 0, which is
+0.642, where the limit is `tan(-1)`, -1.557. An unevaluated limit is now neither infinite nor finite. Some of these
+limits are answered rightly, and some are left unevaluated. And a side asked for at `+oo` or `-oo`, which has only one,
+is the limit there: it was taken by a path without the machinery for an infinity, and left unevaluated what it is. A
+power whose base tends to a number other than 0 and whose exponent tends to 0 tends to 1, which is now answered
+wherever the base's limit is found. One right answer of 2.6.0 is among those left unevaluated: `log(x^x, 3/2) - 1` from
+the left at -1, which is `-1 - 0.129 i`, and which 2.7.0's previous changes had already turned into the wrong `-1`.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"tan(x^2 + x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-cos(-1) / sin(-1)` | `tan(-1)` |
+| `"sin(x^2 + x - 1) / cos(x^2 + x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-cos(-1) / sin(-1)` | `tan(-1)` |
+| `"tan(x^2 - x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-cos(-1) / sin(-1)` | `limitleft(tan(x ^ 2 - x - 1), x, 0)` |
+| `"-x + ln(2*pi*x)/2".ToEntity().Limit("x", "+oo", ApproachFrom.Left)` | `limitleft(-x + ln(2 * pi * x) / 2, x, +oo)` | `-oo` |
+| `"x - sqrt(x^2 + x)".ToEntity().Limit("x", "+oo", ApproachFrom.Left)` | `limitleft(x - sqrt(x ^ 2 + x), x, +oo)` | `-1/2` |
+| `"e^x * x".ToEntity().Limit("x", "-oo", ApproachFrom.Right)` | `limitright(e ^ x * x, x, -oo)` | `0` |
+| `"log(x, tanh(x)) ^ (x ^ (pi + x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `NaN`, in 10.7 s | `1` |
+| `"tanh(log(x / (-1), 1/x))".ToEntity().Limit("x", -1, ApproachFrom.Right)` | `1` | unevaluated; the limit is -1.313 |
+| `"log(x^x, 3/2) - 1".ToEntity().Limit("x", -1, ApproachFrom.Left)` | `ln(3/2) / ln(-1) - 1` | `limitleft(log(x ^ x, 3/2) - 1, x, -1)` |
+
 ### A value put in for a derivative's variable is where it is evaluated
 
 **Silent: substituting for the variable of a derivative or an indefinite integral evaluates it there, where the value was

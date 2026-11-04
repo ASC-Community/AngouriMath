@@ -517,6 +517,15 @@ namespace AngouriMath.Functions.Algebra
             if (byStirling is null)
             {
                 var baseLimit = EvalAssumingContinuous(@base.Limit(x, dest, side));
+                // A base tending to a number other than 0 is not an indeterminate form, and
+                // its limit is the limit's power: g * ln(f) tends to 0 whatever the branch of
+                // ln(f), which stays bounded on the cut too, so f^g tends to 1. Answered here
+                // rather than left to the descent, which asks the base's limit by its own
+                // reading and can decline what this one has just taken:
+                // lim x->0+ log(x, tanh(x))^(x^(pi + x)) is 1, and was answered only while
+                // an undecided base was taken for an infinite one.
+                if (IsFiniteNode(baseLimit) && baseLimit.Evaled is Complex { IsZero: false } finite && finite.IsFinite)
+                    return Integer.One;
                 if (baseLimit != 0 && !IsInfiniteNode(baseLimit))
                     return null;
                 // Every route out of ln(f) runs through differentiating f, so a base this
@@ -790,6 +799,28 @@ namespace AngouriMath.Functions.Algebra
                || expr.Nodes.Any(node => node is Complex { IsFinite: false, IsNaN: false });
 
         /// <summary>
+        /// Whether a limit's value is infinite and was decided to be: <see cref="IsInfiniteNode"/>,
+        /// but never for a value still holding a limit nobody could take.
+        /// </summary>
+        /// <remarks>
+        /// That limit is a question rather than a value, and the destination it carries is not
+        /// what it tends to: <c>limit(sin(u), x, +oo)</c> holds a <c>+oo</c> and says nothing
+        /// about diverging. l'Hopital's rule read sin(u) / cos(u) with both limits undecided as
+        /// oo/oo, differentiated it, and answered lim x->0- tan(x^2 + x - 1) with
+        /// -cos(-1) / sin(-1), 0.642, where it is tan(-1), -1.557. The rule is only true of the
+        /// forms it names, so it asks this.
+        /// <para/>
+        /// <see cref="IsInfiniteNode"/> is kept as it was for the rewrites that ask it whether
+        /// they are worth trying, which are equalities wherever they apply: f^g as e^(g ln f)
+        /// holds whatever f tends to, and an undecided base is exactly where it is worth asking.
+        /// </remarks>
+        private static bool DivergesDecidedly(Entity expr)
+            => !HoldsAnUndecidedLimit(expr) && IsInfiniteNode(expr);
+
+        private static bool HoldsAnUndecidedLimit(Entity expr)
+            => expr.Nodes.Any(node => node is Limitf);
+
+        /// <summary>
         /// Whether what the machinery handed back is an indeterminate form rather than a value:
         /// <c>0 / abs(0)</c>, <c>(+oo * 0)^2</c> -- a shape assembled out of the parts' limits
         /// that evaluates to NaN without any part of it being NaN. NaN is the claim that there
@@ -960,7 +991,7 @@ namespace AngouriMath.Functions.Algebra
         }
 
         private static bool IsFiniteNode(Entity expr)
-            => !IsInfiniteNode(expr) && expr != MathS.NaN;
+            => !HoldsAnUndecidedLimit(expr) && !IsInfiniteNode(expr) && expr != MathS.NaN;
 
         /// <summary>
         /// What an inverse trigonometric function tends to where its argument grows without
@@ -1400,7 +1431,7 @@ namespace AngouriMath.Functions.Algebra
         {
             var above = EvalAssumingContinuous(numerator.Limit(x, dest, side));
             var below = EvalAssumingContinuous(denominator.Limit(x, dest, side));
-            return above == 0 && below == 0 || IsInfiniteNode(above) && IsInfiniteNode(below);
+            return above == 0 && below == 0 || DivergesDecidedly(above) && DivergesDecidedly(below);
         }
 
         /// <summary>
@@ -1433,7 +1464,7 @@ namespace AngouriMath.Functions.Algebra
                 var limit = EvalAssumingContinuous(factor.Limit(x, dest, side));
                 if (vanishing is null && limit == 0)
                     vanishing = factor;
-                else if (diverging is null && IsInfiniteNode(limit))
+                else if (diverging is null && DivergesDecidedly(limit))
                     diverging = factor;
                 else
                     rest *= factor;
@@ -1511,7 +1542,7 @@ namespace AngouriMath.Functions.Algebra
             if (expr is Divf(var num, var den))
                 if (EvalAssumingContinuous(num.Limit(x, dest, side)) is var numLimit && EvalAssumingContinuous(den.Limit(x, dest, side)) is var denLimit)
                     if (numLimit == 0 && denLimit == 0 ||
-                            IsInfiniteNode(numLimit) && IsInfiniteNode(denLimit))
+                            DivergesDecidedly(numLimit) && DivergesDecidedly(denLimit))
                         if (num is not Number && den is not Number)
                             if (num.ContainsNode(x) && den.ContainsNode(x)
                                 && !HasAStepThatJumpsNear(expr, x, dest, side))
