@@ -557,18 +557,27 @@ namespace AngouriMath
                 // cube was three multiplications and a tenth power was nine, each with the
                 // rational search on its result, and the recursion was linear in the exponent
                 // where it should be logarithmic.
+                //
+                // A loop over the exponent's bits, from the top, rather than a recursion on its
+                // half: the recursion was one frame a bit, and a power of -1, i or -i is never
+                // too large to build, so (-1)^(2^20000) took 20000 frames and overflowed the
+                // stack of a thread-pool thread, which ends the process. The multiplications are
+                // the recursion's, in its order: the half truncates toward zero, so a negative
+                // exponent is the bits of its magnitude, each one multiplying by 1 / num.
                 static Complex BinaryIntPow(Complex num, EInteger val)
                 {
                     if (val.IsZero)
                         return 1;
-                    if (val.Equals(1))
-                        return num;
-                    if (val.Equals(-1))
-                        return 1 / num;
-                    var divRem = val.DivRem(2); // divRem[0] == val / 2, divRem[1] == val % 2
-                    var half = BinaryIntPow(num, divRem[0]);
-                    var squared = half * half;
-                    return divRem[1].IsZero ? squared : squared * BinaryIntPow(num, divRem[1]);
+                    var magnitude = val.Abs();
+                    var factor = val.Sign < 0 ? 1 / num : num;
+                    var result = factor;
+                    for (var bit = magnitude.GetUnsignedBitLengthAsInt64() - 2; bit >= 0; bit--)
+                    {
+                        result *= result;
+                        if (magnitude.GetSignedBit(bit))
+                            result *= factor;
+                    }
+                    return result;
                 }
                 // A complex whose imaginary part is exactly zero is the real number it is, and
                 // takes the real paths below: with the downcasting off, Complex.Create keeps
