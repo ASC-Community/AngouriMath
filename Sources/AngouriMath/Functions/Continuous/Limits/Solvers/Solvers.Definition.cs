@@ -249,7 +249,7 @@ namespace AngouriMath.Functions.Algebra
             // reads off the form, an even power of something real, and a real power that is itself
             // real -- sqrt(x^2), whose base vanishes at 0 and is not positive there.
             bool NotNegativeThere(Entity node)
-                => IsNeverNegative(node)
+                => IsNeverNegative(node, x)
                    || node is Powf(var @base, Integer { EInteger.IsEven: true }) && RealThere(@base)
                    || node is Powf(_, not Integer) && RealThere(node);
             bool StrictlyInsideTheUnitInterval(Entity node)

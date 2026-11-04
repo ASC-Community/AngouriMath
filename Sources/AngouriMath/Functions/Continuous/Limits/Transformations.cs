@@ -1102,7 +1102,7 @@ namespace AngouriMath.Functions.Algebra
             // https://github.com/asc-community/AngouriMath/issues/2274
             if (EvalAssumingContinuous(dividend.Limit(x, dest, side)) is not Real { IsZero: false, IsNaN: false } dividendLimit)
                 return null;
-            if ((IsNeverNegative(divisor) ? 1 : SignFromVanishingOrder(divisor, x, dest, side)) is not { } divisorSign)
+            if ((IsNeverNegative(divisor, x) ? 1 : SignFromVanishingOrder(divisor, x, dest, side)) is not { } divisorSign)
                 return null;
             return dividendLimit.IsNegative == divisorSign > 0
                 ? Real.NegativeInfinity
@@ -1121,12 +1121,16 @@ namespace AngouriMath.Functions.Algebra
         /// from each side and NaN from both, where it is +oo. Where such an expression vanishes
         /// it does so from above, whatever its argument does.
         /// </remarks>
-        internal static bool IsNeverNegative(Entity expr) => expr switch
+        internal static bool IsNeverNegative(Entity expr, Variable x) => expr switch
         {
             Absf => true,
-            Powf(var @base, var exponent) => IsNeverNegative(@base) && exponent.Evaled is Real { IsNaN: false },
-            Mulf(var multiplier, var multiplicand) => IsNeverNegative(multiplier) && IsNeverNegative(multiplicand),
-            Divf(var dividend, var divisor) => IsNeverNegative(dividend) && IsNeverNegative(divisor),
+            // An even power of something real: x^2, and sinh(x)^2, whose powers to a negative
+            // exponent were NaN at 0 from both sides for want of it. The base has to be real for
+            // real x, since sqrt(x)^2 is x.
+            Powf(var @base, Integer { EInteger.IsEven: true }) when TreeAnalyzer.IsRealValued(@base, x) => true,
+            Powf(var @base, var exponent) => IsNeverNegative(@base, x) && exponent.Evaled is Real { IsNaN: false },
+            Mulf(var multiplier, var multiplicand) => IsNeverNegative(multiplier, x) && IsNeverNegative(multiplicand, x),
+            Divf(var dividend, var divisor) => IsNeverNegative(dividend, x) && IsNeverNegative(divisor, x),
             _ when expr.Evaled is Real { IsNegative: false, IsNaN: false } => !expr.FreeVariables.Any(),
             _ => false
         };
