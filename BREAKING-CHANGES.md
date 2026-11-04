@@ -135,6 +135,20 @@ real root sitting just past that zero was not answered. The bracket is halved do
 | `"(x^2 - 3x - 3)^(1/3) + sqrt(3x - 4) = 3".ToEntity().Solve("x")` | `{ 1.3099 - 2.3063i, 1.3099 + 2.3063i }` | also `3.7961670056822383` |
 | `"(x^2 - 3x - 3)^(1/3) + sqrt(3x - 4) = 3 provided x in RR".ToEntity().Solve("x")` | `{ }` | `{ 3.7961670056822383 }` |
 
+### A derivatives' quotient that grew but has a value is read
+
+**Silent: `ln(sin(x)) / ln(sinh(x))` from the right at 0 is 1, where 2.6.0 answered `NaN`, the claim that the limit
+does not exist.** l'Hopital's rule bounds how much its derivatives' quotient may grow, so that it does not differentiate
+without end, and the product rule doubles `cos(x) * sinh(x)`. A quotient past the bound is now taken where it has a
+finite real value at a finite destination, and nothing in it jumps: it needs no more differentiating there.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"ln(sin(x)) / ln(sinh(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN`, in 10 s | `1` |
+| `"cos(x) * sinh(x) / sin(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `1` |
+| `"cos(x) * (e^x - e^(-x)) / sin(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `2` |
+| `"log(sinh(x), sin(x)) * cos(x - 2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated, in 37 s | `cos(-2)` |
+
 ### A quotient of logarithms is differentiated only where both diverge
 
 **Silent: a limit of a quotient of logarithms whose divisor tends to 0 is no longer answered by l'Hopital's rule, which

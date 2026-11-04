@@ -1288,6 +1288,18 @@ namespace AngouriMath.Functions.Algebra
             => (lHopitalChain ??= new()).Contains(quotient);
 
         /// <summary>
+        /// The value of <paramref name="expr"/> at a finite <paramref name="dest"/>, where it is a finite real number and
+        /// nothing in it jumps, which is its limit there; otherwise <see langword="null"/>.
+        /// </summary>
+        private static Entity? ItsValueAt(Entity expr, Variable x, Entity dest)
+        {
+            if (!dest.IsFinite || expr.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise))
+                return null;
+            var there = expr.Substitute(x, dest);
+            return there.Evaled is Real { IsFinite: true, IsNaN: false } ? there.InnerSimplified : null;
+        }
+
+        /// <summary>
         /// Whether differentiating both parts has left a quotient bigger than the one it came
         /// from by more than a step on the way to an answer accounts for. Each step asks what
         /// the two parts of its quotient tend to, and a bigger quotient makes those two
@@ -1590,8 +1602,15 @@ namespace AngouriMath.Functions.Algebra
                                 // l'Hopital has nothing to say about a derivative it cannot take.
                                 if (applied.Nodes.Any(node => node is Derivativef))
                                     return null;
-                                if (AlreadyBeingDifferentiated(applied) || GrewTooMuch(expr, applied))
+                                if (AlreadyBeingDifferentiated(applied))
                                     return null;
+                                // The bound is on differentiating again, and a quotient that has a value at
+                                // a finite destination needs no more of it: the product rule doubles
+                                // cos(x) * (e^x - e^(-x)), and its derivatives' quotient, which is 2 at 0,
+                                // was turned away, so cos(x) * sinh(x) / sin(x) from the right at 0 was
+                                // left unevaluated, and ln(sin(x)) / ln(sinh(x)) with it.
+                                if (GrewTooMuch(expr, applied))
+                                    return ItsValueAt(applied, x, dest);
                                 lHopitalApplications++;
                                 MultithreadingFunctional.ExitIfCancelled();
                                 lHopitalChain!.Add(applied);
