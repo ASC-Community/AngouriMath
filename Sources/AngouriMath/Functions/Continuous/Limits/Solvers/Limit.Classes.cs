@@ -419,11 +419,18 @@ namespace AngouriMath
 
         partial record Factorialf
         {
-            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
-                ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
-                : ComputeLimitImpl(New(
-                    Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
-                    x, dist, side);
+            // Not at a pole: the factorial of a negative integer has no value, and the factorial tends
+            // to an infinity there whose sign depends on the side, so putting the argument's limit in
+            // would only write the pole down. x! at -1 came back (-1)! once that limit arrived as -1.
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+            {
+                if (ComputeLimitImpl(this, x, dist, side) is { } lim)
+                    return lim;
+                var argumentLimit = Argument.ComputeLimitDivideEtImpera(x, dist, side);
+                if (argumentLimit?.Evaled is Integer { EInteger.Sign: < 0 })
+                    return null;
+                return ComputeLimitImpl(New(argumentLimit is { IsFinite: true } lim1 ? lim1 : Argument), x, dist, side);
+            }
         }
 
         // The upper incomplete gamma function, continuous in z away from 0, and at 0 for Re a > 0, where it is Gamma(a): the

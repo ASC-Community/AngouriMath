@@ -57,7 +57,18 @@ namespace AngouriMath.Functions.Algebra
 
         private static Entity? SimplifyAndComputeLimitToInfinityCore(Entity expr, Variable x)
         {
-            expr = expr.Replace(node => AsAPowerOfTheVariable(node, x)).Simplify();
+            expr = expr.Replace(node => AsAPowerOfTheVariable(node, x));
+            // The value at the destination, read before the simplification below as well as after
+            // it: the substitution is what answers a continuous point in any case, under the same
+            // guards for a jump, a cut and an indeterminate power, and simplifying first is the
+            // expensive half. x / (tanh(1/2) - tan(x)) at 1, moved out to infinity as
+            // x = 1 + 1/x, took 10 s to simplify for a value the substitution reads in
+            // milliseconds. A real number only: a complex one can be the value on a cut, and the
+            // guards for those after this were written against the simplified form.
+            if (LimitSolvers.SolveBySubstitution(expr, x) is { } beforeSimplifying
+                && beforeSimplifying.Evaled is Real { IsFinite: true })
+                return beforeSimplifying.InnerSimplified;
+            expr = expr.Simplify();
             if (expr is Providedf(var expression, _)) expr = expression; // limits operate assuming a continuous expression even though some points may be undefined.
 
             // The second remarkable limit reads a 1^oo, and it ran once, at the top of

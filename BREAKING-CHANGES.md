@@ -240,6 +240,24 @@ compiled `0^(-1/2)` was 0; since that is `NaN`, the root was missed.
 | `"sqrt(-4 - 4x) + sqrt(2 + x) = -3 - 4x".ToEntity().Solve("x")` | `{ -1.1951718122545800, -1 }` | `{ -1, … }`, the second root in radicals |
 | `"sqrt(x + 5) + sqrt(x) = x".ToEntity().Solve("x")` | `{ 5.6349218075063181 }` | the same root in radicals |
 
+### A limit at a point of continuity is read before it is simplified
+
+**A limit at a finite point takes its value at the point before simplifying the expression, which was the
+expensive half: `x / (tanh(1/2) - tan(x))` at 1 took 10 s, and takes 0.1 s.** The value is the same, and its form
+can differ: a tangent comes back as the quotient of its sine and cosine. A factorial now declines at its poles, which
+reading the value first would otherwise have written down. Some answers move, in both directions, for an expression
+whose values are not real on a side. A NaN there follows the convention `x^x` at 0 is pinned to, a side with no real
+values making no two-sided limit, where the limit was unevaluated.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x / (tanh(1/2) - tan(x))".ToEntity().Limit("x", 1)` | `1 / ((e - 1) / (e + 1) - tan(1))`, in 4.5 s | `1 / ((e - 1) / (e + 1) - sin(1) / cos(1))` |
+| `"abs(x + 1 - x^x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `limitright(abs(x + 1 - x ^ x), x, 0)` |
+| `"abs(x + 1 - x^x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `NaN` | `limitleft(abs(x + 1 - x ^ x), x, 0)` |
+| `"sin(x)^(log(x, pi)^arcsin(x))".ToEntity().Limit("x", 1)` | `limit(sin(x) ^ log(x, pi) ^ arcsin(x), x, 1)` | `NaN` |
+| `"(2*(x - pi))^ln(-x)".ToEntity().Limit("x", 0)` | `limit((2 * (x - pi)) ^ ln(-x), x, 0)` | `NaN` |
+| `"arctan((-1)^x)^(pi/x/cos(2))".ToEntity().Limit("x", 1/2)` | `limit(arctan((-1) ^ x) ^ (pi / x / cos(2)), x, 1/2)` | `NaN` |
+
 ### A radical times a power of its variable is solved exactly
 
 **Silent: an equation in `sqrt(x)` or a cube root of `x` beside powers of `x` is answered in radicals and with all its
