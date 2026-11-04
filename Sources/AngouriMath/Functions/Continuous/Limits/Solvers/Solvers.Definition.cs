@@ -271,6 +271,13 @@ namespace AngouriMath.Functions.Algebra
                     return null;
                 remainingLimits = remaining - 1;
             }
+            // An infinity is approached from one side only, so a side asked for there is the
+            // limit itself -- and the two-sided path is where the machinery for an infinite
+            // destination lives. Taken one-sidedly, -x + ln(2 * pi * x) / 2 at +oo was left
+            // unevaluated where the limit is -oo. A complex infinity is not a real one and is
+            // turned away below as before.
+            if (side is not ApproachFrom.BothSides && dest is Real { IsFinite: false, IsNaN: false })
+                side = ApproachFrom.BothSides;
             // The approach is stated for the whole computation, not only where the destination
             // has been normalised to +oo. Everything below simplifies as it goes, and a rule that
             // may only fire while the approach is in scope is otherwise declining through most of
