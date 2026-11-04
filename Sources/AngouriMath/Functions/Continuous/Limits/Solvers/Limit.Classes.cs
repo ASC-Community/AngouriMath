@@ -193,12 +193,27 @@ namespace AngouriMath
             }
         }
 
+        /// <summary>
+        /// A part's limit with the destination folded out of it. A one-sided limit at a finite
+        /// point moves the variable out to infinity, and the value read off there keeps the
+        /// infinity in it: x^2 + x - 1 from the left at 0 is -1 - 1/+oo + 1/+oo^2, which is -1
+        /// but is not finite to the check above, so sin(x^2 + x - 1) from the left at 0 was left
+        /// unevaluated. Only for the trigonometric functions, which have no cut, and so are
+        /// continuous at every finite argument short of a pole. A function with a cut is not:
+        /// arctan and the logarithm decline there by their own reading, and folding their
+        /// argument's limit would answer with the value on the cut.
+        /// </summary>
+        private static Entity? WithoutTheDestination(Entity? limit)
+            => limit is { } found && found.Nodes.Any(node => node is Real { IsFinite: false })
+               && found.InnerSimplified is var folded && !folded.Nodes.Any(node => node is Real { IsFinite: false })
+                ? folded : limit;
+
         partial record Sinf
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
                 ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
                 : ComputeLimitImpl(New(
-                    Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
+                    WithoutTheDestination(Argument.ComputeLimitDivideEtImpera(x, dist, side)) is { IsFinite: true } lim1 ? lim1 : Argument),
                     x, dist, side);
         }
 
@@ -207,7 +222,7 @@ namespace AngouriMath
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
                 ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
                 : ComputeLimitImpl(New(
-                    Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
+                    WithoutTheDestination(Argument.ComputeLimitDivideEtImpera(x, dist, side)) is { IsFinite: true } lim1 ? lim1 : Argument),
                     x, dist, side);
         }
 
@@ -216,7 +231,7 @@ namespace AngouriMath
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
                 ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
                 : ComputeLimitImpl(New(
-                    Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
+                    WithoutTheDestination(Argument.ComputeLimitDivideEtImpera(x, dist, side)) is { IsFinite: true } lim1 ? lim1 : Argument),
                     x, dist, side);
         }
 
@@ -225,7 +240,7 @@ namespace AngouriMath
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
                 ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
                 : ComputeLimitImpl(New(
-                    Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
+                    WithoutTheDestination(Argument.ComputeLimitDivideEtImpera(x, dist, side)) is { IsFinite: true } lim1 ? lim1 : Argument),
                     x, dist, side);
         }
 
@@ -265,7 +280,7 @@ namespace AngouriMath
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
                 ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
                 : ComputeLimitImpl(New(
-                    Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
+                    WithoutTheDestination(Argument.ComputeLimitDivideEtImpera(x, dist, side)) is { IsFinite: true } lim1 ? lim1 : Argument),
                     x, dist, side);
         }
 
@@ -274,7 +289,7 @@ namespace AngouriMath
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
                 ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
                 : ComputeLimitImpl(New(
-                    Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
+                    WithoutTheDestination(Argument.ComputeLimitDivideEtImpera(x, dist, side)) is { IsFinite: true } lim1 ? lim1 : Argument),
                     x, dist, side);
         }
 
