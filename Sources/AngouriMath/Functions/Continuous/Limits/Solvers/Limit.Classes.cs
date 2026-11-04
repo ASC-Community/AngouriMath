@@ -328,6 +328,13 @@ namespace AngouriMath
                 // the logarithm above declines it. https://github.com/asc-community/AngouriMath/issues/2266
                 if (exponentLimit?.Evaled is not Integer && ArrivesOnTheCutOffTheRealLine(Base, baseLimit, x, dist))
                     return null;
+                // A base that is never negative and vanishes, to an exponent tending to a negative
+                // number, tends to +oo: 0 to a negative power has no value, and abs(x)^(-3/2) at 0
+                // was left unevaluated from each side for it. Where the base vanishes, it does from
+                // above.
+                if (baseLimit?.Evaled is Real { IsZero: true } && exponentLimit?.Evaled is Real { IsNegative: true, IsFinite: true }
+                    && IsNeverNegative(Base))
+                    return Real.PositiveInfinity;
                 var substituted =
                     (baseLimit, exponentLimit)
                     switch {

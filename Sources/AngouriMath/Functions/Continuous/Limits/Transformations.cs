@@ -1102,12 +1102,34 @@ namespace AngouriMath.Functions.Algebra
             // https://github.com/asc-community/AngouriMath/issues/2274
             if (EvalAssumingContinuous(dividend.Limit(x, dest, side)) is not Real { IsZero: false, IsNaN: false } dividendLimit)
                 return null;
-            if (SignFromVanishingOrder(divisor, x, dest, side) is not { } divisorSign)
+            if ((IsNeverNegative(divisor) ? 1 : SignFromVanishingOrder(divisor, x, dest, side)) is not { } divisorSign)
                 return null;
             return dividendLimit.IsNegative == divisorSign > 0
                 ? Real.NegativeInfinity
                 : Real.PositiveInfinity;
         }
+
+        /// <summary>
+        /// Whether an expression is real and not negative wherever it has a value, by its
+        /// form: an absolute value, a power of such a thing to a real exponent, a product or a
+        /// quotient of them, a positive constant.
+        /// </summary>
+        /// <remarks>
+        /// The sign a vanishing divisor keeps is otherwise read off its derivatives, which an
+        /// absolute value does not have where it vanishes: the derivative of abs(x) is sgn(x),
+        /// 0 at 0, and the next one has no value there. So 1/abs(x) at 0 was left unevaluated
+        /// from each side and NaN from both, where it is +oo. Where such an expression vanishes
+        /// it does so from above, whatever its argument does.
+        /// </remarks>
+        internal static bool IsNeverNegative(Entity expr) => expr switch
+        {
+            Absf => true,
+            Powf(var @base, var exponent) => IsNeverNegative(@base) && exponent.Evaled is Real { IsNaN: false },
+            Mulf(var multiplier, var multiplicand) => IsNeverNegative(multiplier) && IsNeverNegative(multiplicand),
+            Divf(var dividend, var divisor) => IsNeverNegative(dividend) && IsNeverNegative(divisor),
+            _ when expr.Evaled is Real { IsNegative: false, IsNaN: false } => !expr.FreeVariables.Any(),
+            _ => false
+        };
 
         /// <summary>
         /// The sign an expression that vanishes at the destination keeps on one side of it,
