@@ -118,9 +118,53 @@ namespace AngouriMath
                     // which side the divisor vanishes from, and so comes back NaN. Only where
                     // nothing above answered, and whatever it did answer is kept if this finds
                     // nothing better.
-                    return DivergesAtAVanishingDivisor(Dividend, Divisor, x, dist, side) ?? substituted;
+                    if (DivergesAtAVanishingDivisor(Dividend, Divisor, x, dist, side) is { } diverges)
+                        return diverges;
+                    // An indeterminate form, 0/0 or oo/oo, read off the parts is NaN, which says there
+                    // is no limit, where the descent only cannot tell: sin(x)/x at 0 is 1, which the
+                    // whole limit reaches through the first remarkable limit, and a function of it --
+                    // (sin(x)/x)^2, exp(sin(x)/x), exp(ln(cos(x))/x^2) -- came out NaN, its argument
+                    // asked only of the descent. The whole limit of the quotient is asked once, and
+                    // only a value is taken, and as the number where the form it came back in holds the
+                    // infinity it was taken at: -4/9 * 0 * (1 - (1 + (1/+oo)^2)^(1/3)), handed on as
+                    // written, sent a definite integral astray. Folded, it is 0, and ln(2) * 2^(1/+oo) is
+                    // ln(2), not its decimal. Where it has no
+                    // value, what was answered is kept.
+                    if (substituted?.Evaled == MathS.NaN && IsAnIndeterminateQuotient(dividend, divisor)
+                        && AsTheWholeLimit(this, x, dist, side) is { } whole && whole.Evaled is Number { IsNaN: false } value)
+                        return whole.InnerSimplified is var folded && folded.Nodes.Any(static node => node is Number { IsFinite: false })
+                            ? value : folded;
+                    return substituted;
                 }
             }
+        }
+
+        /// <summary>Whether two parts' limits make a quotient 0/0 or oo/oo.</summary>
+        private static bool IsAnIndeterminateQuotient(Entity dividend, Entity divisor)
+            => (dividend.Evaled, divisor.Evaled) switch
+            {
+                (Complex { IsZero: true }, Complex { IsZero: true }) => true,
+                (Number { IsFinite: false, IsNaN: false }, Number { IsFinite: false, IsNaN: false }) => true,
+                _ => false,
+            };
+
+        /// <summary>The quotient whose whole limit is being asked from inside the descent, so that no other is asked inside it.</summary>
+        [System.ThreadStatic] private static HashSet<Entity>? quotientsAskedWhole;
+
+        private static Entity? AsTheWholeLimit(Entity quotient, Variable x, Entity dist, ApproachFrom side)
+        {
+            // One level: a whole limit asked from here descends again, and a retry inside it asked another, so that a
+            // definite integral's antiderivative at its bounds -- 1/((1 + x^2)^(1/3) (9 + x^2)) across 0 -- went from four
+            // seconds to past two minutes and was left unevaluated.
+            // Nor under a caller's budget of limits, which every limit asked here spends: fifty asked on the side of a
+            // definite integral's bounds left the bounds none, and the integral unevaluated.
+            if (Functions.Algebra.LimitFunctional.UnderALimitBudget)
+                return null;
+            quotientsAskedWhole ??= new();
+            if (quotientsAskedWhole.Count > 0 || !quotientsAskedWhole.Add(quotient))
+                return null;
+            try { return Functions.Algebra.LimitFunctional.ComputeLimit(quotient, x, dist, side); }
+            finally { quotientsAskedWhole.Remove(quotient); }
         }
 
         partial record Modf
