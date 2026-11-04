@@ -1573,6 +1573,42 @@ namespace AngouriMath.Functions.Algebra
                 && EvalAssumingContinuous(argument.Limit(x, dest, side)) is not Real { IsFinite: true };
         }
 
+        /// <summary>
+        /// The factors of <paramref name="expr"/> that are continuous at a finite destination with a
+        /// finite non-zero value there, as that value, and the product of the rest.
+        /// </summary>
+        /// <remarks>
+        /// l'Hopital's rule differentiates both parts of the quotient, and a factor that tends to a
+        /// number other than 0 only makes the derivative larger: lim c(x) f(x) / g(x) is c(a) lim
+        /// f(x) / g(x). The product rule doubles it each time round, and with tanh written through
+        /// exponentials (1 - tanh(x)^2) * x * (1 + x^2) / tanh(x) at 0 from the right did not finish
+        /// in a minute, where x * (1 + x^2) / tanh(x) takes a tenth of a second. Only a factor real
+        /// for real x and with no step in it, so that its value at the point is its limit from
+        /// either side.
+        /// </remarks>
+        private static (Entity Value, Entity Others) TakeOutContinuousFactors(Entity expr, Variable x, Entity dest)
+        {
+            if (expr is not Mulf || !dest.IsFinite)
+                return (Integer.One, expr);
+            Entity value = Integer.One, rest = Integer.One;
+            var any = false;
+            foreach (var factor in Mulf.LinearChildren(expr))
+            {
+                if (factor.ContainsNode(x)
+                    && !factor.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise)
+                    && TreeAnalyzer.IsRealValued(factor, x)
+                    && factor.Substitute(x, dest) is var there
+                    && there.Evaled is Real { IsFinite: true, IsNaN: false, IsZero: false })
+                {
+                    value *= there;
+                    any = true;
+                }
+                else
+                    rest *= factor;
+            }
+            return any && rest.ContainsNode(x) ? (value.InnerSimplified, rest.InnerSimplified) : (Integer.One, expr);
+        }
+
         private static Entity? ApplylHopitalRuleImpl(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
             if (expr is not Divf && AsQuotient(expr, x, dest, side) is { } quotient)
@@ -1585,12 +1621,15 @@ namespace AngouriMath.Functions.Algebra
                             if (num.ContainsNode(x) && den.ContainsNode(x)
                                 && !HasAStepThatJumpsNear(expr, x, dest, side))
                             {
+                                var (numValue, numRest) = TakeOutContinuousFactors(num, x, dest);
+                                var (denValue, denRest) = TakeOutContinuousFactors(den, x, dest);
+                                var taken = (numValue / denValue).InnerSimplified;
                                 // Simplified, because the shape of the quotient is what the
                                 // machinery below matches on and differentiation does not
                                 // produce it: d/dx ln(x)^2 is 2 * ln(x) * (1 / x), a product
                                 // with a quotient inside rather than the quotient
                                 // 2 * ln(x) / x, and only the second has a limit here.
-                                var applied = (num.Differentiate(x) / den.Differentiate(x)).Simplify();
+                                var applied = (numRest.Differentiate(x) / denRest.Differentiate(x)).Simplify();
                                 // The domain condition simplification leaves behind is what the
                                 // derivative of a logarithm or a root carries, and a Providedf is
                                 // not a continuous node, so the quotient would be turned away
@@ -1614,18 +1653,25 @@ namespace AngouriMath.Functions.Algebra
                                 // was turned away, so cos(x) * sinh(x) / sin(x) from the right at 0 was
                                 // left unevaluated, and ln(sin(x)) / ln(sinh(x)) with it.
                                 if (GrewTooMuch(expr, applied))
-                                    return ItsValueAt(applied, x, dest);
+                                    return ItsValueAt(applied, x, dest) is { } value ? Times(taken, value) : null;
                                 lHopitalApplications++;
                                 MultithreadingFunctional.ExitIfCancelled();
                                 lHopitalChain!.Add(applied);
                                 try
                                 {
                                     if (ComputeLimit(applied, x, dest, side) is { } resLim)
-                                        return resLim;
+                                        return Times(taken, resLim);
                                 }
                                 finally { lHopitalChain.RemoveAt(lHopitalChain.Count - 1); }
                             }
             return null;
+            // A limit times the value taken out: unchanged where nothing was, exact where the limit is
+            // finite, and the infinity itself where it is one, since a finite non-zero real times +oo
+            // is +oo or -oo and a caller compares against that.
+            static Entity Times(Entity taken, Entity limit)
+                => taken == Integer.One ? limit
+                   : limit.Evaled is Real { IsFinite: false, IsNaN: false } && (taken * limit).Evaled is Real { IsNaN: false } infinity ? infinity
+                   : (taken * limit).InnerSimplified;
         }
 
         /// <summary>

@@ -512,6 +512,21 @@ positive on both sides. `x^x` is still `NaN` at 0.
 | `"(x^2)^x".ToEntity().Limit("x", 0)` | `NaN` | `1` |
 | `"(x*x)^(x - 1)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
 
+### A factor continuous at the point is taken out before l'Hopital's rule
+
+**`sin(x)^tanh(x)` at 0 from the right is `1`, where it was left unevaluated.** Read through its exponent, the power is
+a quotient l'Hopital's rule takes. The rule differentiated every factor of both parts, including the ones that tend to
+a number other than 0, such as the `1 - tanh(x)^2` the derivative of tanh brings. With tanh written through
+exponentials, each such factor doubled the derivative, and the result outgrew the rule's bound. A factor that is
+continuous at a finite point and has a non-zero real value there is now taken out as that value, kept exact:
+lim c(x) f(x) / g(x) is c(a) lim f(x) / g(x).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(x)^tanh(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(x) ^ ((e ^ (2 * x) - 1) / (e ^ (2 * x) + 1)), x, 0)` | `1` |
+| `"tan(x)^sin(tanh(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(tan(x) ^ sin((e ^ (2 * x) - 1) / (e ^ (2 * x) + 1)), x, 0)` | `1` |
+| `"tan(2*x)^sin(tanh(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | did not finish in 2 minutes; unevaluated after 13 s on the previous master | `1` |
+
 ### A 0^0 limit whose l'Hopital chain doubles its powers has its value
 
 **Silent: a different answer.** l'Hopital's rule was turned away where a
