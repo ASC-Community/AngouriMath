@@ -216,12 +216,34 @@ namespace AngouriMath.Functions.Algebra
                     Mulf(var multiplier, var multiplicand) => RealThere(multiplier) && RealThere(multiplicand),
                     Divf(var dividend, var divisor) => RealThere(dividend) && RealThere(divisor),
                     Powf(var @base, Integer) => RealThere(@base),
-                    Powf(var @base, var exponent) => RealThere(@base) && RealThere(exponent) && PositiveOnBothSides(@base),
+                    Powf(var @base, var exponent) => RealThere(@base) && RealThere(exponent)
+                                                     && (NotNegativeThere(@base) || PositiveOnBothSides(@base)),
                     Logf(var @base, var antilogarithm) => RealThere(@base) && RealThere(antilogarithm)
                                                           && PositiveOnBothSides(@base) && PositiveOnBothSides(antilogarithm),
+                    // An absolute value is real whatever it is of, and a sine, a cosine and an
+                    // arctangent of a real argument are real. An arcsine and an arccosine are real
+                    // on [-1, 1], so near the point only where their argument is inside it there.
+                    // 1/abs(x)^3 at 0 and sin(arcsin(x)) * (c + 2/x) were NaN for want of these,
+                    // where each side agrees with the other.
+                    Absf => true,
+                    Sinf(var argument) => RealThere(argument),
+                    Cosf(var argument) => RealThere(argument),
+                    Arctanf(var argument) => RealThere(argument),
+                    Arcsinf(var argument) => RealThere(argument) && StrictlyInsideTheUnitInterval(argument),
+                    Arccosf(var argument) => RealThere(argument) && StrictlyInsideTheUnitInterval(argument),
                     _ => false
                 };
             }
+            // Not negative on either side, so that a real power of it is real: what IsNeverNegative
+            // reads off the form, an even power of something real, and a real power that is itself
+            // real -- sqrt(x^2), whose base vanishes at 0 and is not positive there.
+            bool NotNegativeThere(Entity node)
+                => IsNeverNegative(node)
+                   || node is Powf(var @base, Integer { EInteger.IsEven: true }) && RealThere(@base)
+                   || node is Powf(_, not Integer) && RealThere(node);
+            bool StrictlyInsideTheUnitInterval(Entity node)
+                => node.Substitute(x, dest).Evaled is Real { IsFinite: true } value
+                   && value.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.One) < 0;
             bool PositiveOnBothSides(Entity node)
                 => !node.ContainsNode(x)
                    ? node.Evaled is Real { IsPositive: true }
@@ -485,7 +507,14 @@ namespace AngouriMath.Functions.Algebra
                         return byRule;
                     // Asking each side properly, which is what the two above were not asked.
                     // https://github.com/asc-community/AngouriMath/issues/719
-                    if (WhereBothSidesAgree(expr, x, dest) is { } agreed)
+                    // Only where a side came back NaN. A side the descent answered with a value is
+                    // what asking that side outright answers too, since the one-sided path returns
+                    // the descent's value before anything else, so two values that differ differ
+                    // again: tan(x/2) at pi, +oo and -oo, asked both sides through the whole of the
+                    // machinery each time, and a definite integral over [0, pi] spent its budget of
+                    // limits on that.
+                    if ((fromLeft.Evaled == MathS.NaN || fromRight.Evaled == MathS.NaN)
+                        && WhereBothSidesAgree(expr, x, dest) is { } agreed)
                         return agreed;
                     return MathS.NaN; // A two-sided limit cannot exist if the limit from left and right don't match.
                 }

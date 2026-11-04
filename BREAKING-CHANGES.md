@@ -204,6 +204,29 @@ did, and `ln(x + 2) / ln(x + 3)` at 0 was `ln(2) / ln(3)`. With symbols it was n
 | `"limit(ln(a + 1/x) / ln(b + 1/x), x, +oo)".ToEntity().Simplify()` | `a / b` | `ln(a) / ln(b)` |
 | `"limit(ln(1 + x) / ln(y + x), x, 0)".ToEntity().Simplify()` | `1 / y` | `0 provided not ln(y) = 0` |
 
+### A limit over a vanishing absolute value is not claimed not to exist
+
+**Silent: `1/abs(x)` at 0 is `+oo`, where it was `NaN`, the claim that the limit does not exist.** The sign a
+vanishing divisor keeps was read off its derivatives, and the derivative of `abs(x)` is `sgn(x)`, 0 at 0, with
+nothing after it: each side was left unevaluated, and the two-sided limit was `NaN`. An absolute value, and a real
+power, product or quotient of absolute values, now vanishes from above. And two sides that agree are the two-sided
+limit for an expression real on both sides, which now includes an absolute value, a sine, a cosine and an
+arctangent of something real, and an arcsine and an arccosine inside (-1, 1). Where the sides differ, as for
+`x / abs(x)`, the limit is still `NaN`.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"1/abs(x)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"1/abs(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(1 / abs(x), x, 0)` | `+oo` |
+| `"-2/abs(x)".ToEntity().Limit("x", 0)` | `NaN` | `-oo` |
+| `"1/abs(sin(x))".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"(x + 1)/abs(x)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"1/abs(x - 1)".ToEntity().Limit("x", 1)` | `NaN` | `+oo` |
+| `"abs(x)^(-3/2)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"abs(x)^(-3/2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(abs(x) ^ (-3/2), x, 0)` | `+oo` |
+| `"sqrt(x^2)^(-3/2)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"sin(arcsin(x)) * (tan(-1) + 2/x)".ToEntity().Limit("x", 0)` | `NaN` | `2` |
+
 ### An equation in two different square roots is solved exactly
 
 **Silent: an equation `m_1 sqrt(A) + m_2 sqrt(B) + P = 0` in x alone, with two different square roots, is answered in
