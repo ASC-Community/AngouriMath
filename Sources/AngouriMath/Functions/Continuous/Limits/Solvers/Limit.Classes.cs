@@ -539,7 +539,24 @@ namespace AngouriMath
         partial record Absf
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
-                => Argument.ComputeLimitDivideEtImpera(x, dist, side)?.Abs();
+            {
+                var direct = Argument.ComputeLimitDivideEtImpera(x, dist, side)?.Abs();
+                if (direct is { } found && found.Evaled != MathS.NaN)
+                    return found;
+                // The modulus of a quotient is the quotient of the moduli, and of a product the product,
+                // for complex values as for real ones. Read that way, a divisor that vanishes vanishes from
+                // above: abs(1/x^pi) at 0 from the left had no limit, x^pi being complex there and its
+                // sign unreadable, so the two-sided limit was NaN where it is +oo, as 1/abs(x)^pi is.
+                Entity? split = Argument switch
+                {
+                    Divf(var dividend, var divisor) => dividend.Abs() / divisor.Abs(),
+                    Mulf(var multiplier, var multiplicand) => multiplier.Abs() * multiplicand.Abs(),
+                    _ => null
+                };
+                return split?.ComputeLimitDivideEtImpera(x, dist, side) is { } bySplitting && bySplitting.Evaled != MathS.NaN
+                    ? bySplitting
+                    : direct;
+            }
         }
 
         /// <summary>
