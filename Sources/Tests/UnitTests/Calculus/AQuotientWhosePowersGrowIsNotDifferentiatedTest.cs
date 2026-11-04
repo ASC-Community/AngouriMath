@@ -30,7 +30,9 @@ namespace AngouriMath.Tests.Calculus
         {
             var task = Task.Factory.StartNew(() => MathS.FromString(input).Limit("x", 0, ApproachFrom.Right),
                 TaskCreationOptions.LongRunning);
-            Assert.True(task.Wait(TimeSpan.FromSeconds(60)), $"the limit of {input} at 0 from the right did not finish in a minute");
+            // Far from both: the limit takes about 6 s here and past a minute on CI's Windows runner, whose suite runs
+            // three times as long, and before the fix it did not finish in ten minutes.
+            Assert.True(task.Wait(TimeSpan.FromMinutes(5)), $"the limit of {input} at 0 from the right did not finish in five minutes");
             Assert.Equal(Number.Integer.One, task.Result);
         }
 
