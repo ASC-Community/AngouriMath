@@ -338,6 +338,21 @@ Two-sided, each side is now taken with its own value, and `floor(x)^x` at 0 is 1
 | `"floor(x)^tanh(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
 | `"floor(x)^x".ToEntity().Limit("x", 0)` | unevaluated | `NaN`, the sides differ |
 
+### A function of a quotient tending to 0/0 has the value at the quotient's limit
+
+**Silent: a different answer.** A function of a quotient took the quotient's limit from the descent alone, which reads
+0/0 or oo/oo off the two parts as NaN -- the claim that there is no limit -- where only the descent cannot tell. The
+quotient's whole limit is asked now, once, through the remarkable limits and l'Hopital's rule, and only a value it
+gives is taken. No issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `limit((sin(x)/x)^2, x, 0)` | `NaN` | `1` |
+| `limit(exp(sin(x)/x), x, 0)` | `NaN` | `e` |
+| `limit(sin(sin(x)/x), x, 0)` | `NaN` | `sin(1)` |
+| `limit(exp((cos(x) - 1)/x^2), x, 0)` | `NaN` | `e ^ (-1/2)` |
+| `limitright(exp(sin(x)/x), x, 0)` | unevaluated | `e` |
+
 ### A two-sided limit of an expression real on both sides is where its sides agree
 
 **Silent: a two-sided limit that was `NaN` although both sides agree has their value, where the expression is real on

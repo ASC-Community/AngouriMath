@@ -242,6 +242,9 @@ namespace AngouriMath.Functions.Algebra
         /// </summary>
         [System.ThreadStatic] private static int? remainingLimits;
 
+        /// <summary>Whether a caller has set a budget of limits, which a limit asked on the side would spend.</summary>
+        internal static bool UnderALimitBudget => remainingLimits is not null;
+
         /// <summary>
         /// <paramref name="compute"/> with at most <paramref name="limits"/> limits taken in all, for a caller that has a
         /// use only for a limit it can have cheaply, and leaves the question open otherwise.
