@@ -499,6 +499,23 @@ gives is taken. No issue was filed.
 | `limit(exp((cos(x) - 1)/x^2), x, 0)` | `NaN` | `e ^ (-1/2)` |
 | `limitright(exp(sin(x)/x), x, 0)` | unevaluated | `e` |
 
+### A limit of a modulus reads it as the quotient or product of moduli
+
+**Silent: `abs(1/x^pi)` at 0 is `+oo`, where it was `NaN`, the claim that the limit does not exist.** The modulus took its
+argument's limit and nothing else. To the left of 0, `x^pi` is complex, so the sign `1/x^pi`'s divisor vanishes with
+could not be read: that side had no limit, and the two-sided limit was `NaN`. Where the argument's limit gives the
+modulus no value, the modulus of a quotient is now read as the quotient of the moduli, and of a product as the
+product. This holds for complex values too, and read that way the divisor vanishes from above.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"abs(1/x^pi)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"abs(1/x^pi)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(abs(1 / x ^ pi), x, 0)` | `+oo` |
+| `"abs(1/sqrt(x))".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"abs(2/x^(3/2))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(abs(2 / x ^ (3/2)), x, 0)` | `+oo` |
+| `"abs(log(cos(x), -1))".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"abs(log(cos(x), -1))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(abs(log(cos(x), -1)), x, 0)` | `+oo` |
+
 ### A two-sided limit of an expression real on both sides is where its sides agree
 
 **Silent: a two-sided limit that was `NaN` although both sides agree has their value, where the expression is real on
