@@ -49,7 +49,6 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.x'
-        dotnet-quality: 'preview'
 
     # The release's tag without its 'v', as Nuget.yml reads it, so that the Terminal is released
     # under the packages' version; by hand, the version asked for; for a pull request, 0.0.0.

@@ -43,7 +43,6 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.x'
-        dotnet-quality: 'preview'
 
     # The script reports a commit that will not build rather than failing on it, so this step
     # succeeding means "the run completed", not "every commit was measurable". The table says
