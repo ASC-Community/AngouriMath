@@ -292,6 +292,21 @@ carried it once combined: a second derivative of `1/sqrt(x^2 + 13)` stated `not 
 | `"(a provided b > 0) + (c provided b > 0)".ToEntity().InnerSimplified` | `a + c provided b > 0 and b > 0` | `a + c provided b > 0` |
 | `MathS.Equations("sqrt(y) - x", "y - a").Solve("x", "y")` | `[[sqrt(a), (sqrt(a)) ^ 2], [-sqrt(a), (-sqrt(a)) ^ 2]]` | `[[sqrt(a) provided C(sqrt(a)), (sqrt(a)) ^ 2 provided C(sqrt(a))], [-sqrt(a) provided C(-sqrt(a)), (-sqrt(a)) ^ 2 provided C(-sqrt(a))]]`, `C(v)` being `v = 0 or -1/2 * pi < arg(v) and arg(v) <= 1/2 * pi` |
 
+### A 1^oo limit has its value
+
+**Silent: a different answer.** The second remarkable limit writes a 1^oo power `f^g` as `e^(g (f - 1))`, and the
+product in its exponent the descent read as 0 * oo, which is NaN, the claim that there is no limit. Only a base of 1
+plus a polynomial was answered, by another route. The exponent is the quotient `(f - 1) / (1/g)` now, which is asked
+whole where the descent cannot settle it. No issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `limit(cos(x)^(1/x^2), x, 0)` | `NaN` | `e ^ (-1/2)` |
+| `limit((sin(x)/x)^(1/x^2), x, 0)` | `NaN` | `e ^ (-1/6)` |
+| `limit(cos(2x)^(1/x^2), x, 0)` | `NaN` | `e ^ (-2)` |
+| `limit((1 + sin(x))^(1/x), x, 0)` | `NaN` | `e` |
+| `limitright(cos(x)^(1/x), x, 0)` | unevaluated | `1` |
+
 ### A root in exact numbers is put back to the working precision
 
 **Silent: a number that is not a root, in exact numbers, is no longer answered as one.** Every root is put back into the

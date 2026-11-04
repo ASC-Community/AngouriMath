@@ -186,7 +186,9 @@ namespace AngouriMath.Functions.Algebra
                 Powf(var xPlusOne, var xPower) when
                 xPlusOne.ContainsNode(x) && xPower.ContainsNode(x) &&
                 EvalAssumingContinuous((xPlusOne - 1).Limit(x, dest)) == 0 && DivergesInMagnitude(xPower, x, dest) =>
-                MathS.e.Pow(xPower * (xPlusOne - 1)),
+                // The exponent as the quotient (f - 1) / (1/g), not the product g (f - 1): a 0/0 the descent hands to the
+                // whole limit, where it read 0 * oo as NaN, and (cos(x))^(1/x^2) at 0, e^(-1/2), was NaN.
+                MathS.e.Pow((xPlusOne - 1) / (1 / xPower)),
 
                 // a(x)^n / b(x)^n, the same limit written as a quotient. The simplifier used
                 // to gather this into (a/b)^n for us, which is how the shape reached the rule
@@ -206,7 +208,7 @@ namespace AngouriMath.Functions.Algebra
                 && IsEventuallyPositive(numeratorBase, x, dest) && IsEventuallyPositive(denominatorBase, x, dest)
                 && EvalAssumingContinuous((numeratorBase / denominatorBase - 1).Limit(x, dest)) == 0
                 && DivergesInMagnitude(power, x, dest) =>
-                MathS.e.Pow(power * (numeratorBase / denominatorBase - 1)),
+                MathS.e.Pow((numeratorBase / denominatorBase - 1) / (1 / power)),
 
                 _ => expr
             };
