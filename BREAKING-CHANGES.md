@@ -574,6 +574,31 @@ filed; a check of limits against values near the destination found it.
 
 The same spelled `(-ln(2)/ln(x))^(exp(x) - 1)` was `1` in 2.6.0 and did not return after it; it is `1` again.
 
+### The error functions and the exponential and trigonometric integrals have limits
+
+**`erf(x)` at +oo is `1`, where it was left unevaluated.** None of erf, erfc, erfi, Si, Ci, Shi, Chi, Ei or li had a
+limit at all, not even at a point where it is continuous: `erf(x)` at 1 was unevaluated too. Their limits at the
+infinities are now their values there:
+- erf: 1 and -1
+- erfc: 0 and 2
+- erfi and Shi: +oo and -oo
+- Si: pi/2 and -pi/2
+- Ci: 0
+- Chi and li: +oo
+- Ei: +oo and 0
+
+A finite limit of the argument is put in where the function is continuous. For the entire ones that is anywhere.
+For Ci, Chi, Ei and li it is only a positive real point, since they are singular at 0 and cut below it, and li is
+singular at 1 too.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"erf(x)".ToEntity().Limit("x", "+oo")` | `limit(erf(x), x, +oo)` | `1` |
+| `"erf(x)".ToEntity().Limit("x", 1)` | `limit(erf(x), x, 1)` | `erf(1)` |
+| `"Si(x)".ToEntity().Limit("x", "+oo")` | `limit(Si(x), x, +oo)` | `pi / 2` |
+| `"Ei(x)".ToEntity().Limit("x", "-oo")` | `limit(Ei(x), x, -oo)` | `0` |
+| `"erf(x)/x + 1".ToEntity().Limit("x", 0)` | `limit(erf(x) / x + 1, x, 0)` | `2 / sqrt(pi) + 1` |
+
 ### A limit of a logarithm that is not decided is left unevaluated
 
 **Not silent: what overflowed the stack now returns.** A limit of a logarithm whose argument has no limit, as
