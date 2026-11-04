@@ -34,9 +34,30 @@ namespace AngouriMath.Functions.Algebra
             finally { LeaveApproach(outerApproach); }
         }
 
+        /// <summary>
+        /// A power of the reciprocal of the variable as a power of the variable: (1/x)^p as
+        /// x^(-p), and (-1/x)^p as (-1)^p * x^(-p).
+        /// </summary>
+        /// <remarks>
+        /// Exact on the way to +oo, where x is real and positive, and on the principal branch
+        /// for any exponent. A one-sided limit at 0 is taken by putting 0 + 1/x or 0 - 1/x for
+        /// x, so these are what the root of the variable turns into, and nothing rewrites them:
+        /// x^3 * sqrt(1/x) / (x^2 * (1/x)^(-1/2)), which is 1, took 1.6 s, l'Hopital's rule
+        /// differentiating it sixteen deep, and lim x->0+ ln(x) / ln(sqrt(x)) asked it eight
+        /// times on the way to 2 and took 16 s.
+        /// </remarks>
+        private static Entity AsAPowerOfTheVariable(Entity node, Variable x)
+            => node switch
+            {
+                Powf(Divf(Integer one, var v), var p) when one == 1 && v == x && !p.ContainsNode(x) => MathS.Pow(x, -p),
+                Powf(Divf(Integer minusOne, var v), var p) when minusOne == -1 && v == x && !p.ContainsNode(x)
+                    => MathS.Pow(-1, p) * MathS.Pow(x, -p),
+                _ => node
+            };
+
         private static Entity? SimplifyAndComputeLimitToInfinityCore(Entity expr, Variable x)
         {
-            expr = expr.Simplify();
+            expr = expr.Replace(node => AsAPowerOfTheVariable(node, x)).Simplify();
             if (expr is Providedf(var expression, _)) expr = expression; // limits operate assuming a continuous expression even though some points may be undefined.
 
             // The second remarkable limit reads a 1^oo, and it ran once, at the top of
