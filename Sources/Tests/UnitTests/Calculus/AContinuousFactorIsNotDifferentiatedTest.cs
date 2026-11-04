@@ -17,7 +17,7 @@ namespace AngouriMath.Tests.Calculus
     /// <c>1 - tanh(x)^2</c> the derivative of tanh brings. With tanh written through exponentials, each such factor
     /// doubled the derivative, which outgrew the rule's bound. A factor that is continuous at a finite point with a non-zero
     /// value there is now taken out as that value: lim c(x) f(x) / g(x) is c(a) lim f(x) / g(x). Found by limitcheck at
-    /// <c>DEPTH=3</c>, <c>SEED=40</c>; no issue was filed.
+    /// <c>DEPTH=3</c>, <c>SEED=42</c>; no issue was filed.
     /// </summary>
     [Trait("Area", "Calculus")]
     public sealed class AContinuousFactorIsNotDifferentiatedTest
