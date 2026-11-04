@@ -467,6 +467,23 @@ Two-sided, each side is now taken with its own value, and `floor(x)^x` at 0 is 1
 | `"floor(x)^tanh(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
 | `"floor(x)^x".ToEntity().Limit("x", 0)` | unevaluated | `NaN`, the sides differ |
 
+### A function of a quotient tending to oo/oo has the value at the quotient's limit
+
+**`exp(log(1/x, arcsin(x)))` at 0 from the right is `1/e`, where it was left unevaluated.** The logarithm alone is
+-1, and it reaches the descent as `ln(arcsin(x)) / ln(1/x)`, a quotient of two infinities. The limit its derivatives'
+quotient was taken to came back as the form `0 * +oo / 0`, which has no value, and that was handed on as the
+exponent's limit. The whole limit of the quotient was asked only for a 0/0 read off two finite parts. It is now asked
+for -oo/+oo too, and a form with no value is kept only where nothing better is found. A sine of the logarithm is
+answered as well. A hyperbolic sine took ten seconds to be left unevaluated, and is answered in under three.
+`x * ln(x)` at 0 is still `NaN`, since ln(x) has no real values to the left of 0.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"e^log(1/x, arcsin(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(e ^ log(1 / x, arcsin(x)), x, 0)` | `1 / e` |
+| `"sin(log(1/x, arcsin(x)))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(log(1 / x, arcsin(x))), x, 0)` | `sin(-1)` |
+| `"sinh(log(1/x, arcsin(x)))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((e ^ log(1 / x, arcsin(x)) - e ^ (-log(1 / x, arcsin(x)))) / 2, x, 0)` | `(1 / e - e) / 2` |
+| `"tanh(log(x, arcsin(x)))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft((e ^ (2 * log(x, arcsin(x))) - 1) / (e ^ (2 * log(x, arcsin(x))) + 1), x, 0)` | `(e ^ 2 - 1) / (e ^ 2 + 1)` |
+
 ### A function of a quotient tending to 0/0 has the value at the quotient's limit
 
 **Silent: a different answer.** A function of a quotient took the quotient's limit from the descent alone, which reads

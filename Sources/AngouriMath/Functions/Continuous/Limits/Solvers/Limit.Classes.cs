@@ -93,13 +93,20 @@ namespace AngouriMath
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
             {
-                if (ComputeLimitImpl(this, x, dist, side) is { } lim)
+                // A form with no value -- 0 * +oo / 0, which is what -x / (sqrt(1 - x^2) * arcsin(x)) at 0
+                // from the right comes back as -- is the claim that there is no limit, and the parts may
+                // say otherwise. It is kept for the end, where it was answered before, and the parts are
+                // read first.
+                var whole = ComputeLimitImpl(this, x, dist, side);
+                if (whole is { } lim && lim.Evaled != MathS.NaN)
                     return lim;
                 else
                 {
 
+                    var dividendLimit = Dividend.ComputeLimitDivideEtImpera(x, dist, side);
+                    var divisorLimit = Divisor.ComputeLimitDivideEtImpera(x, dist, side);
                     var (dividend, divisor) =
-                        (Dividend.ComputeLimitDivideEtImpera(x, dist, side), Divisor.ComputeLimitDivideEtImpera(x, dist, side)) switch
+                        (dividendLimit, divisorLimit) switch
                         {
                             ({ } lim1, { } lim2) when IsDeterminate(New(lim1, lim2), x) => (lim1, lim2),
                             ({ } lim1, { } lim2) when lim1.InnerSimplified.IsFinite && lim2.InnerSimplified.IsFinite && lim2.InnerSimplified != 0 => (lim1, lim2),
@@ -130,11 +137,19 @@ namespace AngouriMath
                     // written, sent a definite integral astray. Folded, it is 0, and ln(2) * 2^(1/+oo) is
                     // ln(2), not its decimal. Where it has no
                     // value, what was answered is kept.
-                    if (substituted?.Evaled == MathS.NaN && IsAnIndeterminateQuotient(dividend, divisor)
-                        && AsTheWholeLimit(this, x, dist, side) is { } whole && whole.Evaled is Number { IsNaN: false } value)
-                        return whole.InnerSimplified is var folded && folded.Nodes.Any(static node => node is Number { IsFinite: false })
+                    // Two infinite parts are not put in place of the parts above, so the substitution is not
+                    // of the parts' limits, and the form is read off the parts' own limits instead:
+                    // exp(ln(arcsin(x)) / ln(1/x)) at 0 from the right, whose exponent is -oo / +oo and
+                    // tends to -1, was left unevaluated, and so were a sine of it and, after ten seconds, a
+                    // hyperbolic sine.
+                    if ((substituted?.Evaled == MathS.NaN && IsAnIndeterminateQuotient(dividend, divisor)
+                            || (substituted is null || substituted.Evaled == MathS.NaN)
+                               && dividendLimit is { } partLimit1 && divisorLimit is { } partLimit2
+                               && IsAnIndeterminateQuotient(partLimit1, partLimit2))
+                        && AsTheWholeLimit(this, x, dist, side) is { } asked && asked.Evaled is Number { IsNaN: false } value)
+                        return asked.InnerSimplified is var folded && folded.Nodes.Any(static node => node is Number { IsFinite: false })
                             ? value : folded;
-                    return substituted;
+                    return whole ?? substituted;
                 }
             }
         }
