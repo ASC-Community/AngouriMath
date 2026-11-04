@@ -25,7 +25,6 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.x'
-        dotnet-quality: 'preview'
 
     - name: Build
       run: |

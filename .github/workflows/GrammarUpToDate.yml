@@ -49,7 +49,6 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.x'
-        dotnet-quality: 'preview'
 
     # The same two commands Sources/Utils/antlr_rerun.bat runs, without its interactive pause.
     - name: 'Regenerate the parser from the grammar'

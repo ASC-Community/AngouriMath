@@ -23,7 +23,6 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
-          dotnet-quality: 'preview'
           
       - name: 'Pack AngouriMath'
         run: |
@@ -65,7 +64,6 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
-          dotnet-quality: 'preview'
           
       - name: 'Pack AngouriMath'
         run: |
