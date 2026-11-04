@@ -333,7 +333,7 @@ namespace AngouriMath
                 // was left unevaluated from each side for it. Where the base vanishes, it does from
                 // above.
                 if (baseLimit?.Evaled is Real { IsZero: true } && exponentLimit?.Evaled is Real { IsNegative: true, IsFinite: true }
-                    && IsNeverNegative(Base))
+                    && IsNeverNegative(Base, x))
                     return Real.PositiveInfinity;
                 var substituted =
                     (baseLimit, exponentLimit)

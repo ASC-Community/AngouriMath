@@ -227,6 +227,23 @@ arctangent of something real, and an arcsine and an arccosine inside (-1, 1). Wh
 | `"sqrt(x^2)^(-3/2)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
 | `"sin(arcsin(x)) * (tan(-1) + 2/x)".ToEntity().Limit("x", 0)` | `NaN` | `2` |
 
+### A limit over a vanishing even power is not claimed not to exist
+
+**Silent: `1/((x^2)^tanh(1))` at 0 is `+oo`, where it was `NaN`, the claim that the limit does not exist.** A base
+was read as never negative only for an absolute value, or a real power, product or quotient of never-negative parts,
+so `x^2` was not. A vanishing power of it to a constant that is not a number, or to an exponent tending to a negative
+number, was left unevaluated from each side, and the two-sided limit was `NaN`. An even power of a base real for
+real `x` is now never negative. `1/(((i*x)^2)^tanh(1))`, whose base is `-x^2`, is still not answered.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"1/((x^2)^tanh(1))".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"1/((x^2)^tanh(1))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(1 / (x ^ 2) ^ ((e ^ (2 * 1) - 1) / (e ^ (2 * 1) + 1)), x, 0)` | `+oo` |
+| `"(sinh(x)^2)^(sin(x) - 1)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"(sinh(x)^2)^(sin(x) - 1)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((((e ^ x - e ^ (-x)) / 2) ^ 2) ^ (sin(x) - 1), x, 0)` | `+oo` |
+| `"sqrt(x^2)^tan(pi - 1)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"sqrt(x^2)^tan(pi - 1)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((sqrt(x ^ 2)) ^ tan(pi - 1), x, 0)` | `+oo` |
+
 ### An equation in two different square roots is solved exactly
 
 **Silent: an equation `m_1 sqrt(A) + m_2 sqrt(B) + P = 0` in x alone, with two different square roots, is answered in
