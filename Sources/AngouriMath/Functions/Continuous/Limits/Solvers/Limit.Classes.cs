@@ -553,9 +553,16 @@ namespace AngouriMath
                     Mulf(var multiplier, var multiplicand) => multiplier.Abs() * multiplicand.Abs(),
                     _ => null
                 };
-                return split?.ComputeLimitDivideEtImpera(x, dist, side) is { } bySplitting && bySplitting.Evaled != MathS.NaN
-                    ? bySplitting
-                    : direct;
+                if (split?.ComputeLimitDivideEtImpera(x, dist, side) is { } bySplitting && bySplitting.Evaled != MathS.NaN)
+                    return bySplitting;
+                // And the argument's whole limit, where the descent reads a form off its parts: x * ln(x) is
+                // 0 * -oo there, which is NaN, so abs(x * ln(x)) at 0 had no limit from either side, and the
+                // two-sided limit was NaN, where it is 0 -- from the left too, |x| |ln|x| + i pi| tending to 0.
+                // The modulus of a value is taken; x * ln(x) itself keeps the two-sided convention.
+                if (direct?.Evaled == MathS.NaN
+                    && AsTheWholeLimit(Argument, x, dist, side) is { } whole && whole.Evaled is Number { IsNaN: false })
+                    return whole.Abs().InnerSimplified;
+                return direct;
             }
         }
 

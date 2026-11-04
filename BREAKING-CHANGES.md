@@ -529,6 +529,22 @@ positive on both sides. `x^x` is still `NaN` at 0.
 | `"(x^2)^x".ToEntity().Limit("x", 0)` | `NaN` | `1` |
 | `"(x*x)^(x - 1)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
 
+### A limit of a modulus asks its argument's whole limit
+
+**Silent: `abs(x * ln(x))` at 0 is `0`, where it was `NaN`, the claim that the limit does not exist.** It is real on both
+sides. From the left, |x| |ln|x| + i pi| tends to 0 too. The modulus took its argument's limit as the descent reads it,
+and the descent reads x * ln(x) as 0 * -oo, which is NaN. Where that reading has no value, the modulus now asks its
+argument's whole limit and takes the modulus of a value. `x * ln(x)` itself is still `NaN` two-sided, and so is
+`x^x`. `abs(x^x)` is real on both sides, since |x^x| is |x|^x to the left of 0, and it is now `1` there.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"abs(x * ln(x))".ToEntity().Limit("x", 0)` | `NaN` | `0` |
+| `"abs(x * ln(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(abs(x * ln(x)), x, 0)` | `0` |
+| `"abs(sin(x) * ln(x))".ToEntity().Limit("x", 0)` | `NaN` | `0` |
+| `"abs(x^2 * ln(x))".ToEntity().Limit("x", 0)` | `NaN` | `0` |
+| `"abs(x^x)".ToEntity().Limit("x", 0)` | `NaN` | `1` |
+
 ### A factor continuous at the point is taken out before l'Hopital's rule
 
 **`sin(x)^tanh(x)` at 0 from the right is `1`, where it was left unevaluated.** Read through its exponent, the power is
