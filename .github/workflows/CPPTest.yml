@@ -51,7 +51,6 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.x'
-        dotnet-quality: 'preview'
         
     - name: 'Install some libs for Linux'
       if: ${{ matrix.os == 'ubuntu-latest' }}

@@ -36,7 +36,6 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.x'
-        dotnet-quality: 'preview'
 
     # ILC links the runtime into the binary and needs a native linker and zlib to do it.
     - name: 'Install the native toolchain for Linux'
