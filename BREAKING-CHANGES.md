@@ -93,6 +93,21 @@ root near 23.
 | `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
 | `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
 
+### A step function reads the side its argument arrives from off the slope
+
+**A one-sided limit of a floor or a ceiling whose argument arrives at a jump like a root is answered, where it was
+not.** Which side of the jump the argument comes from was read only off the first derivative that does not vanish,
+and `sqrt(x)` at 0 has none that is finite. It is now also read off the slope `g(x) / (x - a)`, which for `sqrt(x)`
+is `1 / sqrt(x)` and tends to +oo, so `sqrt(x)` is above 0 on the right.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"floor(sqrt(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(floor(sqrt(x)), x, 0)` | `0` |
+| `"ceil(sqrt(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(ceil(sqrt(x)), x, 0)` | `1` |
+| `"floor(x - sqrt(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(floor(x - sqrt(x)), x, 0)` | `-1` |
+| `"floor(1 - sqrt(1 - x))".ToEntity().Limit("x", 1, ApproachFrom.Left)` | `limitleft(floor(1 - sqrt(1 - x)), x, 1)` | `0` |
+| `"floor(sqrt(x)) - (x^3)^(x/2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `-1` |
+
 ### An infinity in an expression is not read as a coefficient
 
 **Wrong answer: `log(x, 0)` at 0 from the right is `+oo`, where it was `0`.** `log(x, 0)` is `ln(0) / ln(x)`, and
