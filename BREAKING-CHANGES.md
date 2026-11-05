@@ -93,6 +93,25 @@ root near 23.
 | `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
 | `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
 
+### An infinity in an expression is not read as a coefficient
+
+**Wrong answer: `log(x, 0)` at 0 from the right is `+oo`, where it was `0`.** `log(x, 0)` is `ln(0) / ln(x)`, and
+`ln(0)` is `-oo`, so between 0 and 1 it is `+oo` at every point. An infinity that does not depend on the variable
+was read as a coefficient. `-oo / x` was taken for a constant over a line, and so tended to 0 at +oo. And a
+product's or quotient's other part had its limit put in place of it, so `+oo * x` at 0 became `+oo * 0`, which
+folds to 0. Such an infinity now keeps its sign times the other part's sign on the way in. Where that sign changes
+at the destination, nothing is claimed one-sidedly, and two-sided the limit is NaN as the sides disagree. A
+coefficient that evaluates to NaN is not read as one either, and the limit is left unevaluated rather than NaN.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"log(x, 0)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` | `+oo` |
+| `"log(x, 0)".ToEntity().Limit("x", "+oo")` | `0` | `-oo` |
+| `"-oo / x".ToEntity().Limit("x", "+oo")` | `0` | `-oo` |
+| `"+oo * x".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` | `+oo` |
+| `"arctan(log(sinh(x), 0))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(arctan(log((e ^ x - e ^ (-x)) / 2, 0)), x, 0)` | `pi / 2` |
+| `"1 ^ log(1 - x, x - x)".ToEntity().Limit("x", "1/2")` | `NaN` | `limit(1 ^ log(1 - x, x - x), x, 1/2)` |
+
 ### A trigonometric function reads the value its argument tends to
 
 **A one-sided limit at a finite point of a trigonometric function is answered, where it was left unevaluated.** The
