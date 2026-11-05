@@ -402,6 +402,115 @@ namespace AngouriMath
             }
         }
 
+        /// <summary>
+        /// The limit of an error function or an exponential or trigonometric integral, given its
+        /// argument's limit: the value it tends to at an infinity, and the function of a finite limit
+        /// where it is continuous there.
+        /// </summary>
+        /// <remarks>
+        /// None of these had a limit at all, so erf(x) at +oo, which is 1, was left unevaluated, and
+        /// so was erf(x) at 1. A logarithm of something holding one came to a stop that took more than
+        /// forty seconds: log(x + pi + erf(x), x^2 + tanh(1)) at +oo, which is 2. At an infinity:
+        /// erf to 1 and -1, erfc to 0 and 2, erfi, Shi to +oo and -oo, Si to pi/2 and -pi/2, Ci to 0,
+        /// Chi and li to +oo, and Ei to +oo and 0. Erf, erfc, erfi, Si and Shi are entire, so a finite
+        /// limit is put in as it is. Ci, Chi, Ei and li have a logarithm's singularity at 0 and its cut
+        /// below it, and li another at 1, so only a positive real limit other than li's 1 is put in;
+        /// elsewhere nothing is claimed. Each value at an infinity was checked against mpmath at 10^6 and
+        /// -10^6, and at 50 and -50 for erfi, Shi and Chi.
+        /// </remarks>
+        private static Entity? OfAnErrorOrIntegralFunction(Entity node, Entity argument, Variable x, Entity dist, ApproachFrom side)
+        {
+            if (argument.ComputeLimitDivideEtImpera(x, dist, side) is not { } limit)
+                return null;
+            if (limit.Evaled is Real { IsFinite: false, IsNaN: false } infinity)
+            {
+                var upwards = !infinity.IsNegative;
+                return node switch
+                {
+                    Erff => upwards ? Integer.One : Integer.MinusOne,
+                    Erfcf => upwards ? Integer.Zero : Integer.Create(2),
+                    Erfif or Shif => upwards ? Real.PositiveInfinity : Real.NegativeInfinity,
+                    Sif => upwards ? MathS.pi / 2 : -MathS.pi / 2,
+                    Cif => upwards ? Integer.Zero : null,
+                    Chif or Lif => upwards ? Real.PositiveInfinity : null,
+                    Eif => upwards ? Real.PositiveInfinity : Integer.Zero,
+                    _ => null
+                };
+            }
+            if (limit.Evaled is not Number { IsFinite: true, IsNaN: false } value)
+                return null;
+            var entire = node is Erff or Erfcf or Erfif or Sif or Shif;
+            if (!entire && !(value is Real { IsPositive: true } && !(node is Lif && value == Integer.One)))
+                return null;
+            return node switch
+            {
+                Erff => new Erff(limit),
+                Erfcf => new Erfcf(limit),
+                Erfif => new Erfif(limit),
+                Sif => new Sif(limit),
+                Cif => new Cif(limit),
+                Shif => new Shif(limit),
+                Chif => new Chif(limit),
+                Eif => new Eif(limit),
+                Lif => new Lif(limit),
+                _ => null
+            };
+        }
+
+        partial record Erff
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Erfcf
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Erfif
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Sif
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Cif
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Shif
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Chif
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Eif
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
+        partial record Lif
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+                => OfAnErrorOrIntegralFunction(this, Argument, x, dist, side);
+        }
+
         partial record Arctanf
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
