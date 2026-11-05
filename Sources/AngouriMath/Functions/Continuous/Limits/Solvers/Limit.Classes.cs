@@ -73,8 +73,14 @@ namespace AngouriMath
                     return lim;
                 else
                 {
+                    var multiplierLimit = Multiplier.ComputeLimitDivideEtImpera(x, dist, side);
+                    var multiplicandLimit = Multiplicand.ComputeLimitDivideEtImpera(x, dist, side);
+                    if (AnInfinityTimesASign(Multiplier, Multiplicand, multiplicandLimit, dividing: false, x, dist, side) is { } byMultiplier)
+                        return byMultiplier;
+                    if (AnInfinityTimesASign(Multiplicand, Multiplier, multiplierLimit, dividing: false, x, dist, side) is { } byMultiplicand)
+                        return byMultiplicand;
                     var (mp, md) =
-                        (Multiplier.ComputeLimitDivideEtImpera(x, dist, side), Multiplicand.ComputeLimitDivideEtImpera(x, dist, side)) switch
+                        (multiplierLimit, multiplicandLimit) switch
                         {
                             ({ } lim1, { } lim2) when IsDeterminate(New(lim1, lim2), x) => (lim1, lim2),
                             ({ IsFinite: true } lim1, { IsFinite: true } lim2) => (lim1, lim2),
@@ -105,6 +111,8 @@ namespace AngouriMath
 
                     var dividendLimit = Dividend.ComputeLimitDivideEtImpera(x, dist, side);
                     var divisorLimit = Divisor.ComputeLimitDivideEtImpera(x, dist, side);
+                    if (AnInfinityTimesASign(Dividend, Divisor, divisorLimit, dividing: true, x, dist, side) is { } byDividend)
+                        return byDividend;
                     var (dividend, divisor) =
                         (dividendLimit, divisorLimit) switch
                         {
@@ -152,6 +160,41 @@ namespace AngouriMath
                     return whole ?? substituted;
                 }
             }
+        }
+
+        /// <summary>
+        /// The limit of an infinity that does not depend on <paramref name="x"/> times, or over,
+        /// <paramref name="other"/>: that infinity, with the sign of <paramref name="other"/> on the
+        /// way in, wherever the sign does not change there; otherwise <see langword="null"/>.
+        /// </summary>
+        /// <remarks>
+        /// An infinity is not a coefficient. Taken as one, the descent put the other part's limit in
+        /// its place, and +oo * x at 0 from the right became +oo * 0, which folds to 0, while -oo / x
+        /// at +oo became -oo / +oo and was answered 0 as well. At every point on the way in, though,
+        /// +oo * x is +oo and -oo / x is -oo. This is how ln(0) / ln(x), the logarithm of 0 to the
+        /// base x, was answered 0 at 0 from the right, where it is +oo all the way in.
+        /// Only where the product or quotient of the two limits leaves the answer open: the
+        /// other part tends to 0, or, for a quotient, to an infinity. Elsewhere the descent
+        /// below already answers it.
+        /// </remarks>
+        private static Entity? AnInfinityTimesASign(Entity constant, Entity other, Entity? otherLimit, bool dividing,
+            Variable x, Entity dist, ApproachFrom side)
+        {
+            if (constant.ContainsNode(x) || constant.Evaled is not Real { IsFinite: false, IsNaN: false } infinity)
+                return null;
+            if (otherLimit?.Evaled is not Real { IsNaN: false } limit)
+                return null;
+            if (!limit.IsZero && (!dividing || limit.IsFinite))
+                return null;
+            var sign = limit.IsZero
+                ? ComputeLimit(MathS.Signum(other), x, dist, side)?.Evaled
+                : limit.IsNegative ? Integer.MinusOne : Integer.One;
+            return sign switch
+            {
+                Integer one when one == 1 => infinity,
+                Integer minusOne when minusOne == -1 => infinity.IsNegative ? Real.PositiveInfinity : Real.NegativeInfinity,
+                _ => null,
+            };
         }
 
         /// <summary>Whether two parts' limits make a quotient 0/0 or oo/oo.</summary>

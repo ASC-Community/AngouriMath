@@ -31,6 +31,12 @@ namespace AngouriMath.Functions.Algebra
             foreach (var monomial in monomials)
             {
                 var simplified = monomial.Value.InnerSimplified;
+                // An infinity is not a coefficient: -oo / x is -oo at every x on the way to +oo,
+                // and read as a constant over a line it was answered 0. The descent's
+                // AnInfinityTimesASign is what answers it. Nor is a NaN: 1 ^ log(1 - x, x - x) is 1
+                // at every point near 1/2, and a coefficient evaluated to NaN answered NaN.
+                if (simplified.Evaled is Number { IsFinite: false })
+                    return null;
                 if (simplified != Integer.Zero)
                 {
                     filteredDictionary.Add(monomial.Key, simplified);
