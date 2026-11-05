@@ -1193,7 +1193,41 @@ namespace AngouriMath.Functions.Algebra
             // those margins keeps it on the same side of zero.
             if (!limit.IsZero)
                 return limit.IsNegative ? -1 : 1;
-            return SignFromVanishingOrder(expr, x, dest, side);
+            return SignFromVanishingOrder(expr, x, dest, side) ?? SignFromTheSlope(expr, x, dest, side);
+        }
+
+        /// <summary>
+        /// The sign an expression tending to 0 keeps near a finite destination, read off the
+        /// limit of its slope from the destination, <c>g(x) / (x - a)</c>, or
+        /// <see langword="null"/> where that limit is 0 or not a real number.
+        /// </summary>
+        /// <remarks>
+        /// Where the slope tends to a non-zero L, infinities included, it has the sign of L near
+        /// a, and <c>x - a</c> is positive on the right and negative on the left, so g has the
+        /// sign of L on the right and the other sign on the left. This needs no derivative, and
+        /// answers where <see cref="SignFromVanishingOrder"/> cannot: <c>sqrt(x)</c> at 0, whose
+        /// derivative diverges there, has the slope <c>1 / sqrt(x)</c>, which tends to +oo, and
+        /// so <c>floor(sqrt(x))</c> at 0 from the right is 0, where it was not answered.
+        /// <para/>
+        /// A sign is a question about a real value, and the slope of a complex one can still tend to
+        /// a real infinity: <c>x ^ tanh(pi)</c> on the left of 0 is <c>|x| ^ tanh(pi)</c> times
+        /// <c>e ^ (i pi tanh(pi))</c>, and was read as negative. So the expression has to be real
+        /// throughout the side approached: real wherever it is defined, or real where the bases of its
+        /// roots are positive and those hold there, which <c>sqrt(x)</c>'s does on the right of 0 and
+        /// not on the left. Its real domain condition does not say this: that of <c>x ^ tanh(pi)</c>
+        /// is true. Each base is a part of the expression, so asking about it does not come back here
+        /// with the same question.
+        /// </remarks>
+        private static int? SignFromTheSlope(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        {
+            if (side is not (ApproachFrom.Left or ApproachFrom.Right) || !dest.IsFinite)
+                return null;
+            if (!Functions.TreeAnalyzer.IsRealValued(expr, x)
+                && !(Functions.TreeAnalyzer.WhereRealValued(expr, x) is { } whereReal && HoldsNear(whereReal, x, dest, side) is true))
+                return null;
+            if (EvalAssumingContinuous((expr / (x - dest)).Limit(x, dest, side)) is not Real { IsNaN: false, IsZero: false } slope)
+                return null;
+            return slope.IsNegative == (side is ApproachFrom.Left) ? 1 : -1;
         }
 
         /// <summary>
