@@ -93,6 +93,20 @@ root near 23.
 | `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
 | `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
 
+### A complex constant does not make the two sides of a limit differ
+
+**A two-sided limit with a complex constant in it is answered where each side is, where it was NaN.** Where the
+descent cannot compare the two sides, each is asked through the whole of the machinery, but only of an expression
+real on both sides, and every constant had to be real. `pi^2 / log(x, -2)` is `pi^2 ln(x) / ln(-2)`, which is 0 from
+each side of 1. A constant is the same number on both sides, so a complex one is now allowed; what depends on the
+variable is read as before, and `x^x`, `x ln(x)` and `x^i` at 0 are NaN as they were.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"pi^2 / log(x, -2)".ToEntity().Limit("x", 1)` | `NaN` | `0` |
+| `"(log(1/2, 1) + pi^2) / log(x, -2)".ToEntity().Limit("x", 1)` | `NaN` | `0` |
+| `"log(x ^ (-1), -1) ^ 2".ToEntity().Limit("x", 1)` | `NaN` | `-oo` |
+
 ### A step function reads the side its argument arrives from off the slope
 
 **A one-sided limit of a floor or a ceiling whose argument arrives at a jump like a root is answered, where it was
