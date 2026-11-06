@@ -202,9 +202,9 @@ namespace AngouriMath.Functions.Algebra
 
         /// <summary>
         /// Whether <paramref name="expr"/> is real on both sides of a real <paramref name="dest"/>,
-        /// close enough to it, decided structurally: every power to an exponent that is not whole,
+        /// close enough to it, but for its constants, decided structurally: every power to an exponent that is not whole,
         /// and every logarithm, has a base and an argument positive on both sides, by
-        /// <see cref="SignNear"/>. Where it is, its one-sided limits are limits of real values from
+        /// <see cref="SignNear"/>. Where it is, its one-sided limits are limits of values it takes on
         /// either side, and their agreeing is the two-sided limit under any codomain. <c>x^x</c>
         /// is not, its base being negative on the left, and stays without one; <c>(x^2)^x</c> is,
         /// and was NaN at 0 where each side is 1. Anything else unlisted is not real, which costs
@@ -217,8 +217,12 @@ namespace AngouriMath.Functions.Algebra
             return RealThere(expr);
             bool RealThere(Entity node)
             {
+                // A constant is the same number on both sides, so a complex one does not make
+                // them differ: pi^2 / log(x, -2), which is pi^2 ln(x) / ln(-2), is 0 from each
+                // side of 1 and was NaN. What a side could differ in is a part that depends on x,
+                // and those are read below as before.
                 if (!node.ContainsNode(x))
-                    return node.Evaled is Real { IsFinite: true };
+                    return node.Evaled is Complex { IsFinite: true };
                 return node switch
                 {
                     Variable variable => variable == x,
