@@ -393,6 +393,18 @@ namespace AngouriMath
                 if (baseLimit?.Evaled is Real { IsZero: true } && exponentLimit?.Evaled is Real { IsNegative: true, IsFinite: true }
                     && IsNeverNegative(Base, x))
                     return Real.PositiveInfinity;
+                // A base that keeps a sign as it vanishes is real and not 0 near the point, so to a
+                // negative whole power it is 1 over a power tending to 0 from that sign's side: +oo for
+                // an even power, and +oo or -oo by the sign for an odd one. sin(x)^(-2) at 0 was left
+                // unevaluated from each side and was NaN two-sided, where 1/sin(x)^2 was +oo.
+                // The exponent has to be that whole number near the point and not only tend to it, and
+                // x - 1 - (x + 1) is -2 only once Simplify has cancelled x; it is asked only where the
+                // exponent's limit already is one.
+                if (baseLimit?.Evaled is Real { IsZero: true } && exponentLimit?.Evaled is Integer { IsNegative: true }
+                    && dist.IsFinite
+                    && (Exponent.ContainsNode(x) ? Exponent.Simplify() : Exponent).Evaled is Integer { IsNegative: true } wholeExponent
+                    && SignOfAVanishingBase(wholeExponent.EInteger.IsEven) is { } sign)
+                    return sign > 0 ? Real.PositiveInfinity : Real.NegativeInfinity;
                 var substituted =
                     (baseLimit, exponentLimit)
                     switch {
@@ -416,6 +428,31 @@ namespace AngouriMath
                     && IsIndeterminatePowerForm(substitutedBase, substitutedExponent))
                     return null;
                 return ComputeLimitImpl(substituted, x, dist, side);
+
+                // The sign the power keeps near the point, or null where a side's base has no sign
+                // or, for an odd power, the two sides disagree.
+                int? SignOfAVanishingBase(bool even)
+                {
+                    var sides = side is ApproachFrom.BothSides ? new[] { ApproachFrom.Left, ApproachFrom.Right } : new[] { side };
+                    int? sign = null;
+                    foreach (var oneSide in sides)
+                    {
+                        // A sign is a question about a real value: x^x - 1 on the left of 0 is complex,
+                        // and its reciprocal square goes off the real line. Where the base's real region
+                        // is not known, as arcsin's is not, its form can still say it is real there.
+                        if (!Functions.TreeAnalyzer.IsRealValued(Base, x)
+                            && !(Functions.TreeAnalyzer.WhereRealValued(Base, x) is { } whereReal && HoldsNear(whereReal, x, dist, oneSide) is true)
+                            && !IsRealOnBothSides(Base, x, dist))
+                            return null;
+                        if (SignNear(Base, x, dist, oneSide) is not { } baseSign)
+                            return null;
+                        var powerSign = even ? 1 : baseSign;
+                        if (sign is { } earlier && earlier != powerSign)
+                            return null;
+                        sign = powerSign;
+                    }
+                    return sign;
+                }
             }
         }
 

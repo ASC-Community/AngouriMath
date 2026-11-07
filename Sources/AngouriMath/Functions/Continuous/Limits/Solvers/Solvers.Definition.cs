@@ -210,7 +210,7 @@ namespace AngouriMath.Functions.Algebra
         /// and was NaN at 0 where each side is 1. Anything else unlisted is not real, which costs
         /// coverage and never correctness.
         /// </summary>
-        private static bool IsRealOnBothSides(Entity expr, Variable x, Entity dest)
+        internal static bool IsRealOnBothSides(Entity expr, Variable x, Entity dest)
         {
             if (dest.Evaled is not Real { IsFinite: true })
                 return false;

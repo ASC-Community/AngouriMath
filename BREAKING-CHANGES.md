@@ -123,6 +123,19 @@ four parts it is built from.
 | `"ln(arctan(x) + x) / ln(x)".ToEntity().Limit("x", "+oo")` | unevaluated | `1` |
 | `"tanh(x) * x / (x + tanh(x))".ToEntity().Limit("x", "-oo")` | did not finish in 30 s | `-1` |
 
+### A vanishing base to a negative whole power tends to an infinity
+
+**A real base tending to 0 with a sign, to a negative whole power, is +oo or -oo, where it was NaN.** For an
+even power the limit is +oo; for an odd one it is +oo or -oo by the base's sign, and two-sided it is NaN only
+where the two sides disagree. `1/sin(x)^2` already answered +oo; `sin(x)^(-2)` did not.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(x)^(-2)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"sin(x)^(-2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `+oo` |
+| `"(arcsin(x)^(-2))^2".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"sin(x)^(-1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `NaN` | `-oo` |
+
 ### A quotient whose divisor is 0 near the point has no limit there
 
 **A limit of a quotient whose divisor is 0 all the way in is NaN, where it was a number.** `abs(x) - x` is
