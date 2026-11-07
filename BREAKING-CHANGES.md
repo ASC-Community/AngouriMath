@@ -93,6 +93,22 @@ root near 23.
 | `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
 | `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
 
+### l'Hopital's rule leaves out what only makes the derivatives larger
+
+**Limits whose derivatives grew without bound under l'Hopital's rule are answered, where they did not
+finish or were left unevaluated.** The rule differentiates the whole of each side, and the product rule
+carries every factor beside the one it differentiates. Now a factor that tends to a finite number other
+than 0 at an infinity is replaced by that number, as one continuous at a finite point already was, and a
+polynomial written on both sides is divided out. The quotient of two logarithms does the same with the
+four parts it is built from.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"ln(tanh(x) + x) / ln((x - pi)^2)".ToEntity().Limit("x", "+oo")` | did not finish in 30 s | `1/2` |
+| `"ln(tanh(x) + x) / ln(x - pi)".ToEntity().Limit("x", "+oo")` | did not finish in 30 s | `1` |
+| `"ln(arctan(x) + x) / ln(x)".ToEntity().Limit("x", "+oo")` | unevaluated | `1` |
+| `"tanh(x) * x / (x + tanh(x))".ToEntity().Limit("x", "-oo")` | did not finish in 30 s | `-1` |
+
 ### A complex constant does not make the two sides of a limit differ
 
 **A two-sided limit with a complex constant in it is answered where each side is, where it was NaN.** Where the

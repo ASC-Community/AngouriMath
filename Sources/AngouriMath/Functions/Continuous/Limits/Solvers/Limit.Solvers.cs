@@ -353,8 +353,19 @@ namespace AngouriMath.Functions.Algebra
                     // quotients, the limit of ln(x - 1) / ln(ln(x)) at 1 from the left took twelve
                     // seconds over (1/(x - 1)) / ((1/x) / ln(x)), where x ln(x) / (x - 1) takes a
                     // hundredth of one. It took 14 ms before #2275 sent it to this rule.
-                    var ratio = (upperDerivative * lowerLogArgument / (upperLogArgument * lowerDerivative)).InnerSimplified;
+                    // A part that settles at a finite number other than 0 is that number in the limit,
+                    // and left in it is differentiated with the rest: the derivative of x + tanh(x),
+                    // 1 + 1/cosh(x)^2 written through exponentials, tends to 2, and multiplied into
+                    // the quotient ln(x + tanh(x)) / ln(x - pi) did not finish in a minute.
+                    var ratio = (Settled(upperDerivative) * Settled(lowerLogArgument)
+                        / (Settled(upperLogArgument) * Settled(lowerDerivative))).InnerSimplified;
                     return LimitFunctional.ComputeLimit(ratio, x, Real.PositiveInfinity);
+                    Entity Settled(Entity part)
+                        => part.ContainsNode(x)
+                           && LimitFunctional.ComputeLimit(part, x, Real.PositiveInfinity) is { } limit
+                           && limit.Evaled is Real { IsFinite: true, IsNaN: false, IsZero: false }
+                            ? limit
+                            : part;
                 }
                 else
 
