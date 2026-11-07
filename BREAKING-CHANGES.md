@@ -72,6 +72,32 @@ A bare `floor(x)` or `sgn(x)` was already declined there. Away from a jump, noth
 | `"limit(floor(x) + x, x, 1)".ToEntity().Simplify()` | `2` | `limit(floor(x) + x, x, 1)` |
 | `"limitleft(-sgn(x), x, 0)".ToEntity().Simplify()` | `0` | `limitleft(-sgn(x), x, 0)` |
 
+### A logarithm of a power is read through the logarithm of its base in a limit
+
+**Silent: in a limit, the logarithm of a power to a constant real exponent, `log(f^c)`, is read as `c log(f)`, or as
+`c log(-f) + log((-1)^c)` where `f` is negative near the point.** Nothing read it through `log(f)`, so a logarithm to
+the base `x` of `arcsin(x)^tan(1/2)` was left unevaluated where that of `arcsin(x)` was 1 at once. Where `f` is negative
+the second form keeps the principal branch, and an answer that was a decimal is now exact. A left-sided limit at -1 that
+was a wrong finite value is now 0, and where a left side now agrees with the right, the two-sided limit that was NaN
+is that value. Found by limitcheck; no
+issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"log(x, arcsin(x)^tan(1/2))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(log(x, arcsin(x) ^ tan(1/2)), x, 0)` | `sin(1/2) / cos(1/2)` |
+| `"log(x, arcsin(x)^tan(1/2))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(log(x, arcsin(x) ^ tan(1/2)), x, 0)` | `sin(1/2) / cos(1/2)` |
+| `"log(x, arcsin(x)^tan(1/2))".ToEntity().Limit("x", 0)` | `limit(log(x, arcsin(x) ^ tan(1/2)), x, 0)` | `sin(1/2) / cos(1/2)` |
+| `"ln(arcsin(x)^pi) / ln(x)".ToEntity().Limit("x", 0)` | `limit(ln(arcsin(x) ^ pi) / ln(x), x, 0)` | `pi` |
+| `"ln((-x)^pi) / ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1 + 2.14159265358979323846…`, the decimal of pi | `pi` |
+| `"e^(1/2)^x / log(x^2, arctan(x))".ToEntity().Limit("x", -1, ApproachFrom.Left)` | `e ^ 2 / (1/2 * 1 / (-pi / 4 * (-2)))`, wrong: the values tend to 0 | `0` |
+| `"e^(1/2)^x / log(x^2, arctan(x))".ToEntity().Limit("x", -1)` | `NaN` | `0` |
+| `"log(log(x - 1, 1/2), log(abs(x), x^2))".ToEntity().Limit("x", -1, ApproachFrom.Left)` | `NaN` | `-0.19160486490703… - 0.22317814847246…i`, as from the right |
+| `"log(log(x - 1, 1/2), log(abs(x), x^2))".ToEntity().Limit("x", -1)` | `NaN` | `-0.19160486490703… - 0.22317814847246…i` |
+| `"sqrt(x / 2)^(x^pi * x)".ToEntity().Limit("x", 0, ApproachFrom.Right)`, and from the left | `limitright(sqrt(x / 2) ^ (x ^ pi * x), x, 0)` | `1` |
+| `"log(x^pi, sgn(-1))^2".ToEntity().Limit("x", 1, ApproachFrom.Right)`, and from the left | `limitright(log(x ^ pi, sgn(-1)) ^ 2, x, 1)` | `-oo` |
+| `"log(x^pi, sgn(-1))^2".ToEntity().Limit("x", 1)` | `NaN` | `-oo` |
+| `"(tanh(x)^erf(2))^sin(x^3)".ToEntity().Limit("x", 0, ApproachFrom.Right)`, and from the left | `limitright((((e ^ (2 * x) - 1) / (e ^ (2 * x) + 1)) ^ erf(2)) ^ sin(x ^ 3), x, 0)` | `1` |
+
 ### An equation through a negative whole power is not answered with no roots
 
 **Silent: an empty answer becomes the roots.** Inverting `x^n = v` for a negative whole `n` multiplied by the roots
