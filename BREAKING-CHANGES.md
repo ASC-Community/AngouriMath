@@ -123,6 +123,18 @@ four parts it is built from.
 | `"ln(arctan(x) + x) / ln(x)".ToEntity().Limit("x", "+oo")` | unevaluated | `1` |
 | `"tanh(x) * x / (x + tanh(x))".ToEntity().Limit("x", "-oo")` | did not finish in 30 s | `-1` |
 
+### A quotient whose divisor is 0 near the point has no limit there
+
+**A limit of a quotient whose divisor is 0 all the way in is NaN, where it was a number.** `abs(x) - x` is
+0 for every positive `x`, so `(abs(x) - x) / (abs(x) - x)` has no value anywhere near 1, and l'Hopital's
+rule, whose premise is a divisor that is not 0 near the point, read it as 1. A two-sided limit is NaN only
+where the divisor is 0 on both sides, since one side alone still approaches the point.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(abs(x) - x) / (abs(x) - x)".ToEntity().Limit("x", 1)` | `1` | `NaN` |
+| `"(abs(x) - x) * x / ((abs(x) - x) * sin(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` | `NaN` |
+
 ### A complex constant does not make the two sides of a limit differ
 
 **A two-sided limit with a complex constant in it is answered where each side is, where it was NaN.** Where the

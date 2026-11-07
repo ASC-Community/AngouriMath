@@ -1291,6 +1291,28 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// Whether <paramref name="difference"/> is 0 throughout a punctured one-sided
+        /// neighbourhood of the destination: with every abs and sign in it whose argument keeps a
+        /// sign there replaced by that argument or its negative, and by that sign, it simplifies to
+        /// 0. Nothing is sampled, since a sample can land on a zero: sin(pi / x) is 0 at every
+        /// power of ten.
+        /// </summary>
+        internal static bool VanishesNear(Entity difference, Variable x, Entity dest, ApproachFrom side)
+        {
+            var read = difference.Replace(node => node switch
+            {
+                Absf(var argument) when argument.ContainsNode(x) && SignNear(argument, x, dest, side) is { } sign
+                    => sign > 0 ? argument : -argument,
+                Signumf(var argument) when argument.ContainsNode(x) && SignNear(argument, x, dest, side) is { } sign
+                    => Integer.Create(sign),
+                _ => node
+            });
+            var simplified = read.Simplify();
+            while (simplified is Providedf(var body, _)) simplified = body;
+            return simplified == Integer.Zero;
+        }
+
+        /// <summary>
         /// How deep the rule may be applied to one limit. Differentiating both parts does not
         /// always make the quotient simpler -- x / sqrt(x^2 + 1) turns into sqrt(x^2 + 1) / x,
         /// which turns back, so the two stay indeterminate forever -- and without a bound the

@@ -377,6 +377,17 @@ namespace AngouriMath.Functions.Algebra
                 : RealCodomainWithdraws(expr, x, dest, side))
                 return null;
 
+            // A quotient whose divisor is 0 all the way in has no value there, and has no limit:
+            // (abs(x) - x) / (abs(x) - x) at 1 was 1, from l'Hopital's rule, whose premise is a
+            // divisor that is not 0 near the point. Two-sided, only where it has no value on
+            // either side, since one side alone still approaches the point.
+            if (dest.IsFinite && expr is Divf(_, var divisor)
+                && divisor.ContainsNode(x) && divisor.Nodes.Any(static node => node is Absf or Signumf)
+                && (side is ApproachFrom.BothSides
+                    ? VanishesNear(divisor, x, dest, ApproachFrom.Left) && VanishesNear(divisor, x, dest, ApproachFrom.Right)
+                    : VanishesNear(divisor, x, dest, side)))
+                return MathS.NaN;
+
             expr = expr.Replace(ExpandLogarithm);
 
             // In front of both paths, not only the two-sided one. Each of these is guarded on
