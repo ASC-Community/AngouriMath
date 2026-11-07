@@ -1655,7 +1655,32 @@ namespace AngouriMath.Functions.Algebra
                 return (Integer.One, expr);
             Entity value = Integer.One, rest = Integer.One;
             var any = false;
-            foreach (var factor in Mulf.LinearChildren(expr))
+            Gather(expr);
+            return any && rest.ContainsNode(x) ? (value.InnerSimplified, rest.InnerSimplified) : (Integer.One, expr);
+
+            // A quotient is asked whole before it is taken apart. tanh(x) written through exponentials
+            // is (e^(2x) - 1) / (e^(2x) + 1), which tends to 1 at +oo, while its two parts tend to +oo
+            // and to 0 and neither is taken out.
+            void Gather(Entity node)
+            {
+                if (node is Mulf(var left, var right))
+                {
+                    Gather(left);
+                    Gather(right);
+                }
+                else if (TakeOut(node))
+                    return;
+                else if (node is Divf)
+                    foreach (var factor in Mulf.LinearChildren(node))
+                    {
+                        if (!TakeOut(factor))
+                            rest *= factor;
+                    }
+                else
+                    rest *= node;
+            }
+
+            bool TakeOut(Entity factor)
             {
                 if (factor.ContainsNode(x)
                     && !factor.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise)
@@ -1665,11 +1690,10 @@ namespace AngouriMath.Functions.Algebra
                 {
                     value *= there;
                     any = true;
+                    return true;
                 }
-                else
-                    rest *= factor;
+                return false;
             }
-            return any && rest.ContainsNode(x) ? (value.InnerSimplified, rest.InnerSimplified) : (Integer.One, expr);
         }
 
         /// <summary>Whether <paramref name="node"/> is built from <paramref name="x"/> and real constants by sums, differences, products and positive whole powers.</summary>

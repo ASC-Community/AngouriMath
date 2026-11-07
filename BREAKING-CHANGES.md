@@ -112,12 +112,14 @@ analytic where they are defined and is plainly not 0 at a point.
 **Limits whose derivatives grew without bound under l'Hopital's rule are answered, where they did not
 finish or were left unevaluated.** The rule differentiates the whole of each side, and the product rule
 carries every factor beside the one it differentiates. Now a factor that tends to a finite number other
-than 0 at an infinity is replaced by that number, as one continuous at a finite point already was, and a
+than 0 at an infinity is replaced by that number, a quotient such as tanh(x) written through exponentials
+being asked whole before its parts, as one continuous at a finite point already was, and a
 polynomial written on both sides is divided out. The quotient of two logarithms does the same with the
 four parts it is built from.
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
+| `"tanh(x) * x / (x + tanh(x))".ToEntity().Limit("x", "+oo")` | did not finish in 60 s | `1` |
 | `"ln(tanh(x) + x) / ln((x - pi)^2)".ToEntity().Limit("x", "+oo")` | did not finish in 30 s | `1/2` |
 | `"ln(tanh(x) + x) / ln(x - pi)".ToEntity().Limit("x", "+oo")` | did not finish in 30 s | `1` |
 | `"ln(arctan(x) + x) / ln(x)".ToEntity().Limit("x", "+oo")` | unevaluated | `1` |
