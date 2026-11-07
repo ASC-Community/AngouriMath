@@ -42,6 +42,21 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A product with a quotient for a factor is read over that quotient's divisor in a one-sided limit
+
+**Silent: a one-sided limit of a product whose factors tend to 0 and to an infinity, one of them a quotient, is asked
+as that quotient with the other factor in its dividend.** Read as a product nothing settled the form. Some of these
+were left unevaluated, and some took half a minute through l'Hôpital's rule for what the same expression over one
+divisor answers at once. A two-sided limit is not changed. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(ln(x) * x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(ln(x) * x), x, 0)` | `0` |
+| `"floor(x * log(pi, x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(floor(x * log(pi, x)), x, 0)` | `-1` |
+| `"sgn(sin(x) * log(pi, x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sgn(sin(x) * log(pi, x)), x, 0)` | `-1` |
+| `"arcsin(-x * log(-1, x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(arcsin(-x * log(-1, x)), x, 0)` | `0` |
+| `"x * log(2 + x, x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` after 27 s | `0` in 0.25 s |
+
 ### A limit at the jump of a step function is not answered by substitution
 
 **Silent: a limit of an expression built on `floor`, `ceil`, `round` or `sgn`, where the step's argument arrives on one

@@ -79,6 +79,26 @@ namespace AngouriMath
                         return byMultiplier;
                     if (AnInfinityTimesASign(Multiplicand, Multiplier, multiplierLimit, dividing: false, x, dist, side) is { } byMultiplicand)
                         return byMultiplicand;
+                    // 0 * oo from one side, with a quotient for one factor, is asked as that quotient
+                    // with the other factor in its dividend, its whole limit once. Read as a product,
+                    // nothing settles the form, and the rewriting solvers took x * (ln(x) / ln(2 + x)) at
+                    // 0 from the right through l'Hopital's rule for longer than any caller waits, where
+                    // (x ln(x)) / ln(2 + x) is 0 at once. One-sided only, and not while the sides of a
+                    // two-sided limit are compared: two-sided, x * ln(x) / ln(2 + x) at 0 is NaN, its
+                    // left side being complex, and regrouped there the same product written with
+                    // brackets came back 0.
+                    if (side is not ApproachFrom.BothSides && !IsComparingSides
+                        && multiplierLimit is { } zeroOrInfinity1 && multiplicandLimit is { } zeroOrInfinity2
+                        && IsZeroTimesAnInfinity(zeroOrInfinity1, zeroOrInfinity2)
+                        && (Multiplicand, Multiplier) switch
+                        {
+                            (Divf(var dividend, var divisor), var other) => new Divf(other * dividend, divisor),
+                            (var other, Divf(var dividend, var divisor)) => new Divf(dividend * other, divisor),
+                            _ => null
+                        } is { } regrouped
+                        && AsTheWholeLimit(regrouped, x, dist, side) is { } overOneDivisor
+                        && overOneDivisor.Evaled != MathS.NaN)
+                        return overOneDivisor;
                     var (mp, md) =
                         (multiplierLimit, multiplicandLimit) switch
                         {
@@ -203,6 +223,15 @@ namespace AngouriMath
             {
                 (Complex { IsZero: true }, Complex { IsZero: true }) => true,
                 (Number { IsFinite: false, IsNaN: false }, Number { IsFinite: false, IsNaN: false }) => true,
+                _ => false,
+            };
+
+        /// <summary>Whether two factors' limits make a product 0 * oo.</summary>
+        private static bool IsZeroTimesAnInfinity(Entity first, Entity second)
+            => (first.Evaled, second.Evaled) switch
+            {
+                (Complex { IsZero: true }, Number { IsFinite: false, IsNaN: false }) => true,
+                (Number { IsFinite: false, IsNaN: false }, Complex { IsZero: true }) => true,
                 _ => false,
             };
 
