@@ -1671,26 +1671,32 @@ namespace AngouriMath.Functions.Algebra
             => factor.ContainsNode(x) && (factor is Powf(var @base, Integer) ? IsAPolynomialIn(@base, x) : IsAPolynomialIn(factor, x));
 
         /// <summary>
-        /// <paramref name="numerator"/> over <paramref name="denominator"/> with every factor that
-        /// is a polynomial in <paramref name="x"/>, not identically 0, and written on both sides to
-        /// a whole power, divided out by the smaller of the two powers; null where there is none.
+        /// <paramref name="numerator"/> over <paramref name="denominator"/> with every factor in
+        /// <paramref name="x"/> that is not identically 0 and is written on both sides to a whole
+        /// power divided out by the smaller of the two powers; null where there is none.
         /// </summary>
         /// <remarks>
         /// A polynomial that is not identically 0 has finitely many zeros, so it is not 0 anywhere
         /// on a punctured neighbourhood of a point or of an infinity close enough in, and the two
-        /// quotients agree there. Differentiated instead, the factor is carried through the product
+        /// quotients agree there. A factor analytic where it is defined and not identically 0 has
+        /// zeros that may gather at the destination but fill no interval, so the quotient with it
+        /// cancelled agrees with the other wherever the other is defined, and where it has a limit
+        /// the other has the same one. l'Hopital's rule turns ln(sinh(x)^3) into a quotient with
+        /// (e^x - e^(-x))^2 above and (e^x - e^(-x))^3 below, and (sinh(x)^3)^tan(x) at 0, which
+        /// is 1, was left unevaluated from each side for differentiating them. Differentiated instead, the factor is carried through the product
         /// rule with everything beside it: (x - pi)^2 / ((x + tanh(x)) * (x - pi)) at +oo took
         /// seven seconds, where x^2 / ((x + tanh(x)) * x), whose x the normalisation cancels, took
         /// a fortieth of one; and ln(x + tanh(x)) / ln((x - pi)^2), which l'Hopital's rule turns
         /// into the first, did not finish.
         /// </remarks>
-        private static Entity? WithThePolynomialFactorsOnBothSidesCancelled(Entity numerator, Entity denominator, Variable x)
+        private static Entity? WithTheFactorsOnBothSidesCancelled(Entity numerator, Entity denominator, Variable x)
         {
             var above = Powers(numerator);
             var below = Powers(denominator);
             var cancelledAny = false;
             foreach (var @base in above.Keys.ToList())
-                if (below.TryGetValue(@base, out var underneath) && IsAPolynomial(@base) && !VanishesIdentically(@base))
+                if (below.TryGetValue(@base, out var underneath) && @base.ContainsNode(x)
+                    && (IsAPolynomialIn(@base, x) ? !VanishesIdentically(@base) : IsAnalyticAndNotZero(@base)))
                 {
                     var common = Math.Min(above[@base], underneath);
                     above[@base] -= common;
@@ -1724,7 +1730,16 @@ namespace AngouriMath.Functions.Algebra
                         built *= pair.Value == 1 ? pair.Key : MathS.Pow(pair.Key, pair.Value);
                 return built.InnerSimplified;
             }
-            bool IsAPolynomial(Entity node) => node.ContainsNode(x) && IsAPolynomialIn(node, x);
+            // Any other base is cancelled only where it is made of functions analytic where they
+            // are defined, so that one that is not 0 everywhere has zeros that do not fill an
+            // interval, and only where it is plainly not 0 at a point: an abs, a sign, a step or
+            // a piecewise can be 0 on one side and not the other, as abs(x) - x is, and
+            // sin(x)^2 + cos(x)^2 - 1 is 0 though it may evaluate to a rounding error.
+            bool IsAnalyticAndNotZero(Entity @base)
+                => !@base.Nodes.Any(static node => node is Absf or Signumf or Floorf or Ceilf or Roundf or Piecewise or Providedf)
+                   && (ClearlyNotZero(@base.Substitute(x, Rational.Create(7, 3))) || ClearlyNotZero(@base.Substitute(x, Rational.Create(-11, 5))));
+            static bool ClearlyNotZero(Entity value)
+                => value.Evaled is Complex { IsFinite: true } number && !number.IsNaN && Complex.Abs(number) > Rational.Create(1, 1000);
             // At two points, since a polynomial that is not 0 everywhere may still be 0 at one:
             // x - x is not cancelled, as 0 / 0 is not 1.
             bool VanishesIdentically(Entity polynomial)
@@ -1749,7 +1764,7 @@ namespace AngouriMath.Functions.Algebra
                                 var taken = (numValue / denValue).InnerSimplified;
                                 // A factor written on both sides is divided out rather than
                                 // differentiated, and the smaller quotient is asked instead.
-                                if (WithThePolynomialFactorsOnBothSidesCancelled(numRest, denRest, x) is { } cancelled)
+                                if (WithTheFactorsOnBothSidesCancelled(numRest, denRest, x) is { } cancelled)
                                     return ComputeLimit(cancelled, x, dest, side) is { } cancelledLimit ? Times(taken, cancelledLimit) : null;
                                 // Simplified, because the shape of the quotient is what the
                                 // machinery below matches on and differentiation does not

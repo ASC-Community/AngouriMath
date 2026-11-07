@@ -93,6 +93,20 @@ root near 23.
 | `"x^7 - 5x^6 + 1 = 0".Solve("x")` | six roots, none of them near 5 | seven roots |
 | `"x^4 - 3*x^(5/2) + 2 = 0".Solve("x")` | `{ 1, 4.8870…^(2/5) }` | four roots: `1`, `1.3734…^2`, and two off the real line |
 
+### l'Hopital's rule cancels any factor written on both sides
+
+**Limits whose derivatives carried a factor written on both sides of the quotient are answered, where
+they were NaN in 2.6.0 and left unevaluated after it.** A factor that is not a polynomial, such as the
+e^x - e^(-x) of a sinh, is now divided out as a polynomial one is, where it is built from functions
+analytic where they are defined and is plainly not 0 at a point.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(sinh(x)^3) ^ tan(x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `NaN` | `1` |
+| `"(sinh(x)^3) ^ tan(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `1` |
+| `"x / cos(x) * ln(sinh(x)^3)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `0` |
+| `"sin(x) / cos(x) * ln((e^x - 1)^3)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `0` |
+
 ### l'Hopital's rule leaves out what only makes the derivatives larger
 
 **Limits whose derivatives grew without bound under l'Hopital's rule are answered, where they did not
