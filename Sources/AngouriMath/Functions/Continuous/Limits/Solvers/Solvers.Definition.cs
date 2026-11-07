@@ -299,6 +299,13 @@ namespace AngouriMath.Functions.Algebra
             => !comparingSides && !ReferenceEquals(power, descentRoot);
 
         /// <summary>
+        /// Whether the descent is reading the two sides of a two-sided limit to compare them. A
+        /// side read there is not that side's question, and a product regrouped there would decide
+        /// a two-sided limit with a complex side that the comparison leaves undecided.
+        /// </summary>
+        internal static bool IsComparingSides => comparingSides;
+
+        /// <summary>
         /// Whether <paramref name="expr"/> is the whole of the question whose descent is under
         /// way. The path that began the descent asks the rest of the machinery of it once the
         /// descent has nothing to say, so the descent does not ask its whole limit as well.
