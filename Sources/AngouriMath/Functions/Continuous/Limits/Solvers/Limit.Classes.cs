@@ -218,6 +218,12 @@ namespace AngouriMath
             // definite integral's bounds left the bounds none, and the integral unevaluated.
             if (Functions.Algebra.LimitFunctional.UnderALimitBudget)
                 return null;
+            // Nor of the whole question, which the path that began the descent asks the rest of the
+            // machinery of once the descent has nothing to say. Asked here as well, it descended
+            // again and simplified the same expression twice: (1 - tanh(x)^2) * x * (1 + x^2) / tanh(x)
+            // at 0 from the right spent nine seconds on each before l'Hopital's rule answered 1.
+            if (Functions.Algebra.LimitFunctional.IsTheWholeQuestion(quotient))
+                return null;
             quotientsAskedWhole ??= new();
             if (quotientsAskedWhole.Count > 0 || !quotientsAskedWhole.Add(quotient))
                 return null;

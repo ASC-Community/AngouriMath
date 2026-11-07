@@ -26,6 +26,10 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("sin(x)^tanh(x)")]
         [InlineData("tan(x)^sin(tanh(x))")]
         [InlineData("tan(2*x)^sin(tanh(x))")]
+        // The 1 - tanh(x)^2 the derivative of tanh brings, taken out at 0. The descent of the quotient
+        // asked its whole limit again from inside, which simplified the quotient moved out to infinity
+        // a second time before l'Hopital's rule answered.
+        [InlineData("(1 - tanh(x)^2) * x / tanh(x)")]
         public void IsOneFromTheRight(string input)
             => Assert.Equal(MathS.FromString("1"), MathS.FromString(input).Limit("x", 0, ApproachFrom.Right));
 

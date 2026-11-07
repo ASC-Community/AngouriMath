@@ -299,6 +299,13 @@ namespace AngouriMath.Functions.Algebra
             => !comparingSides && !ReferenceEquals(power, descentRoot);
 
         /// <summary>
+        /// Whether <paramref name="expr"/> is the whole of the question whose descent is under
+        /// way. The path that began the descent asks the rest of the machinery of it once the
+        /// descent has nothing to say, so the descent does not ask its whole limit as well.
+        /// </summary>
+        internal static bool IsTheWholeQuestion(Entity expr) => ReferenceEquals(expr, descentRoot);
+
+        /// <summary>
         /// A logarithm to a base other than e as a quotient of natural logarithms.
         /// </summary>
         /// <remarks>
