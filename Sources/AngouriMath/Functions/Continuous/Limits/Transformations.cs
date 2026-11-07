@@ -1609,7 +1609,8 @@ namespace AngouriMath.Functions.Algebra
 
         /// <summary>
         /// The factors of <paramref name="expr"/> that are continuous at a finite destination with a
-        /// finite non-zero value there, as that value, and the product of the rest.
+        /// finite non-zero value there, as that value, or that tend to a finite non-zero limit at an
+        /// infinite one, as that limit, and the product of the rest.
         /// </summary>
         /// <remarks>
         /// l'Hopital's rule differentiates both parts of the quotient, and a factor that tends to a
@@ -1619,10 +1620,16 @@ namespace AngouriMath.Functions.Algebra
         /// in a minute, where x * (1 + x^2) / tanh(x) takes a tenth of a second. Only a factor real
         /// for real x and with no step in it, so that its value at the point is its limit from
         /// either side.
+        /// <para/>
+        /// At an infinity there is no value to substitute, and the factor's limit stands in for it:
+        /// lim c(x) f(x) / g(x) is lim c(x) times lim f(x) / g(x) wherever the first is a finite
+        /// number other than 0. Left in, tanh(x) * x / (x + tanh(x)) at +oo did not finish in a
+        /// minute, and with it ln(x + tanh(x)) / ln(x), whose derivatives' quotient it is; taken
+        /// out, x / (x + tanh(x)) is 1.
         /// </remarks>
-        private static (Entity Value, Entity Others) TakeOutContinuousFactors(Entity expr, Variable x, Entity dest)
+        private static (Entity Value, Entity Others) TakeOutContinuousFactors(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
-            if (expr is not Mulf || !dest.IsFinite)
+            if (expr is not Mulf)
                 return (Integer.One, expr);
             Entity value = Integer.One, rest = Integer.One;
             var any = false;
@@ -1631,7 +1638,7 @@ namespace AngouriMath.Functions.Algebra
                 if (factor.ContainsNode(x)
                     && !factor.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise)
                     && TreeAnalyzer.IsRealValued(factor, x)
-                    && factor.Substitute(x, dest) is var there
+                    && (dest.IsFinite ? factor.Substitute(x, dest) : IsAPolynomialPower(factor, x) ? MathS.NaN : ComputeLimit(factor, x, dest, side) ?? MathS.NaN) is var there
                     && there.Evaled is Real { IsFinite: true, IsNaN: false, IsZero: false })
                 {
                     value *= there;
@@ -1641,6 +1648,88 @@ namespace AngouriMath.Functions.Algebra
                     rest *= factor;
             }
             return any && rest.ContainsNode(x) ? (value.InnerSimplified, rest.InnerSimplified) : (Integer.One, expr);
+        }
+
+        /// <summary>Whether <paramref name="node"/> is built from <paramref name="x"/> and real constants by sums, differences, products and positive whole powers.</summary>
+        private static bool IsAPolynomialIn(Entity node, Variable x) => node switch
+        {
+            _ when !node.ContainsNode(x) => node.Evaled is Real { IsFinite: true },
+            Variable variable => variable == x,
+            Sumf(var left, var right) => IsAPolynomialIn(left, x) && IsAPolynomialIn(right, x),
+            Minusf(var left, var right) => IsAPolynomialIn(left, x) && IsAPolynomialIn(right, x),
+            Mulf(var left, var right) => IsAPolynomialIn(left, x) && IsAPolynomialIn(right, x),
+            Powf(var @base, Integer { EInteger.Sign: > 0 }) => IsAPolynomialIn(@base, x),
+            _ => false
+        };
+
+        /// <summary>
+        /// Whether <paramref name="factor"/> is a polynomial in <paramref name="x"/> that is not a
+        /// constant, or one to a whole power, which at an infinity tends to an infinity or to 0 and
+        /// never to a finite number other than 0, so that asking its limit is wasted.
+        /// </summary>
+        private static bool IsAPolynomialPower(Entity factor, Variable x)
+            => factor.ContainsNode(x) && (factor is Powf(var @base, Integer) ? IsAPolynomialIn(@base, x) : IsAPolynomialIn(factor, x));
+
+        /// <summary>
+        /// <paramref name="numerator"/> over <paramref name="denominator"/> with every factor that
+        /// is a polynomial in <paramref name="x"/>, not identically 0, and written on both sides to
+        /// a whole power, divided out by the smaller of the two powers; null where there is none.
+        /// </summary>
+        /// <remarks>
+        /// A polynomial that is not identically 0 has finitely many zeros, so it is not 0 anywhere
+        /// on a punctured neighbourhood of a point or of an infinity close enough in, and the two
+        /// quotients agree there. Differentiated instead, the factor is carried through the product
+        /// rule with everything beside it: (x - pi)^2 / ((x + tanh(x)) * (x - pi)) at +oo took
+        /// seven seconds, where x^2 / ((x + tanh(x)) * x), whose x the normalisation cancels, took
+        /// a fortieth of one; and ln(x + tanh(x)) / ln((x - pi)^2), which l'Hopital's rule turns
+        /// into the first, did not finish.
+        /// </remarks>
+        private static Entity? WithThePolynomialFactorsOnBothSidesCancelled(Entity numerator, Entity denominator, Variable x)
+        {
+            var above = Powers(numerator);
+            var below = Powers(denominator);
+            var cancelledAny = false;
+            foreach (var @base in above.Keys.ToList())
+                if (below.TryGetValue(@base, out var underneath) && IsAPolynomial(@base) && !VanishesIdentically(@base))
+                {
+                    var common = Math.Min(above[@base], underneath);
+                    above[@base] -= common;
+                    below[@base] -= common;
+                    cancelledAny = true;
+                }
+            if (!cancelledAny)
+                return null;
+            // Only where what is left is still a quotient of two functions of x: 3x^2 / (x^3 * f(x))
+            // at 0 became 3 / (x * f(x)), which is no longer a question for this rule, and the
+            // limits machinery took more than twenty seconds over it where differentiating took one.
+            var (top, bottom) = (Rebuild(above), Rebuild(below));
+            return top.ContainsNode(x) && bottom.ContainsNode(x) ? top / bottom : null;
+
+            static Dictionary<Entity, int> Powers(Entity side)
+            {
+                var powers = new Dictionary<Entity, int>();
+                foreach (var factor in Mulf.LinearChildren(side))
+                {
+                    var (@base, power) = factor is Powf(var repeated, Integer { EInteger.Sign: > 0 } times) && times.EInteger.CanFitInInt32()
+                        ? (repeated, times.EInteger.ToInt32Unchecked()) : (factor, 1);
+                    powers[@base] = powers.TryGetValue(@base, out var already) ? already + power : power;
+                }
+                return powers;
+            }
+            static Entity Rebuild(Dictionary<Entity, int> powers)
+            {
+                Entity built = Integer.One;
+                foreach (var pair in powers)
+                    if (pair.Value > 0)
+                        built *= pair.Value == 1 ? pair.Key : MathS.Pow(pair.Key, pair.Value);
+                return built.InnerSimplified;
+            }
+            bool IsAPolynomial(Entity node) => node.ContainsNode(x) && IsAPolynomialIn(node, x);
+            // At two points, since a polynomial that is not 0 everywhere may still be 0 at one:
+            // x - x is not cancelled, as 0 / 0 is not 1.
+            bool VanishesIdentically(Entity polynomial)
+                => polynomial.Substitute(x, Rational.Create(7, 3)).Evaled == Integer.Zero
+                   && polynomial.Substitute(x, Rational.Create(-11, 5)).Evaled == Integer.Zero;
         }
 
         private static Entity? ApplylHopitalRuleImpl(Entity expr, Variable x, Entity dest, ApproachFrom side)
@@ -1655,9 +1744,13 @@ namespace AngouriMath.Functions.Algebra
                             if (num.ContainsNode(x) && den.ContainsNode(x)
                                 && !HasAStepThatJumpsNear(expr, x, dest, side))
                             {
-                                var (numValue, numRest) = TakeOutContinuousFactors(num, x, dest);
-                                var (denValue, denRest) = TakeOutContinuousFactors(den, x, dest);
+                                var (numValue, numRest) = TakeOutContinuousFactors(num, x, dest, side);
+                                var (denValue, denRest) = TakeOutContinuousFactors(den, x, dest, side);
                                 var taken = (numValue / denValue).InnerSimplified;
+                                // A factor written on both sides is divided out rather than
+                                // differentiated, and the smaller quotient is asked instead.
+                                if (WithThePolynomialFactorsOnBothSidesCancelled(numRest, denRest, x) is { } cancelled)
+                                    return ComputeLimit(cancelled, x, dest, side) is { } cancelledLimit ? Times(taken, cancelledLimit) : null;
                                 // Simplified, because the shape of the quotient is what the
                                 // machinery below matches on and differentiation does not
                                 // produce it: d/dx ln(x)^2 is 2 * ln(x) * (1 / x), a product
@@ -1686,7 +1779,13 @@ namespace AngouriMath.Functions.Algebra
                                 // cos(x) * (e^x - e^(-x)), and its derivatives' quotient, which is 2 at 0,
                                 // was turned away, so cos(x) * sinh(x) / sin(x) from the right at 0 was
                                 // left unevaluated, and ln(sin(x)) / ln(sinh(x)) with it.
-                                if (GrewTooMuch(expr, applied))
+                                // At an infinity the growth is measured against what was differentiated, not
+                                // against the quotient with the settling factors still in it, which the
+                                // taking out would otherwise count as room to grow:
+                                // log(x, 1/2) ^ (e^x - sgn(x)) at 0 from the right, whose descent reaches
+                                // here at +oo with e^(1/x) taken out, took nine seconds where it took a half.
+                                // At a finite point the bound is as it was, whose taking out it was set for.
+                                if (GrewTooMuch(dest.IsFinite ? expr : numRest / denRest, applied))
                                     return ItsValueAt(applied, x, dest) is { } value ? Times(taken, value) : null;
                                 lHopitalApplications++;
                                 MultithreadingFunctional.ExitIfCancelled();
