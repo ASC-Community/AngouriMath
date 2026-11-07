@@ -26,10 +26,17 @@ namespace AngouriMath.Functions
                 return (leftNum + rightNum).InnerSimplified / leftDen;
 
             var twoInt = ((leftNum + leftDen).Vars, (rightNum + rightDen).Vars).IntersectSequences().Any();
-            if (twoInt)
-                return (leftNum * rightDen + rightNum * leftDen).Simplify() / (rightDen * leftDen).Simplify();
-            else
+            if (!twoInt)
                 return expr;
+            // Over the least common multiple where the denominators share a factor, for the same
+            // reason: (e^(2x) + 1)^2 (e^(2x) - 1) and e^(2x) - 1 cross-multiplied square the
+            // shared factor, and each sum after it multiplies the denominators again before
+            // anything cancels. (1 - tanh(x)^2) / tanh(x) written through exponentials took two
+            // seconds to simplify, nearly all of it in two sums whose denominators had grown to
+            // (e^(2x) + 1)^6 (e^(2x) - 1)^3. The multiple is 0 exactly where the product is.
+            if (SingleQuotient.LeastCommonMultipleOfSharing(leftDen, rightDen) is { } multiple)
+                return (leftNum * multiple.ForA + rightNum * multiple.ForB).Simplify() / multiple.Common.Simplify();
+            return (leftNum * rightDen + rightNum * leftDen).Simplify() / (rightDen * leftDen).Simplify();
         }
 
         // a * b * c / (b * c * d)

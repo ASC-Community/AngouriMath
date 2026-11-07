@@ -141,6 +141,45 @@ namespace AngouriMath.Functions
             }
         }
 
+        /// <summary>
+        /// The least common multiple of two denominators as written, each factor to the highest
+        /// power either has it, with what each is multiplied by to reach it; <see langword="null"/>
+        /// where they share no factor other than a whole number, and their product is that multiple.
+        /// </summary>
+        internal static (Entity Common, Entity ForA, Entity ForB)? LeastCommonMultipleOfSharing(Entity a, Entity b)
+        {
+            (a, b) = (AsFactors(a), AsFactors(b));
+            var (_, aFactors) = Factors(a);
+            var (_, bFactors) = Factors(b);
+            if (!aFactors.Any(factor => bFactors.Any(other => other.Base == factor.Base)))
+                return null;
+            return Over(a, b, leastCommon: true);
+        }
+
+        /// <summary>
+        /// A denominator written so that a factor shared with another is written alike: a whole
+        /// power of a product as the product of its factors' powers, so that
+        /// <c>((u - 1) (u + 1))^2</c> shares <c>u - 1</c>, and each factor inner-simplified, with a
+        /// negative number added written as one subtracted, so that <c>u + -1</c> is <c>u - 1</c>,
+        /// which inner simplification leaves as it is.
+        /// </summary>
+        private static Entity AsFactors(Entity denominator)
+        {
+            Entity product = Integer.One;
+            foreach (var factor in Mulf.LinearChildren(denominator))
+                product *= factor is Powf(Mulf inner, Integer { EInteger.Sign: > 0 } power)
+                    ? Mulf.LinearChildren(inner).Aggregate((Entity)Integer.One, (built, each) => built * MathS.Pow(Written(each), power))
+                    : factor is Powf(var @base, Integer { EInteger.Sign: > 0 } raisedTo) ? MathS.Pow(Written(@base), raisedTo) : Written(factor);
+            return product;
+
+            static Entity Written(Entity factor)
+                => factor.InnerSimplified switch
+                {
+                    Sumf(var augend, Real { IsNegative: true } negative) => (augend - (-negative)).InnerSimplified,
+                    var simplified => simplified,
+                };
+        }
+
         private static void Carry(Entity denominator, List<Entity>? carried)
         {
             if (carried is not null && denominator != Integer.One)
