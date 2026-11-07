@@ -1181,6 +1181,40 @@ namespace AngouriMath.Functions.Algebra
                 () => expr.Substitute(x, Real.Create(PeterO.Numbers.EDecimal.FromString("1E6"))).Evaled);
 
         /// <summary>
+        /// The sign <paramref name="expr"/> keeps near the destination on each side approached, where it
+        /// is real there and the sides agree, or <see langword="null"/>.
+        /// </summary>
+        internal static int? SignOnEachSide(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        {
+            int? sign = null;
+            foreach (var oneSide in Sides(dest, side))
+            {
+                if (!IsRealNear(expr, x, dest, oneSide)
+                    || SignNear(expr, x, dest, oneSide) is not { } here || sign is { } earlier && earlier != here)
+                    return null;
+                sign = here;
+            }
+            return sign;
+        }
+
+        /// <summary>Whether <paramref name="expr"/> is real near the destination on each side approached.</summary>
+        internal static bool IsRealOnEachSide(Entity expr, Variable x, Entity dest, ApproachFrom side)
+            => Sides(dest, side).All(oneSide => IsRealNear(expr, x, dest, oneSide));
+
+        // Where the real region is not known, as arcsin's is not, the form can still say it is real there.
+        private static bool IsRealNear(Entity expr, Variable x, Entity dest, ApproachFrom oneSide)
+            => Functions.TreeAnalyzer.IsRealValued(expr, x)
+                || Functions.TreeAnalyzer.WhereRealValued(expr, x) is { } whereReal && HoldsNear(whereReal, x, dest, oneSide) is true
+                || IsRealOnBothSides(expr, x, dest);
+
+        // The sides a limit approaches from: both at a finite point asked two-sidedly, and one otherwise,
+        // since an infinity is approached from one side whichever is asked.
+        private static ApproachFrom[] Sides(Entity dest, ApproachFrom side)
+            => side is ApproachFrom.BothSides && dest.IsFinite
+                ? new[] { ApproachFrom.Left, ApproachFrom.Right }
+                : new[] { side is ApproachFrom.BothSides ? ApproachFrom.Left : side };
+
+        /// <summary>
         /// The sign an expression keeps throughout a punctured one-sided neighbourhood of the
         /// destination, or <see langword="null"/> where it cannot be read off.
         /// </summary>

@@ -313,6 +313,36 @@ namespace AngouriMath.Functions.Algebra
         internal static bool IsTheWholeQuestion(Entity expr) => ReferenceEquals(expr, descentRoot);
 
         /// <summary>
+        /// A logarithm of a power to a constant real exponent, log(f^c), as c log(f), or as
+        /// c log(-f) + log((-1)^c) where f is negative near the point.
+        /// </summary>
+        /// <remarks>
+        /// For f positive and c real, f^c is positive and ln(f^c) is c ln(f). For f negative, f^c is
+        /// (-f)^c (-1)^c on the principal branch, a positive number times one of modulus 1, so
+        /// ln(f^c) is c ln(-f) + ln((-1)^c), which is c ln(f) only for c in (-1, 1]. In that range the
+        /// first form holds wherever f is real, whatever its sign, so a two-sided limit whose sides
+        /// differ in sign can still be asked through it. Nothing read ln(f^c) through ln(f):
+        /// log(x, arcsin(x)^tan(1/2)) at 0, which is tan(1/2) from each side, was left unevaluated
+        /// after three seconds from the right and four two-sided, where log(x, arcsin(x)) was 1 at
+        /// once. Found by limitcheck at <c>DEPTH=3</c>, <c>SEED=65</c>; no issue was filed.
+        /// </remarks>
+        private static Entity LogarithmOfAPower(Entity node, Variable x, Entity dest, ApproachFrom side)
+        {
+            if (node is not Logf(var @base, Powf(var power, var exponent))
+                || exponent.ContainsNode(x) || exponent.Evaled is not Real { IsFinite: true } c
+                || !power.ContainsNode(x))
+                return node;
+            if (c > -1 && c <= 1 && IsRealOnEachSide(power, x, dest, side))
+                return exponent * new Logf(@base, power);
+            return SignOnEachSide(power, x, dest, side) switch
+            {
+                1 => exponent * new Logf(@base, power),
+                -1 => exponent * new Logf(@base, -power) + new Logf(@base, MathS.Pow(-1, exponent)),
+                _ => node
+            };
+        }
+
+        /// <summary>
         /// A logarithm to a base other than e as a quotient of natural logarithms.
         /// </summary>
         /// <remarks>
@@ -432,6 +462,7 @@ namespace AngouriMath.Functions.Algebra
                 return MathS.NaN;
 
             expr = expr.Replace(ExpandLogarithm);
+            expr = expr.Replace(node => LogarithmOfAPower(node, x, dest, side));
 
             // In front of both paths, not only the two-sided one. Each of these is guarded on
             // a two-sided limit, and a two-sided limit that exists is also the limit from
