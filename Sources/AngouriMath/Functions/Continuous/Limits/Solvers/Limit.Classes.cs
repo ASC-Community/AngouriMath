@@ -405,6 +405,24 @@ namespace AngouriMath
                     && (Exponent.ContainsNode(x) ? Exponent.Simplify() : Exponent).Evaled is Integer { IsNegative: true } wholeExponent
                     && SignOfAVanishingBase(wholeExponent.EInteger.IsEven) is { } sign)
                     return sign > 0 ? Real.PositiveInfinity : Real.NegativeInfinity;
+                // An indeterminate pair, 0^0 among them, is read through the exponent, by the rule
+                // the top level asks of a whole expression and asked of the power here, so that a
+                // power under a function is read too: x^x at 0+ is 1, and sin(x^x) there was
+                // unevaluated. One-sided, or at an infinity, as the top level asks it, and only where
+                // the base is positive on the side approached, so that the power is real there: x^x on
+                // the left of 0 is complex, and the two-sided limit there stays NaN. Where it settles
+                // nothing, the pair is substituted as before, and 0^0 stays NaN. Not in the descents
+                // a two-sided limit compares, where it would settle (-x)^x at 0 and leave x^x NaN, and
+                // not for the whole of the question, which the path above asks once the descent is done.
+                if (baseLimit is { } pairBase && exponentLimit is { } pairExponent
+                    && (side is not ApproachFrom.BothSides || !dist.IsFinite)
+                    && MayReadAPowerThroughItsExponent(this)
+                    && (EvalAssumingContinuous(pairBase) == 0 && EvalAssumingContinuous(pairExponent) == 0
+                        || IsIndeterminatePowerForm(pairBase, pairExponent))
+                    && (side is ApproachFrom.BothSides ? ApproachFrom.Left : side) is var pairSide
+                    && SignNear(Base, x, dist, pairSide) is 1
+                    && SolveAsIndeterminatePower(this, x, dist, pairSide) is { } byExponent)
+                    return byExponent;
                 var substituted =
                     (baseLimit, exponentLimit)
                     switch {

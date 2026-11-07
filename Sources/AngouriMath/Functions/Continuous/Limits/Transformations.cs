@@ -33,7 +33,7 @@ namespace AngouriMath.Functions.Algebra
                && EvalAssumingContinuous(expr.DirectChildren[0].Limit(x, dest)) == 0
                 ? expr.DirectChildren[0]
                 : expr;
-        private static Entity EvalAssumingContinuous(Entity expr) =>
+        internal static Entity EvalAssumingContinuous(Entity expr) =>
             expr.Evaled switch
             {
                 Providedf(var inner, _) => inner,
@@ -498,7 +498,7 @@ namespace AngouriMath.Functions.Algebra
         /// 1^oo is left to <see cref="ApplySecondRemarkable"/>, which answers it more directly,
         /// and 0^oo and oo^oo are not indeterminate at all.
         /// </remarks>
-        private static Entity? SolveAsIndeterminatePower(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        internal static Entity? SolveAsIndeterminatePower(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
             if (expr is not Powf(var @base, var power)
                 || !@base.ContainsNode(x) || !power.ContainsNode(x)
