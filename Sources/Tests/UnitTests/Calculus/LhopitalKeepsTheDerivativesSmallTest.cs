@@ -29,6 +29,7 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("ln(tanh(x) + x) / ln(x)", "+oo", "1")]
         [InlineData("ln(arctan(x) + x) / ln(x)", "+oo", "1")]
         [InlineData("tanh(x) * x / (x + tanh(x))", "-oo", "-1")]
+        [InlineData("tanh(x) * x / (x + tanh(x))", "+oo", "1")]
         [InlineData("(x - pi)^2 / ((x + tanh(x)) * (x - pi))", "+oo", "1")]
         [InlineData("arctan(x) * x / (x + 1)", "+oo", "pi / 2")]
         [InlineData("(x - 1)^2 * sin(x - 1) / ((x - 1)^3 * cos(x))", "1", "sec(1)")]
