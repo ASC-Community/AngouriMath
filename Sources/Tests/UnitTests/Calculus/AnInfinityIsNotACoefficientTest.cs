@@ -46,12 +46,17 @@ namespace AngouriMath.Tests.Calculus
             Assert.Equal(MathS.FromString("+oo"), MathS.FromString("+oo * x").Limit("x", "+oo"));
         }
 
-        // The values are 1 near 1/2, and +oo near 0 from the right; a coefficient evaluated to NaN answered NaN for
-        // both. Neither is answered yet, and a declined limit keeps its node.
+        // The values are 1 near 1/2; a coefficient evaluated to NaN answered NaN. It is not answered yet, and a
+        // declined limit keeps its node.
         [Theory]
         [InlineData("1 ^ log(1 - x, x - x)", "1/2", ApproachFrom.BothSides)]
-        [InlineData("sqrt(x) / x ^ pi + x ^ x", "0", ApproachFrom.Right)]
         public void ANaNCoefficientIsNotAnAnswer(string input, string destination, ApproachFrom side)
             => Assert.IsType<Entity.Limitf>(MathS.FromString(input).Limit("x", destination, side));
+
+        // The values are +oo near 0 from the right, where a coefficient evaluated to NaN answered NaN too. It is
+        // answered since x ^ x, an indeterminate power in a sum, is read through its exponent.
+        [Fact]
+        public void ANaNCoefficientInASumWithAnIndeterminatePower()
+            => Assert.Equal(MathS.FromString("+oo"), MathS.FromString("sqrt(x) / x ^ pi + x ^ x").Limit("x", 0, ApproachFrom.Right));
     }
 }

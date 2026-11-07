@@ -276,6 +276,29 @@ namespace AngouriMath.Functions.Algebra
         [System.ThreadStatic] private static int bothSidesDepth;
 
         /// <summary>
+        /// Whether the descent under way is one of the two a two-sided limit at a finite point
+        /// compares. A power under it reads 0^0 through its exponent only one-sidedly, and two
+        /// sides compared that way make (-x)^x at 0 answer 1 where x^x, its mirror, is NaN: the
+        /// branch each side of the point takes is not this reading's to settle.
+        /// Cleared for each limit asked inside the descent, which is a question of its own.
+        /// </summary>
+        [System.ThreadStatic] private static bool comparingSides;
+
+        /// <summary>
+        /// The expression whose one-sided descent is under way. The one-sided path reads it
+        /// through its exponent itself once the descent has nothing to say, so the descent does
+        /// not ask the same question of it first.
+        /// </summary>
+        [System.ThreadStatic] private static Entity? descentRoot;
+
+        /// <summary>
+        /// Whether a power met in the descent may read itself through its exponent: neither in
+        /// a two-sided comparison nor as the whole of a one-sided question.
+        /// </summary>
+        internal static bool MayReadAPowerThroughItsExponent(Entity power)
+            => !comparingSides && !ReferenceEquals(power, descentRoot);
+
+        /// <summary>
         /// A logarithm to a base other than e as a quotient of natural logarithms.
         /// </summary>
         /// <remarks>
@@ -342,8 +365,14 @@ namespace AngouriMath.Functions.Algebra
             // the work -- which is not a wrong answer but is a slower one, since what it declines
             // to collapse the search then has to explore.
             var enclosingApproach = EnterApproach(x, dest);
+            var (outerComparing, outerRoot) = (comparingSides, descentRoot);
+            (comparingSides, descentRoot) = (false, null);
             try { return ComputeLimitWithinApproach(expr, x, dest, side, acceptNaN); }
-            finally { LeaveApproach(enclosingApproach); }
+            finally
+            {
+                (comparingSides, descentRoot) = (outerComparing, outerRoot);
+                LeaveApproach(enclosingApproach);
+            }
         }
 
         private static Entity? ComputeLimitWithinApproach(Entity expr, Variable x, Entity dest, ApproachFrom side, bool acceptNaN)
@@ -419,7 +448,10 @@ namespace AngouriMath.Functions.Algebra
             if (side is ApproachFrom.Left or ApproachFrom.Right)
             {
                 expr = WithStepsAtTheirLimits(expr, x, dest, side);
-                var oneSided = expr.ComputeLimitDivideEtImpera(x, dest, side);
+                descentRoot = expr;
+                Entity? oneSided;
+                try { oneSided = expr.ComputeLimitDivideEtImpera(x, dest, side); }
+                finally { descentRoot = null; }
                 if (oneSided is { } found && (acceptNaN || found.Evaled != MathS.NaN))
                     return oneSided;
                 // The same rule the two-sided path falls through to, asked with the side it was
@@ -462,7 +494,10 @@ namespace AngouriMath.Functions.Algebra
                 {
                     // just compute limit with no check for left/right equality
                     // here approach left will be ignored anyways, as dest is infinite number
-                    var atInfinity = expr.ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Left);
+                    descentRoot = expr;
+                    Entity? atInfinity;
+                    try { atInfinity = expr.ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Left); }
+                    finally { descentRoot = null; }
                     if (atInfinity is { } found && found.Evaled != MathS.NaN)
                         return found;
                     // l'Hopital's rule was only ever reached for a finite destination, so the
@@ -520,8 +555,8 @@ namespace AngouriMath.Functions.Algebra
                 }
                 // Each side with its own steps put in: floor(x) ^ x at 0 is 1 from the left and 0
                 // from the right, and read bare both sides were 1.
-                else if (WithStepsAtTheirLimits(expr, x, dest, ApproachFrom.Left).ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Left) is { } fromLeft
-                  && WithStepsAtTheirLimits(expr, x, dest, ApproachFrom.Right).ComputeLimitDivideEtImpera(x, dest, ApproachFrom.Right) is { } fromRight)
+                else if (DescendComparingSides(ApproachFrom.Left) is { } fromLeft
+                  && DescendComparingSides(ApproachFrom.Right) is { } fromRight)
                 {
                     if (fromLeft == fromRight && (acceptNaN || fromLeft.Evaled != MathS.NaN))
                         return fromLeft;
@@ -558,6 +593,14 @@ namespace AngouriMath.Functions.Algebra
                 }
             }
             throw new AngouriBugException($"Unresolved enum parameter {side}");
+
+            Entity? DescendComparingSides(ApproachFrom oneSide)
+            {
+                var stepped = WithStepsAtTheirLimits(expr, x, dest, oneSide);
+                comparingSides = true;
+                try { return stepped.ComputeLimitDivideEtImpera(x, dest, oneSide); }
+                finally { comparingSides = false; }
+            }
         }
 
         internal static Entity? ComputeLimitImpl(Entity expr, Variable x, Entity dist, ApproachFrom side) => dist switch

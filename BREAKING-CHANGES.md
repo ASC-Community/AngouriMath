@@ -123,6 +123,22 @@ four parts it is built from.
 | `"ln(arctan(x) + x) / ln(x)".ToEntity().Limit("x", "+oo")` | unevaluated | `1` |
 | `"tanh(x) * x / (x + tanh(x))".ToEntity().Limit("x", "-oo")` | did not finish in 30 s | `-1` |
 
+### An indeterminate power under a function is read through its exponent
+
+**A limit of a function of an indeterminate power, such as `0^0` or `oo^0`, is answered where the power alone
+is.** `x^x` at 0 from the right is 1, and `sin(x^x)` there was NaN or unevaluated, because the rule that reads
+a power through its exponent was asked only of a whole expression. It is asked of a power wherever it sits,
+one-sided or at an infinity, where the base is positive on the side approached. Two-sided limits with a
+complex side, as `x^x` has on the left of 0, are left as they were.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(x^x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `sin(1)` |
+| `"cos(x^x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `cos(1)` |
+| `"sin((x - 1)^ln(x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `NaN` | `sin(1)` |
+| `"sin(x^(1/x))".ToEntity().Limit("x", "+oo")` | unevaluated | `sin(1)` |
+| `"sqrt(x) / x^pi + x^x".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `+oo` |
+
 ### A vanishing base to a negative whole power tends to an infinity
 
 **A real base tending to 0 with a sign, to a negative whole power, is +oo or -oo, where it was NaN.** For an
