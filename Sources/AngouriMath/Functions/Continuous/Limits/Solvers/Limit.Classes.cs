@@ -127,7 +127,20 @@ namespace AngouriMath
                             ({ } bas, { IsFinite: true } lim2) => (bas, lim2),
                             _ => (Multiplier, Multiplicand)
                         };
-                    return ComputeLimitImpl(New(mp, md), x, dist, side);
+                    var substituted = ComputeLimitImpl(New(mp, md), x, dist, side);
+                    // Any other 0 * oo, read off the parts, is a form with no value, which says there is
+                    // no limit where the descent only cannot tell. Its whole limit is asked once, as a
+                    // quotient's is: x^pi ln(x) at 0 from the right is 0, and the whole limit says so,
+                    // but the descent handed on 0 * (-oo), and x^pi ln(x) / 2 and sin(x^pi ln(x)) were
+                    // left unevaluated. Under the gates above, and only a value is taken.
+                    if ((substituted is null || substituted.Evaled == MathS.NaN)
+                        && side is not ApproachFrom.BothSides && !IsComparingSides
+                        && multiplierLimit is { } zeroOrInfinity5 && multiplicandLimit is { } zeroOrInfinity6
+                        && IsZeroTimesAnInfinity(zeroOrInfinity5, zeroOrInfinity6)
+                        && AsTheWholeLimit(this, x, dist, side) is { } asked && asked.Evaled is Number { IsNaN: false } value)
+                        return asked.InnerSimplified is var folded && folded.Nodes.Any(static node => node is Number { IsFinite: false })
+                            ? value : folded;
+                    return substituted;
                 }
             }
         }
