@@ -99,6 +99,23 @@ namespace AngouriMath
                         && AsTheWholeLimit(regrouped, x, dist, side) is { } overOneDivisor
                         && overOneDivisor.Evaled != MathS.NaN)
                         return overOneDivisor;
+                    // So, with a sum or a difference for one factor, is the product taken term by term:
+                    // l'Hopital's rule took x * (ln(-tanh(x)) + 1) at 0 from the left through four and a
+                    // half seconds of nested limits, where x ln(-tanh(x)) + x is 0 at once.
+                    if (side is not ApproachFrom.BothSides && !IsComparingSides
+                        && multiplierLimit is { } zeroOrInfinity3 && multiplicandLimit is { } zeroOrInfinity4
+                        && IsZeroTimesAnInfinity(zeroOrInfinity3, zeroOrInfinity4)
+                        && (Multiplicand, Multiplier) switch
+                        {
+                            (Sumf(var augend, var addend), var other) => other * augend + other * addend,
+                            (var other, Sumf(var augend, var addend)) => augend * other + addend * other,
+                            (Minusf(var minuend, var subtrahend), var other) => other * minuend - other * subtrahend,
+                            (var other, Minusf(var minuend, var subtrahend)) => minuend * other - subtrahend * other,
+                            _ => null
+                        } is { } distributed
+                        && AsTheWholeLimit(distributed, x, dist, side) is { } termByTerm
+                        && termByTerm.Evaled != MathS.NaN)
+                        return termByTerm;
                     var (mp, md) =
                         (multiplierLimit, multiplicandLimit) switch
                         {
