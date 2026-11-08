@@ -34,9 +34,19 @@ namespace AngouriMath.Tests.Calculus
         public void AnOddPowerHasNoTwoSidedLimit()
             => Assert.Equal(MathS.NaN, MathS.FromString("sin(x)^(-1)").Limit("x", 0, ApproachFrom.BothSides));
 
-        // An exponent that only tends to a whole number is not one near the point, and is left alone.
-        [Fact]
-        public void AnExponentThatOnlyTendsToAWholeNumberIsLeftAlone()
-            => Assert.IsType<Entity.Limitf>(MathS.FromString("sin(x)^(x - 2)").Limit("x", 0, ApproachFrom.Right));
+        // An exponent that only tends to a whole number is not one near the point. Under a negative base
+        // the power is complex there, so it is left alone rather than given the odd power's sign.
+        [Theory]
+        [InlineData("sin(x)^(x - 2)")]
+        [InlineData("sin(x)^(x - 1)")]
+        public void AnExponentThatOnlyTendsToAWholeNumberIsLeftAloneUnderANegativeBase(string input)
+            => Assert.IsType<Entity.Limitf>(MathS.FromString(input).Limit("x", 0, ApproachFrom.Left));
+
+        // Under a base positive on the way in, any exponent tending to a negative number gives +oo.
+        [Theory]
+        [InlineData("sin(x)^(x - 2)")]
+        [InlineData("sin(x)^(x - 1)")]
+        public void AnExponentThatOnlyTendsToAWholeNumberTendsToPositiveInfinityUnderAPositiveBase(string input)
+            => Assert.Equal(Entity.Number.Real.PositiveInfinity, MathS.FromString(input).Limit("x", 0, ApproachFrom.Right));
     }
 }

@@ -424,9 +424,11 @@ namespace AngouriMath
                 // A base that is never negative and vanishes, to an exponent tending to a negative
                 // number, tends to +oo: 0 to a negative power has no value, and abs(x)^(-3/2) at 0
                 // was left unevaluated from each side for it. Where the base vanishes, it does from
-                // above.
+                // above. So does one that is positive near the point on each side approached, though it
+                // may be negative elsewhere: (1/x)^(2 ((x - 1)/x^2 - 2)) at +oo was read as 0^(-4), which
+                // has no value, and left unevaluated.
                 if (baseLimit?.Evaled is Real { IsZero: true } && exponentLimit?.Evaled is Real { IsNegative: true, IsFinite: true }
-                    && IsNeverNegative(Base, x))
+                    && (IsNeverNegative(Base, x) || SignOnEachSide(Base, x, dist, side) is 1))
                     return Real.PositiveInfinity;
                 // A base that keeps a sign as it vanishes is real and not 0 near the point, so to a
                 // negative whole power it is 1 over a power tending to 0 from that sign's side: +oo for
