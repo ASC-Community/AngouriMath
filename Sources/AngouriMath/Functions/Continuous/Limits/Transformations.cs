@@ -1910,8 +1910,16 @@ namespace AngouriMath.Functions.Algebra
                                 // log(x, 1/2) ^ (e^x - sgn(x)) at 0 from the right, whose descent reaches
                                 // here at +oo with e^(1/x) taken out, took nine seconds where it took a half.
                                 // At a finite point the bound is as it was, whose taking out it was set for.
+                                // A value at the point is read expanded too, where powers of the variable
+                                // that the product rule left apart are gathered: ln(sqrt(x) * cos(x)) / (1 / x)
+                                // becomes -x^(3/2) * (x^(-1/2) * cos(x) / 2 - sqrt(x) * sin(x)) * sec(x), which
+                                // has no value at 0 as written, since x^(-1/2) has none, and expanded is
+                                // -x * cos(x) * sec(x) / 2 + x^2 * sin(x) * sec(x), which is 0 there. A limit of the grown
+                                // quotient, even with the rule kept out of it, cost seconds per step.
                                 if (GrewTooMuch(dest.IsFinite ? expr : numRest / denRest, applied))
-                                    return ItsValueAt(applied, x, dest) is { } value ? Times(taken, value) : null;
+                                    return ItsValueAt(applied, x, dest) is { } value ? Times(taken, value)
+                                         : dest.IsFinite && ItsValueAt(applied.Expand().InnerSimplified, x, dest) is { } expanded ? Times(taken, expanded)
+                                         : null;
                                 lHopitalApplications++;
                                 MultithreadingFunctional.ExitIfCancelled();
                                 lHopitalChain!.Add(applied);
