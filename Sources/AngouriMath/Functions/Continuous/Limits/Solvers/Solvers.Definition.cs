@@ -408,6 +408,8 @@ namespace AngouriMath.Functions.Algebra
             // may only fire while the approach is in scope is otherwise declining through most of
             // the work -- which is not a wrong answer but is a slower one, since what it declines
             // to collapse the search then has to explore.
+            if (expr.Nodes.Any(static node => node is Derivativef))
+                expr = WithTheDerivativesTaken(expr, x, dest, side);
             var enclosingApproach = EnterApproach(x, dest);
             var (outerComparing, outerRoot) = (comparingSides, descentRoot);
             (comparingSides, descentRoot) = (false, null);
@@ -418,6 +420,33 @@ namespace AngouriMath.Functions.Algebra
                 LeaveApproach(enclosingApproach);
             }
         }
+
+        /// <summary>
+        /// <paramref name="expr"/> with each derivative node that differentiates in closed form replaced by what
+        /// it differentiates to.
+        /// </summary>
+        /// <remarks>
+        /// A derivative is a function of the point it is taken at, and its limit is that function's limit, not the
+        /// derivative of the limit. Read as a node, the point was put in before differentiating: derivative(ln(x y), y)
+        /// at 0 became the derivative of the constant ln(0) and was answered 0, where it is 1 / y; and
+        /// derivative(sqrt(x), x) at 0 put 0 in for the variable too, and came back derivative(0, 0). A derivative
+        /// that does not close is left as it is.
+        /// <para/>
+        /// What it differentiates to is inner-simplified. Differentiating states where the derivative exists, as
+        /// 1 / x provided not x = 0 for ln(x), and a limit is taken on the way in and not at the point: the condition is
+        /// dropped where it holds on each side approached, and kept, which the limit declines, where it does not.
+        /// In a method of its own, so that the closure is not allocated for every limit.
+        /// </remarks>
+        private static Entity WithTheDerivativesTaken(Entity expr, Variable x, Entity dest, ApproachFrom side)
+            => expr.Replace(node =>
+                node is Derivativef(var expression, Variable variable, var iterations) && iterations > 0
+                && expression.Differentiate(variable, iterations).InnerSimplified is var taken
+                && !taken.Nodes.Any(static inner => inner is Derivativef)
+                    ? taken is Providedf(var value, var condition)
+                      && Sides(dest, side).All(oneSide => HoldsNear(condition, x, dest, oneSide) is true)
+                        ? value
+                        : taken
+                    : node);
 
         private static Entity? ComputeLimitWithinApproach(Entity expr, Variable x, Entity dest, ApproachFrom side, bool acceptNaN)
         {

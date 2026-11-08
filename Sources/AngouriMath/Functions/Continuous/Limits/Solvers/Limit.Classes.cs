@@ -741,14 +741,14 @@ namespace AngouriMath
             }
         }
 
+        // A derivative that closes is taken before the limit (WithTheDerivativesTaken). One that does not is not
+        // read through its parts: the limit of what is differentiated says nothing about the limit of its derivative,
+        // and the variable differentiated by is not a value to put a limit in. derivative(sin(x) / x, x) at 0 came
+        // back derivative(1, 0).
         partial record Derivativef
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
-                ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
-                : ComputeLimitImpl(New(
-                    Expression.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Expression,
-                    Var.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim2 ? lim2 : Var),
-                    x, dist, side);
+                ComputeLimitImpl(this, x, dist, side);
         }
 
         partial record Integralf
@@ -765,16 +765,24 @@ namespace AngouriMath
                     x, dist, side);
         }
 
+        // The variable a limit is taken in is bound by it. Where that is the variable approaching, the inner limit does
+        // not depend on it, and is its own limit; it is never a value to put a limit in: limit(sqrt(x) cos(x) / x, x, 0)
+        // at 1 came back limit(cos(1), 1, 0).
         partial record Limitf
         {
-            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
-                ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
-                : ComputeLimitImpl(New(
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
+            {
+                if (ComputeLimitImpl(this, x, dist, side) is { } lim)
+                    return lim;
+                if (Var == x)
+                    return Destination.ContainsNode(x) ? null : this;
+                return ComputeLimitImpl(New(
                     Expression.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Expression,
-                    Var.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim2 ? lim2 : Var,
+                    Var,
                     Destination.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim3 ? lim3 : Destination,
                     ApproachFrom),
                 x, dist, side);
+            }
         }
 
         partial record Signumf
