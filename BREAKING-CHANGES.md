@@ -113,6 +113,40 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### Two fractions over a shared factor are added over their least common denominator
+
+**Silent: where the denominators of two fractions share a factor, `Simplify` adds them over the least common
+multiple of the denominators, each factor to the highest power either has it.** The sum was cross-multiplied, so a
+shared factor was squared and grew with every later sum before anything cancelled, and some sums were left apart. The
+value is unchanged. Simplifying `(1 - tanh(x)^2) / tanh(x)` written through exponentials took 1.8 s and takes 0.15 s,
+with the same answer. No issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"1/(x+1) + 1/(x+1)^2".Simplify()` | `1 / (1 + x) + 1 / (1 + x) ^ 2` | `(2 + x) / (1 + x) ^ 2` |
+
+### A limit reads the sign of a vanishing base on the side approached, and at an infinity
+
+**Silent: a base tending to 0 that is positive on the side approached, to an exponent tending to a negative number,
+tends to `+oo`, though the base may be negative elsewhere; and the sign of an expression tending to 0 is read at an
+infinity, from its parts, and for a positive base to a real power.** The first was known only for a base never negative
+anywhere, so `(1/x)^(2 ((x - 1)/x^2 - 2))` at `+oo` was read as `0^(-4)` and left unevaluated; the second left the sign
+of `1/x` at `+oo` unknown, and with it `sgn(1/x)`. Where a left side is now answered and agrees with the right, a
+two-sided limit that was `NaN` is that value. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(1/x)^(2*((x - 1)/x^2 - 2))".ToEntity().Limit("x", "+oo")` | `limit((1 / x) ^ (2 * ((x - 1) / x ^ 2 - 2)), x, +oo)` | `+oo` |
+| `"sin(x)^(x - 2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(x) ^ (x - 2), x, 0)` | `+oo` |
+| `"x^(x/(-1) - (pi + x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(x ^ (x / (-1) - (pi + x)), x, 0)` | `+oo` |
+| `"sgn(1/x)".ToEntity().Limit("x", "+oo")` | `limit(sgn(1 / x), x, +oo)` | `1` |
+| `"sgn(1/x)".ToEntity().Limit("x", "-oo")` | `limit(sgn(1 / x), x, -oo)` | `-1` |
+| `"sgn(e^x)".ToEntity().Limit("x", "-oo")` | `limit(sgn(e ^ x), x, -oo)` | `1` |
+| `"sgn(log(x, 1/2))".ToEntity().Limit("x", "+oo")` | `limit(sgn(log(x, 1/2)), x, +oo)` | `-1` |
+| `"floor((x - 1/2)/x)".ToEntity().Limit("x", "+oo")` | `limit(floor((x - 1/2) / x), x, +oo)` | `0` |
+| `"ln(sin(x^x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(ln(sin(x ^ x)), x, 0)` | `ln(sin(1))` |
+| `"arcsin(x)^2 / abs(x/pi)".ToEntity().Limit("x", 0)` | `NaN` | `0` |
+
 ### A polynomial with no roots in closed form is answered with all of them
 
 **Silent: a polynomial equation with rational coefficients and no roots in closed form is answered with every root,
