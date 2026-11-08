@@ -1227,8 +1227,34 @@ namespace AngouriMath.Functions.Algebra
             // those margins keeps it on the same side of zero.
             if (!limit.IsZero)
                 return limit.IsNegative ? -1 : 1;
-            return SignFromVanishingOrder(expr, x, dest, side) ?? SignFromTheSlope(expr, x, dest, side);
+            // Near an infinity, the sign at 0 from the right after putting 1/x, or -1/x, for x,
+            // which is where the readers below are stated: 1/x at +oo had no sign. Not through a
+            // slope: that of sinh(e^(-1/x)) at 0 is a limit l'Hopital's rule took 24 seconds
+            // over, and sgn(sinh(e^x)) at -oo asked it. The factors are read at the infinity.
+            if (dest.Evaled is Real { IsFinite: false, IsNaN: false } infinity)
+                return SignFromVanishingOrder(expr.Substitute(x, infinity.IsNegative ? -1 / x : 1 / x), x, Integer.Zero, ApproachFrom.Right)
+                    ?? SignOfTheFactors(expr, x, dest, side);
+            return SignFromVanishingOrder(expr, x, dest, side) ?? SignFromTheSlope(expr, x, dest, side)
+                ?? SignOfTheFactors(expr, x, dest, side);
         }
+
+        // A product or a quotient has the product of its parts' signs: sqrt(x) * x at 0 from the
+        // right has the slope sqrt(x), which tends to 0, and so had no sign. A positive base to a
+        // real power is positive: sqrt(1/x) at +oo has no slope to read, and e^x at -oo none either.
+        private static int? SignOfTheFactors(Entity expr, Variable x, Entity dest, ApproachFrom side)
+            => expr switch
+            {
+                Mulf(var left, var right) => SignOfTheProduct(left, right, x, dest, side),
+                Divf(var left, var right) => SignOfTheProduct(left, right, x, dest, side),
+                Powf(var @base, var exponent) when IsRealNear(exponent, x, dest, side)
+                    => SignNear(@base, x, dest, side) is 1 ? 1 : null,
+                _ => null
+            };
+
+        private static int? SignOfTheProduct(Entity left, Entity right, Variable x, Entity dest, ApproachFrom side)
+            => SignNear(left, x, dest, side) is { } leftSign && SignNear(right, x, dest, side) is { } rightSign
+                ? leftSign * rightSign
+                : null;
 
         /// <summary>
         /// The sign an expression tending to 0 keeps near a finite destination, read off the
