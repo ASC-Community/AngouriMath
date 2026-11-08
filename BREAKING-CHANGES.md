@@ -277,6 +277,19 @@ where the two sides disagree. `1/sin(x)^2` already answered +oo; `sin(x)^(-2)` d
 | `"(arcsin(x)^(-2))^2".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
 | `"sin(x)^(-1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `NaN` | `-oo` |
 
+### A derivatives' quotient with no value as written is read expanded
+
+**l'Hopital's rule reads the value at the point of a quotient that grew too much to differentiate again from the
+quotient expanded as well as as written.** The product rule makes `ln(sqrt(x) cos(x)) / (1 / x)`'s quotient
+`-x^(3/2) (x^(-1/2) cos(x) / 2 - sqrt(x) sin(x)) sec(x)`, which has no value at 0 since `x^(-1/2)` has none, and
+which expanded is `-x cos(x) sec(x) / 2 + x^2 sin(x) sec(x)`, 0 there. These were left unevaluated.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(sqrt(x) cos(x))^x".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `1` |
+| `"x ln(sqrt(x) cos(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"ln(sqrt(x) cos(x)) / (1 / x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+
 ### A quotient whose divisor is 0 near the point has no limit there
 
 **A limit of a quotient whose divisor is 0 all the way in is NaN, where it was a number.** `abs(x) - x` is
