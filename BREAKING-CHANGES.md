@@ -72,6 +72,25 @@ A bare `floor(x)` or `sgn(x)` was already declined there. Away from a jump, noth
 | `"limit(floor(x) + x, x, 1)".ToEntity().Simplify()` | `2` | `limit(floor(x) + x, x, 1)` |
 | `"limitleft(-sgn(x), x, 0)".ToEntity().Simplify()` | `0` | `limitleft(-sgn(x), x, 0)` |
 
+### A step function arriving at 0 is answered from the side its argument arrives from
+
+**Silent: a limit of `floor` or `ceil` whose argument tends to 0 is answered where the argument keeps one sign on the
+way in, and that sign was known for the argument itself but not asked of it.** The step asks the sign of its argument
+less 0, and that difference was not read as the argument: `x^(3/2)` at 0 from the right is a positive base to a real
+power, and `1/x` at -oo is negative, but `x^(3/2) - 0` and `1/x - 0` had no sign. A step arriving at any other
+integer, and an argument that is not real on the side approached, are unchanged. Found by limitcheck; no issue was
+filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"floor(x^(3/2))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(floor(x ^ (3/2)), x, 0)` | `0` |
+| `"floor(sqrt(x^3))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(floor(sqrt(x ^ 3)), x, 0)` | `0` |
+| `"floor(1/x)".ToEntity().Limit("x", "+oo")` | `limit(floor(1 / x), x, +oo)` | `0` |
+| `"floor(1/x)".ToEntity().Limit("x", "-oo")` | `limit(floor(1 / x), x, -oo)` | `-1` |
+| `"floor(e^x)".ToEntity().Limit("x", "-oo")` | `limit(floor(e ^ x), x, -oo)` | `0` |
+| `"floor(log(x - 1, x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `limitright(floor(log(x - 1, x)), x, 1)` | `-1` |
+| `"floor(x / log(x, x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x / log(x, x)), x, 0)` | `-1` |
+
 ### A logarithm of a power is read through the logarithm of its base in a limit
 
 **Silent: in a limit, the logarithm of a power to a constant real exponent, `log(f^c)`, is read as `c log(f)`, or as

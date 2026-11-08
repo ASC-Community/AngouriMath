@@ -1241,9 +1241,13 @@ namespace AngouriMath.Functions.Algebra
         // A product or a quotient has the product of its parts' signs: sqrt(x) * x at 0 from the
         // right has the slope sqrt(x), which tends to 0, and so had no sign. A positive base to a
         // real power is positive: sqrt(1/x) at +oo has no slope to read, and e^x at -oo none either.
+        // A difference with 0 is read as what it subtracts 0 from: a step function at a jump of 0 and a
+        // comparison with 0 both ask about g - 0, and floor(x^(3/2)) at 0 from the right was declined
+        // for want of the sign x^(3/2) has as a power.
         private static int? SignOfTheFactors(Entity expr, Variable x, Entity dest, ApproachFrom side)
             => expr switch
             {
+                Minusf(var minuend, Integer { IsZero: true }) => SignNear(minuend, x, dest, side),
                 Mulf(var left, var right) => SignOfTheProduct(left, right, x, dest, side),
                 Divf(var left, var right) => SignOfTheProduct(left, right, x, dest, side),
                 Powf(var @base, var exponent) when IsRealNear(exponent, x, dest, side)
