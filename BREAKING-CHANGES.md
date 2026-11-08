@@ -107,6 +107,25 @@ filed.
 | `"floor(log(x - 1, x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `limitright(floor(log(x - 1, x)), x, 1)` | `-1` |
 | `"floor(x / log(x, x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x / log(x, x)), x, 0)` | `-1` |
 
+### A limit of a quotient over a quotient is read as a quotient of products
+
+**Silent: in a limit, `a / (b / c)` with `b` constant is read first as `a c / b`, and that reading is kept where it gives
+a value.** Read as written, `x^(-pi) / (ln(2) / ln(x))` at +oo is 0/0, and each step of l'Hopital's rule gave another
+0 * oo with a higher power of `ln(x)`, so it was left unevaluated. `log(x, 2)` is `ln(2) / ln(x)`, so any logarithm in
+a divisor met this. Where the new reading gives no value -- `x ln(x)` at 0 is `0 * (-oo)` to it -- the quotient is read
+as written, as before, and `x / log(x, 2)` at 0 is still 0. A two-sided limit that 2.6.0 answered and the master
+before this change made NaN is answered again. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^(-pi) / log(x, 2)".ToEntity().Limit("x", "+oo")` | `limit(x ^ (-pi) / log(x, 2), x, +oo)` | `0` |
+| `"x^(-pi) / (ln(2) / ln(x))".ToEntity().Limit("x", "+oo")` | `limit(x ^ (-pi) / (ln(2) / ln(x)), x, +oo)` | `0` |
+| `"(1/x)^pi / log(1/x, 2)".ToEntity().Limit("x", "+oo")` | `limit((1 / x) ^ pi / log(1 / x, 2), x, +oo)` | `0` |
+| `"arcsin(pi + x) / (1/x)".ToEntity().Limit("x", 0)`, and from either side | `limit(arcsin(pi + x) / (1 / x), x, 0)` | `0` |
+| `"tan(1/2) / log(x, -1) / tanh(sin(x))".ToEntity().Limit("x", 1, ApproachFrom.Left)` | `limitleft(tan(1/2) / log(x, -1) / ((e ^ (2 * sin(x)) - 1) / (e ^ (2 * sin(x)) + 1)), x, 1)` | `0` |
+| `"tan(1/2) / log(x, -1) / tanh(sin(x))".ToEntity().Limit("x", 1)` | `NaN` | `0` |
+| `"tanh(exp(pi)) / log(log(-1, x), 2)".ToEntity().Limit("x", -1)` | `0`, and `NaN` on master before this change | `0` |
+
 ### A logarithm of a power is read through the logarithm of its base in a limit
 
 **Silent: in a limit, the logarithm of a power to a constant real exponent, `log(f^c)`, is read as `c log(f)`, or as

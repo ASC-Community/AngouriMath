@@ -149,6 +149,16 @@ namespace AngouriMath
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
             {
+                // Over a quotient, as a quotient of products: a / (b / c) is a c / b wherever it has a value. Read as written,
+                // x^(-pi) / (ln(2) / ln(x)) at +oo is 0/0, and l'Hopital's rule makes each step of it another 0 * oo with a
+                // higher power of ln(x), so it was left unevaluated where x^(-pi) ln(x) / ln(2) is 0 at once. Only a value is
+                // taken from it. x ln(x) at 0 comes back as 0 * (-oo), which is no answer, and from both sides that was read
+                // as NaN, where x / log(x, 2) read as written is 0. And only over a constant: x^x / (x / x) as a product is
+                // x^x x / x, which took twenty times as long and answered from both sides of 0 where x^x itself is NaN.
+                if (Divisor is Divf(var over, var under) && under.ContainsNode(x) && !over.ContainsNode(x)
+                    && New(Dividend * under, over).ComputeLimitDivideEtImpera(x, dist, side) is { } asProducts
+                    && !asProducts.ContainsNode(x) && asProducts.Evaled != MathS.NaN)
+                    return asProducts;
                 // A form with no value -- 0 * +oo / 0, which is what -x / (sqrt(1 - x^2) * arcsin(x)) at 0
                 // from the right comes back as -- is the claim that there is no limit, and the parts may
                 // say otherwise. It is kept for the end, where it was answered before, and the parts are
