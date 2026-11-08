@@ -57,6 +57,22 @@ divisor answers at once. A two-sided limit is not changed. Found by limitcheck; 
 | `"arcsin(-x * log(-1, x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(arcsin(-x * log(-1, x)), x, 0)` | `0` |
 | `"x * log(2 + x, x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` after 27 s | `0` in 0.25 s |
 
+### A derivative keeps an exponent that is not rational exact
+
+**Silent: the power rule writes a constant exponent that is not rational as it is, where it wrote its decimal
+value.** `x^pi` differentiated to `3.14159... * x^2.14159...`, so l'Hopital's rule answered a limit whose value is
+`pi` with a hundred-digit decimal, and limits that needed the decimal read as `pi` again were left unevaluated. A
+rational exponent is still written as its value. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^pi".ToEntity().Differentiate("x")` | `3.14159... * x ^ 2.14159...` | `pi * x ^ (pi - 1)` |
+| `"(x^pi - 1) / (x - 1)".ToEntity().Limit("x", 1)` | `3.14159...` | `pi` |
+| `"(x^sqrt(2) - 1) / ln(x)".ToEntity().Limit("x", 1)` | `1.41421...` | `sqrt(2)` |
+| `"x^pi / log(x, 2) - 2".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `-2` |
+| `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | unevaluated | `1` |
+| `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `1` |
+
 ### A limit at the jump of a step function is not answered by substitution
 
 **Silent: a limit of an expression built on `floor`, `ceil`, `round` or `sgn`, where the step's argument arrives on one

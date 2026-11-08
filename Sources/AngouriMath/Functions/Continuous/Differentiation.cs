@@ -263,6 +263,12 @@ namespace AngouriMath
 
         partial record Powf
         {
+            // The exponent's value where it is exact, and the exponent as written where it is not:
+            // pi, sqrt(2) and ln(2) evaluate to decimals, and x^pi differentiated to
+            // 3.14159... * x^2.14159..., which nothing reads as pi again.
+            private Entity ByThePowerRule(Entity exponent, Variable variable)
+                => exponent * Base.Pow((exponent - 1).InnerSimplified) * Base.DerivativeOver(variable);
+
             // (a ^ b)' = e ^ (ln(a) * b) * (a' * b / a + ln(a) * b')
             // (a ^ const)' = const * a ^ (const - 1) * a'
             // (const ^ b)' = e^b * b'
@@ -270,8 +276,8 @@ namespace AngouriMath
             protected override Entity InnerDifferentiate(Variable variable) =>
                 Exponent == Integer.One
                 ? Base.DerivativeOver(variable).Provided(Base.DomainCondition) // don't create x^0 which is undefined for x=0
-                : Exponent.Evaled is Number exp
-                ? exp * Base.Pow(exp - 1) * Base.DerivativeOver(variable)
+                : Exponent.Evaled is Number evaled
+                ? ByThePowerRule(evaled is Rational ? evaled : Exponent, variable)
                 : Base is Number
                 ? Base.Pow(Exponent) * MathS.Ln(Base) * Exponent.DerivativeOver(variable)
                 : Base.Pow(Exponent) * (Base.DerivativeOver(variable) * Exponent / Base + MathS.Ln(Base) * Exponent.DerivativeOver(variable));
