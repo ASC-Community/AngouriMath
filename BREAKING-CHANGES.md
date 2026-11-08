@@ -289,6 +289,26 @@ where the divisor is 0 on both sides, since one side alone still approaches the 
 | `"(abs(x) - x) / (abs(x) - x)".ToEntity().Limit("x", 1)` | `1` | `NaN` |
 | `"(abs(x) - x) * x / ((abs(x) - x) * sin(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` | `NaN` |
 
+### A limit of a derivative is the limit of the function it is
+
+**A limit of `derivative(f, x)` takes the derivative first and the limit of that function second, where it put the
+point into `f` and then differentiated a constant.** Master printed `derivative(0, 0)`, differentiating by a number,
+and 2.6.0 answered 0 where the derivative grows without bound. The condition differentiating attaches, such as
+`provided not x = 0`, is dropped where it holds on each side approached; where it cannot be decided, as for a
+symbolic `y` in `x y`, the limit is left unevaluated. A limit inside a limit no longer has its variable replaced by
+the outer point, which made `limit(cos(1), 1, 0)`.
+
+| Input | Was (2.6.0) | Was (master) | Now |
+|---|---|---|---|
+| `"derivative(sqrt(x), x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` | `derivative(0, 0)` | `+oo` |
+| `"derivative(ln(sqrt(x) cos(x)), x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` | `0` | `+oo` |
+| `"derivative(sin(x)/x, x)".ToEntity().Limit("x", 0)` | `NaN` | `derivative(1, 0)` | `0` |
+| `"derivative(ln(x), x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` | `+oo` | `+oo` |
+| `"derivative(abs(x), x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` | `derivative(0, 0)` | `1` |
+| `"derivative(x^3, x, 2)".ToEntity().Limit("x", 1)` | `+oo` | `6` | `6` |
+| `"derivative(ln(x y), y)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1 / y` | `0` | unevaluated |
+| `"limit(sqrt(x) cos(x)/x, x, 0)".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `NaN` | `limit(cos(1), 1, 0)` | unevaluated |
+
 ### A complex constant does not make the two sides of a limit differ
 
 **A two-sided limit with a complex constant in it is answered where each side is, where it was NaN.** Where the
