@@ -6,6 +6,7 @@
 //
 
 using PeterO.Numbers;
+using AngouriMath.Core.Transformations;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Number;
 
@@ -160,8 +161,9 @@ namespace AngouriMath.Functions
         /// A denominator written so that a factor shared with another is written alike: a whole
         /// power of a product as the product of its factors' powers, so that
         /// <c>((u - 1) (u + 1))^2</c> shares <c>u - 1</c>, and each factor inner-simplified, with a
-        /// negative number added written as one subtracted, so that <c>u + -1</c> is <c>u - 1</c>,
-        /// which inner simplification leaves as it is.
+        /// negative number added written as one subtracted anywhere in it, so that <c>u + -1</c> is
+        /// <c>u - 1</c>, which inner simplification leaves as it is, and its operands in canonical
+        /// order, so that <c>1 + u</c> and <c>u + 1</c> are one factor.
         /// </summary>
         private static Entity AsFactors(Entity denominator)
         {
@@ -172,12 +174,16 @@ namespace AngouriMath.Functions
                     : factor is Powf(var @base, Integer { EInteger.Sign: > 0 } raisedTo) ? MathS.Pow(Written(@base), raisedTo) : Written(factor);
             return product;
 
+            // Anywhere in the factor, not only at its top: a shared factor can hold the sum inside
+            // a quotient of its own, and e^(2x) - 1 written there as e^(2x) + -1 kept two copies of
+            // one denominator apart, so they were multiplied together. Differentiating
+            // ln(tanh(x) + x^2) twice made that sum, and simplifying it took seventeen seconds.
+            // And in one order: (1 + e^(2x))^6 and (e^(2x) + 1)^2 share their base, and with the
+            // order as written they were multiplied together too, each step raising the power.
             static Entity Written(Entity factor)
-                => factor.InnerSimplified switch
-                {
-                    Sumf(var augend, Real { IsNegative: true } negative) => (augend - (-negative)).InnerSimplified,
-                    var simplified => simplified,
-                };
+                => factor.InnerSimplified.Replace(static node => node is Sumf(var augend, Real { IsNegative: true } negative)
+                    ? augend - (-negative) : node).InnerSimplified
+                    .Rewrite(RewriteRules.CanonicalOrderExact);
         }
 
         private static void Carry(Entity denominator, List<Entity>? carried)

@@ -18,7 +18,9 @@ namespace AngouriMath.Tests.Common
     /// exponentials took two seconds to simplify, nearly all of it in two sums whose denominators
     /// had grown to <c>(e^(2x) + 1)^6 (e^(2x) - 1)^3</c>. Where the denominators share a factor,
     /// the sum now goes over their least common multiple. Found while tracing a slow limit; no
-    /// issue was filed.
+    /// issue was filed. A factor is shared however its sums are spelled: <c>-1</c> added deep
+    /// inside it, or its terms in another order, kept the two copies of a factor apart, and
+    /// ln(tanh(x) + x^2) / ln(x) at +oo took eighteen seconds.
     /// </summary>
     /// <remarks>
     /// Checked by value: the denominator is a constant multiple of the least common multiple, and
@@ -36,6 +38,10 @@ namespace AngouriMath.Tests.Common
         [InlineData("1", "((e^(2x) - 1) * (e^(2x) + 1))^2", "x", "(e^(2x) + 1)^2 * (e^(2x) - 1)", "(e^(2x) - 1)^2 * (e^(2x) + 1)^2")]
         // The same factor written as a sum with -1 in one and a difference in the other.
         [InlineData("x", "e^(2x) + -1", "1", "(e^(2x) - 1) * (e^(2x) + 1)^2", "(e^(2x) - 1) * (e^(2x) + 1)^2")]
+        // The same, inside a factor that is itself a sum with a quotient in it.
+        [InlineData("1", "(x + 1 / (e^(2x) + -1))^2", "x", "x + 1 / (e^(2x) - 1)", "(x + 1 / (e^(2x) - 1))^2")]
+        // The same factor with its terms in the other order.
+        [InlineData("x", "(1 + e^(2x))^6", "1", "(e^(2x) + 1)^2", "(e^(2x) + 1)^6")]
         public void GoesOverTheLeastCommonMultiple(string leftNum, string leftDen, string rightNum, string rightDen, string multiple)
         {
             var (ln, ld, rn, rd) = (leftNum.ToEntity(), leftDen.ToEntity(), rightNum.ToEntity(), rightDen.ToEntity());
