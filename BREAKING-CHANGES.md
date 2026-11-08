@@ -147,6 +147,20 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### A vanishing factor times an infinity is asked as a whole when read as a part
+
+**Silent: a limit with, somewhere inside it, a product of a factor tending to 0 and one tending to an infinity is
+answered where that product's own limit is.** Read as a part, the product came back as `0 * oo`, a form with no value,
+and the whole was left unevaluated; `x^pi ln(x)` at 0 from the right is 0, but `x^pi ln(x) / 2` was not answered. One
+side only, as for a quotient's divisor and a sum's terms. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^pi * ln(x) / 2".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(x ^ pi * ln(x) / 2, x, 0)` | `0` |
+| `"sin(x^(3/2) * ln(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(x ^ (3/2) * ln(x)), x, 0)` | `0` |
+| `"x^pi / log(x, -1) - 2".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(x ^ pi / log(x, -1) - 2, x, 0)` | `-2` |
+| `"sin(ln(x) * x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(sin(ln(x) * x), x, 0)` | `0` |
+
 ### Two fractions over a shared factor are added over their least common denominator
 
 **Silent: where the denominators of two fractions share a factor, `Simplify` adds them over the least common
