@@ -98,6 +98,21 @@ issue was filed.
 | `"log(x^pi, sgn(-1))^2".ToEntity().Limit("x", 1)` | `NaN` | `-oo` |
 | `"(tanh(x)^erf(2))^sin(x^3)".ToEntity().Limit("x", 0, ApproachFrom.Right)`, and from the left | `limitright((((e ^ (2 * x) - 1) / (e ^ (2 * x) + 1)) ^ erf(2)) ^ sin(x ^ 3), x, 0)` | `1` |
 
+### A vanishing factor times a sum is taken term by term in a one-sided limit
+
+**Silent: a one-sided limit of a product whose factors tend to 0 and to an infinity, one of them a sum or a difference,
+is asked term by term.** Read as a product, l'Hôpital's rule went through nested limits for what the distributed form
+answers at once, and some rows were left unevaluated. A limit at an infinity is approached from one side and is
+included; a two-sided limit at a finite point is not changed. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"log(pi, x)^sinh(x) * sin(1)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | did not finish in 30 s | `sin(1)` |
+| `"log(pi, x)^sinh(x) * sin(1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | did not finish in 30 s | `sin(1)` |
+| `"sin(e^x * (x + 1/2))".ToEntity().Limit("x", "-oo")` | `limit(sin(e ^ x * (x + 1/2)), x, -oo)` | `0` |
+| `"x * (ln(-tanh(x)) + 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `0` in 3.2 s | `0` in 0.44 s |
+| `"sin(x) * (ln(-tanh(x)) + 1/x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `1` in 3.7 s | `1` in 1.1 s |
+
 ### An equation through a negative whole power is not answered with no roots
 
 **Silent: an empty answer becomes the roots.** Inverting `x^n = v` for a negative whole `n` multiplied by the roots
