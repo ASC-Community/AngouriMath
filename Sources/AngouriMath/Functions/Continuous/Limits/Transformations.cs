@@ -2347,19 +2347,26 @@ namespace AngouriMath.Functions.Algebra
             => expr.Nodes.Any(node =>
                 node is Powf(var @base, Number.Rational and not Number.Integer) && @base.ContainsNode(x));
 
-        private static Entity ApplyTrivialTransformations(Entity expr, Variable x, Entity dest, Func<Entity, Entity, Entity> transformation)
+        /// <remarks>
+        /// Each part is asked from the side the limit is, not from both: finite one-sided limits of the parts are the
+        /// one-sided limit of their sum, difference or product. Asked from both sides, x^pi / log(x, 2) - 2 at 0 from
+        /// the right had its quotient taken through l'Hopital's rule from the left as well, where x^pi is not real,
+        /// and at +oo after the substitution that side asks for, and took 10 seconds where the quotient alone takes a
+        /// fifth of one.
+        /// </remarks>
+        private static Entity ApplyTrivialTransformations(Entity expr, Variable x, Entity dest, ApproachFrom side, Func<Entity, Entity, Entity> transformation)
             => expr switch
             {
                 Sumf(var a, var b)
-                    when ComputeLimit(a, x, dest) is { } aLim && ComputeLimit(b, x, dest) is { } bLim &&
+                    when ComputeLimit(a, x, dest, side) is { } aLim && ComputeLimit(b, x, dest, side) is { } bLim &&
                         IsFiniteNode(aLim.Evaled) && IsFiniteNode(bLim.Evaled)
                         => transformation(a, aLim) + transformation(b, bLim),
                 Minusf(var a, var b)
-                    when ComputeLimit(a, x, dest) is { } aLim && ComputeLimit(b, x, dest) is { } bLim &&
+                    when ComputeLimit(a, x, dest, side) is { } aLim && ComputeLimit(b, x, dest, side) is { } bLim &&
                         IsFiniteNode(aLim.Evaled) && IsFiniteNode(bLim.Evaled)
                         => transformation(a, aLim) - transformation(b, bLim),
                 Mulf(var a, var b)
-                    when ComputeLimit(a, x, dest) is { } aLim && ComputeLimit(b, x, dest) is { } bLim &&
+                    when ComputeLimit(a, x, dest, side) is { } aLim && ComputeLimit(b, x, dest, side) is { } bLim &&
                         IsFiniteNode(aLim.Evaled) && IsFiniteNode(bLim.Evaled)
                         => transformation(a, aLim) * transformation(b, bLim),
                 _ => expr
