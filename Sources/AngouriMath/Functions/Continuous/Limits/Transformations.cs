@@ -1451,6 +1451,104 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// The limit of a derivatives' quotient that grew past <see cref="GrewTooMuch"/>, read term by term at a finite
+        /// destination without another step of the rule: each term has a finite value at the point, or is a product of
+        /// factors with finite non-zero values there and a negative power of the variable's distance to it, a pole whose
+        /// sign the side decides. Poles of one sign are that infinity; poles of both signs, or anything else, are
+        /// <see langword="null"/>.
+        /// </summary>
+        /// <remarks>
+        /// (sqrt(x) - erf(x)) / x at 0 from the right steps to 1/2 * x^(-1/2) - 2 / sqrt(pi) * e^(-x^2), which is +oo
+        /// there and has no value at the point, so it was left unevaluated where 2.6.0 answered +oo, and so was
+        /// floor(sqrt(x) - erf(x)), whose sign is read from that slope. Asking the grown quotient's limit with the rule
+        /// kept out of it answers the same, but the descent it runs took seconds on the quotients that grow the most,
+        /// and thirty on one of them. Reading the terms costs a substitution each.
+        /// </remarks>
+        private static Entity? ItsValueOrPoleAt(Entity applied, Variable x, Entity dest, ApproachFrom side)
+        {
+            if (!dest.IsFinite || side is ApproachFrom.BothSides
+                || applied.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise))
+                return null;
+            var distance = dest is Integer { IsZero: true } ? (Entity)x : x - dest;
+            Entity finite = Integer.Zero;
+            var poles = 0;
+            foreach (var (term, negated) in Terms(applied, false))
+            {
+                Entity value = Integer.One;
+                Entity order = Integer.Zero;
+                if (!Factors(term, Integer.One, ref value, ref order))
+                    return null;
+                if (order.Evaled is not Real { IsNaN: false, IsFinite: true } orderValue)
+                    return null;
+                if (value.Evaled is not Real { IsNaN: false, IsFinite: true, IsZero: false } coefficient)
+                    return null;
+                if (negated)
+                    coefficient = -coefficient;
+                if (orderValue.IsPositive)
+                    continue;
+                if (orderValue.IsZero)
+                {
+                    finite += negated ? -value : value;
+                    continue;
+                }
+                // (x - a)^k for k < 0 is positive to the right of a, and to the left (-1)^k where k is an integer and
+                // not a real number at all where it is not.
+                var signOfPower = side is ApproachFrom.Right ? 1
+                    : orderValue is Integer { EInteger: var k } ? (k.IsEven ? 1 : -1)
+                    : 0;
+                if (signOfPower == 0)
+                    return null;
+                var sign = signOfPower * (coefficient.IsPositive ? 1 : -1);
+                if (poles != 0 && poles != sign)
+                    return null;
+                poles = sign;
+            }
+            if (poles != 0)
+                return poles > 0 ? Real.PositiveInfinity : Real.NegativeInfinity;
+            return finite.Evaled is Real { IsNaN: false, IsFinite: true } ? finite.InnerSimplified : null;
+
+            // A sum over a constant, or a constant times one, is read a term at a time too.
+            IEnumerable<(Entity Term, bool Negated)> Terms(Entity expr, bool negated)
+                => expr switch
+                {
+                    Sumf(var left, var right) => Terms(left, negated).Concat(Terms(right, negated)),
+                    Minusf(var left, var right) => Terms(left, negated).Concat(Terms(right, !negated)),
+                    Divf(Sumf or Minusf, var divisor) when !divisor.ContainsNode(x)
+                        => Terms(((Divf)expr).Dividend, negated).Select(term => (term.Term / divisor, term.Negated)),
+                    Mulf(var factor, Sumf or Minusf) when !factor.ContainsNode(x)
+                        => Terms(((Mulf)expr).Multiplicand, negated).Select(term => (factor * term.Term, term.Negated)),
+                    _ => new[] { (expr, negated) }
+                };
+
+            // The factors of a product or a quotient, with the powers of the distance to the point added up in order
+            // and the rest multiplied into value at the point; false where a factor is neither.
+            bool Factors(Entity expr, Entity power, ref Entity value, ref Entity order)
+            {
+                switch (expr)
+                {
+                    case Mulf(var left, var right):
+                        return Factors(left, power, ref value, ref order) && Factors(right, power, ref value, ref order);
+                    case Divf(var left, var right):
+                        return Factors(left, power, ref value, ref order) && Factors(right, -power, ref value, ref order);
+                    case Powf(var @base, var exponent) when !exponent.ContainsNode(x) && @base == distance:
+                        order += power * exponent;
+                        return true;
+                    case var _ when expr == distance:
+                        order += power;
+                        return true;
+                    case var _ when !expr.ContainsNode(x):
+                        value *= MathS.Pow(expr, power);
+                        return true;
+                    default:
+                        if (ItsValueAt(expr, x, dest) is not { } there || there.Evaled is not Real { IsZero: false })
+                            return false;
+                        value *= MathS.Pow(there, power);
+                        return true;
+                }
+            }
+        }
+
+        /// <summary>
         /// Whether differentiating both parts has left a quotient bigger than the one it came
         /// from by more than a step on the way to an answer accounts for. Each step asks what
         /// the two parts of its quotient tend to, and a bigger quotient makes those two
@@ -1946,6 +2044,7 @@ namespace AngouriMath.Functions.Algebra
                                 if (GrewTooMuch(dest.IsFinite ? expr : numRest / denRest, applied))
                                     return ItsValueAt(applied, x, dest) is { } value ? Times(taken, value)
                                          : dest.IsFinite && ItsValueAt(applied.Expand().InnerSimplified, x, dest) is { } expanded ? Times(taken, expanded)
+                                         : dest.IsFinite && ItsValueOrPoleAt(applied, x, dest, side) is { } read ? Times(taken, read)
                                          : null;
                                 lHopitalApplications++;
                                 MultithreadingFunctional.ExitIfCancelled();
