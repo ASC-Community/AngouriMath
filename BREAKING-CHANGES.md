@@ -107,6 +107,28 @@ filed.
 | `"floor(log(x - 1, x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `limitright(floor(log(x - 1, x)), x, 1)` | `-1` |
 | `"floor(x / log(x, x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x / log(x, x)), x, 0)` | `-1` |
 
+### A real power in a limit is read by its order
+
+**Silent: in a limit, a factor `g^a` with `a` a constant that is not an integer, and `g` tending to 0 or to +oo, is read
+as `x^(k a)` times `(g / x^k)^a`, where `k` is the power of `x` that `g` behaves like.** The second part tends to a
+positive number and is taken out of the limit, so the power left is one of `x` itself, which the other readings already
+answer. A non-integer power of anything but `x` was not read at all, so even `(2x)^pi ln(x)` at 0 was left unevaluated,
+and `ln(x) / (2x)^(-pi)` took 15 seconds to be. Only a factor of a product or a quotient is read this way, so a power
+inside a sum is left alone, and a base tending to -oo, whose real power is complex, is not read either. Found by
+limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(x)^pi * ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(x) ^ pi * ln(x), x, 0)` | `0` |
+| `"(2x)^pi * ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((2 * x) ^ pi * ln(x), x, 0)` | `0` |
+| `"sqrt(sin(x)) * ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sqrt(sin(x)) * ln(x), x, 0)` | `0` |
+| `"ln(x) / (2x)^(-pi)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(ln(x) / (2 * x) ^ (-pi), x, 0)` | `0` |
+| `"sin(sin(x)^pi * ln(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(sin(x) ^ pi * ln(x)), x, 0)` | `0` |
+| `"sin(x)^pi / x^pi".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(x) ^ pi / x ^ pi, x, 0)` | `1` |
+| `"(x^2 + 1)^(1/pi) / x^(2/pi)".ToEntity().Limit("x", "+oo")` | `limit((x ^ 2 + 1) ^ (1 / pi) / x ^ (2 / pi), x, +oo)` | `1` |
+| `"sqrt(arctan(1)) / (1/2 / x)^sinh(pi)".ToEntity().Limit("x", "+oo")` | `limit(sqrt(arctan(1)) / (1/2 / x) ^ ((e ^ pi - e ^ (-pi)) / 2), x, +oo)` | `+oo` |
+| `"x / (1/2) / (x + 1)^pi".ToEntity().Limit("x", -1, ApproachFrom.Right)` | `limitright(x / (1/2) / (x + 1) ^ pi, x, -1)` | `-oo` |
+
 ### The sign of a limit is read through a change of variable
 
 **Silent: in a limit, where the variable is only inside one part `u` of an expression `h(u)`, the expression's sign near

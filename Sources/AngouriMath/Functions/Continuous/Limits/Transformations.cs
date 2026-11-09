@@ -2030,6 +2030,10 @@ namespace AngouriMath.Functions.Algebra
                     && Settled(extracted.ComputeLimitDivideEtImpera(x, toInfinity, ApproachFrom.Left)) is { } byGrowth)
                     return byGrowth;
 
+                if (FactorPowersByTheirOrder(simplified, x) is var (byOrder, coefficient)
+                    && Settled(ComputeLimit(byOrder, x, toInfinity)) is { } byItsOrder)
+                    return (coefficient * byItsOrder).InnerSimplified;
+
                 // A factorial's logarithm has no reading anywhere else -- every route out of
                 // ln(f) differentiates f, and a factorial's derivative wants the digamma
                 // function. SolveAsIndeterminatePower reaches the ones sitting under a
@@ -2107,6 +2111,56 @@ namespace AngouriMath.Functions.Algebra
                     return node;
                 var growth = MathS.Pow(x, Number.Integer.Create(degree));
                 return MathS.Pow(x, Number.Integer.Create(degree) * power) * MathS.Pow((@base / growth).Simplify(), power);
+            }
+        }
+
+        /// <summary>
+        /// The expression with every factor <c>g^a</c> of it -- a factor of the product or the quotient it is -- to a
+        /// constant exponent that is not an integer, of a <c>g</c> tending to 0 or an infinity, replaced by
+        /// <c>x^(k a)</c>, and the product of the limits <c>L^a</c> of what was taken out; or <see langword="null"/> if
+        /// there is no such factor. <c>k</c> is the limit of <c>x g' / g</c>, the power of x that <c>g</c> behaves like,
+        /// taken where it is rational, and <c>L</c> is the limit of <c>g / x^k</c>, taken where it is a positive number.
+        /// <c>sin(x)^pi ln(x)</c> at 0 from the right is <c>sin(1/x)^pi ln(1/x)</c> here, and nothing read a power of
+        /// <c>sin(1/x)</c> alongside a logarithm, while it is <c>(x sin(1/x))^pi</c>, which tends to 1, times
+        /// <c>x^(-pi) ln(1/x)</c>, which tends to 0.
+        /// </summary>
+        /// <remarks>
+        /// A factor tending to a positive number can be taken out of a limit, and <c>(uv)^a = u^a v^a</c> needs <c>u</c>
+        /// positive, which <c>x^k</c> is on the way to +oo, the only direction this is used in. Only a factor: inside a
+        /// sum, <c>sin(x)^pi - x^pi</c>, the part taken out is the whole of the answer.
+        /// </remarks>
+        private static (Entity Rewritten, Entity Coefficient)? FactorPowersByTheirOrder(Entity expr, Variable x)
+        {
+            Entity coefficient = Integer.One;
+            var rewritten = Factor(expr, inDivisor: false);
+            return rewritten == expr ? null : (rewritten, coefficient);
+
+            Entity Factor(Entity node, bool inDivisor)
+            {
+                switch (node)
+                {
+                    case Mulf(var left, var right):
+                        return Factor(left, inDivisor) * Factor(right, inDivisor);
+                    case Divf(var dividend, var divisor):
+                        return Factor(dividend, inDivisor) / Factor(divisor, !inDivisor);
+                    case Powf(var @base, var exponent) when @base.ContainsNode(x) && @base != x
+                        && !exponent.ContainsNode(x) && exponent.Evaled is Real { IsFinite: true } and not Integer:
+                        var baseLimit = ComputeLimit(@base, x, Real.PositiveInfinity);
+                        // Only a base tending to 0 or to +oo: a real power of a negative base is
+                        // complex, and the limits below are too dear to ask for one.
+                        if (InfiniteSign(baseLimit) != 1 && (baseLimit is null || EvalAssumingContinuous(baseLimit) is not Complex { IsZero: true }))
+                            return node;
+                        if (ComputeLimit(x * @base.Differentiate(x) / @base, x, Real.PositiveInfinity) is not { } orderLimit
+                            || EvalAssumingContinuous(orderLimit) is not Rational order || order == 0)
+                            return node;
+                        if (ComputeLimit(@base / MathS.Pow(x, order), x, Real.PositiveInfinity) is not { } limit
+                            || EvalAssumingContinuous(limit) is not Real { IsFinite: true, IsNegative: false } positive || positive == 0)
+                            return node;
+                        coefficient = inDivisor ? coefficient / MathS.Pow(limit, exponent) : coefficient * MathS.Pow(limit, exponent);
+                        return MathS.Pow(x, order * exponent);
+                    default:
+                        return node;
+                }
             }
         }
 
