@@ -294,7 +294,16 @@ namespace AngouriMath
             if (Functions.Algebra.LimitFunctional.IsTheWholeQuestion(quotient))
                 return null;
             quotientsAskedWhole ??= new();
-            if (quotientsAskedWhole.Count > 0 || !quotientsAskedWhole.Add(quotient))
+            if (quotientsAskedWhole.Count > 0)
+                return null;
+            // The expression whose two sides a two-sided limit is comparing, asked whole from one side, is that side's
+            // own question rather than one asked inside another, and does not use the one level up. Counted, it left
+            // that side nothing to ask of its own regrouping: x^pi / log(x, 2) at 0 from the right reads as
+            // x^pi * ln(x), asked whole, in a fifth of a second alone, and from inside the comparison it was refused
+            // and the side spent ten seconds on other readings that did not answer.
+            if (Functions.Algebra.LimitFunctional.IsTheComparedQuestion(quotient))
+                return Functions.Algebra.LimitFunctional.ComputeLimit(quotient, x, dist, side);
+            if (!quotientsAskedWhole.Add(quotient))
                 return null;
             try { return Functions.Algebra.LimitFunctional.ComputeLimit(quotient, x, dist, side); }
             finally { quotientsAskedWhole.Remove(quotient); }

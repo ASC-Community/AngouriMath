@@ -313,6 +313,18 @@ namespace AngouriMath.Functions.Algebra
         internal static bool IsTheWholeQuestion(Entity expr) => ReferenceEquals(expr, descentRoot);
 
         /// <summary>
+        /// The expression whose sides a two-sided limit is comparing. Its whole limit asked from
+        /// one side inside that comparison is the question of that side, not one asked inside another.
+        /// </summary>
+        [System.ThreadStatic] private static Entity? comparedRoot;
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is the expression whose two sides are being compared, so
+        /// that its whole limit from one side is that side's own question.
+        /// </summary>
+        internal static bool IsTheComparedQuestion(Entity expr) => ReferenceEquals(expr, comparedRoot);
+
+        /// <summary>
         /// A logarithm of a power to a constant real exponent, log(f^c), as c log(f), or as
         /// c log(-f) + log((-1)^c) where f is negative near the point.
         /// </summary>
@@ -431,12 +443,12 @@ namespace AngouriMath.Functions.Algebra
             if (expr.Nodes.Any(static node => node is Derivativef))
                 expr = WithTheDerivativesTaken(expr, x, dest, side);
             var enclosingApproach = EnterApproach(x, dest);
-            var (outerComparing, outerRoot) = (comparingSides, descentRoot);
-            (comparingSides, descentRoot) = (false, null);
+            var (outerComparing, outerRoot, outerCompared) = (comparingSides, descentRoot, comparedRoot);
+            (comparingSides, descentRoot, comparedRoot) = (false, null, null);
             try { return ComputeLimitWithinApproach(expr, x, dest, side, acceptNaN); }
             finally
             {
-                (comparingSides, descentRoot) = (outerComparing, outerRoot);
+                (comparingSides, descentRoot, comparedRoot) = (outerComparing, outerRoot, outerCompared);
                 LeaveApproach(enclosingApproach);
             }
         }
@@ -692,9 +704,9 @@ namespace AngouriMath.Functions.Algebra
             Entity? DescendComparingSides(ApproachFrom oneSide)
             {
                 var stepped = WithStepsAtTheirLimits(expr, x, dest, oneSide);
-                comparingSides = true;
+                (comparingSides, comparedRoot) = (true, stepped);
                 try { return stepped.ComputeLimitDivideEtImpera(x, dest, oneSide); }
-                finally { comparingSides = false; }
+                finally { (comparingSides, comparedRoot) = (false, null); }
             }
         }
 
