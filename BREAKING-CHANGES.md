@@ -107,6 +107,19 @@ filed.
 | `"floor(log(x - 1, x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `limitright(floor(log(x - 1, x)), x, 1)` | `-1` |
 | `"floor(x / log(x, x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x / log(x, x)), x, 0)` | `-1` |
 
+### A power of a power of a positive base is one power in a limit
+
+**Silent: in a limit, `(g^a)^b` with `a` and `b` real constants, `b` not an integer, is read as `g^(a b)` where `g` is
+positive near the point on each side approached.** The two are equal for a positive `g` and not for a negative one --
+`sqrt(x^3)` is `i |x|^(3/2)` for `x < 0`, where `x^(3/2)` is `-i |x|^(3/2)` -- so a limit from the left, or from both
+sides, of such a root is read as before. Read as written, `sqrt(x^3) / x` at 0 from the right was 0 only after 4
+seconds, and `floor(sqrt(x^3))` after 6; each now takes under 0.2 s. One limit 2.6.0 left unevaluated is answered.
+Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sinh(arctan(x))^sqrt(x * x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(((e ^ arctan(x) - e ^ (-arctan(x))) / 2) ^ sqrt(x * x), x, 0)` | `1` |
+
 ### A real power in a limit is read by its order
 
 **Silent: in a limit, a factor `g^a` with `a` a constant that is not an integer, and `g` tending to 0 or to +oo, is read
