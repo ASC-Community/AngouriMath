@@ -107,6 +107,19 @@ filed.
 | `"floor(log(x - 1, x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `limitright(floor(log(x - 1, x)), x, 1)` | `-1` |
 | `"floor(x / log(x, x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x / log(x, x)), x, 0)` | `-1` |
 
+### A grown derivatives' quotient is read by its terms in a limit
+
+**Silent: where l'Hopital's rule turns away a derivatives' quotient for growing too much, a one-sided limit at a finite
+point now reads it a term at a time** -- each term a value at the point, or a negative power of the distance to it
+times factors with non-zero values there, a pole whose sign the side decides. Poles of one sign are that infinity;
+anything else is declined as before. `(sqrt(x) - erf(x)) / x` at 0 from the right, which 2.6.0 answered `+oo`, had
+been left unevaluated on the way to this release, and is `+oo` again; one limit 2.6.0 left unevaluated is answered.
+Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(sqrt(x) - erf(x)) / (2 * x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((sqrt(x) - erf(x)) / (2 * x), x, 0)` | `+oo` |
+
 ### A power of a power of a positive base is one power in a limit
 
 **Silent: in a limit, `(g^a)^b` with `a` and `b` real constants, `b` not an integer, is read as `g^(a b)` where `g` is
