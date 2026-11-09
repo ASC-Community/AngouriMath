@@ -1220,6 +1220,12 @@ namespace AngouriMath.Functions.Algebra
         /// </summary>
         internal static int? SignNear(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
+            // A difference with 0 is read as what it subtracts 0 from. A step function at a jump of 0 and a comparison
+            // with 0 both ask about g - 0, which is not simplified on the way, and every reading below carried the 0
+            // along: floor(sinh(2)^log(2, x)) at 0 from the right asked for the slope (g - 0) / (x - 0), which
+            // l'Hopital's rule took seven seconds to decline, where g / x is declined in under half a second.
+            while (expr is Minusf(var minuend, Integer { IsZero: true }))
+                expr = minuend;
             if (EvalAssumingContinuous(expr.Limit(x, dest, side)) is not Real { IsNaN: false } limit)
                 return null;
             // A non-zero limit, infinities included, fixes the sign on its own: the expression
@@ -1268,13 +1274,10 @@ namespace AngouriMath.Functions.Algebra
         // A product or a quotient has the product of its parts' signs: sqrt(x) * x at 0 from the
         // right has the slope sqrt(x), which tends to 0, and so had no sign. A positive base to a
         // real power is positive: sqrt(1/x) at +oo has no slope to read, and e^x at -oo none either.
-        // A difference with 0 is read as what it subtracts 0 from: a step function at a jump of 0 and a
-        // comparison with 0 both ask about g - 0, and floor(x^(3/2)) at 0 from the right was declined
-        // for want of the sign x^(3/2) has as a power.
+        // floor(x^(3/2)) at 0 from the right was declined for want of the sign x^(3/2) has as a power.
         private static int? SignOfTheFactors(Entity expr, Variable x, Entity dest, ApproachFrom side)
             => expr switch
             {
-                Minusf(var minuend, Integer { IsZero: true }) => SignNear(minuend, x, dest, side),
                 Mulf(var left, var right) => SignOfTheProduct(left, right, x, dest, side),
                 Divf(var left, var right) => SignOfTheProduct(left, right, x, dest, side),
                 Powf(var @base, var exponent) when IsRealNear(exponent, x, dest, side)
@@ -1316,7 +1319,9 @@ namespace AngouriMath.Functions.Algebra
             if (!Functions.TreeAnalyzer.IsRealValued(expr, x)
                 && !(Functions.TreeAnalyzer.WhereRealValued(expr, x) is { } whereReal && HoldsNear(whereReal, x, dest, side) is true))
                 return null;
-            if (EvalAssumingContinuous((expr / (x - dest)).Limit(x, dest, side)) is not Real { IsNaN: false, IsZero: false } slope)
+            // Over x itself at 0, for the reason SignNear reads g - 0 as g.
+            var offset = dest is Integer { IsZero: true } ? (Entity)x : x - dest;
+            if (EvalAssumingContinuous((expr / offset).Limit(x, dest, side)) is not Real { IsNaN: false, IsZero: false } slope)
                 return null;
             return slope.IsNegative == (side is ApproachFrom.Left) ? 1 : -1;
         }
