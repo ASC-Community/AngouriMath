@@ -107,6 +107,30 @@ filed.
 | `"floor(log(x - 1, x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `limitright(floor(log(x - 1, x)), x, 1)` | `-1` |
 | `"floor(x / log(x, x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x / log(x, x)), x, 0)` | `-1` |
 
+### The sign of a limit is read through a change of variable
+
+**Silent: in a limit, where the variable is only inside one part `u` of an expression `h(u)`, the expression's sign near
+the destination is read as that of `h(t)` as `t` tends to the limit of `u` from the side `u` arrives from.** The sign of
+something tending to 0 at an infinity was read through `1/x` at 0, where `sinh(e^(-1/x))` is flat -- every derivative
+of `e^(-1/x)` vanishes at 0 -- so `sgn`, `floor` and `abs` of such an argument were left unevaluated. Read through
+`u = e^x`, it is `(e^t - e^-t) / 2` at 0 from the right, which has a slope. The same reading settles a step function at
+a jump when the argument arrives at it through an inner function, as `floor(tanh(x))` at -oo does. Found by limitcheck;
+no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sgn(sinh(e^x))".ToEntity().Limit("x", "-oo")` | `limit(sgn((e ^ e ^ x - e ^ (-e ^ x)) / 2), x, -oo)` | `1` |
+| `"sgn(sin(1/x))".ToEntity().Limit("x", "-oo")` | `limit(sgn(sin(1 / x)), x, -oo)` | `-1` |
+| `"sgn(tan(x^pi))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sgn(tan(x ^ pi)), x, 0)` | `1` |
+| `"floor(tanh(x))".ToEntity().Limit("x", "-oo")` | `limit(floor((e ^ (2 * x) - 1) / (e ^ (2 * x) + 1)), x, -oo)` | `-1` |
+| `"floor(tanh(1/x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor((e ^ (2 * 1 / x) - 1) / (e ^ (2 * 1 / x) + 1)), x, 0)` | `-1` |
+| `"floor(2 - 1/x)".ToEntity().Limit("x", "+oo")` | `limit(floor(2 - 1 / x), x, +oo)` | `1` |
+| `"floor(2 - 1/x)".ToEntity().Limit("x", "-oo")` | `limit(floor(2 - 1 / x), x, -oo)` | `2` |
+| `"floor(e^x - 3)".ToEntity().Limit("x", "-oo")` | `limit(floor(e ^ x - 3), x, -oo)` | `-3` |
+| `"floor(abs(x * x))".ToEntity().Limit("x", 0)` | `limit(floor(abs(x * x)), x, 0)` | `0` |
+| `"floor(arcsin(log(x, pi)))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(floor(arcsin(log(x, pi))), x, 0)` | `-1` |
+| `"floor(erf(x^pi))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(floor(erf(x ^ pi)), x, 0)` | `0` |
+
 ### A limit of a quotient over a quotient is read as a quotient of products
 
 **Silent: in a limit, `a / (b / c)` with `b` constant is read first as `a c / b`, and that reading is kept where it gives

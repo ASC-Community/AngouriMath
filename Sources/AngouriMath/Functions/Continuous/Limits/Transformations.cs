@@ -1233,9 +1233,36 @@ namespace AngouriMath.Functions.Algebra
             // over, and sgn(sinh(e^x)) at -oo asked it. The factors are read at the infinity.
             if (dest.Evaled is Real { IsFinite: false, IsNaN: false } infinity)
                 return SignFromVanishingOrder(expr.Substitute(x, infinity.IsNegative ? -1 / x : 1 / x), x, Integer.Zero, ApproachFrom.Right)
-                    ?? SignOfTheFactors(expr, x, dest, side);
+                    ?? SignOfTheFactors(expr, x, dest, side) ?? SignThroughAChangeOfVariable(expr, x, dest, side);
             return SignFromVanishingOrder(expr, x, dest, side) ?? SignFromTheSlope(expr, x, dest, side)
-                ?? SignOfTheFactors(expr, x, dest, side);
+                ?? SignOfTheFactors(expr, x, dest, side) ?? SignThroughAChangeOfVariable(expr, x, dest, side);
+        }
+
+        // Where the variable is only ever inside one part u, the expression is h(u), and near the destination it has the
+        // sign h(t) has as t tends to the limit of u, from the side u arrives from. sinh(e^x) at -oo is (e^t - e^-t) / 2
+        // at 0 from the right, which has a slope; read at -oo itself, through 1/x, it is flat, every derivative of
+        // e^(-1/x) vanishing at 0, so nothing had a sign for it. u is a proper part, and the side u arrives from is the
+        // sign of u - L, which is skipped where it is this very expression: ln(1 + e^x) at -oo asks it of (1 + e^x) - 1,
+        // whose own u - L is (1 + e^x) - 1 again, and that recursion overflowed the stack. Its next part, e^x, answers.
+        private static int? SignThroughAChangeOfVariable(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        {
+            var t = Variable.CreateTemp(expr.Vars);
+            foreach (var part in expr.Nodes)
+            {
+                if (ReferenceEquals(part, expr) || part == x || !part.ContainsNode(x)
+                    || expr.Substitute(part, t) is not { } outer || outer.ContainsNode(x))
+                    continue;
+                if (EvalAssumingContinuous(part.Limit(x, dest, side)) is not Real { IsNaN: false } limit)
+                    return null;
+                if (!limit.IsFinite)
+                    return SignNear(outer, t, limit, ApproachFrom.Left);
+                if (part - limit is var offset && offset == expr)
+                    continue;
+                return SignNear(offset, x, dest, side) is { } arrivesFrom
+                    ? SignNear(outer, t, limit, arrivesFrom > 0 ? ApproachFrom.Right : ApproachFrom.Left)
+                    : null;
+            }
+            return null;
         }
 
         // A product or a quotient has the product of its parts' signs: sqrt(x) * x at 0 from the
