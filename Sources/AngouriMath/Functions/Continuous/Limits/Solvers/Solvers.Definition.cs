@@ -343,6 +343,26 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// A power of a power to constant real exponents, (g^a)^b, as g^(a b) where g is positive near the point on each
+        /// side approached.
+        /// </summary>
+        /// <remarks>
+        /// For g positive and a, b real, g^a is positive and (g^a)^b is g^(a b). Where g is negative it is not:
+        /// sqrt(x^3) is i |x|^(3/2) for x &lt; 0, and x^(3/2) is -i |x|^(3/2). Read as written, sqrt(x^3) / x at 0 from the
+        /// right was 0 only after four seconds of l'Hopital's rule, each step another root over a power, where x^(3/2) / x
+        /// is sqrt(x) at once; floor(sqrt(x^3)) and sgn(sqrt(x^3)) asked it for the sign of sqrt(x^3). An integer outer
+        /// exponent is left to the normalisation, which takes (g^a)^n apart whatever the sign of g. Found by limitcheck;
+        /// no issue was filed.
+        /// </remarks>
+        private static Entity PowerOfAPower(Entity node, Variable x, Entity dest, ApproachFrom side)
+            => node is Powf(Powf(var @base, var inner), var outer)
+                && @base.ContainsNode(x) && !inner.ContainsNode(x) && !outer.ContainsNode(x)
+                && inner.Evaled is Real { IsFinite: true } && outer.Evaled is Real { IsFinite: true } and not Integer
+                && SignOnEachSide(@base, x, dest, side) is 1
+                    ? MathS.Pow(@base, (inner * outer).InnerSimplified)
+                    : node;
+
+        /// <summary>
         /// A logarithm to a base other than e as a quotient of natural logarithms.
         /// </summary>
         /// <remarks>
@@ -492,6 +512,7 @@ namespace AngouriMath.Functions.Algebra
 
             expr = expr.Replace(ExpandLogarithm);
             expr = expr.Replace(node => LogarithmOfAPower(node, x, dest, side));
+            expr = expr.Replace(node => PowerOfAPower(node, x, dest, side));
 
             // In front of both paths, not only the two-sided one. Each of these is guarded on
             // a two-sided limit, and a two-sided limit that exists is also the limit from
