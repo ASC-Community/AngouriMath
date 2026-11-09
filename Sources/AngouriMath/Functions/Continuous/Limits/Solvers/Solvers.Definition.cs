@@ -521,7 +521,7 @@ namespace AngouriMath.Functions.Algebra
             // second remarkable limit the descent reads it as 1^(+oo) and is definite about
             // it, where the same expression approached from both sides gives e.
             expr = expr.Replace(a => TrivialTrigonometricReplacement(a, x));
-            expr = ApplyTrivialTransformations(expr, x, dest, (_, exprLim) => exprLim);
+            expr = ApplyTrivialTransformations(expr, x, dest, side, (_, exprLim) => exprLim);
             expr = ApplyFirstRemarkableOverFactors(expr, x, dest);
             expr = expr.Replace(c => ApplySecondRemarkable(c, x, dest));
             // A tangent is a quotient as much as a cosecant is a reciprocal, and leaving it

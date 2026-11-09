@@ -107,6 +107,22 @@ filed.
 | `"floor(log(x - 1, x))".ToEntity().Limit("x", 1, ApproachFrom.Right)` | `limitright(floor(log(x - 1, x)), x, 1)` | `-1` |
 | `"floor(x / log(x, x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x / log(x, x)), x, 0)` | `-1` |
 
+### A one-sided limit asks the parts of a sum or product from its side
+
+**Silent: before searching, a one-sided limit replaces a sum, difference or product whose parts have finite limits by
+those limits, and asks each part from the side of the limit rather than from both.** A part with a finite limit from
+the side approached and none from the other, such as `x ^ x` at 0 from the left, no longer keeps the whole
+unevaluated; and a part reaching the same value from both sides is no longer worked through l'Hopital's rule on the
+side that is not approached, so `x ^ pi / log(x, 2) - 2` at 0 from the right takes 0.2 s rather than 10 s. Found by
+limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"log(x, 1) - x ^ x + 1".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(log(x, 1) - x ^ x + 1, x, 0)` | `0` |
+| `"-tan(x) ^ abs(x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(-tan(x) ^ abs(x), x, 0)` | `-1` |
+| `"1/2 * x ^ abs(x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(1/2 * x ^ abs(x), x, 0)` | `1/2` |
+| `"(pi / x) ^ erf(x) * e ^ log(x, x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft((pi / x) ^ erf(x) * e ^ log(x, x), x, 0)` | `e` |
+
 ### A grown derivatives' quotient is read by its terms in a limit
 
 **Silent: where l'Hopital's rule turns away a derivatives' quotient for growing too much, a one-sided limit at a finite
