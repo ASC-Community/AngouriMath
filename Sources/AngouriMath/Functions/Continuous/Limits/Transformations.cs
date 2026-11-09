@@ -28,9 +28,9 @@ namespace AngouriMath.Functions.Algebra
         /// to pi - x -- so rewriting it as x turned <c>lim x-&gt;pi sin(x) / (x - pi)</c>, which
         /// is -1, into pi / 0.
         /// </remarks>
-        private static Entity EquivalenceRules(Entity expr, Variable x, Entity dest)
+        private static Entity EquivalenceRules(Entity expr, Variable x, Entity dest, ApproachFrom side)
             => expr is (Sinf or Tanf or Arcsinf or Arctanf)
-               && EvalAssumingContinuous(expr.DirectChildren[0].Limit(x, dest)) == 0
+               && EvalAssumingContinuous(expr.DirectChildren[0].Limit(x, dest, side)) == 0
                 ? expr.DirectChildren[0]
                 : expr;
         internal static Entity EvalAssumingContinuous(Entity expr) =>
@@ -118,12 +118,21 @@ namespace AngouriMath.Functions.Algebra
             => MathS.Settings.Codomain.Value is AngouriMath.Core.Domain.Real
                && LeavesTheRealsOnTheApproach(expr, x, dest, side);
 
-        private static Entity ApplyFirstRemarkable(Entity expr, Variable x, Entity dest)
+        /// <remarks>
+        /// Each part is asked from the side of the limit. The equivalence of a sine and its argument holds on one side
+        /// of the point as much as on both, so a one-sided limit needs its parts to vanish on its side alone; asked
+        /// from both, (e^((x - 1)^ln(x)) - e^(-(x - 1)^ln(x))) / 2 at 1 from the right spent eight seconds on the left
+        /// of its dividend, where (x - 1)^ln(x) is not real. The simpler part is asked first, since a part that does
+        /// not vanish settles the question and a simple one is the cheaper to ask: the divisor of that quotient, a
+        /// constant, but the dividend of (-1 - x) / (ln(2) / ln(x))^(x - 1) at 1 from the left, whose divisor takes
+        /// seconds and is asked again by the descent.
+        /// </remarks>
+        private static Entity ApplyFirstRemarkable(Entity expr, Variable x, Entity dest, ApproachFrom side)
             => expr switch
             {
                 Divf(var a, var b) div
-                    when EvalAssumingContinuous(a.Limit(x, dest)) == 0 && EvalAssumingContinuous(b.Limit(x, dest)) == 0
-                        => div.New(EquivalenceRules(a, x, dest), EquivalenceRules(b, x, dest)),
+                    when BothVanish(a.Complexity <= b.Complexity ? (a, b) : (b, a), x, dest, side)
+                        => div.New(EquivalenceRules(a, x, dest, side), EquivalenceRules(b, x, dest, side)),
 
                 // A product takes the substitution as much as a quotient does -- it is the ratio
                 // of the two forms tending to 1 that licenses it, and that says nothing about
@@ -131,13 +140,17 @@ namespace AngouriMath.Functions.Algebra
                 // had it, so lim x->0+ tan(x) * ln(x) went the long way round through l'Hopital's
                 // rule and came back NaN, where the same limit written sin(x) * ln(x) is 0.
                 Mulf(var a, var b)
-                    when EquivalenceRules(a, x, dest) is var equivalentA
-                      && EquivalenceRules(b, x, dest) is var equivalentB
+                    when EquivalenceRules(a, x, dest, side) is var equivalentA
+                      && EquivalenceRules(b, x, dest, side) is var equivalentB
                       && (!ReferenceEquals(equivalentA, a) || !ReferenceEquals(equivalentB, b))
                         => equivalentA * equivalentB,
 
                 _ => expr
             };
+
+        private static bool BothVanish((Entity First, Entity Second) parts, Variable x, Entity dest, ApproachFrom side)
+            => EvalAssumingContinuous(parts.First.Limit(x, dest, side)) == 0
+               && EvalAssumingContinuous(parts.Second.Limit(x, dest, side)) == 0;
 
         /// <summary>
         /// <see cref="ApplyFirstRemarkable"/> applied down the product-and-quotient spine
@@ -161,13 +174,13 @@ namespace AngouriMath.Functions.Algebra
         /// factor of the whole.
         /// <a href="https://github.com/asc-community/AngouriMath/issues/749">#749</a>
         /// </remarks>
-        private static Entity ApplyFirstRemarkableOverFactors(Entity expr, Variable x, Entity dest)
+        private static Entity ApplyFirstRemarkableOverFactors(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
-            var applied = ApplyFirstRemarkable(expr, x, dest);
+            var applied = ApplyFirstRemarkable(expr, x, dest, side);
             if (applied is not (Mulf or Divf))
                 return applied;
-            var left = ApplyFirstRemarkableOverFactors(applied.DirectChildren[0], x, dest);
-            var right = ApplyFirstRemarkableOverFactors(applied.DirectChildren[1], x, dest);
+            var left = ApplyFirstRemarkableOverFactors(applied.DirectChildren[0], x, dest, side);
+            var right = ApplyFirstRemarkableOverFactors(applied.DirectChildren[1], x, dest, side);
             // Rebuilt only where a factor actually changed, so an expression the rule has
             // nothing to say about comes back as the very node it went in as, keeping whatever
             // the rest of the machinery has already cached against it.
