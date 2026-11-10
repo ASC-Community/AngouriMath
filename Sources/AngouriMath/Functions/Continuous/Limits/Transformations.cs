@@ -1557,14 +1557,81 @@ namespace AngouriMath.Functions.Algebra
                     case var _ when !expr.ContainsNode(x):
                         value *= MathS.Pow(expr, power);
                         return true;
-                    default:
-                        if (ItsValueAt(expr, x, dest) is not { } there || there.Evaled is not Real { IsZero: false })
-                            return false;
+                    case var _ when ItsValueAt(expr, x, dest) is { } there && there.Evaled is Real { IsZero: false }:
                         value *= MathS.Pow(there, power);
+                        return true;
+                    // A whole power is its base's order that many times, where c * d^k to the n is c^n * d^(kn) exactly.
+                    case Powf(var @base, Integer times):
+                        return Factors(@base, power * times, ref value, ref order);
+                    default:
+                        if (LeadingTerm(expr) is not var (leadingOrder, leadingValue))
+                            return false;
+                        order += power * leadingOrder;
+                        value *= MathS.Pow(leadingValue, power);
                         return true;
                 }
             }
+
+            // A factor with no finite non-zero value at the point read as c * d^k, d the distance to it: a sum by its
+            // terms of the lowest order, where their coefficients do not cancel, and one that vanishes there, a sum
+            // among them, by the first of its derivatives that does not. The product rule leaves both inside one factor:
+            // ln(cos(x) * sqrt(x)) / (1 / (e^(2x) - 1)) at 0 from the right steps to
+            // -1/2 * (x^(-1/2) * cos(x) / 2 - sqrt(x) * sin(x)) * (e^(2x) - 1)^2 / (sqrt(x) * cos(x) * e^(2x)), whose
+            // sum is of order -1/2 and whose e^(2x) - 1 is 2x to the first, so it is of order 1 and tends to 0. A
+            // derivative read at the point is the Taylor coefficient only where the function is smooth there, so not
+            // through an abs, and a value that is not a finite real at the point stops the reading.
+            (Entity Order, Entity Value)? LeadingTerm(Entity expr)
+            {
+                if (ItsValueAt(expr, x, dest) is { } atThePoint && atThePoint.Evaled is Real { IsZero: true })
+                    return ByItsDerivatives(expr);
+                if (expr is Sumf or Minusf)
+                {
+                    Real? lowest = null;
+                    var parts = new List<(Real Order, Entity Value)>();
+                    foreach (var (term, negated) in Terms(expr, false))
+                    {
+                        Entity termValue = Integer.One, termOrder = Integer.Zero;
+                        if (!Factors(term, Integer.One, ref termValue, ref termOrder)
+                            || termOrder.Evaled is not Real { IsNaN: false, IsFinite: true } termOrderValue)
+                            return null;
+                        parts.Add((termOrderValue, negated ? -termValue : termValue));
+                        if (lowest is null || termOrderValue < lowest)
+                            lowest = termOrderValue;
+                    }
+                    if (lowest is null)
+                        return null;
+                    Entity coefficient = Integer.Zero;
+                    foreach (var part in parts)
+                        if (part.Order == lowest)
+                            coefficient += part.Value;
+                    return coefficient.Evaled is Real { IsNaN: false, IsFinite: true, IsZero: false }
+                        ? (lowest, coefficient.InnerSimplified) : null;
+                }
+                return null;
+            }
+
+            // The first derivative that is not 0 at the point, over its factorial, and its order.
+            (Entity Order, Entity Value)? ByItsDerivatives(Entity expr)
+            {
+                if (expr.Nodes.Any(static node => node is Absf))
+                    return null;
+                var derivative = expr;
+                Entity factorial = Integer.One;
+                for (var k = 1; k <= MaxVanishingOrderRead; k++)
+                {
+                    derivative = derivative.Differentiate(x);
+                    factorial *= k;
+                    if (ItsValueAt(derivative, x, dest) is not { } derivativeThere || derivativeThere.Evaled is not Real { IsNaN: false, IsFinite: true } read)
+                        return null;
+                    if (!read.IsZero)
+                        return (Integer.Create(k), (derivativeThere / factorial).InnerSimplified);
+                }
+                return null;
+            }
         }
+
+        /// <summary>How many derivatives <see cref="ItsValueOrPoleAt"/> takes of a vanishing factor to find its order.</summary>
+        private const int MaxVanishingOrderRead = 3;
 
         /// <summary>
         /// Whether differentiating both parts has left a quotient bigger than the one it came
@@ -2087,6 +2154,14 @@ namespace AngouriMath.Functions.Algebra
                                          : dest.IsFinite && ItsValueAt(applied.Expand().InnerSimplified, x, dest) is { } expanded ? Times(taken, expanded)
                                          : dest.IsFinite && ItsValueOrPoleAt(applied, x, dest, side) is { } read ? Times(taken, read)
                                          : null;
+                                // At a finite point the term-by-term reading is asked before another step too: it costs a
+                                // substitution a factor, where the descent through the quotient may cost seconds.
+                                // tanh(x) * ln(cos(x) * sqrt(x)) at 0 from the right reaches here with e^(2x) + 1 taken
+                                // out, so what was differentiated is smaller and the step does not count as grown, and the
+                                // descent through -1/2 * (x^(-1/2) * cos(x) / 2 - sqrt(x) * sin(x)) * (e^(2x) - 1)^2 / ...
+                                // ran out of time where the reading says 0 at once.
+                                if (dest.IsFinite && ItsValueOrPoleAt(applied, x, dest, side) is { } readFirst)
+                                    return Times(taken, readFirst);
                                 lHopitalApplications++;
                                 MultithreadingFunctional.ExitIfCancelled();
                                 lHopitalChain!.Add(applied);
