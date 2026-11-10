@@ -422,6 +422,33 @@ namespace AngouriMath.Functions.Algebra
 
         public static Entity? ComputeLimit(Entity expr, Variable x, Entity dest, ApproachFrom side = ApproachFrom.BothSides, bool acceptNaN = false)
         {
+            var key = (expr, x, dest, side, acceptNaN);
+            if (limitMemo is { } memo && memo.TryGetValue(key, out var known))
+                return known;
+            var found = ComputeLimitUnmemoised(expr, x, dest, side, acceptNaN);
+            if (found is { } && limitMemo is { } store && found.Evaled != MathS.NaN)
+                store[key] = found;
+            return found;
+        }
+
+        /// <summary>
+        /// The limits already found inside the outermost approach, keyed by the whole question.
+        /// </summary>
+        /// <remarks>
+        /// The machinery re-enters itself with questions it has already answered: in
+        /// tanh(log(arcsin(x), x)) at 0 from the left, the limit of the exponent ln(x) / ln(arcsin(x))
+        /// was taken four times over, at a second or more each, and the whole took ten seconds.
+        /// <para/>
+        /// Only answers are kept. A decline can be the scope's and not the question's -- a budget
+        /// of limits spent, a re-entry guard at its depth -- and asked again elsewhere the same
+        /// question may be answered. A NaN is not kept either: it can be an indeterminate form
+        /// read on the way down, which callers withhold and search past rather than an answer.
+        /// Created and dropped with the sign memo, so nothing survives a call.
+        /// </remarks>
+        [System.ThreadStatic] private static Dictionary<(Entity Expr, Variable X, Entity Dest, ApproachFrom Side, bool AcceptNaN), Entity>? limitMemo;
+
+        private static Entity? ComputeLimitUnmemoised(Entity expr, Variable x, Entity dest, ApproachFrom side, bool acceptNaN)
+        {
             if (remainingLimits is { } remaining)
             {
                 if (remaining <= 0)

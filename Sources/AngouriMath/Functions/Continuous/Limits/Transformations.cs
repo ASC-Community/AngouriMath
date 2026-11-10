@@ -342,6 +342,7 @@ namespace AngouriMath.Functions.Algebra
             var previous = currentApproach;
             approachDepth++;
             signMemo ??= new();
+            limitMemo ??= new();
             currentApproach = new Approach(x, dest);
             return previous;
         }
@@ -354,7 +355,7 @@ namespace AngouriMath.Functions.Algebra
         {
             currentApproach = previous;
             if (--approachDepth == 0)
-                signMemo = null;
+                (signMemo, limitMemo) = (null, null);
         }
 
         /// <summary>
