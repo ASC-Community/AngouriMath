@@ -618,6 +618,21 @@ did, and `ln(x + 2) / ln(x + 3)` at 0 was `ln(2) / ln(3)`. With symbols it was n
 | `"limit(ln(a + 1/x) / ln(b + 1/x), x, +oo)".ToEntity().Simplify()` | `a / b` | `ln(a) / ln(b)` |
 | `"limit(ln(1 + x) / ln(y + x), x, 0)".ToEntity().Simplify()` | `1 / y` | `0 provided not ln(y) = 0` |
 
+### A difference of logarithms of one base is read as one logarithm in a limit
+
+**Silent: a limit of a difference of two logarithms of one base, each tending to an infinity, is answered, where it
+was left unevaluated.** `ln(f) - ln(g)` is `ln(f / g)` wherever `f` and `g` are both positive, and the quotient often
+has a limit where neither logarithm has. The two are gathered only where both arguments are checked to be positive
+near the point, so a side on which either is negative is left as it was.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"ln(sin(x)) - ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"(ln(sin(x)) - ln(x)) / x^2".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `-1/6` |
+| `"(ln(sin(x)) - ln(x)) / x".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"log(2, sin(x)) - log(2, x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"2 ln(sin(x)) - ln(x^2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+
 ### A limit over a vanishing absolute value is not claimed not to exist
 
 **Silent: `1/abs(x)` at 0 is `+oo`, where it was `NaN`, the claim that the limit does not exist.** The sign a

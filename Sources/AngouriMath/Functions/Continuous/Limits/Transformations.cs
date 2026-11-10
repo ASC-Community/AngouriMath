@@ -2436,6 +2436,18 @@ namespace AngouriMath.Functions.Algebra
         /// </summary>
         private static Entity? SolveAsDifferenceOfInfinities(Entity expr, Variable x)
         {
+            // A constant factor or divisor is taken out, and the difference read inside it: simplifying
+            // log(2, sin(1/x)) - log(2, 1/x) puts it over ln(2) as one quotient. A real, nonzero constant
+            // times an infinity, or a finite limit, is the limit times it.
+            var (scaled, scale) = expr switch
+            {
+                Mulf(var factor, var rest) when IsNonzeroRealConstant(factor) => (rest, factor),
+                Mulf(var rest, var factor) when IsNonzeroRealConstant(factor) => (rest, factor),
+                Divf(var rest, var divisor) when IsNonzeroRealConstant(divisor) => (rest, 1 / divisor),
+                _ => ((Entity?)null, (Entity?)null)
+            };
+            if (scaled is { } && scale is { })
+                return SolveAsDifferenceOfInfinities(scaled, x) is { } inside ? (scale * inside).InnerSimplified : null;
             if (differenceDepth >= MaxDifferenceDepth || expr is not (Sumf or Minusf))
                 return null;
             var terms = Sumf.LinearChildren(expr).ToArray();
@@ -2454,6 +2466,23 @@ namespace AngouriMath.Functions.Algebra
                 var (minuend, subtrahend) = firstSign > 0
                     ? (terms[0], -terms[1])
                     : (terms[1], -terms[0]);
+
+                // Two logarithms to one base are one logarithm: c log(a) + d log(b) = log(a^c b^d),
+                // exactly, for a and b positive on the way and c and d real. The difference is then a
+                // limit of one function, which ln(sin(1/x)) - ln(1/x), ln(sin(x)) - ln(x) at 0 from the
+                // right, has: it is ln(x sin(1/x)), and tends to 0. The ratio of the two tends to 1 and
+                // the conjugate needs a root, so nothing below had a reading of it.
+                // Each antilogarithm's sign is asked, not inferred from its logarithm tending to a real
+                // infinity: ln(-x) at 0 from the right is read as -oo, and ln(x) - ln(-x), which is
+                // -pi i there, gathered into ln(-1), which is pi i.
+                if (AsMultipleOfALogarithm(terms[0], x) is var (firstBase, firstArgument, firstMultiple)
+                    && AsMultipleOfALogarithm(terms[1], x) is var (secondBase, secondArgument, secondMultiple)
+                    && firstBase == secondBase
+                    && IsPositiveOnTheWay(firstArgument) && IsPositiveOnTheWay(secondArgument))
+                    return ComputeLimit(
+                        MathS.Log(firstBase,
+                            (MathS.Pow(firstArgument, firstMultiple) * MathS.Pow(secondArgument, secondMultiple)).InnerSimplified),
+                        x, dest);
 
                 // The faster growing part decides the answer whenever there is one, which is
                 // what the ratio of the two says: lim x -> +oo e^x - x is +oo because x / e^x
@@ -2486,7 +2515,34 @@ namespace AngouriMath.Functions.Algebra
                 finally { suppresslHopital = false; }
             }
             finally { differenceDepth--; }
+
+            bool IsPositiveOnTheWay(Entity argument)
+                => ComputeLimit(MathS.Signum(argument), x, Real.PositiveInfinity)?.Evaled is Integer one && one == 1;
         }
+
+        /// <summary>
+        /// <paramref name="term"/> as <c>c log(a)</c>, a logarithm to a base free of <paramref name="x"/> times a
+        /// nonzero real constant or over one, or <see langword="null"/> if it is not one. Over one is how a logarithm to
+        /// a base other than e comes out of simplifying: log(2, x) is ln(x) / ln(2).
+        /// </summary>
+        private static (Entity Base, Entity Argument, Entity Multiple)? AsMultipleOfALogarithm(Entity term, Variable x)
+        {
+            var read = Read(term);
+            return read is var (_, _, multiple) && IsNonzeroRealConstant(multiple) ? read : null;
+
+            (Entity Base, Entity Argument, Entity Multiple)? Read(Entity node) => node switch
+            {
+                Logf(var @base, var argument) when !@base.ContainsNode(x) => (@base, argument, Integer.One),
+                Mulf(var constant, var rest) when !constant.ContainsNode(x) && Read(rest) is var (b, a, m) => (b, a, constant * m),
+                Mulf(var rest, var constant) when !constant.ContainsNode(x) && Read(rest) is var (b, a, m) => (b, a, m * constant),
+                Divf(var rest, var constant) when !constant.ContainsNode(x) && Read(rest) is var (b, a, m) => (b, a, m / constant),
+                _ => null
+            };
+        }
+
+        /// <summary>Whether <paramref name="entity"/> is a finite real number other than 0, which a limit may be scaled by.</summary>
+        private static bool IsNonzeroRealConstant(Entity entity)
+            => entity.Evaled is Real { IsFinite: true } real && !real.IsZero;
 
         private static bool ContainsRadical(Entity expr, Variable x)
             => expr.Nodes.Any(node =>
