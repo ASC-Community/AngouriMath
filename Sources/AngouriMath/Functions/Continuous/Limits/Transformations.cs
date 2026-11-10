@@ -1780,7 +1780,19 @@ namespace AngouriMath.Functions.Algebra
             // input. Into the denominator it gives ln(x) / (cos(x) / sin(x)), which is oo/oo
             // and which the rule settles at 0.
             var (restNumerator, restDenominator) = SplitProduct(rest);
+            // At an infinity a power of the variable is the one exception, and it is inverted instead: its
+            // reciprocal is another power, which differentiating lowers, where the reciprocal of the vanishing
+            // factor squares it on every step. x^2 * ln(1 - 1 / x) at +oo went to x^3 * ln(1 - 1 / x)^2, then
+            // x^4 * ln(1 - 1 / x)^3, for three seconds; written ln(1 - 1 / x) / x^(-2) it is settled in one. A
+            // vanishing factor that leaves the reals keeps the old arrangement: over the power,
+            // (sqrt(x) - erf(x)) / x at 0 from the left, which reaches here at +oo with sqrt(-1 / x) in it, came
+            // out a directed complex infinity rather than unevaluated.
+            if (!dest.IsFinite && IsAPowerOfTheVariable(infinity, x) && !LeavesTheRealsOnTheApproach(zero, x, dest, side))
+                return restNumerator * zero / (restDenominator * (1 / infinity)).InnerSimplified;
             return restNumerator * infinity / (restDenominator * (1 / zero)).InnerSimplified;
+
+            static bool IsAPowerOfTheVariable(Entity factor, Variable x)
+                => factor == x || factor is Powf(var @base, Number) && @base == x;
         }
 
         /// <remarks>
