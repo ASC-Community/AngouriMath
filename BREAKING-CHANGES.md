@@ -877,12 +877,19 @@ for -oo/+oo too, and a form with no value is kept only where nothing better is f
 answered as well. A hyperbolic sine took ten seconds to be left unevaluated, and is answered in under three.
 `x * ln(x)` at 0 is still `NaN`, since ln(x) has no real values to the left of 0.
 
+**Silent: a different answer.** `tanh(log(arcsin(x), x))` at 0 from the right was `1`, where the logarithm tends to 1
+and the limit is `tanh(1)`. From the left and from both sides it took ten seconds to be left unevaluated, and is
+answered in under two.
+
 | Input | Was (2.6.0) | Now |
 |---|---|---|
 | `"e^log(1/x, arcsin(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(e ^ log(1 / x, arcsin(x)), x, 0)` | `1 / e` |
 | `"sin(log(1/x, arcsin(x)))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(sin(log(1 / x, arcsin(x))), x, 0)` | `sin(-1)` |
 | `"sinh(log(1/x, arcsin(x)))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((e ^ log(1 / x, arcsin(x)) - e ^ (-log(1 / x, arcsin(x)))) / 2, x, 0)` | `(1 / e - e) / 2` |
 | `"tanh(log(x, arcsin(x)))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft((e ^ (2 * log(x, arcsin(x))) - 1) / (e ^ (2 * log(x, arcsin(x))) + 1), x, 0)` | `(e ^ 2 - 1) / (e ^ 2 + 1)` |
+| `"tanh(log(arcsin(x), x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` | `(e ^ 2 - 1) / (e ^ 2 + 1)` |
+| `"tanh(log(arcsin(x), x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft((e ^ (2 * log(arcsin(x), x)) - 1) / (e ^ (2 * log(arcsin(x), x)) + 1), x, 0)` | `(e ^ 2 - 1) / (e ^ 2 + 1)` |
+| `"tanh(log(arcsin(x), x))".ToEntity().Limit("x", 0)` | `limit((e ^ (2 * log(arcsin(x), x)) - 1) / (e ^ (2 * log(arcsin(x), x)) + 1), x, 0)` | `(e ^ 2 - 1) / (e ^ 2 + 1)` |
 
 ### A function of a quotient tending to 0/0 has the value at the quotient's limit
 
