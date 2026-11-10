@@ -1494,7 +1494,8 @@ namespace AngouriMath.Functions.Algebra
             {
                 Entity value = Integer.One;
                 Entity order = Integer.Zero;
-                if (!Factors(term, Integer.One, ref value, ref order))
+                var logs = 0;
+                if (!Factors(term, Integer.One, ref value, ref order, ref logs))
                     return null;
                 if (order.Evaled is not Real { IsNaN: false, IsFinite: true } orderValue)
                     return null;
@@ -1502,21 +1503,25 @@ namespace AngouriMath.Functions.Algebra
                     return null;
                 if (negated)
                     coefficient = -coefficient;
-                if (orderValue.IsPositive)
+                // A power of the logarithm of the distance changes nothing beside a power of the distance itself,
+                // which outweighs it, but alone it is a pole if it is above and vanishes if it is below. Only from the
+                // right, where the logarithm is real, and negative, which is the sign each of its powers carries.
+                var signOfLogs = logs % 2 == 0 ? 1 : -1;
+                if (orderValue.IsPositive || orderValue.IsZero && logs < 0)
                     continue;
-                if (orderValue.IsZero)
+                if (orderValue.IsZero && logs == 0)
                 {
                     finite += negated ? -value : value;
                     continue;
                 }
                 // (x - a)^k for k < 0 is positive to the right of a, and to the left (-1)^k where k is an integer and
                 // not a real number at all where it is not.
-                var signOfPower = side is ApproachFrom.Right ? 1
+                var signOfPower = side is ApproachFrom.Right || orderValue.IsZero ? 1
                     : orderValue is Integer { EInteger: var k } ? (k.IsEven ? 1 : -1)
                     : 0;
                 if (signOfPower == 0)
                     return null;
-                var sign = signOfPower * (coefficient.IsPositive ? 1 : -1);
+                var sign = signOfPower * signOfLogs * (coefficient.IsPositive ? 1 : -1);
                 if (poles != 0 && poles != sign)
                     return null;
                 poles = sign;
@@ -1538,16 +1543,22 @@ namespace AngouriMath.Functions.Algebra
                     _ => new[] { (expr, negated) }
                 };
 
-            // The factors of a product or a quotient, with the powers of the distance to the point added up in order
-            // and the rest multiplied into value at the point; false where a factor is neither.
-            bool Factors(Entity expr, Entity power, ref Entity value, ref Entity order)
+            // The factors of a product or a quotient, with the powers of the distance to the point added up in order,
+            // and those of its logarithm in logs, and the rest multiplied into value at the point; false where a
+            // factor is none of these.
+            bool Factors(Entity expr, Entity power, ref Entity value, ref Entity order, ref int logs)
             {
                 switch (expr)
                 {
                     case Mulf(var left, var right):
-                        return Factors(left, power, ref value, ref order) && Factors(right, power, ref value, ref order);
+                        return Factors(left, power, ref value, ref order, ref logs) && Factors(right, power, ref value, ref order, ref logs);
                     case Divf(var left, var right):
-                        return Factors(left, power, ref value, ref order) && Factors(right, -power, ref value, ref order);
+                        return Factors(left, power, ref value, ref order, ref logs) && Factors(right, -power, ref value, ref order, ref logs);
+                    case Logf(var logBase, var argument) when argument == distance && logBase == MathS.e:
+                        if (side is not ApproachFrom.Right || power.Evaled is not Integer { EInteger: var logPower } || !logPower.CanFitInInt32())
+                            return false;
+                        logs += logPower.ToInt32Unchecked();
+                        return true;
                     case Powf(var @base, var exponent) when !exponent.ContainsNode(x) && @base == distance:
                         order += power * exponent;
                         return true;
@@ -1562,10 +1573,16 @@ namespace AngouriMath.Functions.Algebra
                         return true;
                     // A whole power is its base's order that many times, where c * d^k to the n is c^n * d^(kn) exactly.
                     case Powf(var @base, Integer times):
-                        return Factors(@base, power * times, ref value, ref order);
+                        return Factors(@base, power * times, ref value, ref order, ref logs);
                     default:
-                        if (LeadingTerm(expr) is not var (leadingOrder, leadingValue))
+                        if (LeadingTerm(expr) is not var (leadingOrder, leadingLogs, leadingValue))
                             return false;
+                        if (leadingLogs != 0)
+                        {
+                            if (power.Evaled is not Integer { EInteger: var leadingPower } || !leadingPower.CanFitInInt32())
+                                return false;
+                            logs += leadingLogs * leadingPower.ToInt32Unchecked();
+                        }
                         order += power * leadingOrder;
                         value *= MathS.Pow(leadingValue, power);
                         return true;
@@ -1579,39 +1596,55 @@ namespace AngouriMath.Functions.Algebra
             // -1/2 * (x^(-1/2) * cos(x) / 2 - sqrt(x) * sin(x)) * (e^(2x) - 1)^2 / (sqrt(x) * cos(x) * e^(2x)), whose
             // sum is of order -1/2 and whose e^(2x) - 1 is 2x to the first, so it is of order 1 and tends to 0. A
             // derivative read at the point is the Taylor coefficient only where the function is smooth there, so not
-            // through an abs, and a value that is not a finite real at the point stops the reading.
-            (Entity Order, Entity Value)? LeadingTerm(Entity expr)
+            // through an abs, and a value that is not a finite real at the point stops the reading. Of two terms of
+            // the same order the one with more powers of the logarithm leads: (1 - cos(x)) * ln(x) + (x - sin(x)) / x
+            // is x^2 * ln(x) / 2 to leading order, and (x - sin(x)) * ln(x) / x^3 at 0 from the right steps to it
+            // over 3x^2, which is ln(x) / 6 and tends to -oo.
+            (Entity Order, int Logs, Entity Value)? LeadingTerm(Entity expr)
             {
                 if (ItsValueAt(expr, x, dest) is { } atThePoint && atThePoint.Evaled is Real { IsZero: true })
                     return ByItsDerivatives(expr);
                 if (expr is Sumf or Minusf)
                 {
                     Real? lowest = null;
-                    var parts = new List<(Real Order, Entity Value)>();
+                    var mostLogs = 0;
+                    var parts = new List<(Real Order, int Logs, Entity Value)>();
                     foreach (var (term, negated) in Terms(expr, false))
                     {
                         Entity termValue = Integer.One, termOrder = Integer.Zero;
-                        if (!Factors(term, Integer.One, ref termValue, ref termOrder)
+                        var termLogs = 0;
+                        if (!Factors(term, Integer.One, ref termValue, ref termOrder, ref termLogs)
                             || termOrder.Evaled is not Real { IsNaN: false, IsFinite: true } termOrderValue)
                             return null;
-                        parts.Add((termOrderValue, negated ? -termValue : termValue));
-                        if (lowest is null || termOrderValue < lowest)
-                            lowest = termOrderValue;
+                        parts.Add((termOrderValue, termLogs, negated ? -termValue : termValue));
+                        if (lowest is null || termOrderValue < lowest || termOrderValue == lowest && termLogs > mostLogs)
+                            (lowest, mostLogs) = (termOrderValue, termLogs);
                     }
                     if (lowest is null)
                         return null;
                     Entity coefficient = Integer.Zero;
                     foreach (var part in parts)
-                        if (part.Order == lowest)
+                        if (part.Order == lowest && part.Logs == mostLogs)
                             coefficient += part.Value;
                     return coefficient.Evaled is Real { IsNaN: false, IsFinite: true, IsZero: false }
-                        ? (lowest, coefficient.InnerSimplified) : null;
+                        ? (lowest, mostLogs, coefficient.InnerSimplified) : null;
+                }
+                // The logarithm of c * d^k, c > 0 and k not 0, is k * ln(d) + ln(c) and its error, which ln(d) outweighs:
+                // ln(cos(x) * sqrt(x)) is ln(x) / 2 to leading order.
+                if (expr is Logf(var logBase, var argument) && logBase == MathS.e && side is ApproachFrom.Right)
+                {
+                    Entity argumentValue = Integer.One, argumentOrder = Integer.Zero;
+                    var argumentLogs = 0;
+                    if (Factors(argument, Integer.One, ref argumentValue, ref argumentOrder, ref argumentLogs) && argumentLogs == 0
+                        && argumentValue.Evaled is Real { IsNaN: false, IsFinite: true, IsPositive: true }
+                        && argumentOrder.Evaled is Real { IsNaN: false, IsFinite: true, IsZero: false } k)
+                        return (Integer.Zero, 1, k);
                 }
                 return null;
             }
 
             // The first derivative that is not 0 at the point, over its factorial, and its order.
-            (Entity Order, Entity Value)? ByItsDerivatives(Entity expr)
+            (Entity Order, int Logs, Entity Value)? ByItsDerivatives(Entity expr)
             {
                 if (expr.Nodes.Any(static node => node is Absf))
                     return null;
@@ -1624,7 +1657,7 @@ namespace AngouriMath.Functions.Algebra
                     if (ItsValueAt(derivative, x, dest) is not { } derivativeThere || derivativeThere.Evaled is not Real { IsNaN: false, IsFinite: true } read)
                         return null;
                     if (!read.IsZero)
-                        return (Integer.Create(k), (derivativeThere / factorial).InnerSimplified);
+                        return (Integer.Create(k), 0, (derivativeThere / factorial).InnerSimplified);
                 }
                 return null;
             }
