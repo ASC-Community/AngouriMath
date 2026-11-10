@@ -1970,11 +1970,14 @@ namespace AngouriMath.Functions.Algebra
                 }
             if (!cancelledAny)
                 return null;
-            // Only where what is left is still a quotient of two functions of x: 3x^2 / (x^3 * f(x))
-            // at 0 became 3 / (x * f(x)), which is no longer a question for this rule, and the
-            // limits machinery took more than twenty seconds over it where differentiating took one.
+            // Only where what is left above is still a function of x: 3x^2 / (x^3 * f(x)) at 0
+            // became 3 / (x * f(x)), which is no longer a question for this rule, and the limits
+            // machinery took more than twenty seconds over it where differentiating took one. What
+            // is left below may be a constant, and then the quotient is a product whose limit is
+            // asked as one: x^3 * arccsc(-x) * sqrt(1 - 1 / x^2) / x^2 at +oo is -1, and
+            // differentiated instead it grew past the rule's bound and was left unevaluated.
             var (top, bottom) = (Rebuild(above), Rebuild(below));
-            return top.ContainsNode(x) && bottom.ContainsNode(x) ? top / bottom : null;
+            return top.ContainsNode(x) ? top / bottom : null;
 
             static Dictionary<Entity, int> Powers(Entity side)
             {
@@ -2043,6 +2046,14 @@ namespace AngouriMath.Functions.Algebra
                                 // unread. Limits already treat the expression as continuous, as
                                 // SimplifyAndComputeLimitToInfinity does with the same shape.
                                 while (applied is Providedf(var body, _)) applied = body;
+                                // And a factor written on both sides of it is divided out, as it is from the quotient
+                                // above, since simplification leaves a power of the variable on both sides beside a root
+                                // of something in it: arccsc(-x) / (1 / x^3) at +oo differentiates into
+                                // -1/3 * x^6 / (x^4 * sqrt(1 - 1 / x^2)), whose powers count as growth, and
+                                // x^3 * arccsc(-x), which is -oo there, was left unevaluated.
+                                var (appliedAbove, appliedBelow) = SplitProduct(applied);
+                                if (WithTheFactorsOnBothSidesCancelled(appliedAbove.InnerSimplified, appliedBelow.InnerSimplified, x) is { } appliedCancelled)
+                                    applied = appliedCancelled;
                                 // A derivative the library cannot compute comes back unevaluated
                                 // (https://github.com/asc-community/AngouriMath/issues/958), and
                                 // differentiating *that* again only raises its Iterations -- so
