@@ -2121,7 +2121,19 @@ namespace AngouriMath.Functions.Algebra
             if (expr is not Divf && AsQuotient(expr, x, dest, side) is { } quotient)
                 expr = quotient;
             if (expr is Divf(var num, var den))
-                if (EvalAssumingContinuous(num.Limit(x, dest, side)) is var numLimit && EvalAssumingContinuous(den.Limit(x, dest, side)) is var denLimit)
+                if (num.Limit(x, dest, side) is var numExact && den.Limit(x, dest, side) is var denExact
+                    && EvalAssumingContinuous(numExact) is var numLimit && EvalAssumingContinuous(denExact) is var denLimit)
+                {
+                    // The parts asked whole may make a form that is not indeterminate, where the descent
+                    // read one of them part by part as one that is: cot(x) - 1/x at 0 is +oo - +oo to the
+                    // descent and 0 asked whole, and (cot(x) - 1/x) / ln(x) at 0 from the right, 0 over
+                    // -oo, was left unevaluated. The rule has nothing to differentiate there, and the
+                    // quotient of the two limits is the limit. Two-sided at a point, only where the
+                    // quotient is real on both sides: a side with no real values makes no two-sided
+                    // limit, the convention x^x at 0 is held to, and sinh(-1) (x^x - 1) is not 0.
+                    if ((side is not ApproachFrom.BothSides || !dest.IsFinite || IsRealOnBothSides(expr, x, dest))
+                        && QuotientOfDeterminateLimits(numExact, numLimit, denExact, denLimit) is { } determinate)
+                        return determinate;
                     if (numLimit == 0 && denLimit == 0 ||
                             DivergesDecidedly(numLimit) && DivergesDecidedly(denLimit))
                         if (num is not Number && den is not Number)
@@ -2206,6 +2218,7 @@ namespace AngouriMath.Functions.Algebra
                                 }
                                 finally { lHopitalChain.RemoveAt(lHopitalChain.Count - 1); }
                             }
+                }
             return null;
             // A limit times the value taken out: unchanged where nothing was, exact where the limit is
             // finite, and the infinity itself where it is one, since a finite non-zero real times +oo
@@ -2215,6 +2228,23 @@ namespace AngouriMath.Functions.Algebra
                    : limit.Evaled is Real { IsFinite: false, IsNaN: false } && (taken * limit).Evaled is Real { IsNaN: false } infinity ? infinity
                    : (taken * limit).InnerSimplified;
         }
+
+        /// <summary>
+        /// The limit of a quotient whose parts' limits make a determinate form, or <see langword="null"/> where they
+        /// do not: a finite limit over an infinite one is 0, an infinite one over a finite one other than 0 is the
+        /// infinity with the sign of the two, and a finite one over a finite one other than 0 is their quotient.
+        /// 0/0 and oo/oo are left to l'Hopital's rule, and anything over 0 to the side it is approached from.
+        /// </summary>
+        private static Entity? QuotientOfDeterminateLimits(Entity numExact, Entity numLimit, Entity denExact, Entity denLimit)
+            => (numLimit, denLimit) switch
+            {
+                (Real { IsNaN: false, IsFinite: true }, Real { IsNaN: false, IsFinite: false }) => Integer.Zero,
+                (Real { IsNaN: false, IsFinite: false } infinity, Real { IsNaN: false, IsFinite: true, IsZero: false } divisor)
+                    => infinity.IsNegative == divisor.IsNegative ? Real.PositiveInfinity : Real.NegativeInfinity,
+                (Real { IsNaN: false, IsFinite: true }, Real { IsNaN: false, IsFinite: true, IsZero: false })
+                    => (numExact / denExact).InnerSimplified,
+                _ => null
+            };
 
         /// <summary>
         /// How deep one limit may go into rewriting itself. Each of the rewrites below hands

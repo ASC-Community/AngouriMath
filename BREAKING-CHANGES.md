@@ -656,6 +656,34 @@ arctangent of something real, and an arcsine and an arccosine inside (-1, 1). Wh
 | `"sqrt(x^2)^(-3/2)".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
 | `"sin(arcsin(x)) * (tan(-1) + 2/x)".ToEntity().Limit("x", 0)` | `NaN` | `2` |
 
+### A quotient whose parts tend to a determinate form is answered in a limit
+
+**Silent: a limit of a quotient whose numerator and denominator, each asked whole, tend to a form that is not
+indeterminate is the quotient of the two limits, where it was left unevaluated.** The descent reads a part term by
+term and can see an indeterminate form the whole does not have: `cot(x) - 1/x` at 0 is `+oo - +oo` to it and 0 asked
+whole, so `(cot(x) - 1/x) / ln(x)`, 0 over `-oo`, was not answered. Most of the rows answered are on the left of 0,
+where `x^x` and `ln(x)` are not real and each side's limit is the one of the complex values. Two-sided at a point it
+answers only where the quotient is real on both sides, the convention `x^x` at 0 is held to. A two-sided limit whose
+two sides are each answered and agree is that value, as `2 (x^x - 1)` at 0 already was, and two rows below move from
+`NaN` to it, though one side is not real. One row was `NaN` on a side where the limit is 1.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(cot(x) - 1/x) / ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"(cot(x) - 1/x) / ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | unevaluated | `0` |
+| `"(1/sin(x) - 1/x) / ln(x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"ln(x) / (cot(x) - 1/x + 2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `-oo` |
+| `"(cot(x) - 1/x + 3) / (x + 2)".ToEntity().Limit("x", 0, ApproachFrom.BothSides)` | unevaluated | `3/2` |
+| `"(1/sin(x) - 1/x) / cot(x)".ToEntity().Limit("x", 0, ApproachFrom.BothSides)` | unevaluated | `0` |
+| `"tan(x)^2 / (x^x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | unevaluated | `0` |
+| `"sin(x/2) / log(x, pi)^(x - 1)".ToEntity().Limit("x", 1, ApproachFrom.Left)` | unevaluated | `sin(1/2)` |
+| `"log(x, erf(x)) * (pi + 2 + x - 1)".ToEntity().Limit("x", "+oo")` | unevaluated | `0` |
+| `"(-ln(x))^(abs(x) * x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `1` |
+| `"arctan(x) / x^x + abs(cos(x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `NaN` | `1` |
+| `"log(1/(1 + pi), (-x)^tan(x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | did not finish in 30 s | `0` |
+| `"log(1/(1 + pi), (-x)^tan(x))".ToEntity().Limit("x", 0, ApproachFrom.BothSides)` | did not finish in 30 s | `0` |
+| `"ln((-x)^tan(x))".ToEntity().Limit("x", 0, ApproachFrom.BothSides)` | `NaN` | `0` |
+
 ### A limit over a vanishing even power is not claimed not to exist
 
 **Silent: `1/((x^2)^tanh(1))` at 0 is `+oo`, where it was `NaN`, the claim that the limit does not exist.** A base
