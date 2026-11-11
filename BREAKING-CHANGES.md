@@ -123,6 +123,17 @@ limitcheck; no issue was filed.
 | `"1/2 * x ^ abs(x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(1/2 * x ^ abs(x), x, 0)` | `1/2` |
 | `"(pi / x) ^ erf(x) * e ^ log(x, x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft((pi / x) ^ erf(x) * e ^ log(x, x), x, 0)` | `e` |
 
+### A logarithm of a part tending to 1 is read as the part less 1 in a limit
+
+**Silent: a factor `ln(u)` whose antilogarithm tends to 1 is read as `u - 1`, as `sin(f)` is read as `f` where `f`
+tends to 0, and a limit left unevaluated through it is answered.** `ln(1 + v) / x` at 0 from the right, with
+`v = ln(sin(x) / x) / ln(x)`, is `v / x`, which is 0. A term of a sum is not rewritten, and a logarithm of a power is
+still read as a product. limitcheck over 42 seeds answers the same rows as before.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"ln(1 + ln(sin(x) / x) / ln(x)) / x".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+
 ### A grown derivatives' quotient is read by its terms in a limit
 
 **Silent: where l'Hopital's rule turns away a derivatives' quotient for growing too much, a one-sided limit at a finite
