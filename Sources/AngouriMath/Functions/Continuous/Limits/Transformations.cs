@@ -1269,7 +1269,11 @@ namespace AngouriMath.Functions.Algebra
             if (dest.Evaled is Real { IsFinite: false, IsNaN: false } infinity)
                 return SignFromVanishingOrder(expr.Substitute(x, infinity.IsNegative ? -1 / x : 1 / x), x, Integer.Zero, ApproachFrom.Right)
                     ?? SignOfTheFactors(expr, x, dest, side) ?? SignThroughAChangeOfVariable(expr, x, dest, side);
-            return SignFromVanishingOrder(expr, x, dest, side) ?? SignFromTheSlope(expr, x, dest, side)
+            // A power is read by its base before its slope: a positive base to a real power is positive, and the base is
+            // the smaller question. sgn((x * x)^arctan(1/2)) at 0 from the left asked for the slope of the power, which
+            // l'Hopital's rule took 6.6 s over, for the sign x * x has as a product.
+            return SignFromVanishingOrder(expr, x, dest, side)
+                ?? (expr is Powf ? SignOfTheFactors(expr, x, dest, side) : null) ?? SignFromTheSlope(expr, x, dest, side)
                 ?? SignOfTheFactors(expr, x, dest, side) ?? SignThroughAChangeOfVariable(expr, x, dest, side);
         }
 
