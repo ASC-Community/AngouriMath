@@ -462,6 +462,16 @@ namespace AngouriMath
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
             {
+                // A base tending to a positive number or to +oo, to a constant real exponent that is
+                // not 0, is continuous there: the power tends to the base's limit to that exponent,
+                // and nothing about the whole has to be read. Asking the whole first simplifies it,
+                // and Simplify expands the power: (x + 1 + i / ln(x))^(-16) at +oo, which is 0, took
+                // 7.8 s for it.
+                if (!Exponent.ContainsNode(x) && Exponent.Evaled is Real { IsFinite: true, IsZero: false }
+                    && Base.ComputeLimitDivideEtImpera(x, dist, side) is { } positiveBaseLimit
+                    && positiveBaseLimit.Evaled is Real { IsPositive: true } positiveBase
+                    && (positiveBase.IsFinite || positiveBase == Real.PositiveInfinity))
+                    return ComputeLimitImpl(New(positiveBaseLimit, Exponent), x, dist, side);
                 if (ComputeLimitImpl(this, x, dist, side) is { } lim)
                     return lim;
                 var baseLimit = Base.ComputeLimitDivideEtImpera(x, dist, side);
