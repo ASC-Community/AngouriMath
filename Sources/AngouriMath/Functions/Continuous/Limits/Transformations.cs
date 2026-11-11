@@ -32,6 +32,21 @@ namespace AngouriMath.Functions.Algebra
             => expr is (Sinf or Tanf or Arcsinf or Arctanf)
                && EvalAssumingContinuous(expr.DirectChildren[0].Limit(x, dest, side)) == 0
                 ? expr.DirectChildren[0]
+                // ln(u) is equivalent to u - 1 where u tends to 1, as sin(f) is to f where f tends to 0: ln(1 + v) / x
+                // at 0 from the right with v = ln(sin(x) / x) / ln(x) is v / x, which is 0, and was left unevaluated,
+                // its quotient 0/0 and l'Hopital's derivatives too large to take. A 1 written as a term is taken off
+                // rather than left as 1 + v - 1, which the descent reads as a sum. Not the logarithm of a power, which is
+                // read as a product, and cos(x)^ln(x) - 1 over x^2 ln(x) at 0 is not answered where
+                // ln(x) ln(cos(x)) over it is -1/2.
+                : expr is Logf(var @base, var antilogarithm) && @base == MathS.e && antilogarithm is not Powf && antilogarithm.ContainsNode(x)
+                  && EvalAssumingContinuous(antilogarithm.Limit(x, dest, side)) == 1
+                ? antilogarithm switch
+                {
+                    Sumf(var one, var rest) when one == Integer.One => rest,
+                    Sumf(var rest, var one) when one == Integer.One => rest,
+                    Minusf(var one, var rest) when one == Integer.One => -rest,
+                    _ => antilogarithm - 1
+                }
                 : expr;
         internal static Entity EvalAssumingContinuous(Entity expr) =>
             expr.Evaled switch
