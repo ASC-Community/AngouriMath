@@ -123,6 +123,18 @@ limitcheck; no issue was filed.
 | `"1/2 * x ^ abs(x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(1/2 * x ^ abs(x), x, 0)` | `1/2` |
 | `"(pi / x) ^ erf(x) * e ^ log(x, x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft((pi / x) ^ erf(x) * e ^ log(x, x), x, 0)` | `e` |
 
+### A negative whole power of a base growing without bound tends to 0 in a limit
+
+**Silent: a power to a constant negative whole exponent whose base grows without bound in modulus, in any direction, is
+answered as 0** where its reciprocal's limit is 0. Before, the whole power was simplified, and `Simplify` expanded it.
+`log(x, -1)` is `i pi / ln(x)`, so near 1 the base below tends to a complex infinity. limitcheck over 42 seeds
+answers the same rows as before, except the three below that did not finish.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"((x + 1) - log(x, -1)) ^ (-16)".ToEntity().Limit("x", 1, ApproachFrom.Right)` | did not finish in 30 s | `0` |
+| `"((x + 1) - log(x, -1)) ^ (-16)".ToEntity().Limit("x", 1, ApproachFrom.BothSides)` | did not finish in 30 s | `0` |
+
 ### A logarithm of a part tending to 1 is read as the part less 1 in a limit
 
 **Silent: a factor `ln(u)` whose antilogarithm tends to 1 is read as `u - 1`, as `sin(f)` is read as `f` where `f`
