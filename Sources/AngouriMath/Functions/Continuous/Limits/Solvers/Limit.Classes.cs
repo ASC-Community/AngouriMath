@@ -467,11 +467,25 @@ namespace AngouriMath
                 // and nothing about the whole has to be read. Asking the whole first simplifies it,
                 // and Simplify expands the power: (x + 1 + i / ln(x))^(-16) at +oo, which is 0, took
                 // 7.8 s for it.
-                if (!Exponent.ContainsNode(x) && Exponent.Evaled is Real { IsFinite: true, IsZero: false }
-                    && Base.ComputeLimitDivideEtImpera(x, dist, side) is { } positiveBaseLimit
-                    && positiveBaseLimit.Evaled is Real { IsPositive: true } positiveBase
-                    && (positiveBase.IsFinite || positiveBase == Real.PositiveInfinity))
-                    return ComputeLimitImpl(New(positiveBaseLimit, Exponent), x, dist, side);
+                if (!Exponent.ContainsNode(x) && Exponent.Evaled is Real { IsFinite: true, IsZero: false } constantExponent)
+                {
+                    var constantBaseLimit = Base.ComputeLimitDivideEtImpera(x, dist, side);
+                    if (constantBaseLimit?.Evaled is Real { IsPositive: true } positiveBase
+                        && (positiveBase.IsFinite || positiveBase == Real.PositiveInfinity))
+                        return ComputeLimitImpl(New(constantBaseLimit, Exponent), x, dist, side);
+                    // A base whose reciprocal tends to 0 grows without bound in modulus, in whatever
+                    // direction, and to a negative exponent the power's modulus is the base's to it on the
+                    // principal branch, so it tends to 0. ((x + 1) - log(x, -1))^(-16) at 1, where the
+                    // base tends to a complex infinity, did not finish in 30 s, while its reciprocal is
+                    // read as 0 in a quarter of a second. The reciprocal is asked whole, under the guards
+                    // that keep a whole limit from being asked again inside it: the descent through its
+                    // parts reads the base as 2 - ln(-1) / 0 and settles nothing. A whole exponent only, so
+                    // that the power is single-valued: a power of a base tending to -oo to one that is not
+                    // whole lies along the logarithm's cut, and is declined below.
+                    if (constantExponent is Integer { IsNegative: true } && constantBaseLimit?.Evaled is not Real { IsFinite: true }
+                        && AsTheWholeLimit(1 / Base, x, dist, side)?.Evaled is Integer { IsZero: true })
+                        return Integer.Zero;
+                }
                 if (ComputeLimitImpl(this, x, dist, side) is { } lim)
                     return lim;
                 var baseLimit = Base.ComputeLimitDivideEtImpera(x, dist, side);
