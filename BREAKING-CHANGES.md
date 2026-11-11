@@ -135,6 +135,21 @@ answers the same rows as before, except the three below that did not finish.
 | `"((x + 1) - log(x, -1)) ^ (-16)".ToEntity().Limit("x", 1, ApproachFrom.Right)` | did not finish in 30 s | `0` |
 | `"((x + 1) - log(x, -1)) ^ (-16)".ToEntity().Limit("x", 1, ApproachFrom.BothSides)` | did not finish in 30 s | `0` |
 
+### A step function of a quotient tending to a constant is answered from the quotient's parts in a limit
+
+**Silent: the side a quotient `a / b` arrives at a constant `c` from is read as the sign of `a - c b` times that of
+`b`**, so a step function of it is answered. `log(x / 2, tan(x))` at 0 from the right is `ln(tan(x)) / ln(x / 2)`,
+which tends to 1. `ln(tan(x)) - ln(x / 2)` tends to `ln(2)` and `ln(x / 2)` to -oo, so the quotient arrives from below,
+and its floor is 0. Since 2.6.0 these were also declined only after 10 to 19 s, spent in l'Hôpital's rule on the slope.
+Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"floor(log(x / 2, tan(x)))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"floor(log(pi / x, tan(x)))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `-1` |
+| `"floor(tanh(1 / x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
+| `"floor(tanh(1 / x))".ToEntity().Limit("x", 0)` | unevaluated | `NaN`: the left side is `-1` |
+
 ### A logarithm of a part tending to 1 is read as the part less 1 in a limit
 
 **Silent: a factor `ln(u)` whose antilogarithm tends to 1 is read as `u - 1`, as `sin(f)` is read as `f` where `f`
