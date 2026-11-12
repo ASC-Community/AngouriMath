@@ -116,6 +116,17 @@ namespace AngouriMath
                         && AsTheWholeLimit(distributed, x, dist, side) is { } termByTerm
                         && termByTerm.Evaled != MathS.NaN)
                         return termByTerm;
+                    // So, with a power u^v for one factor whose exponent tends to a constant c other than 0, is the
+                    // product read as (other * u^c) * u^(v - c), where u^(v - c) has a finite limit other than 0. That
+                    // holds for the principal power, e^(v ln u) being e^(c ln u) e^((v - c) ln u). The exponent of
+                    // (tan(x) + 1)^(x^(x - 1)) at 0 from the right is (tan(x) + 1 - 1) * x^(x - 1), and l'Hopital's rule
+                    // differentiated x^(x - 1) for longer than any caller waits, where tan(x) / x tends to 1 and x^x to 1.
+                    if (side is not ApproachFrom.BothSides && !IsComparingSides
+                        && multiplierLimit is { } zeroOrInfinity7 && multiplicandLimit is { } zeroOrInfinity8
+                        && IsZeroTimesAnInfinity(zeroOrInfinity7, zeroOrInfinity8)
+                        && (ByTheExponentsLimit(Multiplicand, Multiplier, x, dist, side) ?? ByTheExponentsLimit(Multiplier, Multiplicand, x, dist, side))
+                            is { } byTheExponentsLimit)
+                        return byTheExponentsLimit;
                     var (mp, md) =
                         (multiplierLimit, multiplicandLimit) switch
                         {
@@ -265,6 +276,21 @@ namespace AngouriMath
                 (Number { IsFinite: false, IsNaN: false }, Number { IsFinite: false, IsNaN: false }) => true,
                 _ => false,
             };
+
+        /// <summary>
+        /// The limit of <c>power * other</c> read as <c>(other * u^c) * u^(v - c)</c>, for a power <c>u^v</c> whose exponent
+        /// tends to a constant <c>c</c> other than 0 and where <c>u^(v - c)</c> tends to a finite real other than 0.
+        /// </summary>
+        private static Entity? ByTheExponentsLimit(Entity power, Entity other, Variable x, Entity dist, ApproachFrom side)
+        {
+            if (power is not Powf(var @base, var exponent) || !exponent.ContainsNode(x)
+                || exponent.ComputeLimitDivideEtImpera(x, dist, side)?.Evaled is not Real { IsFinite: true, IsZero: false, IsNaN: false } constant
+                || MathS.Pow(@base, (exponent - constant).InnerSimplified).ComputeLimitDivideEtImpera(x, dist, side)?.Evaled
+                    is not Real { IsFinite: true, IsZero: false, IsNaN: false } rest
+                || AsTheWholeLimit(other * MathS.Pow(@base, constant), x, dist, side)?.Evaled is not Number { IsNaN: false } head)
+                return null;
+            return (head * rest).Evaled;
+        }
 
         /// <summary>Whether two factors' limits make a product 0 * oo.</summary>
         private static bool IsZeroTimesAnInfinity(Entity first, Entity second)
