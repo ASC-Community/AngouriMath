@@ -164,6 +164,19 @@ Found by limitcheck; no issue was filed.
 | `"floor(tanh(1 / x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `0` |
 | `"floor(tanh(1 / x))".ToEntity().Limit("x", 0)` | unevaluated | `NaN`: the left side is `-1` |
 
+### A two-sided limit through a real function of a real argument is the sides' common value
+
+**Silent: a tangent, an arccotangent, an error function and a step function of a real argument are read as real when
+the two sides of a two-sided limit are compared**, as a sine, a cosine and an arctangent already were. Their sides were
+not compared at all, and where the descent read a side as `0 * oo`, the limit was `NaN`, which says it does not exist.
+Since 2.6.0, master answered `NaN` for these. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(pi^2 + (1/2) / x) * erf(x)".ToEntity().Limit("x", 0)` | `limit((pi * pi + 1/2 / x) * erf(x), x, 0)` | `1 / sqrt(pi)` |
+| `"(1 + 1/x) * erf(x)".ToEntity().Limit("x", 0)` | `limit((1 + 1 / x) * erf(x), x, 0)` | `2 * 1 / sqrt(pi)` |
+| `"(abs(x)^(x/pi))^sgn(x)".ToEntity().Limit("x", 0)` | `limit((abs(x) ^ (x / pi)) ^ sgn(x), x, 0)` | `1` |
+
 ### A logarithm of a part tending to 1 is read as the part less 1 in a limit
 
 **Silent: a factor `ln(u)` whose antilogarithm tends to 1 is read as `u - 1`, as `sin(f)` is read as `f` where `f`
