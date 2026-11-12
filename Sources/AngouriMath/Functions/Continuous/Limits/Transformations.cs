@@ -1298,13 +1298,16 @@ namespace AngouriMath.Functions.Algebra
         // e^(-1/x) vanishing at 0, so nothing had a sign for it. u is a proper part, and the side u arrives from is the
         // sign of u - L, which is skipped where it is this very expression: ln(1 + e^x) at -oo asks it of (1 + e^x) - 1,
         // whose own u - L is (1 + e^x) - 1 again, and that recursion overflowed the stack. Its next part, e^x, answers.
+        // t is real, so u has to be real on the side approached: ln(x) on the left of 0 is ln|x| + i pi, and e^ln(x),
+        // which is x and negative there, was read as e^t at -oo, positive, so floor(e^ln(x)) at 0 from the left was 0.
         private static int? SignThroughAChangeOfVariable(Entity expr, Variable x, Entity dest, ApproachFrom side)
         {
             var t = Variable.CreateTemp(expr.Vars);
             foreach (var part in expr.Nodes)
             {
                 if (ReferenceEquals(part, expr) || part == x || !part.ContainsNode(x)
-                    || expr.Substitute(part, t) is not { } outer || outer.ContainsNode(x))
+                    || expr.Substitute(part, t) is not { } outer || outer.ContainsNode(x)
+                    || !IsRealOnEachSide(part, x, dest, side))
                     continue;
                 if (EvalAssumingContinuous(part.Limit(x, dest, side)) is not Real { IsNaN: false } limit)
                     return null;
