@@ -57,6 +57,20 @@ divisor answers at once. A two-sided limit is not changed. Found by limitcheck; 
 | `"arcsin(-x * log(-1, x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(arcsin(-x * log(-1, x)), x, 0)` | `0` |
 | `"x * log(2 + x, x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` after 27 s | `0` in 0.25 s |
 
+### A product with a power for a factor is read by the power's exponent's limit in a one-sided limit
+
+**Silent: a one-sided limit of a product whose factors tend to 0 and to an infinity, one of them a power `u^v` whose
+exponent tends to a constant `c` other than 0, is read as `(other * u^c) * u^(v - c)`** wherever `u^(v - c)` tends to a
+finite real other than 0. The principal power splits that way for any `u`. `(tan(x) + 1)^(x^(x - 1))` at 0 from the
+right has the exponent `tan(x) * x^(x - 1)`, which is `tan(x) / x` times `x^x` and tends to 1, so the limit is `e`.
+l'Hôpital's rule differentiated `x^(x - 1)` instead, and did not finish. A two-sided limit is not changed. Found by
+limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(tan(x) + 1)^(x^(x - 1))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((tan(x) + 1) ^ x ^ (x - 1), x, 0)` | `e` |
+| `"tan(x) * x^(x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` after 11 s | `1` in 0.21 s |
+
 ### A derivative keeps an exponent that is not rational exact
 
 **Silent: the power rule writes a constant exponent that is not rational as it is, where it wrote its decimal
