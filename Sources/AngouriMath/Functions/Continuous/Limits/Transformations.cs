@@ -1273,9 +1273,24 @@ namespace AngouriMath.Functions.Algebra
             // the smaller question. sgn((x * x)^arctan(1/2)) at 0 from the left asked for the slope of the power, which
             // l'Hopital's rule took 6.6 s over, for the sign x * x has as a product.
             return SignFromVanishingOrder(expr, x, dest, side)
-                ?? (expr is Powf ? SignOfTheFactors(expr, x, dest, side) : null) ?? SignFromTheSlope(expr, x, dest, side)
+                ?? (expr is Powf ? SignOfTheFactors(expr, x, dest, side) : null) ?? SignOfAQuotientLessAConstant(expr, x, dest, side)
+                ?? SignFromTheSlope(expr, x, dest, side)
                 ?? SignOfTheFactors(expr, x, dest, side) ?? SignThroughAChangeOfVariable(expr, x, dest, side);
         }
+
+        // A quotient less a constant, a / b - c, is the one quotient (a - c b) / b, and has the sign of a - c b times that
+        // of b, which are two smaller questions than its slope. floor(log(x / 2, tan(x))) at 0 from the right is the
+        // floor of ln(tan(x)) / ln(x / 2), which tends to 1, and asks the sign of that less 1: a - b tends to ln(2) and
+        // b to -oo, so it is negative, and the floor is 0. Read through the slope, l'Hopital's rule spent 20 s and
+        // declined, and the limit was left unevaluated.
+        private static int? SignOfAQuotientLessAConstant(Entity expr, Variable x, Entity dest, ApproachFrom side)
+            => expr switch
+            {
+                Minusf(Divf(var dividend, var divisor), var constant) when !constant.ContainsNode(x)
+                    => SignNear(dividend - constant * divisor, x, dest, side) is { } top && SignNear(divisor, x, dest, side) is { } bottom
+                        ? top * bottom : null,
+                _ => null
+            };
 
         // Where the variable is only ever inside one part u, the expression is h(u), and near the destination it has the
         // sign h(t) has as t tends to the limit of u, from the side u arrives from. sinh(e^x) at -oo is (e^t - e^-t) / 2
