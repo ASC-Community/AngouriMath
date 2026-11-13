@@ -134,11 +134,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public virtual Expression ConvertUnaryNode(Expression e, Entity typeHolder)
         {
             e = NumericOperand(e);
-            // A function of a matrix has no compiled form here: the tensor operations are the
-            // arithmetic ones, and sin(A) is not an element-by-element sine of a matrix.
+            // A function of a matrix is the function of each entry, which is what evaluation makes of it, and not a
+            // matrix function: sin(A) is not the power series of A. https://github.com/asc-community/AngouriMath/issues/526
             if (TensorCompilation.IsTensor(e.Type))
-                throw new UncompilableNodeException(
-                    $"There is no compiled form for {typeHolder.GetType().Name} of a matrix.");
+                return TensorCompilation.ElementwiseUnary(e, typeHolder, entry => ConvertUnaryNode(entry, typeHolder), ConvertType);
             return typeHolder switch
             {
                 Sinf      when ShouldBeAtLeastDouble(e) is var newE  => Expression.Call(GetDef("Sin", 1, newE.Type), newE),
@@ -238,9 +237,15 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             // A matrix in either place: the tensor operation of the same name, the scalar side
             // converted to the element type. https://github.com/asc-community/AngouriMath/issues/526
             if (TensorCompilation.IsTensor(left.Type) || TensorCompilation.IsTensor(right.Type))
+            {
+                // A matrix of whole numbers written beside a matrix argument over double is a matrix over double.
+                (left, right) = TensorCompilation.Widened(left, right, ConvertType);
                 return TensorCompilation.Binary(typeHolder, left, right, ConvertType)
+                    // A function of two arguments one of which is a matrix, where evaluation applies it entry by entry.
+                    ?? TensorCompilation.ElementwiseBinary(typeHolder, left, right, (l, r) => ConvertBinaryNode(l, r, typeHolder), ConvertType)
                     ?? throw new UncompilableNodeException(
                         $"The node of type {typeHolder.GetType()} has no compiled form over a matrix.");
+            }
 
             (left, right) = EqualizeTypesIfAble(NumericOperand(left), NumericOperand(right));
             return typeHolder switch

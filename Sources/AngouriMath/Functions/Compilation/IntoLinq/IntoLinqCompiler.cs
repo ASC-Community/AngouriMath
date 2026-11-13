@@ -23,6 +23,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             ) where TDelegate : Delegate
         {
             bool IsMatrixArgument(Variable variable) => typesAndNames.Any(c => c.variable == variable && TensorCompilation.IsMatrixType(c.type));
+            Type? TypeOf(Variable variable) => typesAndNames.FirstOrDefault(c => c.variable == variable).type;
             // A matrix has no compiled form, but an expression built out of matrices often
             // has a value that is an ordinary number -- [0, 1]T * [[a, b], [c, d]] * [1, 0]
             // is c -- and there is nothing to stop that being compiled. Nothing simplified
@@ -36,7 +37,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             StatementPositions.Check(expr);
             // Two matrices whose shapes are written into the expression and do not fit are refused here, rather than by
             // a delegate that throws at every point it is called at. https://github.com/asc-community/AngouriMath/issues/526
-            TensorCompilation.CheckShapes(expr, IsMatrixArgument);
+            Func<Variable, (int Rows, int Columns)?> argumentShape = variable => TensorCompilation.ShapeOfArgument(TypeOf(variable));
+            TensorCompilation.CheckShapes(expr, argumentShape);
+            CheckResultShape(expr, returnType, argumentShape);
             if (MathS.Settings.RefuseNonRealCompilation && returnType is { } real && IsRealType(real)
                 && typesAndNames.All(c => IsRealType(c.type)) && !IsRealWhereverDefined(expr, typesAndNames))
                 throw new UncompilableNodeException(
@@ -77,11 +80,15 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 var constantType = typesAndNames.Any(c => IsComplex(c.type)) || IsComplex(returnType)
                     ? typeof(System.Numerics.Complex)
                     : matrixElements.Count == 1 ? matrixElements[0] : null;
+                // Only a matrix argument can be a vector whose shape is not written out: abs of a written one is its norm
+                // after simplification already.
+                if (typesAndNames.Any(c => TensorCompilation.IsMatrixType(c.type)))
+                    BuildNorms(expr, argumentShape, subexpressionsCache, variableAssignments, localVars, protocol, constantType);
                 var tree = BuildTree(expr, subexpressionsCache, variableAssignments, localVars, protocol, constantType);
                 // A matrix known to be 1 x 1 asked for as a number is its entry, as evaluation has it. Any other matrix
                 // is refused as a number by ConvertType.
                 if (TensorCompilation.IsTensor(tree.Type) && returnType is not null && !TensorCompilation.IsMatrixType(returnType)
-                    && TensorCompilation.IsOneByOne(expr, IsMatrixArgument))
+                    && TensorCompilation.IsOneByOne(expr, argumentShape))
                     tree = TensorCompilation.ToScalar(tree);
                 var treeWithLocals = Expression.Block(localVars, variableAssignments.Append(tree));
                 Expression entireExpression = returnType is not null ? protocol.ConvertType(treeWithLocals, returnType) : treeWithLocals;
@@ -96,6 +103,43 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 throw new UncompilableNodeException(
                     $"`{expr.Stringize()}` has no compiled form for the types requested: {e.Message}");
             }
+        }
+
+        /// <summary>
+        /// Every <c>abs</c> of a column vector, compiled to its norm ahead of the rest and cached, so that the tree
+        /// built after it reads the number. Of a vector, <c>abs</c> is a number, and of any other matrix a matrix,
+        /// and only the shape known when compiling can tell which.
+        /// https://github.com/asc-community/AngouriMath/issues/2423
+        /// </summary>
+        private static void BuildNorms(Entity expr, Func<Variable, (int Rows, int Columns)?> argumentShape,
+            Dictionary<Entity, ParameterExpression> cachedSubexpressions, List<Expression> variableAssignments,
+            List<ParameterExpression> newLocalVars, CompilationProtocol protocol, Type? constantType)
+        {
+            foreach (var norm in TensorCompilation.Norms(expr, argumentShape))
+            {
+                if (cachedSubexpressions.ContainsKey(norm))
+                    continue;
+                var vector = BuildTree(norm.Argument, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType);
+                if (!TensorCompilation.IsTensor(vector.Type))
+                    continue;
+                var value = Expression.Variable(typeof(double));
+                variableAssignments.Add(Expression.Assign(value, TensorCompilation.Norm(vector)));
+                newLocalVars.Add(value);
+                cachedSubexpressions[norm] = value;
+            }
+        }
+
+        /// <summary>
+        /// A matrix known when compiling not to be a column, asked for as a vector, is refused then rather than by a
+        /// delegate that throws at every call.
+        /// </summary>
+        private static void CheckResultShape(Entity expr, Type? returnType, Func<Variable, (int Rows, int Columns)?> argumentShape)
+        {
+            if (returnType is null || !TensorCompilation.IsVectorArray(returnType) || TensorCompilation.Shape(expr, argumentShape) is not { } shape)
+                return;
+            if (shape.Columns > 1)
+                throw new InvalidMatrixOperationException(
+                    $"`{expr.Stringize()}` is a matrix of {shape.Columns} columns, not a column vector, and cannot be compiled as {returnType}");
         }
 
         private static bool IsRealType(Type type)

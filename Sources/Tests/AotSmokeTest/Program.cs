@@ -347,6 +347,18 @@ namespace AngouriMath.AotSmokeTest
             Check("compiled [[2, 0], [0, 2]] / [[1, 0], [0, i]] + [[2, 0], [0, 2]] ^ 2",
                 quotient[0, 0] == 6 && quotient[0, 1] == 0 && quotient[1, 0] == 0 && quotient[1, 1] == new Complex(4, -2),
                 $"[[{quotient[0, 0]}, {quotient[0, 1]}], [{quotient[1, 0]}, {quotient[1, 1]}]]");
+            // A function of a matrix argument is the function of each entry, through a lambda nested in the tree, and of a
+            // vector taken as a one-dimensional array abs is its norm: both must stay AOT-safe.
+            var entries = "exp(A) + abs(A) + [[1, 0], [0, 1]]".Compile<Complex[,], Complex[,]>("A");
+            var mapped = entries(new Complex[,] { { 0, Complex.ImaginaryOne }, { -1, 2 } });
+            Check("compiled exp(A) + abs(A) + I at [[0, i], [-1, 2]]",
+                mapped[0, 0] == 2 && Complex.Abs(mapped[0, 1] - (Complex.Exp(Complex.ImaginaryOne) + 1)) < 1e-12
+                    && Math.Abs(mapped[1, 0].Real - (Math.Exp(-1) + 1)) < 1e-12 && Math.Abs(mapped[1, 1].Real - (Math.Exp(2) + 3)) < 1e-12,
+                $"[[{mapped[0, 0]}, {mapped[0, 1]}], [{mapped[1, 0]}, {mapped[1, 1]}]]");
+            var norm = "abs(v) * sin(v)".Compile<double[], double[]>("v")(new double[] { 3, -4 });
+            Check("compiled abs(v) * sin(v) at [3, -4]",
+                norm.Length == 2 && Math.Abs(norm[0] - 5 * Math.Sin(3)) < 1e-12 && Math.Abs(norm[1] - 5 * Math.Sin(-4)) < 1e-12,
+                string.Join(", ", norm));
         }
     }
 }

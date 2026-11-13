@@ -233,7 +233,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
     /// https://github.com/asc-community/AngouriMath/issues/363
     /// https://github.com/asc-community/AngouriMath/issues/526
     /// </remarks>
-    public static class TensorCompilation
+    public static partial class TensorCompilation
     {
         /// <summary>The closed methods for one element type.</summary>
         private sealed class Kit
@@ -322,24 +322,25 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// <c>double[,]</c> is: an argument or a result of that type is a matrix, converted to and from the tensor at
         /// the delegate's boundary, so that a caller need not know GenericTensor.
         /// </summary>
-        internal static bool IsMatrixArray(Type type) => kitsByArray.ContainsKey(type);
+        internal static bool IsMatrixArray(Type type) => kitsByArray.ContainsKey(type) || IsVectorArray(type);
 
         /// <summary>Whether a value of <paramref name="type"/> is a matrix, as a tensor or as a two-dimensional array.</summary>
         internal static bool IsMatrixType(Type type) => IsTensor(type) || IsMatrixArray(type);
 
         /// <summary>The element type of a matrix type, or <see langword="null"/> where it is not one.</summary>
         internal static Type? ElementOfMatrixType(Type type)
-            => kitsByTensor.TryGetValue(type, out var kit) || kitsByArray.TryGetValue(type, out kit) ? ElementOf(kit.Tensor) : null;
+            => kitsByTensor.TryGetValue(type, out var kit) || kitsByArray.TryGetValue(type, out kit) ? ElementOf(kit.Tensor) : ElementOfVectorType(type);
 
         /// <summary>A two-dimensional array argument as the tensor the compiled arithmetic runs on.</summary>
-        internal static Expression FromArrayArgument(Expression array) => Expression.Call(kitsByArray[array.Type].FromArray, array);
+        internal static Expression FromArrayArgument(Expression array)
+            => IsVectorArray(array.Type) ? FromVectorArgument(array) : Expression.Call(kitsByArray[array.Type].FromArray, array);
 
         /// <summary>
         /// A tensor as the two-dimensional array of the same element type, or <see langword="null"/> where
         /// <paramref name="type"/> is not that array.
         /// </summary>
         internal static Expression? AsArray(Expression tensor, Type type)
-            => kitsByTensor.TryGetValue(tensor.Type, out var kit) && kit.Array == type ? Expression.Call(kit.ToArray, tensor) : null;
+            => kitsByTensor.TryGetValue(tensor.Type, out var kit) && kit.Array == type ? Expression.Call(kit.ToArray, tensor) : AsVector(tensor, type);
 
         private static Type ElementOf(Type tensor) => tensor.GetGenericArguments()[0];
 
@@ -684,19 +685,27 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// <param name="expr">The expression about to be compiled.</param>
         /// <param name="isMatrix">Whether a variable is a matrix argument.</param>
         /// <exception cref="InvalidMatrixOperationException">Two matrices whose shapes are known cannot be combined.</exception>
-        internal static void CheckShapes(Entity expr, Func<Entity.Variable, bool> isMatrix) => ShapeOf(expr, isMatrix);
+        internal static void CheckShapes(Entity expr, Func<Entity.Variable, bool> isMatrix) => ShapeOf(expr, variable => isMatrix(variable) ? (0, 0) : null);
+
+        /// <inheritdoc cref="CheckShapes(Entity, Func{Entity.Variable, bool})"/>
+        /// <param name="expr">The expression about to be compiled.</param>
+        /// <param name="argument">The shape of an argument, as <see cref="ShapeOfArgument"/> gives it.</param>
+        internal static void CheckShapes(Entity expr, Func<Entity.Variable, (int Rows, int Columns)?> argument) => ShapeOf(expr, argument);
 
         /// <summary>
         /// Whether <paramref name="expr"/> is known before the delegate is called to be a 1 x 1 matrix, as
         /// <c>[[1, 0]] * A * [[0], [1]]</c> is whatever the shape of <c>A</c>: such a matrix is a number.
         /// </summary>
-        internal static bool IsOneByOne(Entity expr, Func<Entity.Variable, bool> isMatrix) => ShapeOf(expr, isMatrix) == (1, 1);
+        internal static bool IsOneByOne(Entity expr, Func<Entity.Variable, (int Rows, int Columns)?> argument) => ShapeOf(expr, argument) == (1, 1);
 
         // null: a number. Otherwise rows and columns, 0 for a count not known until the delegate is called: (0, 0) is a
-        // matrix argument, and a product keeps what its factors say, a 1 x n row times anything having one row.
-        private static (int Rows, int Columns)? ShapeOf(Entity expr, Func<Entity.Variable, bool> isMatrix)
+        // matrix argument, and (0, 1) a vector argument, a column of a length not known yet.
+        private static (int Rows, int Columns)? ShapeOf(Entity expr, Func<Entity.Variable, (int Rows, int Columns)?> isMatrix)
         {
             static bool Known((int Rows, int Columns)? shape) => shape is { Rows: > 0, Columns: > 0 };
+            // What two shapes that must be equal say together.
+            static (int Rows, int Columns)? Merged((int Rows, int Columns)? a, (int Rows, int Columns)? b)
+                => a is { } x && b is { } y ? (x.Rows > 0 ? x.Rows : y.Rows, x.Columns > 0 ? x.Columns : y.Columns) : a ?? b;
             static string Show((int Rows, int Columns)? shape) => $"{shape!.Value.Rows}x{shape.Value.Columns}";
             switch (expr)
             {
@@ -707,7 +716,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                             ShapeOf(matrix[i, j], isMatrix);
                     return (matrix.RowCount, matrix.ColumnCount);
                 case Entity.Variable variable:
-                    return isMatrix(variable) ? (0, 0) : null;
+                    return isMatrix(variable);
                 case Entity.Sumf or Entity.Minusf:
                 {
                     var operands = (IBinaryNode)expr;
@@ -715,7 +724,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     if (Known(a) && Known(b) && a != b)
                         throw new InvalidMatrixOperationException(
                             $"`{expr.Stringize()}` has no value: matrices of shapes {Show(a)} and {Show(b)} are not {(expr is Entity.Sumf ? "added" : "subtracted")}");
-                    return Known(a) ? a : Known(b) ? b : a ?? b;
+                    return Merged(a, b);
                 }
                 case Entity.Mulf(var multiplier, var multiplicand):
                 {
@@ -750,7 +759,22 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     var (a, b) = (ShapeOf(@base, isMatrix), ShapeOf(exponent, isMatrix));
                     if (Known(a) && a!.Value.Rows != a.Value.Columns)
                         throw new InvalidMatrixOperationException($"`{expr.Stringize()}` has no value: a {Show(a)} matrix is not square and has no power");
-                    return b is null ? a : null;
+                    // A number to the power of a matrix is the power of each entry, the shape of the exponent.
+                    return a ?? b;
+                }
+                // The modulus of a vector, a column or a row, is its norm, a number; any other function of one argument
+                // is the function of each entry, the shape of the argument.
+                case Entity.Absf(var argument) when IsVector(ShapeOf(argument, isMatrix)):
+                    return null;
+                case IUnaryNode function:
+                    return ShapeOf(function.NodeChild, isMatrix);
+                case IBinaryNode function when IsElementwiseBinary(expr, firstIsMatrix: false):
+                {
+                    var (a, b) = (ShapeOf(function.NodeFirstChild, isMatrix), ShapeOf(function.NodeSecondChild, isMatrix));
+                    if (Known(a) && Known(b) && a != b)
+                        throw new InvalidMatrixOperationException(
+                            $"`{expr.Stringize()}` has no value: matrices of shapes {Show(a)} and {Show(b)} are not combined entry by entry");
+                    return Merged(a, b);
                 }
                 default:
                     foreach (var child in expr.DirectChildren)

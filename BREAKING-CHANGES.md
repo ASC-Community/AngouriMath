@@ -1823,6 +1823,27 @@ value is a number compiles. One whose value is a matrix is refused as before, an
 | `"A * B".ToEntity().Compile<double[,], double[,], double[,]>("A", "B")` | throws `UncompilableNodeException` | the matrix product |
 | `"[1, 0]T * [[a, b], [c, d]] * [0, 1]".ToEntity().Compile("a", "b", "c", "d")` | throws `UncompilableNodeException` | `b` |
 
+### A function of a compiled matrix argument is the function of each entry
+
+**Addition, not silent.** Under the LINQ compiler a function of a matrix argument compiles to what evaluation makes of
+it once the matrix is put in: the function of each entry. That holds for a function of one argument, `sin(A)`, `exp(A)`,
+`ln(A)`, `abs(A)`, and of two where evaluation maps it over a matrix and a number or two matrices of one shape: a number
+to the power of a matrix, `log`, `max`, `min`, `mod`, `binomial` and the rest. It is not the matrix function: `exp(A)` is
+not the matrix exponential, which evaluation does not compute either. A power with a matrix for its base stays the
+matrix power. `abs` of a vector, a column or a row known when compiling to be one, is its norm, `sqrt(sum |v_k|^2)`, a
+number ([#2423](https://github.com/asc-community/AngouriMath/issues/2423)); of a two-dimensional array whose shape is known
+only at the call it is the modulus of each entry, and a column or a row of more than one entry there throws
+`InvalidMatrixOperationException`. A matrix
+of statements, as `A < 0` is, has no compiled form. A one-dimensional array, `double[]` or `Complex[]`, is a column
+vector, as an argument and as the result.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"sin(A)"`, compiled over `GenTensor<double>` and called at `A = [[1, 2], [3, -4]]` | throws `UncompilableNodeException` | `[[0.841, 0.909], [0.141, 0.757]]` |
+| `"exp(A)"`, `"2 ^ A"`, `"max(A, 0)"`, the same | throws `UncompilableNodeException` | the function of each entry |
+| `"abs(v)"`, compiled from `double[]` to `double` and called at `[3, -4]` | throws `AngouriBugException` | `5` |
+| `"sin(v)"`, compiled from `double[]` to `double[]` | throws `KeyNotFoundException` | the sine of each entry |
+
 ### A matrix argument is not simplified as a number before compiling
 
 **Silent: what compiled to a wrong value now gives the right one.** The LINQ compiler simplifies an expression with a
