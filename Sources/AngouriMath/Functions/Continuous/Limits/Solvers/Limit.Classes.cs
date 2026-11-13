@@ -766,11 +766,31 @@ namespace AngouriMath
             {
                 // A diverging argument first, as for the arcsecant: substituting it leaves the
                 // function of an infinity rather than the angle it tends to.
-                if (InverseTrigonometryAtInfinity(this, Argument.ComputeLimitDivideEtImpera(x, dist, side)) is { } atInfinity)
+                var argumentLimit = Argument.ComputeLimitDivideEtImpera(x, dist, side);
+                if (InverseTrigonometryAtInfinity(this, argumentLimit) is { } atInfinity)
                     return atInfinity;
+                // At 0 the arccotangent jumps: it is arctan(1/t), with range (-pi/2, pi/2], so
+                // arccot(0.001) = 1.5698, arccot(-0.001) = -1.5698 and arccot(0) = pi/2. A
+                // one-sided limit there is taken from the side the argument arrives from, as for
+                // the sign, and nothing is answered where that side cannot be read. Putting 0 in
+                // gave pi/2 for arccot(x) at 0 from the left, and for the two-sided limit, which
+                // is answered here only where both sides arrive from the same side of 0.
+                if (argumentLimit?.Evaled is Number argumentValue && argumentValue == 0)
+                {
+                    var arrivesFrom = side is ApproachFrom.BothSides
+                        ? SignNear(Argument, x, dist, ApproachFrom.Left) is { } left && SignNear(Argument, x, dist, ApproachFrom.Right) == left ? left : null
+                        : SignNear(Argument, x, dist, side);
+                    return arrivesFrom switch
+                    {
+                        1 => MathS.pi / 2,
+                        -1 => -MathS.pi / 2,
+                        // An argument that is 0 everywhere has no side to arrive from, and the
+                        // arccotangent of it is the constant pi/2: (x^2 - 1) - (x - 1)(x + 1).
+                        _ => Argument.Simplify().Evaled is Number simplified && simplified == 0 ? MathS.pi / 2 : null
+                    };
+                }
                 return ComputeLimitImpl(this, x, dist, side) is { } lim ? lim
-                    : ComputeLimitImpl(New(
-                        Argument.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } lim1 ? lim1 : Argument),
+                    : ComputeLimitImpl(New(argumentLimit is { IsFinite: true } lim1 ? lim1 : Argument),
                         x, dist, side);
             }
         }

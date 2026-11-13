@@ -116,6 +116,33 @@ A bare `floor(x)` or `sgn(x)` was already declined there. Away from a jump, noth
 | `"limit(floor(x) + x, x, 1)".ToEntity().Simplify()` | `2` | `limit(floor(x) + x, x, 1)` |
 | `"limitleft(-sgn(x), x, 0)".ToEntity().Simplify()` | `0` | `limitleft(-sgn(x), x, 0)` |
 
+### An arccotangent whose argument arrives at 0 is answered from the side it arrives from
+
+**Silent: a limit through `arccot(u)` where `u` tends to 0 takes `pi/2` where `u` arrives from above and `-pi/2` where
+it arrives from below.** This library's arccotangent is `arctan(1/u)`, with range `(-pi/2, pi/2]`, so it jumps at 0:
+`arccot(-0.001)` is `-1.5698` and `arccot(0)` is `pi/2`. Limits put 0 in and answered `pi/2` from either side, so a
+two-sided limit across the jump had a value, and a quotient over a divisor vanishing from below had the wrong sign. The
+sign of an expression vanishing at the point was read from its derivative there, and where that derivative holds
+`arccot(x)` the sign came out wrong from the left: `x * arccot(x)` is positive on both sides of 0.
+Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"arccot(x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `pi / 2` | `-pi / 2` |
+| `"arccot(x)".ToEntity().Limit("x", 0)` | `pi / 2` | `NaN` |
+| `"arccot(-x^2)".ToEntity().Limit("x", 0)` | `pi / 2` | `-pi / 2` |
+| `"arccot(x) + arctan(x)".ToEntity().Limit("x", 0)` | `pi / 2` | `NaN` |
+| `"arccot(x) / x".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-oo` | `+oo` |
+| `"arccot(x) / x".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"x * arccot(x) / sin(x)^2".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"(arccot(x) - pi/2) / x".ToEntity().Limit("x", 0)` | `-1` | `NaN` |
+| `"(arccot(x) + pi/2) / x".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-oo` | `-1` |
+| `"1 / (x * arccot(x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `-oo` | `limitleft(1 / (x * arccotan(x)), x, 0)` |
+| `"sgn(x * arccot(x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(sgn(x * arccotan(x)), x, 0)` | `1` |
+| `"sgn(x * arccot(x))".ToEntity().Limit("x", 0)` | `limit(sgn(x * arccotan(x)), x, 0)` | `1` |
+| `"floor(x * arccot(x))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `limitleft(floor(x * arccotan(x)), x, 0)` | `0` |
+| `"arccot(x * sin(1/x))".ToEntity().Limit("x", 0)` | `pi / 2` | `limit(arccotan(x * sin(1 / x)), x, 0)` |
+
 ### A step function arriving at 0 is answered from the side its argument arrives from
 
 **Silent: a limit of `floor` or `ceil` whose argument tends to 0 is answered where the argument keeps one sign on the
