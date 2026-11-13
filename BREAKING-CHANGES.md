@@ -42,6 +42,28 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.6.0
 
+### A step function of an unbounded argument times a vanishing factor has the limit of the factor times the argument
+
+**Silent: a limit of `f * floor(g)`, `f * ceil(g)` or `f * round(g)`, where `f` tends to 0 and `g` is real, is
+answered with the limit of `f * g`.** The step is within 1 of its argument, so the two products differ by `f` times
+something bounded, which tends to 0. Each side used to stop at `0 * floor(+oo)`, which 2.6.0 answered with a wrong `0`
+one-sided and `NaN` two-sided. Where `f * g` has no limit of its own the limit is left as it was. Found by limitcheck;
+no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x * floor(2/x)".ToEntity().Limit("x", 0)` | `NaN` | `2` |
+| `"x * floor(2/x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` | `2` |
+| `"floor(1/x) * sin(x)".ToEntity().Limit("x", 0)` | `NaN` | `1` |
+| `"x^2 * floor(1/x^2)".ToEntity().Limit("x", 0)` | `0` | `1` |
+| `"x * ceil(1/x)".ToEntity().Limit("x", 0)` | `NaN` | `1` |
+| `"x * round(1/x)".ToEntity().Limit("x", 0)` | throws `OverflowException` | `1` |
+| `"x^2 * floor(1/x)".ToEntity().Limit("x", 0)` | `NaN` | `0` |
+| `"x * floor(1/x^2)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` | `+oo` |
+| `"x * floor(1/x^2)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `0` | `-oo` |
+| `"x * floor(2/x) + 3".ToEntity().Limit("x", 0)` | `limit(x * floor(2 / x) + 3, x, 0)` | `5` |
+| `"floor(x) / x".ToEntity().Limit("x", "+oo")` | `0` | `1` |
+
 ### A product with a quotient for a factor is read over that quotient's divisor in a one-sided limit
 
 **Silent: a one-sided limit of a product whose factors tend to 0 and to an infinity, one of them a quotient, is asked
@@ -100,6 +122,9 @@ and 1 in order. 2.6.0 answered the third with a wrong `0`. Found by limitcheck; 
 | `"floor(1/x) * sin(x)".ToEntity().Limit("x", 0)` | `NaN` | `limit(floor(1 / x) * sin(x), x, 0)` |
 | `"x^2 * floor(1/x^2)".ToEntity().Limit("x", 0)` | `0` | `limit(x ^ 2 * floor(1 / x ^ 2), x, 0)` |
 | `"x * ceil(1/x)".ToEntity().Limit("x", 0)` | `NaN` | `limit(x * ceil(1 / x), x, 0)` |
+
+These four are answered with their values by the entry *A step function of an unbounded argument times a vanishing
+factor has the limit of the factor times the argument*, above.
 
 ### A two-sided limit whose side stops at a finite indeterminate form is left unevaluated
 
