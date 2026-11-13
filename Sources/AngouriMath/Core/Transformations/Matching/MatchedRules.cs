@@ -2057,12 +2057,15 @@ namespace AngouriMath.Core.Transformations.Matching
                 // larger the angle is.
                 growth: RewriteRuleGrowth.Collects),
 
+            // The four rules below are the definitions arccsc(z) = arcsin(1 / z) and its siblings,
+            // read through n / d = 1 / (d / n), which holds for a nonzero n. At n = 0 the left
+            // side is arcsin(0) = 0 and the right arccsc(d / 0), which has no value.
             new MatchedRule(
                 "an-arcsine-of-a-numeric-reciprocal-is-an-arccosecant",
                 MatchPattern.Node<Arcsinf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arccosecantf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arcsin(1 / c) = arccosec(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.
@@ -2073,7 +2076,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Arccosf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arcsecantf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arccos(1 / c) = arcsec(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.
@@ -2084,7 +2087,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Arccosecantf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arcsinf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arccosec(1 / c) = arcsin(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.
@@ -2095,7 +2098,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Arcsecantf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arccosf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arcsec(1 / c) = arccos(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.
@@ -2546,17 +2549,26 @@ namespace AngouriMath.Core.Transformations.Matching
                 bound => Functions.Patterns.PushNotInside(Orf.LinearChildren((Orf)bound["chain"]), disjoin: false),
                 Soundness.Sound,
                 description: "not (a or b or ...) = (not a) and (not b) and ..."),
+            // Transitivity is a fact about an order, so the pair below fires only where the
+            // three operands are known to be ordered. Elsewhere the implication need not have a
+            // truth value -- at a = i, b = 1, c = 0 it is NaN -- and the ordered condition cannot
+            // be attached instead, as its siblings attach it: a comparison with no truth value
+            // inside a conjunction that is already false leaves the implication true, so at
+            // a = i, b = 0, c = 1 the chain of greaters is True and `True provided a in RR` is
+            // not. https://github.com/asc-community/AngouriMath/issues/876
             new MatchedRule(
                 "a-chain-of-greaters-implies-its-own-ends",
                 MatchPattern.Node<Impliesf>(MatchPattern.Node<Andf>(MatchPattern.Node<Greaterf>(MatchPattern.Any("a"), MatchPattern.Any("b")), MatchPattern.Node<Greaterf>(MatchPattern.Any("b"), MatchPattern.Any("c"))), MatchPattern.Node<Greaterf>(MatchPattern.Any("a"), MatchPattern.Any("c"))),
                 bound => Entity.Boolean.True.Provided(bound["a"].DomainCondition).Provided(bound["b"].DomainCondition).Provided(bound["c"].DomainCondition),
                 Soundness.SoundUnderAssumptions,
+                when: bound => Functions.Patterns.AreOrdered(bound["a"], bound["b"], bound["c"]),
                 description: "(((a > b) and (b > c)) implies (a > c)) = True"),
             new MatchedRule(
                 "a-chain-of-lesss-implies-its-own-ends",
                 MatchPattern.Node<Impliesf>(MatchPattern.Node<Andf>(MatchPattern.Node<Lessf>(MatchPattern.Any("a"), MatchPattern.Any("b")), MatchPattern.Node<Lessf>(MatchPattern.Any("b"), MatchPattern.Any("c"))), MatchPattern.Node<Lessf>(MatchPattern.Any("a"), MatchPattern.Any("c"))),
                 bound => Entity.Boolean.True.Provided(bound["a"].DomainCondition).Provided(bound["b"].DomainCondition).Provided(bound["c"].DomainCondition),
                 Soundness.SoundUnderAssumptions,
+                when: bound => Functions.Patterns.AreOrdered(bound["a"], bound["b"], bound["c"]),
                 description: "(((a < b) and (b < c)) implies (a < c)) = True"),
             new MatchedRule(
                 "a-equals-with-zero-on-the-left-turns-round",
@@ -3084,6 +3096,13 @@ namespace AngouriMath.Core.Transformations.Matching
                             MatchPattern.Any("n")))),
                 bound => new Powf(bound["a"] / new Powf(bound["b"], bound["c"]), bound["n"]),
                 Soundness.SoundUnderAssumptions,
+                // The guard of the quotient rule above, for the same reason: b ^ (c * n) is
+                // (b ^ c) ^ n, and a ^ n / (b ^ c) ^ n is (a / b ^ c) ^ n, only for a whole n or
+                // positive real bases. At a = 1, b = -1, n = 1/2 the quotient is
+                // 1 / (-1) ^ 1 = -1 and the gathered power (1 / 1) ^ (1/2) = 1.
+                when: bound => bound["n"] is Integer
+                               || (bound["a"].Evaled is Real { IsPositive: true }
+                                   && bound["b"].Evaled is Real { IsPositive: true }),
                 description: "a ^ n / b ^ (c * n) = (a / b ^ c) ^ n, for a positive whole c",
                 // The exponent is matched twice and written once, and one power node goes: the delta
                 // is -(1 + |n|), at most -2 and further the larger the exponent is.
@@ -3100,6 +3119,11 @@ namespace AngouriMath.Core.Transformations.Matching
                     MatchPattern.Node<Powf>(MatchPattern.Any("b"), MatchPattern.Any("n"))),
                 bound => new Powf(new Powf(bound["a"], bound["c"]) / bound["b"], bound["n"]),
                 Soundness.SoundUnderAssumptions,
+                // Guarded as its mirror is: at a = -1, b = 1, n = 1/2 the quotient is -1 and the
+                // gathered power ((-1) ^ 2 / 1) ^ (1/2) is 1.
+                when: bound => bound["n"] is Integer
+                               || (bound["a"].Evaled is Real { IsPositive: true }
+                                   && bound["b"].Evaled is Real { IsPositive: true }),
                 description: "a ^ (c * n) / b ^ n = (a ^ c / b) ^ n, for a positive whole c",
                 // The exponent is matched twice and written once, and one power node goes with it:
                 // the delta is -(1 + |n|), the mirror of the rule that takes it into the divisor.
@@ -4015,7 +4039,12 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Divf>(MatchPattern.Node<Mulf>(MatchPattern.Node<Signumf>(MatchPattern.Any("a")), MatchPattern.Node<Mulf>(MatchPattern.Any("b"), MatchPattern.Any("a"))), MatchPattern.Node<Absf>(MatchPattern.Any("a"))),
                 bound => bound["b"].Provided(!bound["a"].EqualTo(Integer.Zero)),
                 Soundness.SoundUnderAssumptions,
-                description: "(sgn(a) * (b * a)) / abs(a) = b, provided a is not zero",
+                // sgn(a) is a / abs(a), so sgn(a) * a / abs(a) is a^2 / abs(a)^2: 1 for a real a and
+                // not otherwise -- at a = i it is -1. Realness is a reading, not a condition on
+                // where either side is defined, so it is decided here, as the comparison rules
+                // decide it, and the rule does not fire on an operand not known to be real.
+                when: bound => Functions.Patterns.OrderedConditionFor(bound["a"]) == Entity.Boolean.True,
+                description: "(sgn(a) * (b * a)) / abs(a) = b, for a real a, provided a is not zero",
                 // Three copies of a go and one comes back inside the condition; the sign, the
                 // absolute value, the quotient and two products go against the three nodes the
                 // condition and its attachment add: the delta is -1 - 2|a|, at most -3.

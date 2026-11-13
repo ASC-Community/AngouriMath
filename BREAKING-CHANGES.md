@@ -79,6 +79,20 @@ divisor answers at once. A two-sided limit is not changed. Found by limitcheck; 
 | `"arcsin(-x * log(-1, x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(arcsin(-x * log(-1, x)), x, 0)` | `0` |
 | `"x * log(2 + x, x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` after 27 s | `0` in 0.25 s |
 
+### A quotient of powers whose exponents differ by a whole factor is gathered only where that holds
+
+**Silent: `a^n / b^(c*n)` and `a^(c*n) / b^n` are no longer gathered into one power unless `n` is whole or both
+bases are positive reals**, the condition `a^n / b^n -> (a/b)^n` has carried since
+[#802](https://github.com/asc-community/AngouriMath/issues/802). The two rules gathering a whole factor `c` had no
+guard. At `x = 1, y = -1, n = 1/2` the quotient `x^n / y^(2n)` is `1 / (-1)^1 = -1`, while the gathered
+`(x / y^2)^n` is `1`. Found by the v3 definedness specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^n/y^(2*n)".ToEntity().Simplify()` | `(x / y ^ 2) ^ n` | `x ^ n / y ^ (2 * n)` |
+| `"x^(2*n)/y^n".ToEntity().Simplify()` | `(x ^ 2 / y) ^ n` | `x ^ (2 * n) / y ^ n` |
+| `"2^n/3^(2*n)".ToEntity().Simplify()` | `(2/9) ^ n` | `(2/9) ^ n`, unchanged |
+
 ### A product with a power for a factor is read by the power's exponent's limit in a one-sided limit
 
 **Silent: a one-sided limit of a product whose factors tend to 0 and to an infinity, one of them a power `u^v` whose
@@ -92,6 +106,22 @@ limitcheck; no issue was filed.
 |---|---|---|
 | `"(tan(x) + 1)^(x^(x - 1))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((tan(x) + 1) ^ x ^ (x - 1), x, 0)` | `e` |
 | `"tan(x) * x^(x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` after 11 s | `1` in 0.21 s |
+
+### A chain of comparisons is decided by transitivity only where its operands are ordered
+
+**Silent: `(a > b and b > c) implies a > c`, and the same with `<`, is no longer simplified to `True` for symbols
+over the complex plane.** An order comparison has no truth value off the real line, so at `a = i, b = 1, c = 0`
+the implication is `NaN`, and the answer `True` gave it one. It is still `True` over the reals
+(`MathS.Settings.Codomain` set to `Domain.Real`) and for operands known to be real. A condition `a in RR` cannot be
+attached instead, as `x > x` attaches it ([#876](https://github.com/asc-community/AngouriMath/issues/876)): at
+`a = i, b = 0, c = 1` the conjunction is false and the implication is `True`. Found by the v3 definedness
+specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"((a > b) and (b > c)) implies (a > c)".ToEntity().Simplify()` | `True` | `a > b and b > c implies a > c` |
+| `"((a < b) and (b < c)) implies (a < c)".ToEntity().Simplify()` | `True` | `a < b and b < c implies a < c` |
+| the same over `Domain.Real` | `True` | `True`, unchanged |
 
 ### A derivative keeps an exponent that is not rational exact
 
@@ -108,6 +138,19 @@ rational exponent is still written as its value. Found by limitcheck; no issue w
 | `"x^pi / log(x, 2) - 2".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `-2` |
 | `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | unevaluated | `1` |
 | `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `1` |
+
+### An inverse function of a zero over a symbol is not turned into its reciprocal function
+
+**Silent, through the rule registry only: `arcsin(0 / x)` is no longer rewritten to `arccsc(x / 0)` by
+`RewriteRules.Trigonometric`, nor `arccos(0 / x)` to `arcsec(x / 0)`.** The rules read `n / d` as `1 / (d / n)`,
+which needs a nonzero `n`; at `n = 0` the input is `0` (or `pi / 2`) wherever `x` is not `0`, and the answer has no
+value. `Simplify` folds `0 / x` before the rules are asked, so its answers do not change. Found by the v3
+definedness specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `Transformation.Rewriting(RewriteRules.Trigonometric).ApplyOrKeep("arcsin(0/x)")` | `arccsc(x / 0)` | `arcsin(0 / x)` |
+| `Transformation.Rewriting(RewriteRules.Trigonometric).ApplyOrKeep("arccos(0/x)")` | `arcsec(x / 0)` | `arccos(0 / x)` |
 
 ### A two-sided limit whose sides are undecided is left unevaluated
 
@@ -138,6 +181,19 @@ limit is still `NaN`. Found by limitcheck; no issue was filed.
 |---|---|---|
 | `"1 / log(x^2, cos(x))".ToEntity().Limit("x", 0)` | `-oo` | `limit(1 / log(x ^ 2, cos(x)), x, 0)` |
 | `"1 / (x * arccot(x))".ToEntity().Limit("x", 0)` | `NaN` | `limit(1 / (x * arccotan(x)), x, 0)` |
+
+### A sign times a thing over its absolute value cancels only for a real operand
+
+**Silent, through the rule registry only: `sgn(x) * (y * x) / abs(x)` is no longer rewritten to
+`y provided not x = 0` by `RewriteRules.Common` for an `x` not known to be real.** `sgn(x)` is `x / abs(x)`, so the
+quotient is `y * x^2 / abs(x)^2`, which is `-y` at `x = i`. Over the reals (`MathS.Settings.Codomain` set to
+`Domain.Real`) and for an operand known to be real it still cancels. `Simplify` sorts the product before the rule is
+asked, so its answers do not change. Found by the v3 definedness specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `Transformation.Rewriting(RewriteRules.Common).ApplyOrKeep("sgn(x)*(y*x)/abs(x)")` | `y provided not x = 0` | `sgn(x) * y * x / abs(x)` |
+| the same over `Domain.Real` | `y provided not x = 0` | `y provided not x = 0`, unchanged |
 
 ### A limit at the jump of a step function is not answered by substitution
 

@@ -154,10 +154,21 @@ namespace AngouriMath.Functions
             // These read that pair back. Restricted to a whole c so that nothing gains a
             // root it did not have -- b^c goes into the base, rather than the exponent
             // being divided. https://github.com/asc-community/AngouriMath/issues/740
+            // And guarded as the rule above is, since gathering the exponent is the same move:
+            // at {1} = 1, {2} = -1, n = 1/2 the quotient is 1 / (-1) ^ 1 = -1 and the gathered
+            // power (1 / 1) ^ (1/2) is 1.
             Divf(Powf(var any1, var any3), Powf(var any2, Mulf(Integer { IsPositive: true } const1, var any3a)))
-                when any3 == any3a => new Powf(any1 / new Powf(any2, const1), any3),
+                when any3 == any3a
+                     && (any3 is Integer
+                         || (any1.Evaled is Real { IsPositive: true }
+                             && any2.Evaled is Real { IsPositive: true }))
+                => new Powf(any1 / new Powf(any2, const1), any3),
             Divf(Powf(var any1, Mulf(Integer { IsPositive: true } const1, var any3)), Powf(var any2, var any3a))
-                when any3 == any3a => new Powf(new Powf(any1, const1) / any2, any3),
+                when any3 == any3a
+                     && (any3 is Integer
+                         || (any1.Evaled is Real { IsPositive: true }
+                             && any2.Evaled is Real { IsPositive: true }))
+                => new Powf(new Powf(any1, const1) / any2, any3),
 
             // x / x^n
             Divf(var any1, Powf(var any1a, var any2)) when any1 == any1a => new Powf(any1, 1 - any2),

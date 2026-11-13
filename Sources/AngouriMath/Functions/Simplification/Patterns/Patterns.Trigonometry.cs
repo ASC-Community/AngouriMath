@@ -214,10 +214,10 @@ namespace AngouriMath.Functions
             
             // TODO: add more secant/cosecant patterns
 
-            Arcsinf(Divf(var number, var notNumber)) when number is Number && notNumber is not Number => new Arccosecantf(notNumber / number),
-            Arccosf(Divf(var number, var notNumber)) when number is Number && notNumber is not Number => new Arcsecantf(notNumber / number),
-            Arccosecantf(Divf(var number, var notNumber)) when number is Number && notNumber is not Number => new Arcsinf(notNumber / number),
-            Arcsecantf(Divf(var number, var notNumber)) when number is Number && notNumber is not Number => new Arccosf(notNumber / number),
+            Arcsinf(Divf(var number, var notNumber)) when number is Number && number != Integer.Zero && notNumber is not Number => new Arccosecantf(notNumber / number),
+            Arccosf(Divf(var number, var notNumber)) when number is Number && number != Integer.Zero && notNumber is not Number => new Arcsecantf(notNumber / number),
+            Arccosecantf(Divf(var number, var notNumber)) when number is Number && number != Integer.Zero && notNumber is not Number => new Arcsinf(notNumber / number),
+            Arcsecantf(Divf(var number, var notNumber)) when number is Number && number != Integer.Zero && notNumber is not Number => new Arccosf(notNumber / number),
 
             _ => x
         };

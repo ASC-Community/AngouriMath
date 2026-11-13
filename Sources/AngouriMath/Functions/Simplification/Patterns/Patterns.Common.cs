@@ -263,7 +263,8 @@ namespace AngouriMath.Functions
 
             Mulf(Absf(var any1), Absf(var any2)) => new Absf(any1 * any2),
             Divf(Absf(var any1), Absf(var any2)) => new Absf(any1 / any2),
-            Divf(Mulf(Signumf(var any1), Mulf(var any2, var any1a)), Absf(var any1b)) when any1 == any1a && any1a == any1b => any2.Provided(!any1.EqualTo(Integer.Zero)),
+            // sgn(a) * a / abs(a) is 1 only for a real a: at a = i it is -1.
+            Divf(Mulf(Signumf(var any1), Mulf(var any2, var any1a)), Absf(var any1b)) when any1 == any1a && any1a == any1b && OrderedCondition(any1) == Entity.Boolean.True => any2.Provided(!any1.EqualTo(Integer.Zero)),
             Mulf(Signumf(var any1), Absf(var any1a)) when any1 == any1a => any1,
             Mulf(Absf(var any1a), Signumf(var any1)) when any1 == any1a => any1,
 
