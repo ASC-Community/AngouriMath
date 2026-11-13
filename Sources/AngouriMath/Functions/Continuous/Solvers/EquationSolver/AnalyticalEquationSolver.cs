@@ -318,6 +318,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 var newVar = Variable.CreateTemp(expr.Vars);
                 // Here we find all possible replacements and find one that has at least one solution
                 Set? unsettled = null;
+                var noRealReplacement = false;
                 foreach (var alt in SpellingsToSolveOver(expr))
                 {
                     MultithreadingFunctional.ExitIfCancelled();
@@ -328,8 +329,23 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     var minimumSubtree = TreeAnalyzer.GetMinimumSubtree(alt, x);
                     if (minimumSubtree == x)
                         continue;
-                    // Here we are trying to solve for this replacement
-                    var solutionsSet = Solve(alt.Substitute(minimumSubtree, newVar), newVar).InnerSimplified;
+                    // Here we are trying to solve for this replacement. Over the reals the
+                    // replacement is real only where the subtree it stands for is real at every
+                    // real x: i x is not, and e^u = -1 has the real root pi for u = i x. Where it
+                    // is not, the replacement is solved over the complex numbers, and the roots
+                    // in x are read over the reals when they are solved for below.
+                    // https://github.com/asc-community/AngouriMath/issues/2425
+                    // Where it is, a replacement with no real root is an x with none: e^(x^2) = -1.
+                    Entity solutionsSet;
+                    var readOverTheReals = MathS.Settings.Codomain.Value == Core.Domain.Real;
+                    var realReplacement = readOverTheReals && TreeAnalyzer.IsRealValued(minimumSubtree, x);
+                    if (readOverTheReals && !realReplacement)
+                        using (MathS.Settings.Codomain.Set(Core.Domain.Complex))
+                            solutionsSet = Solve(alt.Substitute(minimumSubtree, newVar), newVar).InnerSimplified;
+                    else
+                        solutionsSet = Solve(alt.Substitute(minimumSubtree, newVar), newVar).InnerSimplified;
+                    if (realReplacement && solutionsSet is FiniteSet { IsSetEmpty: true })
+                        noRealReplacement = true;
                     if (solutionsSet is FiniteSet { IsSetEmpty: false } enums)
                     {
                         var solutions = enums.Select(solution => Solve(minimumSubtree - solution, x, compensateSolving: true)).Unite().InnerSimplified;
@@ -346,6 +362,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 }
                 if (unsettled is { } condition)
                     return condition;
+                if (noRealReplacement)
+                    return Set.Empty;
                 // // //
             }
 

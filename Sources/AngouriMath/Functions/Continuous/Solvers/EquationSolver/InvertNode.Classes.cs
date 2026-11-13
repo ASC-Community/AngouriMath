@@ -127,11 +127,45 @@ namespace AngouriMath
                             : null;
                     return principal;
                 }  
+                // Over the reals a positive base to a real power is positive, so a value that is not
+                // a positive real is no power of it: e^x = -1 has no real root, and log(e, -1) is
+                // i pi. https://github.com/asc-community/AngouriMath/issues/2425
+                if (MathS.Settings.Codomain.Value == Core.Domain.Real && IsNotAPowerOverTheReals(value, x))
+                    return Enumerable.Empty<Entity>();
                 // a ^ x = value => x = log(a, value)
                 // TODO: determine how we should return periodic roots as
                 // (e ^ x) ^ a != (e ^ a) ^ x for logs
                 return Exponent.Invert(MathS.Log(Base, value), x);
             }
+
+            /// <summary>
+            /// Whether, for a positive real base and an exponent real at every real
+            /// <paramref name="x"/>, <paramref name="value"/> is decidedly not a positive real.
+            /// </summary>
+            /// <remarks>
+            /// Decided on an enclosure of the value, never on its printed form: <c>ln(-1)</c> stays
+            /// a node, and only its value says it is <c>i pi</c>. A value is not a positive real
+            /// where its imaginary part is enclosed away from zero, where its real part is enclosed
+            /// below zero whatever its imaginary part is, or where it is exactly zero. Anything
+            /// else -- a value the enclosure cannot separate from the positive reals, or one with a
+            /// free variable -- is left to the inversion as before, so this only ever removes a
+            /// root it has proved is not one.
+            /// </remarks>
+            private bool IsNotAPowerOverTheReals(Entity value, Entity x)
+            {
+                if (x is not Variable variable || value.ContainsNode(x)
+                    || !TreeAnalyzer.IsRealValued(Exponent, variable)
+                    || Numerics.PreciseEvaluation.Of(Base, EnclosureDigits) is not { } @base
+                    || !@base.Im.IsZero || @base.Re.Low.Sign <= 0)
+                    return false;
+                if (value.Evaled is Integer { IsZero: true })
+                    return true;
+                if (Numerics.PreciseEvaluation.Of(value, EnclosureDigits) is not { } enclosure)
+                    return false;
+                return enclosure.Im.Mignitude.Sign > 0 || enclosure.Re.High.Sign < 0;
+            }
+
+            private const int EnclosureDigits = 40;
 
             // The principal power z^p is e^(p ln z), so its argument is p arg(z): in (-p pi, p pi]
             // for 0 < p < 1, and in [p pi, -p pi) for -1 < p < 0, where it is never 0. A value

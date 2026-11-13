@@ -243,5 +243,54 @@ namespace AngouriMath.Tests.Common
             var printed = "abs(x) = a".ToEntity().Solve("x").Stringize();
             Assert.Contains("a >= 0", printed);
         }
+        // https://github.com/asc-community/AngouriMath/issues/2425
+        // Over the reals a positive base to a real power is positive, so e^x = t has a real
+        // root only for a positive t. e^x + 1 = 0 was answered { ln(-1) }, which is i pi, and
+        // e^x - 2e^(-x) - 1 = 0, a quadratic in e^x with the roots 2 and -1, kept ln(-1) beside
+        // ln(2). Each root is checked to be real and to satisfy the equation, and the count says
+        // that none was lost.
+        [Theory]
+        [InlineData("e^x + 1 = 0", 0)]
+        [InlineData("3 e^x + 5 = 0", 0)]
+        [InlineData("2^x = -3", 0)]
+        [InlineData("e^(2x + 1) = -3", 0)]
+        [InlineData("e^x - 2e^(-x) - 1 = 0", 1)]
+        [InlineData("e^(2x) + e^x - 2 = 0", 1)]
+        [InlineData("e^x - e^(-x) = 3", 1)]
+        [InlineData("e^x + e^(-x) = 1", 0)]
+        [InlineData("e^x + e^(-x) = 3", 2)]
+        [InlineData("e^(2x) - 3e^x + 2 = 0", 2)]
+        [InlineData("e^(x^2) = -1", 0)]
+        [InlineData("e^(x^2) + e^(-x^2) = 1", 0)]
+        // A replacement that is not real at a real x is solved over the complex numbers:
+        // e^(i x) = -1 has the real root pi.
+        [InlineData("e^(i x) = -1", 1)]
+        public void Issue2425_AnExponentialEquationOverTheRealsHasOnlyRealRoots(string equation, int count)
+        {
+            using var _ = MathS.Settings.Codomain.Set(AngouriMath.Core.Domain.Real);
+            var statement = (Entity.Equalsf)equation.ToEntity();
+            var roots = Assert.IsType<Entity.Set.FiniteSet>(statement.Solve("x"));
+            Assert.Equal(count, roots.Count);
+            foreach (var root in roots)
+            {
+                var value = Assert.IsAssignableFrom<Entity.Number.Complex>(root.Evaled);
+                Assert.True(value.ImaginaryPart.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.FromString("1E-30")) < 0,
+                    $"{root} = {value} is not real");
+                var residual = Assert.IsAssignableFrom<Entity.Number.Complex>(
+                    (statement.Left - statement.Right).Substitute("x", root).Evaled);
+                Assert.True(residual.Abs().EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromString("1E-30")) < 0,
+                    $"{root} leaves {residual}");
+            }
+        }
+
+        // The complex reading is untouched: e^x + 1 = 0 has the root i pi there.
+        [Fact]
+        public void Issue2425_OverTheComplexNumbersTheRootIsKept()
+        {
+            var statement = (Entity.Equalsf)"e^x + 1 = 0".ToEntity();
+            var root = Assert.Single(Assert.IsType<Entity.Set.FiniteSet>(statement.Solve("x")));
+            var value = Assert.IsAssignableFrom<Entity.Number.Complex>(root.Evaled);
+            Assert.Equal(System.Math.PI, value.ImaginaryPart.EDecimal.ToDouble(), 12);
+        }
     }
 }
