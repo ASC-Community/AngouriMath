@@ -294,6 +294,11 @@ namespace AngouriMath.AotSmokeTest
 
             var piecewise = "piecewise(x provided x > 0, 0 provided x <= 0)".Compile<double, double>(x);
             Check("compiled piecewise at -3 and 3", piecewise(-3) == 0 && piecewise(3) == 3, $"{piecewise(-3)}, {piecewise(3)}");
+            // A case computed only where it is taken is a block with locals of its own.
+            // https://github.com/asc-community/AngouriMath/issues/2195
+            var computedCases = "piecewise(x^2 + 1 provided x > 0, x^2 - 1) + x^2".Compile<double, double>(x);
+            Check("compiled piecewise of computed cases at -3 and 3", computedCases(-3) == 17 && computedCases(3) == 19,
+                $"{computedCases(-3)}, {computedCases(3)}");
 
             // A comparison of numbers that are not ordered has no truth value, and the connectives
             // follow Kleene's tables, in the interpreter a native build compiles to.

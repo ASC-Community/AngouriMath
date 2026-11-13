@@ -201,6 +201,22 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     => protocol.ConvertMembership(
                         BuildTree(element, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType), set),
 
+                // The value of a case is computed only where it is taken, inside the conditional, so that a case
+                // that is undefined, or costly, where it is not taken is not computed there. Every subexpression is
+                // otherwise a local assigned before the expression's value is, which would compute each case.
+                // https://github.com/asc-community/AngouriMath/issues/2195
+                Providedf(var value, var predicate)
+                    => protocol.ConvertBinaryNode(
+                        Conditional(value, cachedSubexpressions, protocol, constantType),
+                        BuildTree(predicate, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType),
+                        expr),
+
+                // The first predicate is always computed; the others only where every one before them fails.
+                Piecewise piecewise
+                    => protocol.ConvertOtherNode(piecewise.DirectChildren.Select((child, i) => i == 1
+                        ? BuildTree(child, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType)
+                        : Conditional(child, cachedSubexpressions, protocol, constantType)).ToArray(), expr),
+
                 IBinaryNode twoArg
                     => protocol.ConvertBinaryNode(
                         BuildTree(twoArg.NodeFirstChild, cachedSubexpressions, variableAssignments, newLocalVars, protocol, constantType), 
@@ -215,6 +231,24 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             cachedSubexpressions[expr] = newVar;
             newLocalVars.Add(newVar);
             return newVar;
+        }
+
+        /// <summary>
+        /// <paramref name="expr"/> as a block of its own, computed only where the block is: what it computes is
+        /// cached inside the block and not outside it, where the block may not have been computed. What was
+        /// cached before it is read as it is everywhere else.
+        /// </summary>
+        private static Expression Conditional(
+            Entity expr,
+            Dictionary<Entity, ParameterExpression> cachedSubexpressions,
+            CompilationProtocol protocol,
+            Type? constantType)
+        {
+            var cached = new Dictionary<Entity, ParameterExpression>(cachedSubexpressions);
+            var locals = new List<ParameterExpression>();
+            var assignments = new List<Expression>();
+            var tree = BuildTree(expr, cached, assignments, locals, protocol, constantType);
+            return assignments.Count == 0 ? tree : Expression.Block(locals, assignments.Append(tree));
         }
     }
 }

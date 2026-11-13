@@ -15,8 +15,8 @@ using Xunit;
 namespace AngouriMath.Tests.Common
 {
     /// <summary>
-    /// A <c>provided</c> or <c>piecewise</c> compiled to a FastExpression computes the case it takes and no other, as
-    /// evaluation does. It computed every case and kept one, so that
+    /// A compiled <c>provided</c> or <c>piecewise</c> computes the case it takes and no other, as
+    /// evaluation does. Both compilers computed every case and kept one, so that
     /// <c>piecewise(primepi(x) provided x &lt; 100, 0)</c> at 9999991 sieved ten million numbers for a
     /// value it threw away: 18 ms a call, where evaluation takes 13 µs.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/2195">#2195</a>
@@ -79,6 +79,31 @@ namespace AngouriMath.Tests.Common
             AgreesAtEveryPoint(expression, value => compiled.Call(value), "FastExpression");
         }
 
+        [Theory]
+        [MemberData(nameof(Expressions))]
+        public void LinqOverTheComplexNumbersIsWhatEvaluationSays(string expression)
+        {
+            var compiled = expression.ToEntity().Compile<Complex, Complex>("x");
+            AgreesAtEveryPoint(expression, value => compiled(value), "LINQ over Complex");
+        }
+
+        [Theory]
+        [MemberData(nameof(Expressions))]
+        public void LinqOverTheRealsIsWhatEvaluationSaysWhereItIsReal(string expression)
+        {
+            var compiled = expression.ToEntity().Compile<double, double>("x");
+            foreach (var (at, value) in points)
+            {
+                if (value.Imaginary != 0)
+                    continue;
+                var expected = Interpreted(expression, at);
+                if (expected.Imaginary != 0)
+                    expected = double.NaN;
+                var actual = compiled(value.Real);
+                Assert.True(Agrees(expected, actual), $"LINQ over double: {expression} at {at}: {expected} interpreted, {actual} compiled");
+            }
+        }
+
         // primepi sieves up to its argument, and at 9999991 the sieve is 5 million bits, 625 KB, on every
         // call. What a call allocates is the measure, not how long it takes, which is the machine's.
         public static readonly TheoryData<string> NotTakenAt9999991 = new()
@@ -108,6 +133,20 @@ namespace AngouriMath.Tests.Common
             Assert.True(Agrees(Interpreted(expression, Untaken), compiled.Call(Untaken)));
             var bytes = Allocated(() => compiled.Call(Untaken));
             Assert.True(bytes < WellBelowTheSieve, $"{expression} at {Untaken} allocated {bytes} bytes");
+        }
+
+        [Theory]
+        [MemberData(nameof(NotTakenAt9999991))]
+        public void LinqDoesNotComputeACaseItDoesNotTake(string expression)
+        {
+            var overComplex = expression.ToEntity().Compile<Complex, Complex>("x");
+            var overReals = expression.ToEntity().Compile<double, double>("x");
+            Assert.True(Agrees(Interpreted(expression, Untaken), overComplex(Untaken)));
+            Assert.True(Agrees(Interpreted(expression, Untaken), overReals(Untaken)));
+            var bytes = Allocated(() => overComplex(Untaken));
+            Assert.True(bytes < WellBelowTheSieve, $"{expression} over Complex at {Untaken} allocated {bytes} bytes");
+            bytes = Allocated(() => overReals(Untaken));
+            Assert.True(bytes < WellBelowTheSieve, $"{expression} over double at {Untaken} allocated {bytes} bytes");
         }
 
         /// <summary>Where the case is taken, it is computed: the sieve is there.</summary>
