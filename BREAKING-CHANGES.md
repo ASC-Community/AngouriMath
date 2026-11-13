@@ -101,6 +101,19 @@ and 1 in order. 2.6.0 answered the third with a wrong `0`. Found by limitcheck; 
 | `"x^2 * floor(1/x^2)".ToEntity().Limit("x", 0)` | `0` | `limit(x ^ 2 * floor(1 / x ^ 2), x, 0)` |
 | `"x * ceil(1/x)".ToEntity().Limit("x", 0)` | `NaN` | `limit(x * ceil(1 / x), x, 0)` |
 
+### A two-sided limit whose side stops at a finite indeterminate form is left unevaluated
+
+**Silent: a two-sided limit is left unevaluated, rather than answered, where a side's limit stops at an indeterminate
+form of finite parts, such as `c / 0`, and the expression is real just beside the point.** That form is a side whose
+parts were never compared, not a side without a limit. `1 / log(x^2, cos(x))` is `+oo` from each side of 0, and 2.6.0
+answered `-oo`; `1 / (x * arccot(x))` is `+oo` from each side, and 2.6.0 answered `NaN`. Where the expression has no real value beside the point, as `(x - x) / (x - x)` has none anywhere, the
+limit is still `NaN`. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"1 / log(x^2, cos(x))".ToEntity().Limit("x", 0)` | `-oo` | `limit(1 / log(x ^ 2, cos(x)), x, 0)` |
+| `"1 / (x * arccot(x))".ToEntity().Limit("x", 0)` | `NaN` | `limit(1 / (x * arccotan(x)), x, 0)` |
+
 ### A limit at the jump of a step function is not answered by substitution
 
 **Silent: a limit of an expression built on `floor`, `ceil`, `round` or `sgn`, where the step's argument arrives on one
