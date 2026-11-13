@@ -340,6 +340,13 @@ namespace AngouriMath.AotSmokeTest
             var at3 = matrix(3);
             Check("compiled matrix at 3", at3[0, 0] == 4 && at3[0, 1] == 7 && at3[1, 0] == 5 && at3[1, 1] == 10,
                 $"[[{at3[0, 0]}, {at3[0, 1]}], [{at3[1, 0]}, {at3[1, 1]}]]");
+            // Matrices taken and given as two-dimensional arrays, a matrix over a matrix by the inverse, and a power whose
+            // exponent is checked to be whole, over Complex: the conversions and the elimination must stay AOT-safe too.
+            var arrays = "A / B + A ^ n".Compile<Complex[,], Complex[,], Complex, Complex[,]>("A", "B", "n");
+            var quotient = arrays(new Complex[,] { { 2, 0 }, { 0, 2 } }, new Complex[,] { { 1, 0 }, { 0, Complex.ImaginaryOne } }, 2);
+            Check("compiled [[2, 0], [0, 2]] / [[1, 0], [0, i]] + [[2, 0], [0, 2]] ^ 2",
+                quotient[0, 0] == 6 && quotient[0, 1] == 0 && quotient[1, 0] == 0 && quotient[1, 1] == new Complex(4, -2),
+                $"[[{quotient[0, 0]}, {quotient[0, 1]}], [{quotient[1, 0]}, {quotient[1, 1]}]]");
         }
     }
 }

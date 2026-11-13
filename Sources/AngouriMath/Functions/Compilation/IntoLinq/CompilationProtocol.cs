@@ -93,9 +93,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     throw new UncompilableNodeException($"A statement that may have no truth value cannot be compiled as {type}, which has no NaN");
                 return ConvertType(Expression.Call(ThreeValuedLogic.IversonMethod, ConvertType(expr, typeof(bool?))), type);
             }
+            // A tensor is given back as the two-dimensional array of its element type where that is asked for.
+            if (TensorCompilation.AsArray(expr, type) is { } array)
+                return array;
             // A tensor converts to nothing but itself: a matrix over one element type is not
             // a matrix over another, and it is not a number.
-            if (TensorCompilation.IsTensor(expr.Type) || TensorCompilation.IsTensor(type))
+            if (TensorCompilation.IsMatrixType(expr.Type) || TensorCompilation.IsMatrixType(type))
                 throw new UncompilableNodeException($"A value of type {expr.Type} cannot be compiled as {type}");
                 
             bool exprNullable = (Nullable.GetUnderlyingType(expr.Type) is not null) || (expr.Type == typeof(object));

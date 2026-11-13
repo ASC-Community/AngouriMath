@@ -1767,17 +1767,76 @@ are now also found wherever the `1` and the square sit in a sum, under the condi
 | `"1 + tan(x)^2 - sec(x)^2".Simplify()` | `1 + tan(x) ^ 2 - sec(x) ^ 2` | `0 provided not cos(x) = 0` |
 | `"a + 1 + tan(y)^2 - sec(y)^2".Simplify()` | `a + 1 + tan(y) ^ 2 - sec(y) ^ 2` | `a provided not cos(y) = 0` |
 
-### A scalar over a matrix argument is not compiled
+### A scalar over a matrix argument is the scalar times its inverse
 
-**Not silent: what compiled to a wrong value now throws `UncompilableNodeException`.** A scalar over a matrix that is an
-argument of the compiled function was compiled as the scalar over every element, where evaluation takes it as the scalar
-times the inverse. The inverse is not compiled, as a negative matrix power is not, so the quotient is refused. A matrix
-written into the expression is inverted before it is compiled, as before
-([#2287](https://github.com/asc-community/AngouriMath/issues/2287)).
+**Not silent: what compiled to a wrong value now gives the right one.** A scalar over a matrix that is an argument of the
+compiled function was compiled as the scalar over every element, where evaluation takes it as the scalar times the
+inverse. Since 2.6.0 it was refused while the inverse was not compiled
+([#2287](https://github.com/asc-community/AngouriMath/issues/2287)), and the inverse compiles now: a matrix over a matrix is the first times the inverse of the second, and a negative power
+is that power of the inverse, as evaluation has them. A singular matrix's inverse is NaN in every entry, as a compiled
+division by zero has no value. A matrix of `int`, `long` or `BigInteger` is not inverted: its inverse is not a matrix of
+whole numbers. A matrix written into the expression is inverted before it is compiled, as before.
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
-| `"x / A"`, compiled over `GenTensor<double>` and called at `A = [[1, 2], [3, 4]]`, `x = 2` | `[[2, 1], [0.667, 0.5]]` | throws `UncompilableNodeException` |
+| `"x / A"`, compiled over `GenTensor<double>` and called at `A = [[1, 2], [3, 4]]`, `x = 2` | `[[2, 1], [0.667, 0.5]]` | `[[-4, 2], [3, -1]]` |
+| `"A ^ (-1)"`, compiled over `GenTensor<double>` and called at `A = [[1, 2], [3, 4]]` | throws `NotSupportedException` when called | `[[-2, 1], [1.5, -0.5]]` |
+| `"A / B"`, compiled over `GenTensor<double>` | throws `UncompilableNodeException` | `A` times the inverse of `B` |
+
+### A compiled matrix power is the matrix power of a whole exponent
+
+**Silent: a matrix to a power that is not whole has no compiled value, where 2.6.0 compiled it entry by entry.** In 2.6.0
+simplification raised each entry to the power before compiling, so `[[x, 1], [0, y]] ^ x` compiled as `[[x ^ x, 1], [0,
+y ^ x]]`. Evaluation takes a power of a matrix as a matrix power since "A matrix is divided, raised to a power and compared
+as a matrix" above, and leaves one that is not whole unevaluated. The compiled delegate now takes the matrix power where the
+exponent is whole, and throws `InvalidMatrixOperationException` when called with one that is not; it no longer casts the
+exponent to `int`, which truncates. An exponent of type `Complex` compiles, and is whole where its imaginary part is zero and
+its real part is whole.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"[[x, 1], [0, y]] ^ x"`, compiled over `double` to `GenTensor<double>` and called at `(0.7, -1.3)` | `[[0.779, 1], [0, NaN]]`, each entry to the power | throws `InvalidMatrixOperationException` |
+| the same compiled over `Complex` to `GenTensor<Complex>` | throws `UncompilableNodeException` | a delegate; the matrix power at a whole `x`, and `InvalidMatrixOperationException` at any other |
+
+### A power of a matrix that is not square is refused when compiling
+
+**Not silent: what compiled to a wrong value now throws `InvalidMatrixOperationException`.** In 2.6.0 simplification
+squared `[[x, 1, y]]` entry by entry, and the delegate returned that. A matrix that is not square has no power, and
+evaluation leaves it written. Simplification also leaves written any operation on written matrices whose shapes do not
+fit, and `Compile` now refuses each of them, naming the shapes, rather than building a delegate that throws whenever it is
+called. A matrix argument's shape is known only when the delegate is called, and is checked then.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"[[x, 1, y]] ^ 2".ToEntity().Compile<Complex, Complex, GenTensor<Complex>>("x", "y")`, called at `(1, 2)` | `[[1, 1, 4]]` | throws `InvalidMatrixOperationException` when compiling |
+
+### A compiled matrix is taken and given as a two-dimensional array, and FastExpression compiles a number made of matrices
+
+**Addition, not silent.** Under the LINQ compiler `double[,]`, `Complex[,]`, `float[,]`, `int[,]`, `long[,]` and
+`BigInteger[,]` are matrices, as arguments and as the result, read into and out of the `GenTensor` the arithmetic runs
+on, so a caller need not know GenericTensor. FastExpression simplifies an expression with a matrix in it before
+compiling it, as the LINQ compiler does since [#425](https://github.com/asc-community/AngouriMath/issues/425), so one whose
+value is a number compiles. One whose value is a matrix is refused as before, and the message names the LINQ form.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"A * B".ToEntity().Compile<double[,], double[,], double[,]>("A", "B")` | throws `UncompilableNodeException` | the matrix product |
+| `"[1, 0]T * [[a, b], [c, d]] * [0, 1]".ToEntity().Compile("a", "b", "c", "d")` | throws `UncompilableNodeException` | `b` |
+
+### A matrix argument is not simplified as a number before compiling
+
+**Silent: what compiled to a wrong value now gives the right one.** The LINQ compiler simplifies an expression with a
+written matrix in it before compiling ([#425](https://github.com/asc-community/AngouriMath/issues/425)), and
+simplification reads a variable as a number. With a matrix argument beside the written matrices, `[[1, 0]] * A * [[0], [1]]`
+was multiplied out to `0`, and the delegate returned that whatever `A` was. Only the parts that do not mention a matrix
+argument are simplified now, a written matrix beside a matrix argument is over the argument's element type, and a matrix
+known when compiling to be 1 x 1 compiles as a number, its entry, as evaluation has it.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"[[1, 0]] * A * [[0], [1]]"`, compiled from `GenTensor<double>` to `double` and called at `A = [[1, 2], [3, -4]]` | `0` | `2` |
+| `"A + [[1, 2], [3, 4]]"`, compiled over `GenTensor<double>`, the same | throws `UncompilableNodeException` | `[[2, 4], [6, 0]]` |
+| `"[[1, 0]] * A"`, compiled over `GenTensor<double>`, the same | throws `KeyNotFoundException` | `[[1, 2]]` |
 
 ### A square system is not answered with rows that are no solution
 
