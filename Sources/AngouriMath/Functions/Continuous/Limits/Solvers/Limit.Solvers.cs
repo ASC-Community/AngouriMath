@@ -231,6 +231,188 @@ namespace AngouriMath.Functions.Algebra
         }
 
         /// <summary>
+        /// The other shapes the squeeze theorem's premise settles, where the bounded part is also
+        /// kept away from 0, or is a term rather than a factor: a part vanishing over one bounded
+        /// away from 0 tends to 0, a part diverging times or over one bounded away from 0 diverges
+        /// with the sign the product takes, and a diverging term beside a bounded one diverges.
+        /// </summary>
+        /// <remarks>
+        /// <c>e^x / e^(cos(x))</c> at -oo is 0, and was answered NaN: the descent put
+        /// <c>e^(cos(x))</c>'s own limit, which does not exist, in place of the divisor, and a
+        /// quotient of a limit and no limit read as no limit. The divisor has no limit and still
+        /// lies in <c>[1/e, e]</c> all the way in, which is all the quotient needs of it. The
+        /// bound is read off the shape (<see cref="Enclosure"/>), never off sampled values, and
+        /// where the enclosure reaches 0 nothing is claimed: <c>x / (1 + cos(x))</c> stays
+        /// unanswered, as it has poles all the way in.
+        /// </remarks>
+        internal static Entity? SolveWithABoundedPart(Entity expr, Variable x)
+        {
+            // Not over an expression with an infinity or a NaN written in it. Such a part "diverges"
+            // only because the infinity is already there: tanh(log(x + 1, 0)) at -1 from the right
+            // reaches e^(+oo / ln(x)) - 1, which the descent answers +oo, and its quotient by
+            // e^(+oo / ln(x)) + 1, read as +oo / +oo, was answered 0 where the values settle at 1.
+            if (expr.Nodes.Any(static node => node is Number { IsFinite: false }))
+                return null;
+            switch (expr)
+            {
+                case Mulf(var multiplier, var multiplicand):
+                    return DivergingTimesAwayFromZero(multiplicand, multiplier, x)
+                        ?? DivergingTimesAwayFromZero(multiplier, multiplicand, x);
+                case Divf(var dividend, var divisor):
+                    if (SignAwayFromZero(divisor, x) is not { } divisorSign)
+                        return null;
+                    // Only a real-valued dividend: 0 swallows a side that is not real, which has no
+                    // limit under the convention x^x at 0 is held to. sinh(-1) (x^x - 1) at 0 is read
+                    // from the left as ((-1/x)^(-1/x) - 1) (1 - e^2) / e, and came to 0 two-sided.
+                    if (IsRealValued(dividend, x) && VanishesAtInfinity(dividend, x))
+                        return Integer.Zero;
+                    return InfinityAtInfinity(dividend, x) is { } dividendInfinity
+                        ? Signed(dividendInfinity, divisorSign)
+                        : null;
+                case Sumf(var augend, var addend):
+                    return DivergingBesideBounded(augend, addend, x, 1)
+                        ?? DivergingBesideBounded(addend, augend, x, 1);
+                case Minusf(var minuend, var subtrahend):
+                    return DivergingBesideBounded(minuend, subtrahend, x, 1)
+                        ?? DivergingBesideBounded(subtrahend, minuend, x, -1);
+                default:
+                    return null;
+            }
+
+            static Entity? DivergingTimesAwayFromZero(Entity diverging, Entity bounded, Variable x)
+                => SignAwayFromZero(bounded, x) is { } sign && InfinityAtInfinity(diverging, x) is { } infinity
+                    ? Signed(infinity, sign)
+                    : null;
+
+            // The diverging part, taken with the sign it carries in the sum, beside a bounded one.
+            static Entity? DivergingBesideBounded(Entity diverging, Entity bounded, Variable x, int sign)
+                => diverging.ContainsNode(x) && Enclosure(bounded, x) is { } && InfinityAtInfinity(diverging, x) is { } infinity
+                    ? Signed(infinity, sign)
+                    : null;
+
+            static Entity Signed(Real infinity, int sign)
+                => (infinity == Real.PositiveInfinity) == (sign > 0) ? Real.PositiveInfinity : Real.NegativeInfinity;
+        }
+
+        /// <summary>
+        /// The sign of an expression whose <see cref="Enclosure"/> excludes 0, or
+        /// <see langword="null"/> where it does not or there is none. A constant counts:
+        /// x - cos(x) at -oo is read at +oo as -1 * (x + cos(x)).
+        /// </summary>
+        private static int? SignAwayFromZero(Entity expr, Variable x)
+            => Enclosure(expr, x) is var (low, high)
+                ? low > 0 ? 1 : high < 0 ? -1 : null
+                : null;
+
+        /// <summary>
+        /// The real infinity the expression tends to, where it is real on the way in, or
+        /// <see langword="null"/>.
+        /// </summary>
+        /// <remarks>
+        /// Real on the way in, and not only in its limit: a side on which the expression is not
+        /// real has no limit under the convention x^x at 0 is held to, and a bounded part beside
+        /// it must not give it one. tanh(x^cos(2)) at 0 from the left is read at +oo through
+        /// (-1/x)^cos(2), complex for every x, and came to 1, and two-sided to 1 where it is NaN.
+        /// </remarks>
+        private static Real? InfinityAtInfinity(Entity expr, Variable x)
+            => IsRealNearInfinity(expr, x)
+               && LimitFunctional.ComputeLimit(expr, x, Real.PositiveInfinity) is { } limit
+               && limit.Evaled is Real { IsFinite: false, IsNaN: false } infinity
+                ? infinity
+                : null;
+
+        /// <summary>
+        /// Whether the expression is real for every large enough x: real wherever it is defined,
+        /// or real where the bases of its roots and the arguments of its logarithms are positive,
+        /// and each of those tends to a positive number or to +oo. One tending to 0 is declined,
+        /// since it says nothing about the side it arrives from.
+        /// </summary>
+        private static bool IsRealNearInfinity(Entity expr, Variable x)
+            => IsRealValued(expr, x)
+               || TreeAnalyzer.WhereRealValued(expr, x) is { } where
+                  && where.Nodes.OfType<Greaterf>().ToList() is { Count: > 0 } conditions
+                  && conditions.All(condition =>
+                      LimitFunctional.ComputeLimit(condition.Left, x, Real.PositiveInfinity) is { } limit
+                      && limit.Evaled is Real { IsNaN: false, IsPositive: true, IsZero: false });
+
+        /// <summary>
+        /// An interval the expression stays within for every real x, read off its shape: a
+        /// sine, a cosine, a sign and an error function of a real argument lie in [-1, 1], an
+        /// arctangent and an arccotangent in [-pi/2, pi/2], a positive constant to a power is
+        /// monotone in the power, and sums, differences, products, quotients by an interval
+        /// without 0, moduli and positive whole powers combine intervals. <see langword="null"/>
+        /// for any other shape, including anything an x appears in bare: nothing is sampled.
+        /// </summary>
+        /// <remarks>
+        /// In doubles, and widened outward by a relative 1e-12 at every step, so that rounding
+        /// can only make the interval larger: 1 + cos(x) comes out reaching just below 0, and so
+        /// is not taken to be bounded away from it, which it is not.
+        /// </remarks>
+        private static (double Low, double High)? Enclosure(Entity expr, Variable x)
+        {
+            if (!expr.ContainsNode(x))
+                return expr.Evaled is Real { IsFinite: true, IsNaN: false } value
+                    ? Widened(value.AsDouble(), value.AsDouble())
+                    : null;
+            switch (expr)
+            {
+                case Sinf or Cosf or Signumf or Erff when IsRealValued(expr.DirectChildren[0], x):
+                    return (-1, 1);
+                case Arctanf or Arccotanf when IsRealValued(expr.DirectChildren[0], x):
+                    return Widened(-System.Math.PI / 2, System.Math.PI / 2);
+                case Absf(var argument):
+                    if (Enclosure(argument, x) is not var (low, high))
+                        return null;
+                    return Widened(low > 0 ? low : high < 0 ? -high : 0, System.Math.Max(System.Math.Abs(low), System.Math.Abs(high)));
+                case Sumf(var augend, var addend):
+                    if (Enclosure(augend, x) is not var (augendLow, augendHigh) || Enclosure(addend, x) is not var (addendLow, addendHigh))
+                        return null;
+                    return Widened(augendLow + addendLow, augendHigh + addendHigh);
+                case Minusf(var minuend, var subtrahend):
+                    if (Enclosure(minuend, x) is not var (minuendLow, minuendHigh) || Enclosure(subtrahend, x) is not var (subtrahendLow, subtrahendHigh))
+                        return null;
+                    return Widened(minuendLow - subtrahendHigh, minuendHigh - subtrahendLow);
+                case Mulf(var multiplier, var multiplicand):
+                    return Enclosure(multiplier, x) is { } left && Enclosure(multiplicand, x) is { } right
+                        ? Product(left, right) : null;
+                case Divf(var dividend, var divisor):
+                    if (Enclosure(dividend, x) is not { } over || Enclosure(divisor, x) is not var (divisorLow, divisorHigh)
+                        || divisorLow <= 0 && divisorHigh >= 0)
+                        return null;
+                    return Product(over, Widened(1 / divisorHigh, 1 / divisorLow));
+                // e^g, and any positive constant to a power, is monotone in the power.
+                case Powf(var @base, var exponent) when !@base.ContainsNode(x):
+                    if (@base.Evaled is not Real { IsFinite: true, IsPositive: true } positive
+                        || Enclosure(exponent, x) is not var (exponentLow, exponentHigh))
+                        return null;
+                    var (atLow, atHigh) = (System.Math.Pow(positive.AsDouble(), exponentLow), System.Math.Pow(positive.AsDouble(), exponentHigh));
+                    return IsAFiniteDouble(atLow) && IsAFiniteDouble(atHigh)
+                        ? Widened(System.Math.Min(atLow, atHigh), System.Math.Max(atLow, atHigh)) : null;
+                case Powf(var @base, Integer { EInteger: var power }) when power.Sign > 0 && power.CompareTo(64) <= 0:
+                    if (Enclosure(@base, x) is not { } baseEnclosure)
+                        return null;
+                    var result = baseEnclosure;
+                    for (var i = 1; i < power.ToInt32Checked(); i++)
+                        result = Product(result, baseEnclosure);
+                    return IsAFiniteDouble(result.Low) && IsAFiniteDouble(result.High) ? result : null;
+                default:
+                    return null;
+            }
+
+            // double.IsFinite is not on netstandard2.0, which the library ships.
+            static bool IsAFiniteDouble(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+
+            static (double Low, double High) Product((double Low, double High) left, (double Low, double High) right)
+            {
+                var corners = new[] { left.Low * right.Low, left.Low * right.High, left.High * right.Low, left.High * right.High };
+                return Widened(corners.Min(), corners.Max());
+            }
+
+            static (double Low, double High) Widened(double low, double high)
+                => (low - 1e-12 * (1 + System.Math.Abs(low)), high + 1e-12 * (1 + System.Math.Abs(high)));
+        }
+
+        /// <summary>
         /// That a sine or a cosine has no limit where its argument grows without bound: it takes
         /// every value in its range infinitely often on the way in and settles on none of them.
         /// </summary>
@@ -329,7 +511,7 @@ namespace AngouriMath.Functions.Algebra
                 case Minusf(var minuend, var subtrahend):
                     return IsBoundedAtInfinity(minuend, x) && IsBoundedAtInfinity(subtrahend, x);
                 default:
-                    return false;
+                    return Enclosure(expr, x) is { };
             }
         }
 

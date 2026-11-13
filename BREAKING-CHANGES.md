@@ -1218,6 +1218,30 @@ singular at 1 too.
 | `"Ei(x)".ToEntity().Limit("x", "-oo")` | `limit(Ei(x), x, -oo)` | `0` |
 | `"erf(x)/x + 1".ToEntity().Limit("x", 0)` | `limit(erf(x) / x + 1, x, 0)` | `2 / sqrt(pi) + 1` |
 
+### A part bounded away from 0, or a bounded term, settles a limit it has no limit of its own in
+
+**Not silent: three of these were NaN, the claim that the limit does not exist, where it is 0 or +oo.** `e^x / e^(cos(x))`
+at -oo is 0, `e^(cos(x))` lying in `[1/e, e]` all the way in. The descent put the divisor's own limit in its place, and
+`e^(cos(x))` has none, so the quotient read as a limit over no limit, which is no limit. What the quotient needs of the
+divisor is only that it stays between two positive bounds, and that is read off its shape now: a sine, cosine, sign or
+error function of a real argument in `[-1, 1]`, an arctangent in `[-pi/2, pi/2]`, a positive constant to such a power,
+and sums, products and quotients of those. With it, a part vanishing over one bounded away from 0 tends to 0, a part
+diverging times or over one bounded away from 0 diverges with the product's sign, and a diverging term beside a bounded
+one diverges. Where the bound reaches 0 nothing is claimed: `x / (1 + cos(x))` at +oo stays unevaluated.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"exp(x) / exp(cos(x))".ToEntity().Limit("x", "-oo")` | `NaN` | `0` |
+| `"exp(x) * exp(-cos(x))".ToEntity().Limit("x", "-oo")` | `NaN` | `0` |
+| `"x * exp(sin(1/x))".ToEntity().Limit("x", 0)` | `NaN` | `0` |
+| `"exp(sin(1/x)) / x".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `NaN` | `+oo` |
+| `"1 / (x^2 * (3 + cos(1/x)))".ToEntity().Limit("x", 0)` | `NaN` | `+oo` |
+| `"exp(x) / (2 + cos(x))".ToEntity().Limit("x", "-oo")` | `limit(e ^ x / (2 + cos(x)), x, -oo)` | `0` |
+| `"exp(x - cos(x))".ToEntity().Limit("x", "-oo")` | `limit(e ^ (x - cos(x)), x, -oo)` | `0` |
+| `"x / exp(cos(x))".ToEntity().Limit("x", "-oo")` | `limit(x / e ^ cos(x), x, -oo)` | `-oo` |
+| `"x + sin(x)".ToEntity().Limit("x", "+oo")` | `limit(x + sin(x), x, +oo)` | `+oo` |
+| `"x^2 / (2 + sin(x))".ToEntity().Limit("x", "+oo")` | `limit(x ^ 2 / (2 + sin(x)), x, +oo)` | `+oo` |
+
 ### A limit of a logarithm that is not decided is left unevaluated
 
 **Not silent: what overflowed the stack now returns.** A limit of a logarithm whose argument has no limit, as

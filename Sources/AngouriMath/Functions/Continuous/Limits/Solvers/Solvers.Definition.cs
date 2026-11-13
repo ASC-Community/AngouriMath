@@ -123,6 +123,10 @@ namespace AngouriMath.Functions.Algebra
             var boundedResult = LimitSolvers.SolveAsBoundedTimesVanishing(expr, x);
             if (boundedResult is { }) return boundedResult;
 
+            // After it, as its other shapes: a part bounded away from 0, or a bounded term.
+            var boundedPartResult = LimitSolvers.SolveWithABoundedPart(expr, x);
+            if (boundedPartResult is { }) return boundedPartResult;
+
             // After the rule above and not before it. This one answers NaN, which is the claim
             // that there is no limit, and the squeeze theorem is precisely the case where a
             // factor with no limit of its own still leaves the product with one. Asked first it
