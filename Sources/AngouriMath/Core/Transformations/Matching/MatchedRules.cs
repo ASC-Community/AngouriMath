@@ -3086,6 +3086,13 @@ namespace AngouriMath.Core.Transformations.Matching
                             MatchPattern.Any("n")))),
                 bound => new Powf(bound["a"] / new Powf(bound["b"], bound["c"]), bound["n"]),
                 Soundness.SoundUnderAssumptions,
+                // The guard of the quotient rule above, for the same reason: b ^ (c * n) is
+                // (b ^ c) ^ n, and a ^ n / (b ^ c) ^ n is (a / b ^ c) ^ n, only for a whole n or
+                // positive real bases. At a = 1, b = -1, n = 1/2 the quotient is
+                // 1 / (-1) ^ 1 = -1 and the gathered power (1 / 1) ^ (1/2) = 1.
+                when: bound => bound["n"] is Integer
+                               || (bound["a"].Evaled is Real { IsPositive: true }
+                                   && bound["b"].Evaled is Real { IsPositive: true }),
                 description: "a ^ n / b ^ (c * n) = (a / b ^ c) ^ n, for a positive whole c",
                 // The exponent is matched twice and written once, and one power node goes: the delta
                 // is -(1 + |n|), at most -2 and further the larger the exponent is.
@@ -3102,6 +3109,11 @@ namespace AngouriMath.Core.Transformations.Matching
                     MatchPattern.Node<Powf>(MatchPattern.Any("b"), MatchPattern.Any("n"))),
                 bound => new Powf(new Powf(bound["a"], bound["c"]) / bound["b"], bound["n"]),
                 Soundness.SoundUnderAssumptions,
+                // Guarded as its mirror is: at a = -1, b = 1, n = 1/2 the quotient is -1 and the
+                // gathered power ((-1) ^ 2 / 1) ^ (1/2) is 1.
+                when: bound => bound["n"] is Integer
+                               || (bound["a"].Evaled is Real { IsPositive: true }
+                                   && bound["b"].Evaled is Real { IsPositive: true }),
                 description: "a ^ (c * n) / b ^ n = (a ^ c / b) ^ n, for a positive whole c",
                 // The exponent is matched twice and written once, and one power node goes with it:
                 // the delta is -(1 + |n|), the mirror of the rule that takes it into the divisor.

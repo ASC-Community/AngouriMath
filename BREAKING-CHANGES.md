@@ -57,6 +57,20 @@ divisor answers at once. A two-sided limit is not changed. Found by limitcheck; 
 | `"arcsin(-x * log(-1, x))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright(arcsin(-x * log(-1, x)), x, 0)` | `0` |
 | `"x * log(2 + x, x)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `0` after 27 s | `0` in 0.25 s |
 
+### A quotient of powers whose exponents differ by a whole factor is gathered only where that holds
+
+**Silent: `a^n / b^(c*n)` and `a^(c*n) / b^n` are no longer gathered into one power unless `n` is whole or both
+bases are positive reals**, the condition `a^n / b^n -> (a/b)^n` has carried since
+[#802](https://github.com/asc-community/AngouriMath/issues/802). The two rules gathering a whole factor `c` had no
+guard. At `x = 1, y = -1, n = 1/2` the quotient `x^n / y^(2n)` is `1 / (-1)^1 = -1`, while the gathered
+`(x / y^2)^n` is `1`. Found by the v3 definedness specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x^n/y^(2*n)".ToEntity().Simplify()` | `(x / y ^ 2) ^ n` | `x ^ n / y ^ (2 * n)` |
+| `"x^(2*n)/y^n".ToEntity().Simplify()` | `(x ^ 2 / y) ^ n` | `x ^ (2 * n) / y ^ n` |
+| `"2^n/3^(2*n)".ToEntity().Simplify()` | `(2/9) ^ n` | `(2/9) ^ n`, unchanged |
+
 ### A product with a power for a factor is read by the power's exponent's limit in a one-sided limit
 
 **Silent: a one-sided limit of a product whose factors tend to 0 and to an infinity, one of them a power `u^v` whose
