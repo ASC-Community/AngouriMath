@@ -54,6 +54,41 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Any;
         }
 
+        // The determinant, the trace and an entry are numbers; the transpose is a matrix, which
+        // has no domain of numbers, as a matrix written out has none.
+        // https://github.com/asc-community/AngouriMath/issues/2147
+        partial record Determinantf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
+        partial record Transposef
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Any;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Any;
+        }
+
+        partial record Tracef
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
+        partial record MatrixEntryf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

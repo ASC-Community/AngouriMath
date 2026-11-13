@@ -31,16 +31,28 @@ namespace AngouriMath.Core.Antlr
             return tb.ToMatrix() ?? throw new AngouriBugException("Should've been checked already");
         }
 
-        // det, transpose, dot, cross and resultant are computed from what they are applied to, and
-        // there is no node for any of them: det(A) of a symbol A has nothing to be. So an argument
-        // has to be a matrix written out, or an expression that is one once its operations are
-        // carried out, as 2 [[1, 2], [3, 4]] is.
-        // https://github.com/asc-community/AngouriMath/issues/2147
+        // det, transpose, dot, cross and resultant are computed from what they are applied to where it
+        // is a matrix written out, or an expression that is one once its operations are carried out,
+        // as 2 [[1, 2], [3, 4]] is. https://github.com/asc-community/AngouriMath/issues/2147
         private static Matrix MatrixArgument(string function, Entity argument, string example)
             => argument as Matrix ?? argument.InnerSimplified as Matrix
                 ?? throw new InvalidArgumentParseException(
                     $"{function} is computed from the entries of a matrix or a vector written out, " +
                     $"as in {example}, and {argument} is not one");
+
+        // A matrix written out, or null where the argument may yet stand for one -- a name, or an
+        // expression with a name in it beside a matrix, as A [[1, 2], [3, 4]] is, which simplifying
+        // would read as a number -- and det, transpose, trace and an entry are left as nodes over
+        // it. A number, a statement or a set is no matrix, and is refused as it was.
+        private static Matrix? MatrixOrUnknown(string function, Entity argument, string example)
+            => (argument as Matrix ?? argument.InnerSimplified) switch
+            {
+                Matrix when argument is not Matrix && HasANameOutsideAWrittenMatrix(argument) => null,
+                Matrix matrix => matrix,
+                Number or Statement or Set => throw new InvalidArgumentParseException(
+                    $"{function} is taken of a matrix, as in {example}, and {argument} is not one"),
+                _ => null,
+            };
 
         /// <summary>The entries of a vector, written as a column or as a row.</summary>
         private static Entity[] Components(string function, Entity argument)
@@ -54,17 +66,57 @@ namespace AngouriMath.Core.Antlr
                 $"{function} is taken of vectors, and {vector} is a {vector.RowCount} by {vector.ColumnCount} matrix");
         }
 
-        /// <summary><c>det(M)</c>: the determinant of a square matrix.</summary>
+        /// <summary><c>det(M)</c>: the determinant of a square matrix, or the node over a name for one.</summary>
         internal static Entity Determinant(Entity argument)
         {
-            var matrix = MatrixArgument("det", argument, "det([[1, 2], [3, 4]])");
+            if (MatrixOrUnknown("det", argument, "det([[1, 2], [3, 4]])") is not { } matrix)
+                return new Determinantf(argument);
             return matrix.Determinant ?? throw new InvalidArgumentParseException(
                 $"det is taken of a square matrix, and {matrix} is {matrix.RowCount} by {matrix.ColumnCount}");
         }
 
-        /// <summary><c>transpose(M)</c>, which <c>]T</c> writes only after a bracket.</summary>
+        /// <summary><c>transpose(M)</c>, which <c>]T</c> writes only after a bracket, or the node over a name for a matrix.</summary>
         internal static Entity Transposed(Entity argument)
-            => MatrixArgument("transpose", argument, "transpose([[1, 2], [3, 4]])").T;
+            => MatrixOrUnknown("transpose", argument, "transpose([[1, 2], [3, 4]])") is { } matrix
+                ? matrix.T
+                : new Transposef(argument);
+
+        /// <summary><c>trace(M)</c>: the sum of the diagonal of a square matrix, or the node over a name for one.</summary>
+        internal static Entity Trace(Entity argument)
+        {
+            if (MatrixOrUnknown("trace", argument, "trace([[1, 2], [3, 4]])") is not { } matrix)
+                return new Tracef(argument);
+            return matrix.IsSquare
+                ? matrix.Trace
+                : throw new InvalidArgumentParseException(
+                    $"trace is taken of a square matrix, and {matrix} is {matrix.RowCount} by {matrix.ColumnCount}");
+        }
+
+        /// <summary>
+        /// <c>A[i, j]</c>: the entry in row <c>i</c> and column <c>j</c>, both counted from 1. Taken at once of a
+        /// matrix written out where both indices are whole numbers, and refused where they name no entry; a node
+        /// otherwise.
+        /// </summary>
+        internal static Entity Entry(Entity argument, List<Entity> indices)
+        {
+            if (indices.Count != 2)
+                throw new InvalidArgumentParseException(
+                    $"An entry of a matrix is named by its row and its column, as in A[1, 2], and {indices.Count} indices are given");
+            var (row, column) = (indices[0], indices[1]);
+            if (MatrixOrUnknown("An index", argument, "A[1, 2]") is not { } matrix)
+                return new MatrixEntryf(argument, row, column);
+            int? Position(Entity index, int count, string what)
+                => index.InnerSimplified switch
+                {
+                    Integer i when i >= 1 && i <= count => (int)i - 1,
+                    Number => throw new InvalidArgumentParseException(
+                        $"{matrix} has {count} {what}s, counted from 1, and {index} is not one of them"),
+                    _ => null,
+                };
+            return (Position(row, matrix.RowCount, "row"), Position(column, matrix.ColumnCount, "column")) is (int i, int j)
+                ? matrix[i, j]
+                : new MatrixEntryf(matrix, row, column);
+        }
 
         /// <summary>
         /// <c>dot(a, b)</c>: the sum of the products of the components, without conjugating either

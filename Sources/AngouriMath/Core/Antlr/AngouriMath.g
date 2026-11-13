@@ -80,14 +80,24 @@ options
 // So we put UPPER_CASE lexer rules after lower_case parser rules.
 
 // atom is defined later
+/* An atom, then any entries taken of it, then a factorial mark.
+
+   An entry of a matrix is `A[i, j]`, its row and its column counted from 1 as a_ij is. The
+   brackets follow what they index directly, and a bracket after an atom was not a parse before,
+   so nothing that parsed reads differently. They are read here rather than in a rule of their
+   own, since a rule is a context allocated for every atom of every parse, and that cost ParseEasy
+   7% of its allocation. https://github.com/asc-community/AngouriMath/issues/2147
+
+   The double factorial, n (n - 2) (n - 4) ..., is not (n!)!: that keeps its parentheses. Three
+   marks are the triple factorial in the literature, which the library does not have, so they are
+   refused rather than read as (n!!)!. https://github.com/asc-community/AngouriMath/issues/2182 */
 factorial_expression returns[Entity value]
-    : p = atom '!' { $value = MathS.Factorial($p.value); }
-    /* The double factorial, n (n - 2) (n - 4) ..., which is not (n!)!: that keeps its parentheses.
-       Three marks are the triple factorial in the literature, which the library does not have, so
-       they are refused rather than read as (n!!)!. https://github.com/asc-community/AngouriMath/issues/2182 */
-    | p = atom '!!' { $value = MathS.DoubleFactorial($p.value); }
-    | p = atom '!!!' { throw new UnrecognizedFunctionParseException("n!!! is the triple factorial, which AngouriMath does not have; write (n!!)! for the factorial of a double factorial"); }
-    | p = atom { $value = $p.value; }
+    : p = atom { $value = $p.value; }
+      ('[' args = function_arguments ']' { $value = ParsingHelpers.Entry($value, $args.list); })*
+      ( '!' { $value = MathS.Factorial($value); }
+      | '!!' { $value = MathS.DoubleFactorial($value); }
+      | '!!!' { throw new UnrecognizedFunctionParseException("n!!! is the triple factorial, which AngouriMath does not have; write (n!!)! for the factorial of a double factorial"); }
+      )?
     ;
 
 power_list returns[List<Entity> value]
@@ -653,12 +663,14 @@ atom returns[Entity value]
     | 'Ci(' args = function_arguments ')' { Assert("Ci", 1, $args.list.Count); $value = MathS.Ci($args.list[0]); }
     | 'Shi(' args = function_arguments ')' { Assert("Shi", 1, $args.list.Count); $value = MathS.Shi($args.list[0]); }
     | 'Chi(' args = function_arguments ')' { Assert("Chi", 1, $args.list.Count); $value = MathS.Chi($args.list[0]); }
-    /* The determinant, the transpose, the scalar and the vector product, and the resultant, each
-       computed from what it is applied to: there is no node for any of them, so a matrix or a
-       vector has to be written out, or be one once its operations are carried out.
-       https://github.com/asc-community/AngouriMath/issues/2147 */
+    /* The determinant, the transpose, the trace, the scalar and the vector product, and the
+       resultant, each computed from what it is applied to where that is a matrix or a vector
+       written out, or one once its operations are carried out. det, transpose and trace of
+       anything else that may stand for a matrix, as a name does, are nodes, computed once it is
+       one. https://github.com/asc-community/AngouriMath/issues/2147 */
     | 'det(' args = function_arguments ')' { Assert("det", 1, $args.list.Count); $value = ParsingHelpers.Determinant($args.list[0]); }
     | 'transpose(' args = function_arguments ')' { Assert("transpose", 1, $args.list.Count); $value = ParsingHelpers.Transposed($args.list[0]); }
+    | 'trace(' args = function_arguments ')' { Assert("trace", 1, $args.list.Count); $value = ParsingHelpers.Trace($args.list[0]); }
     | 'dot(' args = function_arguments ')' { Assert("dot", 2, $args.list.Count); $value = ParsingHelpers.Dot($args.list[0], $args.list[1]); }
     | 'cross(' args = function_arguments ')' { Assert("cross", (1, 2), $args.list.Count); $value = ParsingHelpers.Cross($args.list); }
     | 'laplacian(' args = function_arguments ')' { Assert("laplacian", 2, $args.list.Count); $value = ParsingHelpers.Laplacian($args.list[0], $args.list[1]); }

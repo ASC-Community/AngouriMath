@@ -563,6 +563,114 @@ namespace AngouriMath
         }
 
 
+        /// <summary>
+        /// An operation on a matrix, carried out where <paramref name="argument"/> is one once simplified. A matrix
+        /// written in place is kept a matrix even at 1x1, where simplifying it whole would give its entry: det([[5]])
+        /// is 5 because [[5]] is a matrix, and det(5) is left alone because 5 is not one. A condition or the cases of
+        /// a piecewise are carried through, as a function of a number carries them.
+        /// https://github.com/asc-community/AngouriMath/issues/2147
+        /// </summary>
+        /// <param name="argument">What the operation is applied to.</param>
+        /// <param name="isExact">Whether to keep the answer exact, as for simplification against evaluation.</param>
+        /// <param name="ofMatrix">The value at a matrix, or null where the matrix has none, as a matrix that is not square has no determinant.</param>
+        /// <param name="ofOther">The value at anything else, a rewrite such as det(transpose(A)) = det(A), or null.</param>
+        /// <param name="unevaluated">The node, over the simplified argument.</param>
+        private static Entity OnMatrixArgument(Entity argument, bool isExact, Func<Matrix, Entity?> ofMatrix,
+            Func<Entity, Entity?> ofOther, Func<Entity, Entity> unevaluated)
+        {
+            // A name beside a written matrix may stand for a matrix, and simplification reads it as a number:
+            // A [[2, 0], [0, 3]] simplifies to [[2 A, 0], [0, 3 A]], whose determinant 6 A^2 is not det(A) det(...).
+            var readsANameAsANumber = argument is not Matrix && HasANameOutsideAWrittenMatrix(argument);
+            Entity Over(Entity simplified) => simplified switch
+            {
+                Matrix matrix => (readsANameAsANumber ? null : ofMatrix(matrix)) ?? unevaluated(readsANameAsANumber ? argument : matrix),
+                Providedf(var expression, var predicate) => Over(expression).Provided(predicate),
+                Piecewise piecewise => piecewise.ApplyToValues(Over),
+                var other => ofOther(other) ?? unevaluated(other),
+            };
+            return Over(argument is Matrix written ? written.Elementwise(e => e.InnerSimplified(isExact)) : argument.InnerSimplified(isExact));
+        }
+
+        /// <summary>
+        /// Whether a name stands somewhere in <paramref name="expr"/> other than as an entry of a matrix written out, or
+        /// inside a determinant, a trace or an entry, which are numbers whatever the name is. Such a name may stand for
+        /// a matrix, and a matrix operation over it is left until it is one.
+        /// https://github.com/asc-community/AngouriMath/issues/2147
+        /// </summary>
+        internal static bool HasANameOutsideAWrittenMatrix(Entity expr)
+        {
+            if (expr is Matrix or Determinantf or Tracef or MatrixEntryf)
+                return false;
+            if (expr is Variable { IsConstant: false })
+                return true;
+            var children = expr.DirectChildren;
+            for (var i = 0; i < children.Count; i++)
+                if (HasANameOutsideAWrittenMatrix(children[i]))
+                    return true;
+            return false;
+        }
+
+        partial record Determinantf
+        {
+            // Whether there is a determinant depends on the shape alone, which no condition on the entries can say.
+            private protected override Entity IntrinsicCondition => Boolean.True;
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => OnMatrixArgument(Argument, isExact,
+                    matrix => matrix.IsSquare ? matrix.Determinant?.InnerSimplified(isExact) : null,
+                    // det(A^T) = det(A), the one being defined exactly where the other is.
+                    other => other is Transposef(var inner) ? new Determinantf(inner).InnerSimplified(isExact) : null,
+                    New);
+        }
+
+        partial record Transposef
+        {
+            private protected override Entity IntrinsicCondition => Boolean.True;
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => OnMatrixArgument(Argument, isExact,
+                    matrix => matrix.T.InnerSimplified(isExact),
+                    other => other is Transposef(var inner) ? inner : null,
+                    New);
+        }
+
+        partial record Tracef
+        {
+            private protected override Entity IntrinsicCondition => Boolean.True;
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => OnMatrixArgument(Argument, isExact,
+                    matrix => matrix.IsSquare ? matrix.Trace.InnerSimplified(isExact) : null,
+                    // The transpose has the same diagonal.
+                    other => other is Transposef(var inner) ? new Tracef(inner).InnerSimplified(isExact) : null,
+                    New);
+        }
+
+        partial record MatrixEntryf
+        {
+            private protected override Entity IntrinsicCondition => Boolean.True;
+
+            // The index as a position counted from 0, where it is a whole number from 1 to the count.
+            private static int? Position(Entity index, int count)
+                => index is Integer integer && integer.EInteger.CompareTo(1) >= 0 && integer.EInteger.CompareTo(count) <= 0
+                    ? integer.EInteger.ToInt32Checked() - 1
+                    : null;
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+            {
+                var row = Row.InnerSimplified(isExact);
+                var column = Column.InnerSimplified(isExact);
+                return OnMatrixArgument(Argument, isExact,
+                    matrix => (Position(row, matrix.RowCount), Position(column, matrix.ColumnCount)) is (int i, int j)
+                        ? matrix[i, j]
+                        : null,
+                    // The (i, j) entry of the transpose is the (j, i) entry of the matrix.
+                    other => other is Transposef(var inner) ? new MatrixEntryf(inner, column, row).InnerSimplified(isExact) : null,
+                    argument => New(argument, row, column));
+            }
+        }
+
         partial record Matrix
         {
             private protected override Entity IntrinsicCondition => Boolean.True;

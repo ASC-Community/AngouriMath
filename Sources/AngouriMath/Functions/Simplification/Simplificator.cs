@@ -42,6 +42,8 @@ namespace AngouriMath.Functions
         /// <summary>See more details in <see cref="Entity.Simplify(int)"/></summary>
         internal static Entity Simplify(Entity expr, int level)
         {
+            if (ProductsOfMatrices.Frozen(expr) is var (frozen, products))
+                return ProductsOfMatrices.Thawed(Simplify(frozen, level), products, level);
             simplifying++;
             try
             {
@@ -203,6 +205,10 @@ namespace AngouriMath.Functions
                 return product;
             var factors = new System.Collections.Generic.List<Entity>();
             Gather(product, factors);
+            // A product with a transpose in it is a product of matrices, which do not commute.
+            // https://github.com/asc-community/AngouriMath/issues/2147
+            if (factors.Exists(static factor => factor is Entity.Transposef or Entity.Powf(Entity.Transposef, _)))
+                return product;
             var ordered = new System.Collections.Generic.List<Entity>(factors.Count);
             for (var rank = 0; rank <= 2; rank++)
                 foreach (var factor in factors)

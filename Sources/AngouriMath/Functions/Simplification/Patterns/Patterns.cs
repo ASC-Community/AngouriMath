@@ -33,6 +33,22 @@ namespace AngouriMath.Functions
             return sorted == original ? original : sorted;
         }
 
+        /// <summary>
+        /// The factors of a product sorted and grouped, unless one of them is a transpose, which is a matrix: matrices do
+        /// not commute, and AᵀA is not AAᵀ. The product is then left in the order it is written, its other factors
+        /// included, since a name beside a transpose may stand for a matrix too; a name carries no type to say which
+        /// (https://github.com/asc-community/AngouriMath/issues/1237).
+        /// https://github.com/asc-community/AngouriMath/issues/2147
+        /// </summary>
+        internal static Entity SortAndGroupFactors(Entity original, TreeAnalyzer.SortLevel level)
+        {
+            var factors = Mulf.LinearChildren(original);
+            for (var i = 0; i < factors.Count; i++)
+                if (factors[i] is Transposef or Powf(Transposef, _))
+                    return original;
+            return SortAndGroup(original, factors, level, static (a, b) => a * b);
+        }
+
         /// <summary>Actual sorting with <see cref="Entity.SortHash(TreeAnalyzer.SortLevel)"/></summary>
         [AddressableRules]
         internal static Func<Entity, Entity> SortRules(TreeAnalyzer.SortLevel level) => x => x switch
@@ -40,7 +56,7 @@ namespace AngouriMath.Functions
             Sumf or Minusf =>
                 SortAndGroup(x, Sumf.LinearChildren(x), level, (a, b) => a + b),
             Mulf or Divf =>
-                SortAndGroup(x, Mulf.LinearChildren(x), level, (a, b) => a * b),
+                SortAndGroupFactors(x, level),
             Andf =>
                 SortAndGroup(x, Andf.LinearChildren(x), level, (a, b) => a & b),
             Orf =>

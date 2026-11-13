@@ -63,14 +63,16 @@ namespace AngouriMath.Tests.Convenience
         }
 
         /// <summary>
-        /// There is no node for any of these, so a symbol, a matrix of the wrong shape, or vectors
-        /// of different lengths have nothing to be, and are refused at parsing rather than read as
-        /// something else.
+        /// A number, a matrix of the wrong shape, or vectors of different lengths have nothing to
+        /// be, and are refused at parsing rather than read as something else. A symbol is not
+        /// refused by det and transpose, which are nodes over a name for a matrix
+        /// (MatrixOperationNodesTest); dot, cross and resultant have no node.
         /// </summary>
         [Theory]
-        [InlineData("det(A)")]
+        [InlineData("det(5)")]
         [InlineData("det([[1, 2, 3], [4, 5, 6]])")]
-        [InlineData("transpose(x)")]
+        [InlineData("transpose(2)")]
+        [InlineData("dot(A, [1, 2])")]
         [InlineData("dot([1, 2], [1, 2, 3])")]
         [InlineData("dot([[1, 2], [3, 4]], [1, 2])")]
         [InlineData("cross([1, 2], [3, 4])")]

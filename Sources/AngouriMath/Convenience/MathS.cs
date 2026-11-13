@@ -6004,6 +6004,52 @@ namespace AngouriMath
             public static Matrix Matrix(int rows, int columns, params Entity[] values) =>
                 new(GenTensor.CreateMatrix(rows, columns, (x, y) => values[x * columns + y]));
 
+            /// <summary>The determinant <c>det(A)</c> of a square matrix, as a node.</summary>
+            /// <param name="matrix">The matrix, written out or a name that stands for one.</param>
+            /// <returns>The <see cref="Entity.Determinantf"/> node, computed once its argument is a matrix</returns>
+            /// <remarks>
+            /// A matrix that is not square has no determinant, and the node is left as it is.
+            /// https://github.com/asc-community/AngouriMath/issues/2147
+            /// </remarks>
+            /// <example>
+            /// <code>
+            /// var det = MathS.Matrices.Determinant("A");
+            /// Console.WriteLine(det);
+            /// Console.WriteLine(det.Substitute("A", "[[1, 2], [3, 4]]").Evaled);
+            /// </code>
+            /// Prints
+            /// <code>
+            /// det(A)
+            /// -2
+            /// </code>
+            /// </example>
+            public static Entity Determinant(Entity matrix) => new Determinantf(matrix);
+
+            /// <summary>The transpose <c>transpose(A)</c>, as a node. A vector is a column, and its transpose a row.</summary>
+            /// <param name="matrix">The matrix, written out or a name that stands for one.</param>
+            /// <returns>The <see cref="Entity.Transposef"/> node, computed once its argument is a matrix</returns>
+            /// <remarks>https://github.com/asc-community/AngouriMath/issues/2147</remarks>
+            public static Entity Transpose(Entity matrix) => new Transposef(matrix);
+
+            /// <summary>The trace <c>trace(A)</c> of a square matrix, the sum of its diagonal entries, as a node.</summary>
+            /// <param name="matrix">The matrix, written out or a name that stands for one.</param>
+            /// <returns>The <see cref="Entity.Tracef"/> node, computed once its argument is a matrix</returns>
+            /// <remarks>
+            /// A matrix that is not square has no trace, and the node is left as it is.
+            /// https://github.com/asc-community/AngouriMath/issues/2147
+            /// </remarks>
+            public static Entity Trace(Entity matrix) => new Tracef(matrix);
+
+            /// <summary>The entry <c>A[i, j]</c> of a matrix, its rows and columns counted from 1, as a node.</summary>
+            /// <param name="matrix">The matrix, written out or a name that stands for one.</param>
+            /// <param name="row">The row, from 1.</param>
+            /// <param name="column">The column, from 1.</param>
+            /// <returns>The <see cref="Entity.MatrixEntryf"/> node, computed once its argument is a matrix and its indices are whole numbers in range</returns>
+            /// <remarks>
+            /// An index out of range names no entry, and the node is left as it is.
+            /// https://github.com/asc-community/AngouriMath/issues/2147
+            /// </remarks>
+            public static Entity Entry(Entity matrix, Entity row, Entity column) => new MatrixEntryf(matrix, row, column);
         }
 
         /// <summary>

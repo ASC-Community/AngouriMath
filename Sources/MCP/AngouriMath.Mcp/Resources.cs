@@ -108,10 +108,12 @@ internal static class Resources
           iverson`
         - `derivative integral limit limitleft limitright sum product argmax argmin piecewise
           apply lambda`
-        - matrices and vectors: `det transpose dot cross resultant`, computed from a matrix or
-          a vector written out, `[1, 2]` being a column and `[[1, 2], [3, 4]]` a matrix:
-          `det(A)` of a symbol is refused. `cross(a, b)` is the vector product in space and
-          `cross([x, y])` is `[-y, x]`; `resultant(p, q, x)` eliminates `x`
+        - matrices and vectors: `det transpose trace dot cross resultant`, computed from a
+          matrix or a vector written out, `[1, 2]` being a column and `[[1, 2], [3, 4]]` a
+          matrix. `det(A)`, `transpose(A)`, `trace(A)` and the entry `A[k, l]` (counted from 1)
+          of a name are nodes, carried out once the name is substituted by a matrix.
+          `cross(a, b)` is the vector product in space and `cross([x, y])` is `[-y, x]`;
+          `resultant(p, q, x)` eliminates `x`
         - `forwarddifference(f, k)`, which is `f(k + 1) - f(k)` once parsed
         - `laplacian(f, [x, y])`, `jacobian(F, [x, y])` and `hessian(f, [x, y])`, made of
           `derivative` nodes when parsed; the variables are a vector, or one name
