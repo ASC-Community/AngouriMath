@@ -4041,7 +4041,12 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Divf>(MatchPattern.Node<Mulf>(MatchPattern.Node<Signumf>(MatchPattern.Any("a")), MatchPattern.Node<Mulf>(MatchPattern.Any("b"), MatchPattern.Any("a"))), MatchPattern.Node<Absf>(MatchPattern.Any("a"))),
                 bound => bound["b"].Provided(!bound["a"].EqualTo(Integer.Zero)),
                 Soundness.SoundUnderAssumptions,
-                description: "(sgn(a) * (b * a)) / abs(a) = b, provided a is not zero",
+                // sgn(a) is a / abs(a), so sgn(a) * a / abs(a) is a^2 / abs(a)^2: 1 for a real a and
+                // not otherwise -- at a = i it is -1. Realness is a reading, not a condition on
+                // where either side is defined, so it is decided here, as the comparison rules
+                // decide it, and the rule does not fire on an operand not known to be real.
+                when: bound => Functions.Patterns.OrderedConditionFor(bound["a"]) == Entity.Boolean.True,
+                description: "(sgn(a) * (b * a)) / abs(a) = b, for a real a, provided a is not zero",
                 // Three copies of a go and one comes back inside the condition; the sign, the
                 // absolute value, the quotient and two products go against the three nodes the
                 // condition and its attachment add: the delta is -1 - 2|a|, at most -3.

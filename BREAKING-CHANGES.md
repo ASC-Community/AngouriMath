@@ -157,6 +157,19 @@ limit is still `NaN`. Found by limitcheck; no issue was filed.
 | `"1 / log(x^2, cos(x))".ToEntity().Limit("x", 0)` | `-oo` | `limit(1 / log(x ^ 2, cos(x)), x, 0)` |
 | `"1 / (x * arccot(x))".ToEntity().Limit("x", 0)` | `NaN` | `limit(1 / (x * arccotan(x)), x, 0)` |
 
+### A sign times a thing over its absolute value cancels only for a real operand
+
+**Silent, through the rule registry only: `sgn(x) * (y * x) / abs(x)` is no longer rewritten to
+`y provided not x = 0` by `RewriteRules.Common` for an `x` not known to be real.** `sgn(x)` is `x / abs(x)`, so the
+quotient is `y * x^2 / abs(x)^2`, which is `-y` at `x = i`. Over the reals (`MathS.Settings.Codomain` set to
+`Domain.Real`) and for an operand known to be real it still cancels. `Simplify` sorts the product before the rule is
+asked, so its answers do not change. Found by the v3 definedness specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `Transformation.Rewriting(RewriteRules.Common).ApplyOrKeep("sgn(x)*(y*x)/abs(x)")` | `y provided not x = 0` | `sgn(x) * y * x / abs(x)` |
+| the same over `Domain.Real` | `y provided not x = 0` | `y provided not x = 0`, unchanged |
+
 ### A limit at the jump of a step function is not answered by substitution
 
 **Silent: a limit of an expression built on `floor`, `ceil`, `round` or `sgn`, where the step's argument arrives on one
