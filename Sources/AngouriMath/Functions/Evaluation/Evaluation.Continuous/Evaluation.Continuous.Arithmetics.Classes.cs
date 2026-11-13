@@ -1619,19 +1619,43 @@ namespace AngouriMath
             /// has no exact simplification, so it survived as a <see cref="Powf"/> and
             /// <see cref="Entity.EvalNumerical"/> then rejected it as "not a simple
             /// number" -- it only worked when the norm was a perfect square.
+            ///
+            /// The norm over the complex numbers is <c>sqrt(sum |v_k|^2)</c>. Squaring the
+            /// component itself is that only on the real line: <c>[1 + i, 2]</c> gave
+            /// <c>sqrt(4 + 2i)</c>, <c>[1 + i, 1 - i]</c> gave 0, and <c>[x, y]</c> gave
+            /// <c>sqrt(x^2 + y^2)</c>, which is 0 at <c>x = i, y = 0</c> where the norm is 1.
+            /// https://github.com/asc-community/AngouriMath/issues/2423
             /// </remarks>
             private static Entity VectorNorm(Matrix vector, bool isExact)
             {
-                var norm = Sumf.Sum(vector.Select(component => component.Pow(2))).Pow(0.5);
+                var norm = Sumf.Sum(vector.Select(ModulusSquared)).Pow(0.5);
                 return isExact ? norm.InnerSimplified : norm.Evaled;
             }
+
+            /// <summary>
+            /// <c>|z|^2</c>, written as <c>z^2</c> where <paramref name="component"/> is known to be
+            /// real -- the same value, and the form a real vector's norm has always had -- and as
+            /// <c>re^2 + im^2</c> for a number, so that an exact one stays exact. Realness is read off
+            /// the node's codomain, as <see cref="Conjugatef.IsKnownReal"/> does: a bare symbol is
+            /// <see cref="Domain.Any"/>, so its modulus is kept.
+            /// </summary>
+            private static Entity ModulusSquared(Entity component) => component switch
+            {
+                Complex number => number.RealPart * number.RealPart + number.ImaginaryPart * number.ImaginaryPart,
+                _ when Conjugatef.IsKnownReal(component) => component.Pow(2),
+                _ => new Absf(component).Pow(2)
+            };
 
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
                 => ExpandOnOneArgument(Argument,
                     a => a switch
                     {
+                        // A row is a vector as much as a column is: [1 + i, 2]T was taken entry by
+                        // entry, [[abs(1 + i), 2]], where its column is sqrt(6). It is taken through its
+                        // transpose, because a matrix enumerates its rows, and a row's only row is itself.
                         Matrix m when m.IsVector => VectorNorm(m, isExact),
+                        Matrix m when m.IsRowVector => VectorNorm(m.T, isExact),
                         Complex n when !isExact => Number.Abs(n),
                         Absf abs => abs,
                         // The interval itself from zero on, its reflection up to zero, and
