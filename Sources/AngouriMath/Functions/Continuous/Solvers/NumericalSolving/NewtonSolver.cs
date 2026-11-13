@@ -47,10 +47,18 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
             {
                 var prev = value;
 
-                NumericsComplex ChooseGood() =>
-                    NumericsComplex.Abs(prev - value) > (double)MathS.Settings.PrecisionErrorCommon.Value
-                    ? double.NaN
-                    : value; 
+                // Converged means the last step was small beside the point, not only small: near a
+                // zero that every term shares, t ^ ln(-2) + t ^ ln(4) at t = 0, the iteration crawls
+                // and its steps fall under any fixed tolerance while it is still a fifth of the way
+                // from where it stops, and those points came back as roots. So below 1 the step is
+                // measured against the point; from 1 up the tolerance is what it always was.
+                // https://github.com/asc-community/AngouriMath/issues/2424
+                NumericsComplex ChooseGood()
+                {
+                    var tolerance = (double)MathS.Settings.PrecisionErrorCommon.Value;
+                    var scale = Math.Min(1, Math.Max(NumericsComplex.Abs(value), tolerance));
+                    return NumericsComplex.Abs(prev - value) > tolerance * scale ? double.NaN : value;
+                }
 
                 int minCheckIters = (int)Math.Sqrt(precision);
                 for (int i = 0; i < precision; i++)
@@ -341,11 +349,16 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
         /// </summary>
         /// <returns>
         /// <see langword="true"/> for anything that cannot be checked, so that a root is
-        /// only ever dropped on positive evidence that it is spurious.
+        /// only ever dropped on positive evidence that it is spurious. A point where the
+        /// expression is undefined at exact arguments is such evidence: the compiled form
+        /// takes <c>0^i</c> to be 0, and <c>x^i + x</c> was answered with the root 0.
         /// </returns>
         private static bool Satisfies(Entity expr, Entity.Variable v, Complex root)
         {
-            return expr.Substitute(v, root).Evaled is not Complex residual
+            var substituted = expr.Substitute(v, root);
+            if (AnalyticalSolving.StatementSolver.IsUndefinedExactly(substituted))
+                return false;
+            return substituted.Evaled is not Complex residual
                 || !residual.IsFinite
                 || residual.Abs().EDecimal.LessThan(MathS.Settings.PrecisionErrorCommon);
         }
