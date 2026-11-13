@@ -154,7 +154,7 @@ take.
 
 `Compile` was asked for a function it cannot build. Two distinct causes, and the message says which:
 
-- a node with no compiled form — a derivative, an integral, a limit, a function of a matrix;
+- a node with no compiled form — a derivative, an integral, a limit, a comparison of a matrix;
 - a variable the expression mentions that the compilation was not given. The message names the
   variable and lists the ones it *was* given, since `Compile("x")` on `a * x` failing used to
   surface as a bare `KeyNotFoundException` about some dictionary.
@@ -170,10 +170,13 @@ to and to pass a matrix in as: `"A * B".ToEntity().Compile<GenTensor<double, Dou
 GenTensor<double, DoubleOperations>, GenTensor<double, DoubleOperations>>("A", "B")` is the matrix
 product, `2 A + B - 1` scales, adds and shifts element by element, `A ^ 3` is the matrix power
 ([#526](https://github.com/asc-community/AngouriMath/issues/526)). A two-dimensional array of the
-element type -- `double[,]`, `Complex[,]` -- is a matrix too, as an argument and as the result.
-Compiling a matrix as a number, or a number as a matrix, or `sin(A)`, is still this exception, and
-so is dividing by a matrix of `int`, `long` or `BigInteger`, whose inverse is not one of whole
-numbers.
+element type -- `double[,]`, `Complex[,]` -- is a matrix too, as an argument and as the result,
+and a one-dimensional array -- `double[]` -- is a column vector. A function of a matrix is the
+function of each entry, as evaluation has it: `sin(A)`, `exp(A)`, `2 ^ A`, `log(2, A)`,
+`max(A, B)`; `abs` of a vector, a column or a row, is its norm. Compiling a matrix as a number, unless it is known
+to be 1 x 1, or a number as a matrix, is still this exception, as are a comparison or equality
+of matrices, a matrix to the power of a matrix, and dividing by a matrix of `int`, `long` or
+`BigInteger`, whose inverse is not one of whole numbers.
 
 ### `CannotEvalException`
 
@@ -237,7 +240,10 @@ involved.
 
 A compiled matrix raises it as well: `Compile` where the shapes of matrices written into the
 expression do not fit, and the compiled delegate where the shapes of matrix arguments do not, or
-where a matrix power's exponent is not a whole number.
+where a matrix power's exponent is not a whole number. So does a delegate given an empty array, one
+returning a vector that is given a matrix of more than one column, and one taking `abs` of a
+two-dimensional array that turns out to be a column or a row, whose modulus is a norm rather than a
+matrix: pass a column as a one-dimensional array for its norm.
 
 ### `BadMatrixShapeException`
 

@@ -300,7 +300,7 @@ namespace AngouriMath.Tests.Common
         public void AMatrixIsNotANumberAndSaysSo()
         {
             Assert.Throws<UncompilableNodeException>(() => "[[x, 2 x]]".ToEntity().Compile<double, double>("x"));
-            Assert.Throws<UncompilableNodeException>(() => "sin(A)".ToEntity().Compile<GenTensor<double, DoubleOperations>, GenTensor<double, DoubleOperations>>("A"));
+            Assert.Throws<UncompilableNodeException>(() => "sin(A)".ToEntity().Compile<GenTensor<double, DoubleOperations>, double>("A"));
         }
     }
 }
