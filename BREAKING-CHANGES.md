@@ -87,6 +87,20 @@ rational exponent is still written as its value. Found by limitcheck; no issue w
 | `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | unevaluated | `1` |
 | `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `1` |
 
+### A two-sided limit whose sides are undecided is left unevaluated
+
+**Silent: a two-sided limit is left unevaluated, rather than `NaN`, where a side's limit stops at an indeterminate form
+with an infinity in it**, such as `0 * floor(-oo)`. That form is a side whose parts were never compared, not a side
+without a limit, and `NaN` says the limit does not exist. Each limit below exists, and they are 2, 1, 1
+and 1 in order. 2.6.0 answered the third with a wrong `0`. Found by limitcheck; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"x * floor(2/x)".ToEntity().Limit("x", 0)` | `NaN` | `limit(x * floor(2 / x), x, 0)` |
+| `"floor(1/x) * sin(x)".ToEntity().Limit("x", 0)` | `NaN` | `limit(floor(1 / x) * sin(x), x, 0)` |
+| `"x^2 * floor(1/x^2)".ToEntity().Limit("x", 0)` | `0` | `limit(x ^ 2 * floor(1 / x ^ 2), x, 0)` |
+| `"x * ceil(1/x)".ToEntity().Limit("x", 0)` | `NaN` | `limit(x * ceil(1 / x), x, 0)` |
+
 ### A limit at the jump of a step function is not answered by substitution
 
 **Silent: a limit of an expression built on `floor`, `ceil`, `round` or `sgn`, where the step's argument arrives on one
