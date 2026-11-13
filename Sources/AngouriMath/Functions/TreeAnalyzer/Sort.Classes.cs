@@ -50,6 +50,30 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "v_" + Name;
         }
 
+        partial record Determinantf
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "det_", "det_", "det_");
+        }
+
+        partial record Transposef
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "transpose_", "transpose_", "transpose_");
+        }
+
+        partial record Tracef
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "trace_", "trace_", "trace_");
+        }
+
+        partial record MatrixEntryf
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "entry_", "entry_", "entry_");
+        }
+
         partial record Matrix
         {
             private protected override string SortHashName(SortLevel level)

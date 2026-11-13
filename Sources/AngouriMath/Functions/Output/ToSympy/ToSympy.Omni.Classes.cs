@@ -160,6 +160,28 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.Piecewise({string.Join(", ", Cases.Select(c => $"({c.Expression.ToSymPy()}, {c.Predicate.ToSymPy()})"))})";
         }
         
+        // https://github.com/asc-community/AngouriMath/issues/2147
+        partial record Determinantf
+        {
+            internal override string ToSymPy() => $"sympy.det({Argument.ToSymPy()})";
+        }
+
+        partial record Transposef
+        {
+            internal override string ToSymPy() => $"sympy.transpose({Argument.ToSymPy()})";
+        }
+
+        partial record Tracef
+        {
+            internal override string ToSymPy() => $"sympy.trace({Argument.ToSymPy()})";
+        }
+
+        // SymPy counts a matrix's rows and columns from 0, and this node from 1.
+        partial record MatrixEntryf
+        {
+            internal override string ToSymPy() => $"({Argument.ToSymPy()})[({Row.ToSymPy()}) - 1, ({Column.ToSymPy()}) - 1]";
+        }
+
         partial record Matrix
         {
             internal override string ToSymPy()

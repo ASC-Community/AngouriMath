@@ -152,6 +152,34 @@ namespace AngouriMath
                 : this == variable ? 1 : 0;
         }
 
+        // The transpose, the trace and an entry are linear in the matrix, so each is taken of its
+        // derivative, entry by entry. The determinant is not linear and keeps its derivative node:
+        // Jacobi's formula needs the adjugate, which has no node.
+        // https://github.com/asc-community/AngouriMath/issues/2147
+        partial record Transposef
+        {
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => IsConstantIn(variable) ? Integer.Zero : new Transposef(Argument.DerivativeOver(variable));
+        }
+
+        partial record Tracef
+        {
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => IsConstantIn(variable) ? Integer.Zero : new Tracef(Argument.DerivativeOver(variable));
+        }
+
+        partial record MatrixEntryf
+        {
+            // Only where the indices do not vary: an entry is not a function of a continuous index.
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => IsConstantIn(variable) ? Integer.Zero
+                : Row.ContainsNode(variable) || Column.ContainsNode(variable) ? base.InnerDifferentiate(variable)
+                : new MatrixEntryf(Argument.DerivativeOver(variable), Row, Column);
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

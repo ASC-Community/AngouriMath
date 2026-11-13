@@ -223,15 +223,33 @@ other; `Domain.Any` is a codomain and not a candidate for the job
 (1 by 3). There is no empty vector: `[]` is not a value this library has
 ([#1028](https://github.com/asc-community/AngouriMath/issues/1028)), while the empty set `{}` is.
 
-`det(M)` is the determinant of a square matrix and `transpose(M)` its transpose. `dot(a, b)` is the
+`det(M)` is the determinant of a square matrix, `transpose(M)` its transpose and `trace(M)` the sum
+of its diagonal. `dot(a, b)` is the
 sum of the products of two vectors' components, with neither side conjugated. `cross(a, b)` is the
 vector product in three dimensions, and `cross(a)` turns a vector in the plane through a right angle
 anticlockwise, `cross([x, y])` being `[-y, x]`, so `dot(cross(a), b)` is the plane's pseudo-scalar
 product. `resultant(p, q, x)` eliminates `x` between two polynomials:
 `resultant(x^2 + y^2 - 1, x + y - 1, y)` is `2 * x ^ 2 - 2 * x`. Each is computed from its
-arguments when it is parsed, and there is no node for any of them, so a matrix or a vector has to be
-written out, or be one once its operations are carried out: `det(2 * [[1, 2], [3, 4]])` is `-8`,
-and `det(A)` of a symbol `A` is refused
+arguments when it is parsed where they are matrices or vectors written out, or are once their
+operations are carried out: `det(2 * [[1, 2], [3, 4]])` is `-8`.
+
+`M[k, l]` is the entry in row `k` and column `l`, both counted from 1 as `a_ij` is:
+`[[1, 2], [3, 4]][2, 1]` is `3`. Write the brackets straight after what they index, and put anything
+looser than a name or a call in parentheses: `(A + B)[1, 2]`. A vector is indexed by both, `v[2, 1]`
+for its second component, since `v[2]` would be a component of a column and a row of a matrix.
+Remember that `i` is the imaginary unit, so an index is not called `i`. The C# indexer on a `Matrix`
+counts from 0, as C# does: `M[k, l]` in an expression is `matrix[k - 1, l - 1]` in code.
+
+`det`, `transpose`, `trace` and an entry of a name, `det(A)`, `transpose(A) * B`, `trace(A * B)`,
+`A[k, l]`, are nodes, carried out once the name is a matrix: by `Substitute`, by simplification, or
+in a compiled delegate taking `double[,]` or `Complex[,]`. Nothing else knows that the name is a
+matrix, since a name carries no type
+([#1237](https://github.com/asc-community/AngouriMath/issues/1237)), but a product with a transpose in
+it is kept in the order it is written. A non-square matrix has no determinant and no trace, and an
+index out of range names no entry: the node is left as it is. A number, a statement or a set is not a
+matrix, and `det(5)` is refused. A name beside a written matrix may stand for a matrix too, so
+`det(x * [[1, 2], [3, 4]])` is left until `x` is known, where the entries of `det([[x, 1], [2, x]])` are
+numbers and it is `x ^ 2 - 2`
 ([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
 
 `laplacian(f, [x, y, z])` is the sum of the second derivatives of a scalar `f`, `jacobian(F, [x, y])`

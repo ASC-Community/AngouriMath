@@ -60,7 +60,7 @@ public sealed class ParsingTest
         }
         catch (InvalidArgumentParseException)
         {
-            // A function of a matrix or a vector written out, which x is not: det(x).
+            // A function of a matrix or a vector written out, which x is not: dot(x).
         }
         var syntax = Resources.Read("angourimath://syntax")!;
         Assert.True(Regex.IsMatch(syntax, $@"(?<![A-Za-z0-9_]){Regex.Escape(name)}(?![A-Za-z0-9_])"),

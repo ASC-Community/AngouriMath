@@ -2345,8 +2345,7 @@ namespace AngouriMath.Core.Transformations.Matching
             new MatchedRule(
                 "a-product-chain-is-sorted-and-grouped",
                 MatchPattern.Any<Mulf>("x"),
-                (node, _) => Functions.Patterns.SortAndGroup(
-                    node, Mulf.LinearChildren(node), level, (a, b) => a * b),
+                (node, _) => Functions.Patterns.SortAndGroupFactors(node, level),
                 // Regrouping reads a quotient as a product with a negative power, which is the
                 // same value wherever the divisor is not zero.
                 Soundness.SoundUnderAssumptions,
@@ -2355,8 +2354,7 @@ namespace AngouriMath.Core.Transformations.Matching
             new MatchedRule(
                 "a-quotient-chain-is-sorted-and-grouped",
                 MatchPattern.Any<Divf>("x"),
-                (node, _) => Functions.Patterns.SortAndGroup(
-                    node, Mulf.LinearChildren(node), level, (a, b) => a * b),
+                (node, _) => Functions.Patterns.SortAndGroupFactors(node, level),
                 Soundness.SoundUnderAssumptions,
                 description: "a quotient is read as a product, whose factors are put in canonical order and grouped"),
 

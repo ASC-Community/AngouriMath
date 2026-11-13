@@ -258,12 +258,18 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             internal MethodInfo? Inverse { get; }
             internal MethodInfo? DivideByMatrix { get; }
             internal MethodInfo? ScalarOverMatrix { get; }
+            internal MethodInfo Transpose { get; }
+            internal MethodInfo Determinant { get; }
+            internal MethodInfo Trace { get; }
+            internal MethodInfo Entry { get; }
 
             private Kit(Type tensor, Type array, MethodInfo empty, MethodInfo set, MethodInfo add, MethodInfo subtract, MethodInfo multiply,
                 MethodInfo addScalar, MethodInfo subtractScalar, MethodInfo subtractFromScalar, MethodInfo multiplyScalar,
                 MethodInfo divideScalar, MethodInfo power, MethodInfo toArray, MethodInfo fromArray, MethodInfo toScalar,
-                MethodInfo? inverse, MethodInfo? divideByMatrix, MethodInfo? scalarOverMatrix)
+                MethodInfo? inverse, MethodInfo? divideByMatrix, MethodInfo? scalarOverMatrix,
+                MethodInfo transpose, MethodInfo determinant, MethodInfo trace, MethodInfo entry)
             {
+                (Transpose, Determinant, Trace, Entry) = (transpose, determinant, trace, entry);
                 (Tensor, Array, Empty, Set, Add, Subtract, Multiply, AddScalar, SubtractScalar, SubtractFromScalar, MultiplyScalar, DivideScalar, Power)
                     = (tensor, array, empty, set, add, subtract, multiply, addScalar, subtractScalar, subtractFromScalar, multiplyScalar, divideScalar, power);
                 (ToArray, FromArray, ToScalar, Inverse, DivideByMatrix, ScalarOverMatrix) = (toArray, fromArray, toScalar, inverse, divideByMatrix, scalarOverMatrix);
@@ -291,7 +297,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     Named<Func<GenTensor<T, TWrapper>, T>>(a => TensorCompilation.ToScalar(a)),
                     field ? Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>(a => TensorCompilation.Inverse(a)) : null,
                     field ? Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((a, b) => TensorCompilation.DivideByMatrix(a, b)) : null,
-                    field ? Named<Func<T, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((s, a) => TensorCompilation.ScalarOverMatrix(s, a)) : null);
+                    field ? Named<Func<T, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((s, a) => TensorCompilation.ScalarOverMatrix(s, a)) : null,
+                    Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>(a => TensorCompilation.Transpose(a)),
+                    Named<Func<GenTensor<T, TWrapper>, T>>(a => TensorCompilation.Determinant(a)),
+                    Named<Func<GenTensor<T, TWrapper>, T>>(a => TensorCompilation.Trace(a)),
+                    Named<Func<GenTensor<T, TWrapper>, int, int, T>>((a, i, j) => TensorCompilation.Entry(a, i, j)));
         }
 
         [ConstantField]
@@ -596,6 +606,128 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static GenTensor<T, TWrapper> ScalarOverMatrix<T, TWrapper>(T scalar, GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
             => MultiplyScalar(Inverse(a), scalar);
 
+        /// <summary>The transpose, the rows of the one being the columns of the other.</summary>
+        public static GenTensor<T, TWrapper> Transpose<T, TWrapper>(GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
+        {
+            var result = GenTensor<T, TWrapper>.CreateMatrix(a.Shape[1], a.Shape[0]);
+            for (var i = 0; i < a.Shape[0]; i++)
+                for (var j = 0; j < a.Shape[1]; j++)
+                    result[j, i] = a[i, j];
+            return result;
+        }
+
+        /// <summary>
+        /// The determinant, by Bareiss' fraction-free elimination: every division it makes is exact, so it is exact
+        /// over the whole numbers as well, and a row is exchanged for the pivot of largest size where the elements
+        /// have one, as partial pivoting chooses it, and for the first that is not zero where they do not. A zero
+        /// column gives 0.
+        /// </summary>
+        /// <exception cref="InvalidMatrixOperationException">The matrix is not square, and has no determinant.</exception>
+        public static T Determinant<T, TWrapper>(GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
+        {
+            if (a.Shape[0] != a.Shape[1])
+                throw new InvalidMatrixOperationException($"A matrix of shape {a.Shape} is not square and has no determinant");
+            var ops = default(TWrapper);
+            var n = a.Shape[0];
+            var m = new T[n, n];
+            for (var i = 0; i < n; i++)
+                for (var j = 0; j < n; j++)
+                    m[i, j] = a[i, j];
+            var sizable = typeof(T) == typeof(double) || typeof(T) == typeof(float) || typeof(T) == typeof(Complex);
+            var negated = false;
+            var previous = ops.CreateOne();
+            for (var k = 0; k < n - 1; k++)
+            {
+                var pivot = -1;
+                for (var row = k; row < n; row++)
+                    if (!ops.IsZero(m[row, k]) && (pivot < 0 || sizable && Magnitude(m[row, k]) > Magnitude(m[pivot, k])))
+                    {
+                        pivot = row;
+                        if (!sizable)
+                            break;
+                    }
+                if (pivot < 0)
+                    return ops.CreateZero();
+                if (pivot != k)
+                {
+                    for (var j = 0; j < n; j++)
+                        (m[pivot, j], m[k, j]) = (m[k, j], m[pivot, j]);
+                    negated = !negated;
+                }
+                for (var i = k + 1; i < n; i++)
+                {
+                    for (var j = k + 1; j < n; j++)
+                        m[i, j] = ops.Divide(ops.Subtract(ops.Multiply(m[i, j], m[k, k]), ops.Multiply(m[i, k], m[k, j])), previous);
+                    m[i, k] = ops.CreateZero();
+                }
+                previous = m[k, k];
+            }
+            return negated ? ops.Negate(m[n - 1, n - 1]) : m[n - 1, n - 1];
+        }
+
+        /// <summary>The trace, the sum of the diagonal.</summary>
+        /// <exception cref="InvalidMatrixOperationException">The matrix is not square, and has no trace.</exception>
+        public static T Trace<T, TWrapper>(GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
+        {
+            if (a.Shape[0] != a.Shape[1])
+                throw new InvalidMatrixOperationException($"A matrix of shape {a.Shape} is not square and has no trace");
+            var ops = default(TWrapper);
+            var sum = ops.CreateZero();
+            for (var i = 0; i < a.Shape[0]; i++)
+                sum = ops.Add(sum, a[i, i]);
+            return sum;
+        }
+
+        /// <summary>The entry in a row and a column, both counted from 1.</summary>
+        /// <exception cref="InvalidMatrixOperationException">Either index is out of the matrix.</exception>
+        public static T Entry<T, TWrapper>(GenTensor<T, TWrapper> a, int row, int column) where TWrapper : struct, IOperations<T>
+            => row >= 1 && row <= a.Shape[0] && column >= 1 && column <= a.Shape[1]
+                ? a[row - 1, column - 1]
+                : throw new InvalidMatrixOperationException($"A matrix of shape {a.Shape} has no entry at ({row}, {column}): its rows and columns are counted from 1");
+
+        /// <summary>A compiled index as the whole number it must be, checked when the delegate is called.</summary>
+        /// <exception cref="InvalidMatrixOperationException">The index is not a whole number that fits an <see cref="int"/>.</exception>
+        public static int WholeIndex(double index)
+            => Math.Floor(index) == index && index >= int.MinValue && index <= int.MaxValue
+                ? (int)index
+                : throw new InvalidMatrixOperationException($"An entry is indexed by whole numbers, and {index.ToString(System.Globalization.CultureInfo.InvariantCulture)} is not one");
+
+        /// <inheritdoc cref="WholeIndex(double)"/>
+        public static int WholeIndex(Complex index)
+            => index.Imaginary == 0
+                ? WholeIndex(index.Real)
+                : throw new InvalidMatrixOperationException($"An entry is indexed by whole numbers, and {index} is not one");
+
+        [ConstantField]
+        private static readonly MethodInfo wholeRealIndex = ((MethodCallExpression)((Expression<Func<double, int>>)(e => WholeIndex(e))).Body).Method;
+        [ConstantField]
+        private static readonly MethodInfo wholeComplexIndex = ((MethodCallExpression)((Expression<Func<Complex, int>>)(e => WholeIndex(e))).Body).Method;
+
+        /// <summary>
+        /// The compiled form of a transpose, a determinant, a trace or an entry, whose first operand is the matrix, or
+        /// <see langword="null"/> where the node is none of them.
+        /// https://github.com/asc-community/AngouriMath/issues/2147
+        /// </summary>
+        internal static Expression? MatrixOperation(Entity node, IReadOnlyList<Expression> operands, Func<Expression, Type, Expression> convert)
+        {
+            if (node is not (Entity.Transposef or Entity.Determinantf or Entity.Tracef or Entity.MatrixEntryf))
+                return null;
+            if (!kitsByTensor.TryGetValue(operands[0].Type, out var kit))
+                throw new UncompilableNodeException(
+                    $"`{node.Stringize()}` is taken of a matrix, and its argument compiles to {operands[0].Type.Name}: compile it with a matrix type, such as double[,], for the argument");
+            Expression Index(Expression index)
+                => Expression.Call(
+                    index.Type == typeof(Complex) ? wholeComplexIndex : wholeRealIndex,
+                    index.Type == typeof(Complex) ? index : convert(index, typeof(double)));
+            return node switch
+            {
+                Entity.Transposef => Expression.Call(kit.Transpose, operands[0]),
+                Entity.Determinantf => Expression.Call(kit.Determinant, operands[0]),
+                Entity.Tracef => Expression.Call(kit.Trace, operands[0]),
+                _ => Expression.Call(kit.Entry, operands[0], Index(operands[1]), Index(operands[2])),
+            };
+        }
+
         /// <summary>The compiled form of a matrix node over the given compiled elements, all of one type.</summary>
         internal static Expression Build(Entity.Matrix matrix, IReadOnlyList<Expression> elements)
         {
@@ -775,6 +907,24 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                         throw new InvalidMatrixOperationException(
                             $"`{expr.Stringize()}` has no value: matrices of shapes {Show(a)} and {Show(b)} are not combined entry by entry");
                     return Merged(a, b);
+                }
+                case Entity.Transposef(var argument):
+                    return ShapeOf(argument, isMatrix) is { } transposed ? (transposed.Columns, transposed.Rows) : null;
+                case Entity.Determinantf or Entity.Tracef:
+                {
+                    var a = ShapeOf(expr.DirectChildren[0], isMatrix);
+                    if (Known(a) && a!.Value.Rows != a.Value.Columns)
+                        throw new InvalidMatrixOperationException($"`{expr.Stringize()}` has no value: a {Show(a)} matrix is not square");
+                    return null;
+                }
+                case Entity.MatrixEntryf(var argument, var row, var column):
+                {
+                    var a = ShapeOf(argument, isMatrix);
+                    ShapeOf(row, isMatrix);
+                    ShapeOf(column, isMatrix);
+                    if (Known(a) && (row is Entity.Number.Integer i && (i < 1 || i > a!.Value.Rows) || column is Entity.Number.Integer j && (j < 1 || j > a!.Value.Columns)))
+                        throw new InvalidMatrixOperationException($"`{expr.Stringize()}` has no value: a {Show(a)} matrix has no such entry, its rows and columns counted from 1");
+                    return null;
                 }
                 default:
                     foreach (var child in expr.DirectChildren)

@@ -234,6 +234,42 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        // https://github.com/asc-community/AngouriMath/issues/2147
+        partial record Determinantf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"det({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record Transposef
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"transpose({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record Tracef
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"trace({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record MatrixEntryf
+        {
+            // The brackets follow a name or a call directly, and anything looser is put in
+            // parentheses first, so that (A + B)[1, 2] is not read as A + B[1, 2].
+            /// <inheritdoc/>
+            private protected override string StringizeNode()
+                => $"{Argument.Stringize(Argument.Priority < Priority.Func)}[{Row.Stringize()}, {Column.Stringize()}]";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

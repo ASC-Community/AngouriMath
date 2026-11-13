@@ -368,7 +368,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// </summary>
         public virtual Expression ConvertOtherNode(IEnumerable<Expression> en, Entity typeHolder)
         {
-            
+            // The transpose, the determinant, the trace and an entry of a matrix argument.
+            // https://github.com/asc-community/AngouriMath/issues/2147
+            if (TensorCompilation.MatrixOperation(typeHolder, en as IReadOnlyList<Expression> ?? en.ToArray(), ConvertType) is { } ofMatrix)
+                return ofMatrix;
+
             return typeHolder switch
             {
                 Piecewise => HandlePiecewise(en),

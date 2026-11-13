@@ -151,6 +151,33 @@ namespace AngouriMath
                 @"\end{cases}";
         }
 
+        // det and tr as operators, the transpose as an upright T, as ISO 80000-2 writes them, and an
+        // entry as a subscript. https://github.com/asc-community/AngouriMath/issues/2147
+        partial record Determinantf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\det\left({Argument.Latexize()}\right)";
+        }
+
+        partial record Transposef
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"{{{Argument.Latexize(Argument.Priority < Priority.Func)}}}^{{\mathrm{{T}}}}";
+        }
+
+        partial record Tracef
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() => $@"\operatorname{{tr}}\left({Argument.Latexize()}\right)";
+        }
+
+        partial record MatrixEntryf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => $@"{{{Argument.Latexize(Argument.Priority < Priority.Func)}}}_{{{Row.Latexize()},{Column.Latexize()}}}";
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

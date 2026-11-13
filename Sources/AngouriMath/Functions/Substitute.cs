@@ -11,6 +11,34 @@ namespace AngouriMath
     {
         #region Simple
 
+        partial record Determinantf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record Transposef
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record Tracef
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record MatrixEntryf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value), Row.Substitute(x, value), Column.Substitute(x, value));
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

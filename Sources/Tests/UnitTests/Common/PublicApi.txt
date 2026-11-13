@@ -138,10 +138,12 @@ AngouriMath.Core.Compilation.IntoLinq.SingleOperations.Subtract(System.Single, S
 AngouriMath.Core.Compilation.IntoLinq.SingleOperations.ToString(System.Single) : System.String
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Add(GenTensor<T,TWrapper>, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.AddScalar(GenTensor<T,TWrapper>, T) : GenTensor<T,TWrapper>
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Determinant(GenTensor<T,TWrapper>) : T
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.DivideByMatrix(GenTensor<T,TWrapper>, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.DivideFromScalar(T, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.DivideScalar(GenTensor<T,TWrapper>, T) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Empty(System.Int32, System.Int32) : GenTensor<T,TWrapper>
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Entry(GenTensor<T,TWrapper>, System.Int32, System.Int32) : T
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.FromArray(T[,]) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Inverse(GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Multiply(GenTensor<T,TWrapper>, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
@@ -154,8 +156,12 @@ AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.SubtractFromScalar(T, Ge
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.SubtractScalar(GenTensor<T,TWrapper>, T) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.TensorTypeOf(System.Type) : System.Type
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.ToArray(GenTensor<T,TWrapper>) : T[,]
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Trace(GenTensor<T,TWrapper>) : T
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Transpose(GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.WholeExponent(System.Double) : System.Int32
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.WholeExponent(System.Numerics.Complex) : System.Int32
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.WholeIndex(System.Double) : System.Int32
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.WholeIndex(System.Numerics.Complex) : System.Int32
 AngouriMath.Core.CostModel.<Clone>$() : AngouriMath.Core.CostModel
 AngouriMath.Core.CostModel.All { } : System.Collections.Generic.IReadOnlyList<AngouriMath.Core.CostModel>
 AngouriMath.Core.CostModel.Cost { } : System.Func<AngouriMath.Entity,System.Double>
@@ -961,6 +967,24 @@ AngouriMath.Entity+Derivativef.ToString() : System.String
 AngouriMath.Entity+Derivativef.ctor(AngouriMath.Entity, AngouriMath.Entity, System.Int32)
 AngouriMath.Entity+Derivativef.op_Equality(AngouriMath.Entity+Derivativef, AngouriMath.Entity+Derivativef) : System.Boolean
 AngouriMath.Entity+Derivativef.op_Inequality(AngouriMath.Entity+Derivativef, AngouriMath.Entity+Derivativef) : System.Boolean
+AngouriMath.Entity+Determinantf.<Clone>$() : AngouriMath.Entity+Determinantf
+AngouriMath.Entity+Determinantf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+Determinantf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+Determinantf.Deconstruct(AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+Determinantf.EqualityContract { } : System.Type
+AngouriMath.Entity+Determinantf.Equals(AngouriMath.Entity+Determinantf) : System.Boolean
+AngouriMath.Entity+Determinantf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+Determinantf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+Determinantf.GetHashCode() : System.Int32
+AngouriMath.Entity+Determinantf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+Determinantf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+Determinantf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+Determinantf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+Determinantf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+Determinantf.ToString() : System.String
+AngouriMath.Entity+Determinantf.ctor(AngouriMath.Entity)
+AngouriMath.Entity+Determinantf.op_Equality(AngouriMath.Entity+Determinantf, AngouriMath.Entity+Determinantf) : System.Boolean
+AngouriMath.Entity+Determinantf.op_Inequality(AngouriMath.Entity+Determinantf, AngouriMath.Entity+Determinantf) : System.Boolean
 AngouriMath.Entity+Divf.<Clone>$() : AngouriMath.Entity+Divf
 AngouriMath.Entity+Divf.Codomain { } : AngouriMath.Core.Domain
 AngouriMath.Entity+Divf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
@@ -1675,6 +1699,27 @@ AngouriMath.Entity+Matrix.op_Multiply(AngouriMath.Entity+Matrix, AngouriMath.Ent
 AngouriMath.Entity+Matrix.op_Subtraction(AngouriMath.Entity+Matrix, AngouriMath.Entity+Matrix) : AngouriMath.Entity+Matrix
 AngouriMath.Entity+Matrix.op_UnaryNegation(AngouriMath.Entity+Matrix) : AngouriMath.Entity+Matrix
 AngouriMath.Entity+Matrix.op_UnaryPlus(AngouriMath.Entity+Matrix) : AngouriMath.Entity+Matrix
+AngouriMath.Entity+MatrixEntryf.<Clone>$() : AngouriMath.Entity+MatrixEntryf
+AngouriMath.Entity+MatrixEntryf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+MatrixEntryf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+MatrixEntryf.Column { } : AngouriMath.Entity
+AngouriMath.Entity+MatrixEntryf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+MatrixEntryf.EqualityContract { } : System.Type
+AngouriMath.Entity+MatrixEntryf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+MatrixEntryf.Equals(AngouriMath.Entity+MatrixEntryf) : System.Boolean
+AngouriMath.Entity+MatrixEntryf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+MatrixEntryf.GetHashCode() : System.Int32
+AngouriMath.Entity+MatrixEntryf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+MatrixEntryf.InnerDifferentiate(AngouriMath.Entity+Variable) : AngouriMath.Entity
+AngouriMath.Entity+MatrixEntryf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+MatrixEntryf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+MatrixEntryf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+MatrixEntryf.Row { } : AngouriMath.Entity
+AngouriMath.Entity+MatrixEntryf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+MatrixEntryf.ToString() : System.String
+AngouriMath.Entity+MatrixEntryf.ctor(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity)
+AngouriMath.Entity+MatrixEntryf.op_Equality(AngouriMath.Entity+MatrixEntryf, AngouriMath.Entity+MatrixEntryf) : System.Boolean
+AngouriMath.Entity+MatrixEntryf.op_Inequality(AngouriMath.Entity+MatrixEntryf, AngouriMath.Entity+MatrixEntryf) : System.Boolean
 AngouriMath.Entity+Maxf.<Clone>$() : AngouriMath.Entity+Maxf
 AngouriMath.Entity+Maxf.Codomain { } : AngouriMath.Core.Domain
 AngouriMath.Entity+Maxf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
@@ -3055,6 +3100,44 @@ AngouriMath.Entity+Tanf.ToString() : System.String
 AngouriMath.Entity+Tanf.ctor(AngouriMath.Entity)
 AngouriMath.Entity+Tanf.op_Equality(AngouriMath.Entity+Tanf, AngouriMath.Entity+Tanf) : System.Boolean
 AngouriMath.Entity+Tanf.op_Inequality(AngouriMath.Entity+Tanf, AngouriMath.Entity+Tanf) : System.Boolean
+AngouriMath.Entity+Tracef.<Clone>$() : AngouriMath.Entity+Tracef
+AngouriMath.Entity+Tracef.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+Tracef.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+Tracef.Deconstruct(AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+Tracef.EqualityContract { } : System.Type
+AngouriMath.Entity+Tracef.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+Tracef.Equals(AngouriMath.Entity+Tracef) : System.Boolean
+AngouriMath.Entity+Tracef.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+Tracef.GetHashCode() : System.Int32
+AngouriMath.Entity+Tracef.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+Tracef.InnerDifferentiate(AngouriMath.Entity+Variable) : AngouriMath.Entity
+AngouriMath.Entity+Tracef.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+Tracef.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+Tracef.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+Tracef.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+Tracef.ToString() : System.String
+AngouriMath.Entity+Tracef.ctor(AngouriMath.Entity)
+AngouriMath.Entity+Tracef.op_Equality(AngouriMath.Entity+Tracef, AngouriMath.Entity+Tracef) : System.Boolean
+AngouriMath.Entity+Tracef.op_Inequality(AngouriMath.Entity+Tracef, AngouriMath.Entity+Tracef) : System.Boolean
+AngouriMath.Entity+Transposef.<Clone>$() : AngouriMath.Entity+Transposef
+AngouriMath.Entity+Transposef.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+Transposef.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+Transposef.Deconstruct(AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+Transposef.EqualityContract { } : System.Type
+AngouriMath.Entity+Transposef.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+Transposef.Equals(AngouriMath.Entity+Transposef) : System.Boolean
+AngouriMath.Entity+Transposef.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+Transposef.GetHashCode() : System.Int32
+AngouriMath.Entity+Transposef.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+Transposef.InnerDifferentiate(AngouriMath.Entity+Variable) : AngouriMath.Entity
+AngouriMath.Entity+Transposef.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+Transposef.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+Transposef.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+Transposef.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+Transposef.ToString() : System.String
+AngouriMath.Entity+Transposef.ctor(AngouriMath.Entity)
+AngouriMath.Entity+Transposef.op_Equality(AngouriMath.Entity+Transposef, AngouriMath.Entity+Transposef) : System.Boolean
+AngouriMath.Entity+Transposef.op_Inequality(AngouriMath.Entity+Transposef, AngouriMath.Entity+Transposef) : System.Boolean
 AngouriMath.Entity+TrigonometricFunction.<Clone>$() : AngouriMath.Entity+TrigonometricFunction
 AngouriMath.Entity+TrigonometricFunction.EqualityContract { } : System.Type
 AngouriMath.Entity+TrigonometricFunction.Equals(AngouriMath.Entity+Function) : System.Boolean
@@ -3419,8 +3502,12 @@ AngouriMath.MathS+Matrices+Direction.Horizontal : AngouriMath.MathS+Matrices+Dir
 AngouriMath.MathS+Matrices+Direction.Vertical : AngouriMath.MathS+Matrices+Direction
 AngouriMath.MathS+Matrices+Direction.value__ : System.Int32
 AngouriMath.MathS+Matrices.Concat(AngouriMath.MathS+Matrices+Direction, AngouriMath.Entity+Matrix[]) : AngouriMath.Entity+Matrix
+AngouriMath.MathS+Matrices.Determinant(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS+Matrices.Entry(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+Matrices.Matrix(System.Int32, System.Int32, AngouriMath.Entity[]) : AngouriMath.Entity+Matrix
 AngouriMath.MathS+Matrices.PointwiseMultiplication(AngouriMath.Entity+Matrix, AngouriMath.Entity+Matrix) : AngouriMath.Entity+Matrix
+AngouriMath.MathS+Matrices.Trace(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS+Matrices.Transpose(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+Multithreading.SetLocalCancellationToken(System.Threading.CancellationToken) : System.Void
 AngouriMath.MathS+NumberTheory.Congruent(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+NumberTheory.CountDivisors(AngouriMath.Entity+Number+Integer) : AngouriMath.Entity+Number+Integer
@@ -3752,6 +3839,7 @@ class AngouriMath.Entity+Cosecantf
 class AngouriMath.Entity+Cosf
 class AngouriMath.Entity+Cotanf
 class AngouriMath.Entity+Derivativef
+class AngouriMath.Entity+Determinantf
 class AngouriMath.Entity+Divf
 class AngouriMath.Entity+Dividesf
 class AngouriMath.Entity+DivisorSigmaf
@@ -3786,6 +3874,7 @@ class AngouriMath.Entity+Lif
 class AngouriMath.Entity+Limitf
 class AngouriMath.Entity+Logf
 class AngouriMath.Entity+Matrix
+class AngouriMath.Entity+MatrixEntryf
 class AngouriMath.Entity+Maxf
 class AngouriMath.Entity+Maximumf
 class AngouriMath.Entity+Minf
@@ -3847,6 +3936,8 @@ class AngouriMath.Entity+SumOverSetf
 class AngouriMath.Entity+Sumf
 class AngouriMath.Entity+Summationf
 class AngouriMath.Entity+Tanf
+class AngouriMath.Entity+Tracef
+class AngouriMath.Entity+Transposef
 class AngouriMath.Entity+TrigonometricFunction
 class AngouriMath.Entity+Valuationf
 class AngouriMath.Entity+Variable

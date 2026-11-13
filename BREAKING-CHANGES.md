@@ -2608,10 +2608,39 @@ the right shape, written out or once its operations are carried out, throws `Inv
 |---|---|---|
 | `"det([[1, 2], [3, 4]])".ToEntity()` | `det * [[1, 2], [3, 4]]` | `-2` |
 | `"transpose([1, 2])".ToEntity()` | `transpose * [1, 2]` | `[[1, 2]]`, the row |
-| `"transpose(x)".ToEntity()` | `transpose * x` | throws `InvalidArgumentParseException` |
+| `"transpose(x)".ToEntity()` | `transpose * x` | the node `transpose(x)`, see the entry below |
 | `"cross([a, b])".ToEntity()` | `cross * [a, b]` | `[-b, a]` |
 | `"dot([1, 2], [3, 4])".ToEntity()` | throws `UnhandledParseException` | `1 * 3 + 2 * 4` |
 | `"resultant(x^2 - 1, x - a, x)".ToEntity()` | throws `UnhandledParseException` | `a ^ 2 - 1` |
+
+### `det`, `transpose`, `trace` and an entry `A[k, l]` of a name for a matrix are nodes
+
+**Not silent: these were read as products, or did not parse, and are now nodes, carried out once the name is a
+matrix.** `det(A)`, `transpose(A)` and `trace(A)` of a name, or of an expression that is not yet a matrix, are the
+nodes `Determinantf`, `Transposef` and `Tracef`; `A[k, l]` is `MatrixEntryf`, the entry in row `k` and column `l`
+counted from 1, and did not parse at all. Each is computed when the name is substituted by a matrix, by `Simplify`,
+`Evaled` and a compiled delegate taking `double[,]` or `Complex[,]`. Of a matrix written out each is computed as it is
+parsed, as `det` and `transpose` already were, and `trace` is new. A matrix that is not square has no determinant
+and no trace, and an index out of range names no entry: the node is left, never a number. A number, a statement or
+a set is refused with `InvalidArgumentParseException`. A product with a transpose in it is no longer reordered by
+`Simplify`, since matrices do not commute: `transpose(A) * A - A * transpose(A)` is not `0`. A name beside a written
+matrix, as in `det(x * [[1, 2], [3, 4]])`, may stand for a matrix too, and such an argument is not carried out until
+it is one, where it was multiplied into the entries as a number
+([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"det(A)".ToEntity()` | `det * A` | `det(A)`, a `Determinantf` |
+| `"transpose(A)".ToEntity()` | `transpose * A` | `transpose(A)`, a `Transposef` |
+| `"transpose(A) * B".ToEntity()` | `transpose * A * B` | `transpose(A) * B` |
+| `"trace(A)".ToEntity()` | `trace * A` | `trace(A)`, a `Tracef` |
+| `"trace([[1, 2], [3, 4]])".ToEntity()` | `trace * [[1, 2], [3, 4]]` | `1 + 4` |
+| `"trace(A * B)".Simplify()` | `A * B * trace` | `trace(A * B)` |
+| `"A[1, 2]".ToEntity()` | throws `UnhandledParseException` | `A[1, 2]`, a `MatrixEntryf` |
+| `"[[1, 2], [3, 4]][2, 1]".ToEntity()` | throws `UnhandledParseException` | `3` |
+| `"det(5)".ToEntity()` | `det * 5` | throws `InvalidArgumentParseException` |
+| `"det(x * [[1, 2], [3, 4]])".ToEntity()` | `det * x * [[1, 2], [3, 4]]` | `det(x * [[1, 2], [3, 4]])`: `x` may stand for a matrix |
+| `"det(A)".Substitute("A", "[[1, 2], [3, 4]]").Evaled` | `[[det, det * 2], [det * 3, det * 4]]` | `-2` |
 
 ### The names of functions to come are refused by name
 

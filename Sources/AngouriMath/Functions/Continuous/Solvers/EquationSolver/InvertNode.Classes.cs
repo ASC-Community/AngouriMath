@@ -28,6 +28,29 @@ namespace AngouriMath
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) => new[] { this };
         }
 
+        // The transpose is its own inverse. The determinant, the trace and an entry forget most of the matrix, and
+        // no matrix is found from one of them. https://github.com/asc-community/AngouriMath/issues/2147
+        partial record Transposef
+        {
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                Argument.Invert(new Transposef(value), x);
+        }
+
+        partial record Determinantf
+        {
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) => null;
+        }
+
+        partial record Tracef
+        {
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) => null;
+        }
+
+        partial record MatrixEntryf
+        {
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) => null;
+        }
+
         // Each function and operator processing
         partial record Sumf
         {
