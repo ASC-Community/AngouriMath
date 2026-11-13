@@ -3011,6 +3011,30 @@ sine, cosine, tangent, logarithm, arcsine, arccosine and arctangent of a real ar
 | `"Si(10^(-60))".EvalNumerical()` | `0` | `1E-60`, to the hundredth digit |
 | `"sin(pi)".EvalNumerical()` | `0` | `0` |
 
+### The norm of a vector is the root of its components' moduli squared
+
+**Silent: wrong answers.** `|v|` of a row vector was taken entry by entry, where a column's was its norm; both are
+now the norm. `|v|` of a column vector was `sqrt(sum v_k^2)`, which is its norm only where every
+component is real. A complex component made it `NaN`, a different number, or 0, and a symbol, which may take a complex
+value, was squared as though it could not. The norm is now `sqrt(sum |v_k|^2)`. A component whose codomain is real,
+such as `domain(x, RR)`, is still squared as it is, since that is the same value; a real vector's norm is unchanged.
+The compiled norm over `Complex` changes with it, since it compiles the simplified form; over `double` it was right
+([#2423](https://github.com/asc-community/AngouriMath/issues/2423)).
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"abs([1 + i, 2])".ToEntity().Evaled` | `NaN` | `2.449489742783178…`, which is `sqrt(6)` |
+| `"abs([1 + i, 2])".Simplify()` | `NaN` | `sqrt(6)` |
+| `"abs([3 * i, 4])".Simplify()` | `sqrt(7)` | `5` |
+| `"abs([1 + i, 1 - i])".Simplify()` | `0` | `2` |
+| `"abs([1 + i, 2]T)".Simplify()`, a row vector | `[[abs(1 + i), 2]]`, entry by entry | `sqrt(6)` |
+| `"abs([3, 4]T)".Simplify()` | `[[3, 4]]` | `5` |
+| `"abs([x, y])".Simplify()` | `sqrt(x ^ 2 + y ^ 2)` | `sqrt(abs(x) ^ 2 + abs(y) ^ 2)` |
+| `"abs([x, 3 * i])".Simplify()` | `sqrt(x ^ 2 - 9)` | `sqrt(9 + abs(x) ^ 2)` |
+| `"abs([x, y])".Compile<Complex, Complex, Complex>("x", "y")(i, 0)` | `6.1E-17 + i` | `1` |
+| `"abs([x, y])".Compile<Complex, Complex, Complex>("x", "y")(1 + i, 2)` | `2.058 + 0.486i` | `2.449489742783178` |
+| `"abs([3, 4])".Simplify()` | `5` | `5` |
+
 ---
 
 ## 2.6.0 — since 2.5.0
