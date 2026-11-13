@@ -13,7 +13,8 @@ namespace AngouriMath.Tests.Calculus
     /// <summary>
     /// A two-sided limit whose sides stopped at an indeterminate form with an infinity in it, 0 * floor(-oo) for
     /// x floor(2/x) at 0, answered NaN, which says there is no limit, where each side is 2. Such a side is undecided,
-    /// so the limit is left unevaluated. Found by limitcheck; no issue was filed.
+    /// so the limit is left unevaluated. So is a side that stops at a form of finite parts, 0 / 0 for erf(abs(x)) / x^4,
+    /// where the expression is real beside the point. Found by limitcheck; no issue was filed.
     /// </summary>
     [Trait("Area", "Calculus")]
     public sealed class AnUndecidedSideLeavesTheLimitUnevaluatedTest
@@ -23,6 +24,14 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("floor(1/x) * sin(x)")]
         [InlineData("x^2 * floor(1/x^2)")]
         [InlineData("x * ceil(1/x)")]
+        // A side that stops at 0 / 0, or at c / 0, of an expression real beside the point is undecided too:
+        // erf(abs(x)) / x^4 is +oo from each side, 1 / log(x^2, cos(x)) is +oo, abs(x)^erf(x) is 1.
+        [InlineData("erf(abs(x)) / x^4")]
+        [InlineData("erf(abs(x)) / (x^3 * sinh(x))")]
+        [InlineData("1 / log(x^2, cos(x))")]
+        [InlineData("abs(x)^erf(x)")]
+        [InlineData("tan(1/2 + x) + abs(x)^erf(x)")]
+        [InlineData("1 / (x * arccot(x))")]
         public void IsNotNaN(string input)
             => Assert.IsType<Entity.Limitf>(input.ToEntity().Limit("x", 0));
 
@@ -30,6 +39,7 @@ namespace AngouriMath.Tests.Calculus
         // in different directions, an oscillation, a jump.
         [Theory]
         [InlineData("(x - x) * sin(x) / ((x - x) * x)", "0")]
+        [InlineData("(x - x) / (x - x)", "0")]
         [InlineData("ln(-2) / ln(x)", "1")]
         [InlineData("sin(1/x)", "0")]
         [InlineData("floor(2/x)", "0")]

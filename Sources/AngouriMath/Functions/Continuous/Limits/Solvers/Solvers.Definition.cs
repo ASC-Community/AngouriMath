@@ -193,12 +193,12 @@ namespace AngouriMath.Functions.Algebra
             bothSidesDepth++;
             try
             {
-                var fromLeft = Decided(ComputeLimit(expr, x, dest, ApproachFrom.Left));
+                var fromLeft = Decided(ComputeLimit(expr, x, dest, ApproachFrom.Left), ApproachFrom.Left);
                 if (fromLeft?.Evaled == MathS.NaN)
                     return null;
                 // A side that does not exist settles the question whatever the other side does,
                 // so the right is still asked when the left is undecided.
-                var fromRight = Decided(ComputeLimit(expr, x, dest, ApproachFrom.Right));
+                var fromRight = Decided(ComputeLimit(expr, x, dest, ApproachFrom.Right), ApproachFrom.Right);
                 if (fromRight?.Evaled == MathS.NaN)
                     return null;
                 if (fromLeft is null || fromRight is null)
@@ -215,13 +215,33 @@ namespace AngouriMath.Functions.Algebra
             // where it stops the search, and withheld at the outermost call, where it is not an
             // answer. One with an infinity in it, 0 * floor(-oo) for x floor(2/x), is a product or
             // a quotient of parts whose rates were never compared, so that side is undecided rather
-            // than absent. One of finite parts only stays a side without a limit, as before: 0 / 0
-            // for (x - x) / (x - x), which has no value anywhere, and ln(-2) / 0 for ln(-2) / ln(x)
-            // at 1, whose sides are infinities in different directions.
-            static Entity? Decided(Entity? limit)
+            // than absent. So is one of finite parts where the expression takes real values on that
+            // side: erf(abs(x)) / x^4 at 0 stops at 0 / 0 from each side, is +oo from each, and was
+            // NaN. One of finite parts stays a side without a limit where the expression has no real
+            // value beside the point: 0 / 0 for (x - x) / (x - x), which has no value anywhere, and
+            // ln(-2) / 0 for ln(-2) / ln(x) at 1, whose values there are not real and whose sides
+            // are infinities in different directions.
+            Entity? Decided(Entity? limit, ApproachFrom side)
                 => limit is { } && IsAnIndeterminateForm(limit)
-                   && limit.Nodes.Any(static node => node is Real { IsFinite: false })
+                   && (limit.Nodes.Any(static node => node is Real { IsFinite: false })
+                       || IsRealBeside(expr, x, dest, side))
                     ? null : limit;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> has a finite real value at two points on
+        /// <paramref name="side"/> of a finite real <paramref name="dest"/>, 10^-6 and 10^-9 away.
+        /// A witness that the expression is defined and real there, not a proof of it near
+        /// every point; a side it finds real is only ever left undecided, never answered.
+        /// </summary>
+        private static bool IsRealBeside(Entity expr, Variable x, Entity dest, ApproachFrom side)
+        {
+            if (dest.Evaled is not Real { IsFinite: true } at || side is ApproachFrom.BothSides)
+                return false;
+            var sign = side is ApproachFrom.Left ? -1 : 1;
+            return RealAt(Rational.Create(sign, 1_000_000)) && RealAt(Rational.Create(sign, 1_000_000_000));
+            bool RealAt(Rational offset)
+                => expr.Substitute(x, at + offset).Evaled is Real { IsFinite: true };
         }
 
         /// <summary>
