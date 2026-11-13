@@ -1346,21 +1346,36 @@ and a number that passes every round is left open, since passing is not a proof
 | `"(10^30 + 1) in PP".ToEntity().Evaled` | `1000000000000000000000000000001 in PP` | `False` |
 | `"(10^30 + 57) in PP".ToEntity().Evaled` | `1000000000000000000000000000057 in PP` | `1000000000000000000000000000057 in PP` |
 
-### An exact power too large to build is the decimal
+### An exact power too large to build is left written
 
-**Not silent: what did not return now answers.** An exact number to a whole power was built exactly however large it
-was. `46655^(10^20)` has 4.7e20 digits, and its evaluation neither returned nor stopped when cancelled. Nor did a
-`Simplify` of anything holding it. Past sixteen million bits, about five million digits, a power is now evaluated as the
-decimal, as the same power with a half added already was: `+oo` past the context's range, `-oo` for a negative base to
-an odd power, and `0` below the range. An exact simplification leaves it as written, since the infinity is the
-decimal's. Each of -1, i and -i keeps its exact power. No issue was filed; a check of compiled expressions against
-evaluation found it.
+**Not silent: what did not return now answers, or stays written.** An exact number to a whole power was built exactly
+however large it was. `46655^(10^20)` has 4.7e20 digits, and its evaluation neither returned nor stopped when cancelled.
+Nor did a `Simplify` of anything holding it. Past sixteen million bits, about five million digits, such a power is now
+left as written, by evaluation and by `Simplify` alike, and `EvalNumerical` refuses it with `CannotEvalException`. It
+is finite and not zero, so it is never `+oo`, `-oo` or `0`. An expression holding it is settled where structure settles
+it, as with `a - a` or `0 * a`, or where the exponents settle it, as with `2^m / 2^n`. A comparison is settled by the
+signs, by the exponents for one positive base, or by the logarithms of the magnitudes where they differ by more than
+their rounding. Anything else stays written. Each of -1, i and -i keeps its exact power. Measured on 2.6.0 with a
+twenty-second limit. https://github.com/asc-community/AngouriMath/issues/1448
 
 | Input | Was (2.6.0) | Now |
 |---|---|---|
-| `"46655^(10^20)".EvalNumerical()` | does not return | `+oo` |
-| `"(5/2)^(10^7)".EvalNumerical()` | does not return | `+oo` |
+| `"2^(10^9)".ToEntity().Evaled` | does not return | `2 ^ 1000000000` |
+| `"2^(-(10^9))".ToEntity().Evaled` | does not return | `2 ^ (-1000000000)` |
+| `"46655^(10^20)".EvalNumerical()` | does not return | throws `CannotEvalException` |
 | `"2^(10^10)".Simplify()` | does not return | `2 ^ 10000000000` |
+| `"2^(10^9) - 2^(10^9)".Simplify()` | does not return | `0` |
+| `"x - x + 2^(10^9) - 2^(10^9)".Simplify()` | does not return | `0` |
+| `"2^(10^9) / 2^(10^9 - 1)".Simplify()` | does not return | `2` |
+| `"2^(10^9) * 2^(-(10^9))".Simplify()` | does not return | `1` |
+| `"0 * 2^(10^9)".ToEntity().Evaled` | does not return | `0` |
+| `"2^(10^9) > 2^(10^9 - 1)".ToEntity().Evaled` | does not return | `True` |
+| `"2^(10^9) = 2^(10^9 - 1)".ToEntity().Evaled` | does not return | `False` |
+| `"3^(10^9) > 2^(10^9)".ToEntity().Evaled` | does not return | `True` |
+| `"2^(10^9) > 5".ToEntity().Evaled` | does not return | `True` |
+| `"2^(-(10^9)) > 0".Simplify()` | does not return | `True` |
+| `"2^(10^9) = 4^(5 * 10^8)".ToEntity().Evaled` | does not return | `2 ^ 1000000000 = 4 ^ 500000000` |
+| `"forall n in ZZ* : 3^(n + 1) divides 2^(3^n) + 1".ToEntity().Evaled` | does not return | as written |
 
 ### The inverse of a symbolic matrix carries no condition of a pivot
 

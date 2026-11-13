@@ -627,8 +627,10 @@ namespace AngouriMath
                 }
                 // An exact power past MaxExactPowerBits is not built: 46655^(10^20) would have 4.7e20
                 // digits, and the multiplications for it never returned or stopped when cancelled, so
-                // a simplification of the expression did not either. It is the decimal, as the same
-                // power with a half added is: +oo past the context's range, 0 below it.
+                // a simplification of the expression did not either. Evaluating a power node leaves it
+                // written before this is reached (https://github.com/asc-community/AngouriMath/issues/1448);
+                // a caller of Pow itself gets the decimal, as the same power with a half added does:
+                // +oo past the context's range, 0 below it.
                 if (@base.IsFinite && pow is { } && IsTooLargeToBuild(@base, pow))
                 {
                     var largeContext = MathS.Settings.DecimalPrecisionContext;

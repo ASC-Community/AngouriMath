@@ -324,6 +324,10 @@ namespace AngouriMath
                     // A size that is not a number is compared as a size, never by the difference
                     // of two expressions: card(ZZ) - card(QQ) is not zero, and the two are equal.
                     : AngouriMath.Core.Sets.Cardinality.IsSize(left) || AngouriMath.Core.Sets.Cardinality.IsSize(right) ? AngouriMath.Core.Sets.Cardinality.Compare(left, right, static sign => sign == 0, isExact)
+                    // An exact power too large to build is not a constant, its value being left written, and is
+                    // told apart from a number or another such power where its sign, exponent or magnitude decides it.
+                    // https://github.com/asc-community/AngouriMath/issues/1448
+                    : OrderOfUnbuiltPowers(left, right) is { } order ? order == 0
                     : left.IsConstant && right.IsConstant ? (HasAnUnreadSize(left) || HasAnUnreadSize(right) ? null : ConstantsAreEqual(left, right))
                     : left is Set setLeft && right is Set setRight ? SetsAreEqual(setLeft, setRight, isExact)
                     : null,
@@ -347,6 +351,80 @@ namespace AngouriMath
             _ => null,
         };
 
+        /// <summary>
+        /// An exact power too large to build, which evaluation leaves written: an exact base that is not zero to a
+        /// rational exponent. <see langword="null"/> for anything else.
+        /// https://github.com/asc-community/AngouriMath/issues/1448
+        /// </summary>
+        private static (Number.Rational Base, Number.Rational Exponent)? AsAnUnbuiltPower(Entity expr)
+            => expr is Powf(Number.Rational { IsZero: false } @base, Number.Rational exponent) && Powf.IsTooLargeToBuild(@base, exponent)
+               ? (@base, exponent) : null;
+
+        /// <summary>
+        /// The sign of a real power of an exact real base that is not zero, where its exponent decides it: positive
+        /// for a positive base, and for a negative one by the parity of a whole exponent.
+        /// </summary>
+        private static int? SignOfAnUnbuiltPower((Number.Rational Base, Number.Rational Exponent) power)
+            => power.Base.ERational.Sign > 0 ? 1
+               : power.Exponent is Number.Integer { EInteger: var whole } ? (whole.IsEven ? 1 : -1)
+               : null;
+
+        /// <summary>
+        /// The sign of <c>left - right</c> where either side is an exact power too large to build and the other is a
+        /// real number or another such power, decided without building either: two powers of one positive base by
+        /// their exponents, exactly, and otherwise by the signs and then by the logarithms of the magnitudes, where
+        /// those differ by more than the error of computing them. <see langword="null"/> where nothing decides it,
+        /// which leaves the comparison written; in particular, two magnitudes that may be equal are never told
+        /// apart. As the decimals, these powers were <c>+oo</c> and <c>0</c>, and <c>2^(10^9) &gt; 2^(10^9 - 1)</c>
+        /// was False. https://github.com/asc-community/AngouriMath/issues/1448
+        /// </summary>
+        private static int? OrderOfUnbuiltPowers(Entity left, Entity right)
+        {
+            var (powerLeft, powerRight) = (AsAnUnbuiltPower(left), AsAnUnbuiltPower(right));
+            if (powerLeft is null && powerRight is null)
+                return null;
+            if (powerLeft is { } l && powerRight is { } r && l.Base.ERational.Equals(r.Base.ERational) && l.Base.ERational.Sign > 0)
+            {
+                var byExponent = l.Exponent.ERational.CompareTo(r.Exponent.ERational);
+                return l.Base.ERational.CompareTo(ERational.One) > 0 ? byExponent : -byExponent;
+            }
+            if (SignAndLogarithm(left, powerLeft) is not var (signLeft, logLeft) || SignAndLogarithm(right, powerRight) is not var (signRight, logRight))
+                return null;
+            // A power is not zero, so a side of the other sign, or zero, is decided by the signs alone.
+            if (signLeft != signRight || logLeft is null || logRight is null)
+                return signLeft.CompareTo(signRight);
+            // Each logarithm is within a relative 1e-99 of its value: a decimal side is rounded to a hundred digits,
+            // and the rest is computed to OrderContext's. So a difference past 1e-90 of their size is not rounding.
+            var difference = logLeft.Subtract(logRight, OrderContext);
+            var bound = logLeft.Abs().Add(logRight.Abs()).Add(EDecimal.One).Multiply(OrderTolerance);
+            if (difference.Abs().CompareTo(bound) <= 0)
+                return null;
+            return signLeft * difference.Sign;
+        }
+
+        /// <summary>
+        /// The sign of an exact power too large to build, or of a finite real number, and the natural logarithm of
+        /// its magnitude, <see langword="null"/> for zero. <see langword="null"/> for anything else, and for a power
+        /// whose sign its exponent does not settle.
+        /// </summary>
+        private static (int Sign, EDecimal? Logarithm)? SignAndLogarithm(Entity side, (Number.Rational Base, Number.Rational Exponent)? power)
+        {
+            if (power is { } p)
+                return SignOfAnUnbuiltPower(p) is { } sign
+                    ? (sign, p.Exponent.ERational.ToEDecimal(OrderContext)
+                        .Multiply(p.Base.ERational.Abs().ToEDecimal(OrderContext).Log(OrderContext), OrderContext))
+                    : null;
+            if (side is Number number && AsAReal(number) is { EDecimal: { IsFinite: true } real })
+                return real.IsZero ? (0, null) : (real.Sign, real.Abs().Log(OrderContext));
+            return null;
+        }
+
+        /// <summary>The working precision of <see cref="SignAndLogarithm"/>: twenty digits past the decimals'.</summary>
+        [Core.ConstantField] private static readonly EContext OrderContext = EContext.ForPrecision(120);
+
+        /// <summary>The relative difference of two logarithms below which <see cref="OrderOfUnbuiltPowers"/> leaves them undecided.</summary>
+        [Core.ConstantField] private static readonly EDecimal OrderTolerance = EDecimal.FromString("1e-90");
+
         partial record Greaterf
         {
             // Inequality comparisons are only defined for real numbers.
@@ -361,6 +439,7 @@ namespace AngouriMath
                         (Number numLeft, Number numRight) when AsAReal(numLeft) is { } reLeft && AsAReal(numRight) is { } reRight => reLeft > reRight,
                         (Number numLeft, Number numRight) => MathS.NaN,
                         _ when AngouriMath.Core.Sets.Cardinality.IsSize(a) || AngouriMath.Core.Sets.Cardinality.IsSize(b) => AngouriMath.Core.Sets.Cardinality.Compare(a, b, static sign => sign > 0, isExact),
+                        _ when OrderOfUnbuiltPowers(a, b) is { } sign => sign > 0,
                         _ => null
                     },
                     (@this, a, b) => ((Greaterf)@this).New(a, b), isExact);
@@ -381,6 +460,7 @@ namespace AngouriMath
                         (Number numLeft, Number numRight) when AsAReal(numLeft) is { } reLeft && AsAReal(numRight) is { } reRight => reLeft >= reRight,
                         (Number numLeft, Number numRight) => MathS.NaN,
                         _ when AngouriMath.Core.Sets.Cardinality.IsSize(a) || AngouriMath.Core.Sets.Cardinality.IsSize(b) => AngouriMath.Core.Sets.Cardinality.Compare(a, b, static sign => sign >= 0, isExact),
+                        _ when OrderOfUnbuiltPowers(a, b) is { } sign => sign >= 0,
                         _ => null
                     },
                     (@this, a, b) => ((GreaterOrEqualf)@this).New(a, b), isExact);
@@ -401,6 +481,7 @@ namespace AngouriMath
                         (Number numLeft, Number numRight) when AsAReal(numLeft) is { } reLeft && AsAReal(numRight) is { } reRight => reLeft < reRight,
                         (Number numLeft, Number numRight) => MathS.NaN,
                         _ when AngouriMath.Core.Sets.Cardinality.IsSize(a) || AngouriMath.Core.Sets.Cardinality.IsSize(b) => AngouriMath.Core.Sets.Cardinality.Compare(a, b, static sign => sign < 0, isExact),
+                        _ when OrderOfUnbuiltPowers(a, b) is { } sign => sign < 0,
                         _ => null
                     },
                     (@this, a, b) => ((Lessf)@this).New(a, b), isExact);
@@ -420,6 +501,7 @@ namespace AngouriMath
                         (Number numLeft, Number numRight) when AsAReal(numLeft) is { } reLeft && AsAReal(numRight) is { } reRight => reLeft <= reRight,
                         (Number numLeft, Number numRight) => MathS.NaN,
                         _ when AngouriMath.Core.Sets.Cardinality.IsSize(a) || AngouriMath.Core.Sets.Cardinality.IsSize(b) => AngouriMath.Core.Sets.Cardinality.Compare(a, b, static sign => sign <= 0, isExact),
+                        _ when OrderOfUnbuiltPowers(a, b) is { } sign => sign <= 0,
                         _ => null
                     },
                     (@this, a, b) => ((LessOrEqualf)@this).New(a, b), isExact);

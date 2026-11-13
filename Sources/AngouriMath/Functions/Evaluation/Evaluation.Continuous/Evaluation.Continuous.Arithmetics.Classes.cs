@@ -409,6 +409,17 @@ namespace AngouriMath
                 => Exponent is Rational and not Integer and Rational ratio
                    && ratio.ERational.Denominator.Remainder(2).IsZero;
             
+            /// <summary>
+            /// Whether an exact <paramref name="base"/> to the rational <paramref name="exponent"/> is past the size an
+            /// exact power is built to, a fraction <c>p / q</c> read as the whole power just above <c>|p / q|</c>: a
+            /// <c>q</c>-th root makes the power no longer than that, and one that is not exact is a decimal of the
+            /// same magnitude. A whole exponent allocates nothing here, being asked of every exact power.
+            /// </summary>
+            internal static bool IsTooLargeToBuild(Complex @base, Rational exponent)
+                => exponent is Integer { EInteger: var whole }
+                   ? Number.IsTooLargeToBuild(@base, whole)
+                   : Number.IsTooLargeToBuild(@base, exponent.ERational.Numerator.Abs().Divide(exponent.ERational.Denominator).Add(PeterO.Numbers.EInteger.One));
+
             private static bool TryPower(Matrix m, int exp, out Entity res)
             {
                 // Only a square matrix has powers; Pow throws for any other. And only one with
@@ -461,6 +472,12 @@ namespace AngouriMath
                           ? 0
                           : MathS.NaN
                         : new Providedf(0, Re(x) > 0),
+                    // An exact power too large to build stays a power. It is finite and not zero, and as
+                    // the decimal it was +oo or 0, which then fed exact arithmetic: 2^(10^9) - 2^(10^9)
+                    // was NaN, 0 * 2^(10^9) was NaN and 2^(10^9) > 2^(10^9 - 1) was False. Left written,
+                    // what can be said of it is said by structure or by its exponent, and the rest is
+                    // left undecided. https://github.com/asc-community/AngouriMath/issues/1448
+                    (Complex n1, Rational n2) when IsTooLargeToBuild(n1, n2) => null,
                     (Complex n1, Complex n2) when !isExact => Number.Pow(n1, n2), // returns 1 for 0^0 and 0 for 0^(negative real part), we need to handle these cases above
                     (Integer(1), { DomainCondition: var condition }) => Integer.One.Provided(condition),
                     (var n1, Integer(-1)) => (1 / n1).InnerSimplified(isExact),
