@@ -250,6 +250,47 @@ namespace AngouriMath.Functions.Algebra
                 ? Real.NaN
                 : null;
 
+        /// <summary>
+        /// A step function of an unbounded argument times a factor that vanishes: the limit of
+        /// <c>f * floor(g)</c> is the limit of <c>f * g</c>, and the same for <c>ceil</c> and
+        /// <c>round</c>.
+        /// </summary>
+        /// <remarks>
+        /// <c>floor(g) = g - r</c> with <c>0 &lt;= r &lt; 1</c> wherever <c>g</c> is real, <c>ceil(g) = g + r</c>
+        /// with the same bound, and <c>round(g)</c> is within 1/2 of <c>g</c>. So
+        /// <c>f * floor(g) - f * g</c> is <c>f</c> times something bounded by 1, which tends to 0
+        /// wherever <c>f</c> does, and the two products have the same limit, a value or an
+        /// infinity alike. Assumed, and checked: <c>g</c> is real-valued, and the other factors
+        /// tend to 0. Nothing is assumed of <c>g</c>'s limit, which is the point -- the descent
+        /// puts each part's own limit in place of the part, so <c>x floor(2/x)</c> at 0 was read
+        /// as <c>0 * floor(+oo)</c>, a form it cannot settle, where it is 2 from either side.
+        /// <para/>
+        /// Only a limit is taken from it. A <c>NaN</c> for <c>f * g</c> would say the same of the
+        /// step, but inside the machinery <c>NaN</c> can also be a form nothing read, so it is left
+        /// to the rules that already decide those.
+        /// </remarks>
+        internal static Entity? SolveAsAStepOfAnUnboundedArgument(Entity expr, Variable x)
+        {
+            if (expr is not (Mulf or Divf) || !expr.Nodes.Any(static node => node is Floorf or Ceilf or Roundf))
+                return null;
+            var factors = Mulf.LinearChildren(expr);
+            for (var i = 0; i < factors.Count; i++)
+            {
+                if (factors[i] is not (Floorf or Ceilf or Roundf) || !factors[i].ContainsNode(x))
+                    continue;
+                var argument = factors[i].DirectChildren[0];
+                if (!IsRealValued(argument, x))
+                    continue;
+                var rest = factors.Where((_, j) => j != i).Aggregate((Entity)Integer.One, static (product, factor) => product * factor);
+                if (!rest.ContainsNode(x) || !VanishesAtInfinity(rest, x))
+                    continue;
+                if (LimitFunctional.ComputeLimit((rest * argument).InnerSimplified, x, Real.PositiveInfinity) is { } limit
+                    && limit.Evaled != MathS.NaN)
+                    return limit;
+            }
+            return null;
+        }
+
         private static bool VanishesAtInfinity(Entity expr, Variable x)
             => LimitFunctional.ComputeLimit(expr, x, Real.PositiveInfinity) is { } limit
                && limit.Evaled is Real { IsZero: true };

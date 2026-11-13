@@ -130,6 +130,11 @@ namespace AngouriMath.Functions.Algebra
             var oscillationResult = LimitSolvers.SolveAsOscillationWithoutLimit(expr, x);
             if (oscillationResult is { }) return oscillationResult;
 
+            // After both rules above, which settle the products they read without asking for
+            // another limit; this one asks for the limit of a second product.
+            var stepResult = LimitSolvers.SolveAsAStepOfAnUnboundedArgument(expr, x);
+            if (stepResult is { }) return stepResult;
+
             return null;
         }
 
@@ -184,8 +189,8 @@ namespace AngouriMath.Functions.Algebra
         {
             // Set where no answer came because a side has none yet, rather than because a side
             // does not exist or the two differ. Neither side is then known to be NaN, so neither
-            // is the limit: x floor(2/x) at 0 is 2 from each side, the one-sided paths do not
-            // decide it, and the two-sided one answered NaN.
+            // is the limit: floor(1/x) / floor(2/x) at 0 is 1/2 from each side, the one-sided
+            // paths do not decide it, and a NaN here would say there is no limit.
             aSideIsUndecided = false;
             if (bothSidesDepth >= MaxBothSidesDepth
                 || MathS.Settings.Codomain.Value is not AngouriMath.Core.Domain.Real && !IsRealOnBothSides(expr, x, dest))
@@ -213,7 +218,7 @@ namespace AngouriMath.Functions.Algebra
 
             // An indeterminate form a side's own limit could not read is NaN inside the machinery,
             // where it stops the search, and withheld at the outermost call, where it is not an
-            // answer. One with an infinity in it, 0 * floor(-oo) for x floor(2/x), is a product or
+            // answer. One with an infinity in it, such as 0 * oo or oo / oo, is a product or
             // a quotient of parts whose rates were never compared, so that side is undecided rather
             // than absent. So is one of finite parts where the expression takes real values on that
             // side: erf(abs(x)) / x^4 at 0 stops at 0 / 0 from each side, is +oo from each, and was

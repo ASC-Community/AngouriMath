@@ -20,10 +20,9 @@ namespace AngouriMath.Tests.Calculus
     public sealed class AnUndecidedSideLeavesTheLimitUnevaluatedTest
     {
         [Theory]
-        [InlineData("x * floor(2/x)")]
-        [InlineData("floor(1/x) * sin(x)")]
-        [InlineData("x^2 * floor(1/x^2)")]
-        [InlineData("x * ceil(1/x)")]
+        // 1/2 from each side. The four this was written for, x floor(2/x) among them, are answered now, and are pinned
+        // in AStepOfAnUnboundedArgumentTimesAVanishingFactorTest.
+        [InlineData("floor(1/x) / floor(2/x)")]
         // A side that stops at 0 / 0, or at c / 0, of an expression real beside the point is undecided too:
         // erf(abs(x)) / x^4 is +oo from each side, 1 / log(x^2, cos(x)) is +oo, abs(x)^erf(x) is 1.
         [InlineData("erf(abs(x)) / x^4")]
