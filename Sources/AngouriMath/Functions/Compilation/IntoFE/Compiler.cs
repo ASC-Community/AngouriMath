@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2022 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -48,6 +48,7 @@ namespace AngouriMath
                     cacheLine = ~cacheLine;
                     compiler.Cache[this] = cacheLine;
                     compiler.Instructions.Add(new(InstructionType.SAVE_CACHE, cacheLine));
+                    compiler.Saved.Add(this);
                 }
             }
         }
@@ -536,29 +537,48 @@ namespace AngouriMath
         {
             private protected override bool CompilesItself => true;
 
+            // The value where the predicate holds, and NaN elsewhere, the value not being computed there.
             private protected override void CompileNode(Compiler compiler)
             {
+                var start = compiler.Saved.Count;
                 Predicate.InnerCompile(compiler);
+                var unless = compiler.Jump(InstructionType.JUMP_UNLESS_HOLDS);
                 Expression.InnerCompile(compiler);
-                compiler.Instructions.Add(new(InstructionType.CALL_PROVIDED));
+                var past = compiler.Jump(InstructionType.JUMP);
+                compiler.Land(unless);
+                compiler.Instructions.Add(new(InstructionType.PUSH_CONST, Value: double.NaN));
+                compiler.Land(past);
+                compiler.Forget(start);
             }
         }
 
-        // The first case whose predicate holds, and NaN where none does: from the last case up,
-        // each is kept where its predicate holds and the cases below it are kept elsewhere.
+        // The first case whose predicate holds, and NaN where none does. Each predicate is tried in
+        // turn, and the first that holds has its case computed and jumps past the rest, so that a case
+        // not taken is not computed: one may be undefined, or costly, where it is not taken.
         public partial record Piecewise
         {
             private protected override bool CompilesItself => true;
 
             private protected override void CompileNode(Compiler compiler)
             {
-                compiler.Instructions.Add(new(InstructionType.PUSH_CONST, Value: double.NaN));
-                foreach (var @case in Cases.Reverse())
+                var start = compiler.Saved.Count;
+                var past = new List<int>();
+                foreach (var @case in Cases)
                 {
                     @case.Predicate.InnerCompile(compiler);
+                    var unless = compiler.Jump(InstructionType.JUMP_UNLESS_HOLDS);
+                    // What the predicates computed holds for the cases after them, as reaching one
+                    // means every predicate before it was computed; what a case computed does not.
+                    var predicates = compiler.Saved.Count;
                     @case.Expression.InnerCompile(compiler);
-                    compiler.Instructions.Add(new(InstructionType.CALL_SELECT));
+                    compiler.Forget(predicates);
+                    past.Add(compiler.Jump(InstructionType.JUMP));
+                    compiler.Land(unless);
                 }
+                compiler.Instructions.Add(new(InstructionType.PUSH_CONST, Value: double.NaN));
+                foreach (var jump in past)
+                    compiler.Land(jump);
+                compiler.Forget(start);
             }
         }
 
@@ -1010,6 +1030,33 @@ namespace AngouriMath.Core
         internal sealed record Compiler(List<Instruction> Instructions,
             IReadOnlyDictionary<Variable, int> VarNamespace, IDictionary<Entity, int> Cache)
         {
+            /// <summary>
+            /// The subexpressions saved to the cache, in the order their instructions were emitted. A
+            /// subexpression saved where a jump may pass over it has no value in its slot after the jump,
+            /// so once the code that may be passed over is compiled it is <see cref="Forget"/>-ed back to
+            /// unsaved, and is computed again where it is next met: a slot is read only where every path
+            /// to the read has written it, as <see cref="FastExpression.Substitute"/> relies on.
+            /// </summary>
+            internal List<Entity> Saved { get; } = new();
+
+            /// <summary>Marks every subexpression saved since <paramref name="count"/> were as unsaved.</summary>
+            internal void Forget(int count)
+            {
+                for (var i = count; i < Saved.Count; i++)
+                    Cache[Saved[i]] = ~Cache[Saved[i]];
+                Saved.RemoveRange(count, Saved.Count - count);
+            }
+
+            /// <summary>Emits a jump whose target is not yet known, and returns where it is.</summary>
+            internal int Jump(InstructionType type)
+            {
+                Instructions.Add(new(type));
+                return Instructions.Count - 1;
+            }
+
+            /// <summary>Makes the jump at <paramref name="jump"/> land on the next instruction emitted.</summary>
+            internal void Land(int jump) => Instructions[jump] = Instructions[jump] with { Reference = Instructions.Count };
+
             /// <summary>Returns a compiled expression. Allows to boost substitution a lot</summary>
             /// <param name="func">The function to be compiled</param>
             /// <param name="variables">Must be equal to func's variables (ignoring constants)</param>

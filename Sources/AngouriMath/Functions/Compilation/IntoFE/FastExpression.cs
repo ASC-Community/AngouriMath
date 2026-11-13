@@ -21,6 +21,12 @@ namespace AngouriMath.Core
             LOAD_CACHE,
             SAVE_CACHE,
 
+            // Control flow, to the instruction its Reference names: a jump, and a jump taken
+            // unless the truth value popped holds, as a case of a piecewise is passed over unless
+            // its predicate holds.
+            JUMP = 20,
+            JUMP_UNLESS_HOLDS,
+
             // 1-arg functions
             CALL_SIN = 50,
             CALL_COS,
@@ -86,8 +92,6 @@ namespace AngouriMath.Core
             CALL_OR,
             CALL_XOR,
             CALL_IMPLIES,
-            // A value where its predicate holds, and NaN elsewhere.
-            CALL_PROVIDED,
             CALL_BINOMIAL,
             CALL_FALLING_FACTORIAL,
             CALL_RISING_FACTORIAL,
@@ -98,10 +102,8 @@ namespace AngouriMath.Core
             CALL_VALUATION,
             CALL_DIVIDES,
 
-            // 3-arg: a value where its predicate holds, and the one below it elsewhere.
-            CALL_SELECT = 150,
-            // Whether two numbers are congruent modulo a third.
-            CALL_CONGRUENT,
+            // 3-arg: whether two numbers are congruent modulo a third.
+            CALL_CONGRUENT = 150,
         }
         internal sealed partial record Instruction(InstructionType Type, int Reference = -1, System.Numerics.Complex Value = default)
         {
@@ -136,7 +138,7 @@ namespace AngouriMath.Core
 
         [System.ThreadStatic] private static Scratch? scratch;
 
-        private readonly List<Instruction> instructions;
+        private readonly Instruction[] instructions;
         private readonly int varCount;
         private readonly int cacheCount;
 
@@ -147,7 +149,7 @@ namespace AngouriMath.Core
         internal FastExpression(int varCount, List<Instruction> instructions, int cacheCount)
         {
             this.varCount = varCount;
-            this.instructions = instructions;
+            this.instructions = instructions.ToArray();
             this.cacheCount = cacheCount;
         }
 
@@ -171,9 +173,20 @@ namespace AngouriMath.Core
             var cache = mine.Cache;
             if (cache.Length < cacheCount)
                 mine.Cache = cache = new System.Numerics.Complex[cacheCount];
-            foreach (var instruction in instructions)
+            for (var next = 0; next < instructions.Length; next++)
+            {
+                var instruction = instructions[next];
                 switch (instruction.Type)
                 {
+                    // Every jump is forward, so a call ends. A piecewise computes the case it takes
+                    // and no other: https://github.com/asc-community/AngouriMath/issues/2195
+                    case InstructionType.JUMP:
+                        next = instruction.Reference - 1;
+                        break;
+                    case InstructionType.JUMP_UNLESS_HOLDS:
+                        if (Truth(stack.Pop()) != true)
+                            next = instruction.Reference - 1;
+                        break;
                     case InstructionType.PUSH_VAR:
                         stack.Push(values[instruction.Reference]);
                         break;
@@ -364,12 +377,6 @@ namespace AngouriMath.Core
                     case InstructionType.CALL_IMPLIES:
                         stack.Push(Truth(Logic.Implies(Truth(stack.Pop()), Truth(stack.Pop()))));
                         break;
-                    case InstructionType.CALL_PROVIDED:
-                    {
-                        var value = stack.Pop();
-                        stack.Push(Truth(stack.Pop()) == true ? value : double.NaN);
-                        break;
-                    }
                     // The binomial coefficient, the factorial powers and the double factorial.
                     // https://github.com/asc-community/AngouriMath/issues/2195
                     case InstructionType.CALL_BINOMIAL:
@@ -426,15 +433,8 @@ namespace AngouriMath.Core
                     case InstructionType.CALL_CONGRUENT:
                         stack.Push(Truth(AngouriMath.Numerics.NumberStatements.Congruent(stack.Pop(), stack.Pop(), stack.Pop())));
                         break;
-                    case InstructionType.CALL_SELECT:
-                    {
-                        var value = stack.Pop();
-                        var holds = Truth(stack.Pop()) == true;
-                        var otherwise = stack.Pop();
-                        stack.Push(holds ? value : otherwise);
-                        break;
-                    }
                 }
+            }
             if (stack.Count != 1)
                 throw new AngouriBugException($"Unused values remain in the stack: {stack.Count} instead of 1");
             return stack.Pop();
@@ -447,6 +447,6 @@ namespace AngouriMath.Core
         private static bool? Truth(System.Numerics.Complex value) => value == 1 ? true : value == 0 ? false : null;
 
         /// <summary>Might be useful for debug if a function works too slowly</summary>
-        public override string ToString() => string.Join(" \n| ", instructions);
+        public override string ToString() => string.Join<Instruction>(" \n| ", instructions);
     }
 }
