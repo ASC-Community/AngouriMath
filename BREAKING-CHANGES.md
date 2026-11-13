@@ -374,6 +374,32 @@ included; a two-sided limit at a finite point is not changed. Found by limitchec
 | `"x * (ln(-tanh(x)) + 1)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `0` in 3.2 s | `0` in 0.44 s |
 | `"sin(x) * (ln(-tanh(x)) + 1/x)".ToEntity().Limit("x", 0, ApproachFrom.Left)` | `1` in 3.7 s | `1` in 1.1 s |
 
+### Over the reals, an exponential equation has no root where the power would have to be non-positive
+
+**Silent: under `MathS.Settings.Codomain.Set(Domain.Real)`, a root that is a logarithm of a number that is not a
+positive real is dropped.** A positive base to a real power is positive, so `a^u = v` has a real `u` only for a
+positive `v`, and `ln(-1)` is `i pi`. Decided on an enclosure of `v`'s value, so a `v` that cannot be told from the
+positive reals keeps its root, and a symbolic one keeps it as before (`e^x = y` is still `{ ln(y) }`). An equation
+solved through a replacement that is real at every real `x`, such as `x^2`, and whose replacement has no real root,
+has none either. A replacement that is not real at a real `x`, such as `i x`, is solved over the complex numbers,
+so `e^(i x) = -1` keeps its root `pi`. The default complex codomain is not changed.
+[#2425](https://github.com/asc-community/AngouriMath/issues/2425)
+
+| Input, with `Codomain` set to `Domain.Real` | Was (2.6.0) | Now |
+|---|---|---|
+| `"e^x + 1 = 0".Solve("x")` | `{ ln(-1) }` | `{ }` |
+| `"e^x - 2e^(-x) - 1 = 0".Solve("x")` | `{ ln(-1), ln(2) }` | `{ ln(2) }` |
+| `"2^x = -3".Solve("x")` | `{ log(2, -3) }` | `{ }` |
+| `"(1/2)^x = -4".Solve("x")` | `{ log(1/2, -4) }` | `{ }` |
+| `"3 e^x + 5 = 0".Solve("x")` | `{ ln(-5/3) }` | `{ }` |
+| `"e^(2x + 1) = -3".Solve("x")` | `{ (ln(-3) - 1) / 2 }` | `{ }` |
+| `"e^(2x) + e^x - 2 = 0".Solve("x")` | `{ 0, ln(-2) }` | `{ 0 }` |
+| `"e^x + e^(-x) = 1".Solve("x")` | `{ ln((1 - sqrt(-3)) / 2), ln((1 + sqrt(-3)) / 2) }` | `{ }` |
+| `"e^x - e^(-x) = 3".Solve("x")` | `{ ln((3 - sqrt(13)) / 2), ln((3 + sqrt(13)) / 2) }` | `{ ln((3 + sqrt(13)) / 2) }` |
+| `"e^x = -1 + i".Solve("x")` | `{ ln(-1 + i) }` | `{ }` |
+| `"e^(x^2) = -1".Solve("x")` | `{ sqrt(ln(-1)), -sqrt(ln(-1)) }` | `{ }` |
+| `"e^(x^2) + e^(-x^2) = 1".Solve("x")` | `{ sqrt(ln((1 - sqrt(-3)) / 2)), -sqrt(ln((1 - sqrt(-3)) / 2)), sqrt(ln((1 + sqrt(-3)) / 2)), -sqrt(ln((1 + sqrt(-3)) / 2)) }` | `{ }` |
+
 ### An equation through a negative whole power is not answered with no roots
 
 **Silent: an empty answer becomes the roots.** Inverting `x^n = v` for a negative whole `n` multiplied by the roots
