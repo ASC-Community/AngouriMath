@@ -23,7 +23,8 @@ namespace AngouriMath
         /// <remarks>
         /// A statement compiles to its truth value: 1 where it holds, 0 where it does not, and NaN
         /// where it has none, as <c>i &gt; 1</c> has none. A <c>provided</c> or a <c>piecewise</c> is NaN
-        /// where no predicate holds. https://github.com/asc-community/AngouriMath/issues/2195
+        /// where no predicate holds, and computes only the case it takes, as evaluation does.
+        /// https://github.com/asc-community/AngouriMath/issues/2195
         /// </remarks>
         public FastExpression Compile(params Variable[] variables) => Compiler.Compile(this, variables);
 
