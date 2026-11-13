@@ -246,6 +246,17 @@ namespace AngouriMath.Functions.Algebra
                     Arctanf(var argument) => RealThere(argument),
                     Arcsinf(var argument) => RealThere(argument) && StrictlyInsideTheUnitInterval(argument),
                     Arccosf(var argument) => RealThere(argument) && StrictlyInsideTheUnitInterval(argument),
+                    // So are a tangent and an arccotangent, the error functions, and the step functions, of a real
+                    // argument. (pi^2 + 1/(2x)) erf(x) at 0 was NaN, where each side is 1/sqrt(pi).
+                    Tanf(var argument) => RealThere(argument),
+                    Arccotanf(var argument) => RealThere(argument),
+                    Erff(var argument) => RealThere(argument),
+                    Erfcf(var argument) => RealThere(argument),
+                    Erfif(var argument) => RealThere(argument),
+                    Floorf(var argument) => RealThere(argument),
+                    Ceilf(var argument) => RealThere(argument),
+                    Roundf(var argument) => RealThere(argument),
+                    Signumf(var argument) => RealThere(argument),
                     _ => false
                 };
             }
