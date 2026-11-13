@@ -414,6 +414,31 @@ one inside another was answered with the empty set, a claim that it has no solut
 | `"1/(2 + p^(-3)) = 1/3".Solve("p")` | `{ }` | `{ 1, -1/2 + i * 1/2 * sqrt(3), -1/2 + i * -1/2 * sqrt(3) }` |
 | `"1/(1 + x^(-2)) = y".Solve("x")` | `{ }` | `{ ((-1) / (-y) - 1) ^ (-1/2), -((-1) / (-y) - 1) ^ (-1/2) }` |
 
+### An equation with a power of x to a number that is not real is solved rather than overflowing the stack
+
+**A crash becomes an answer.** A power of x to an exponent that is a number but not a real one, such as
+`t ^ ln(-2)` (which is how `(-2)^x` reaches the solver), was substituted by x itself. That renamed the
+variable, the same equation was asked again, and the stack overflowed and took the process down. The
+substitution is declined now, and the equation goes on to the other routes. Where Newton's method answers it, a
+point is a root only if the last step was small relative to the point. Without that, points crawling towards
+`t = 0`, where every term vanishes, were kept: `x = -12.536 + 2.550i` was answered for `(-2)^x + 4^x = 0`, a
+quarter of the way from the nearest root. A point is also not a root where a function in the equation is undefined
+at exact arguments: Newton's method compiles `0^i` to 0, so `x^i + x = 0` had 0 among its roots, where `0^i` has no
+value. The answers are the roots that lie within the search, not the whole
+family `x = (ln(-s) + 2 pi i k) / (ln(a) - ln(b))`
+([#2319](https://github.com/asc-community/AngouriMath/issues/2319)).
+[#2424](https://github.com/asc-community/AngouriMath/issues/2424)
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"(-2)^x + 4^x = 0".Solve("x")` | stack overflow | nine roots `(2k + 1) pi i / (pi i - ln(2))`, `k` from -7 to 1, in decimals |
+| `"(-3)^x + 9^x = 0".Solve("x")` | stack overflow | seven roots `(2k + 1) pi i / (pi i - ln(3))`, `k` from -5 to 1, in decimals |
+| `"(-2)^x - 4^x = 0".Solve("x")` | stack overflow | eight roots `2k pi i / (pi i - ln(2))`, `k` from -6 to 1, in decimals |
+| `"(-2)^x + 2^x = 0".Solve("x")` | stack overflow | `{ -5, -3, -1, 1, 3 }` |
+| `"x^(1 + i) + x = 0".Solve("x")` | stack overflow | `0` and `e^((2k + 1) pi)` for `k` from -3 to 0, in decimals |
+| `"x^i + x = 0".Solve("x")` | stack overflow | `{ -e^(pi/2) i, e^(-pi/2) i }`, in decimals |
+| `"x^i + x^(2*i) = 0".Solve("x")` | stack overflow | `{ e^pi }`, in decimals |
+
 ### A vanishing factor times an infinity is asked as a whole when read as a part
 
 **Silent: a limit with, somewhere inside it, a product of a factor tending to 0 and one tending to an infinity is

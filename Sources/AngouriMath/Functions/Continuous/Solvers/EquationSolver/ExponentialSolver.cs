@@ -226,6 +226,13 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 
                 MultithreadingFunctional.ExitIfCancelled();
             }
+            // A substitution of x by itself only renames the variable, and solving the renamed
+            // equation asks this solver the same question again, without end. It is what is left
+            // when every exponent is numeric but one is not real, so the case above cannot choose
+            // a power of x: (-2)^x + 4^x = 0 reaches here as t^ln(-2) + t^ln(4), and so does
+            // x^(1 + i) + x = 0. https://github.com/asc-community/AngouriMath/issues/2424
+            if (substitution == x)
+                return null;
             expr = expr.Substitute(substitution, replacement);
             if (expr.ContainsNode(x)) return null; // cannot be solved, not a multiplicative exponenial equation
 

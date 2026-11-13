@@ -162,7 +162,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// Whether a root demonstrably fails the equation. Anything that cannot be
         /// evaluated to a number -- a root still carrying a parameter, say
         /// <c>pi + 2 * pi * n_1</c>, or one whose residual is not finite -- is kept, so
-        /// that a root is only ever dropped on positive evidence against it.
+        /// that a root is only ever dropped on positive evidence against it. A function
+        /// undefined at exact arguments is such evidence; see <see cref="IsUndefinedExactly"/>.
         /// </summary>
         private static bool IsSpurious(Entity equation, Variable x, Entity root)
         {
@@ -183,7 +184,32 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 return true;
             if (root.Vars.Any())
                 return false;
-            return IsEvidenceAgainst(equation.Substitute(x, root));
+            var substituted = equation.Substitute(x, root);
+            return IsUndefinedExactly(substituted) || IsEvidenceAgainst(substituted);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="substituted"/>, with no symbol left in it, has no value because
+        /// some function in it is undefined at its arguments: a node whose arguments are all exact
+        /// numbers and whose own value is not a finite number. <c>x^i + x</c> at 0 is one, since
+        /// <c>0^i</c> is undefined, so 0 is not a root of <c>x^i + x = 0</c> however small the
+        /// compiled function Newton's method iterated on is there.
+        /// </summary>
+        /// <remarks>
+        /// A residual that is not finite is otherwise no evidence against a root: a root found in
+        /// decimals carries rounding, and a function taken at it next to the edge of its domain, or
+        /// a term that overflows, may have no value where the root itself gives one. Exact arguments
+        /// have neither to come from. https://github.com/asc-community/AngouriMath/issues/2424
+        /// </remarks>
+        internal static bool IsUndefinedExactly(Entity substituted)
+        {
+            static bool IsExact(Entity argument)
+                => argument.Evaled is Complex value && value.RealPart is Rational && value.ImaginaryPart is Rational;
+            foreach (var node in substituted.Nodes)
+                if (node.DirectChildren.Count > 0 && node.DirectChildren.All(IsExact)
+                    && node.Evaled is Complex { IsFinite: false })
+                    return true;
+            return false;
         }
 
         /// <summary>
