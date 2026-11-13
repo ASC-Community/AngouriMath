@@ -2548,17 +2548,26 @@ namespace AngouriMath.Core.Transformations.Matching
                 bound => Functions.Patterns.PushNotInside(Orf.LinearChildren((Orf)bound["chain"]), disjoin: false),
                 Soundness.Sound,
                 description: "not (a or b or ...) = (not a) and (not b) and ..."),
+            // Transitivity is a fact about an order, so the pair below fires only where the
+            // three operands are known to be ordered. Elsewhere the implication need not have a
+            // truth value -- at a = i, b = 1, c = 0 it is NaN -- and the ordered condition cannot
+            // be attached instead, as its siblings attach it: a comparison with no truth value
+            // inside a conjunction that is already false leaves the implication true, so at
+            // a = i, b = 0, c = 1 the chain of greaters is True and `True provided a in RR` is
+            // not. https://github.com/asc-community/AngouriMath/issues/876
             new MatchedRule(
                 "a-chain-of-greaters-implies-its-own-ends",
                 MatchPattern.Node<Impliesf>(MatchPattern.Node<Andf>(MatchPattern.Node<Greaterf>(MatchPattern.Any("a"), MatchPattern.Any("b")), MatchPattern.Node<Greaterf>(MatchPattern.Any("b"), MatchPattern.Any("c"))), MatchPattern.Node<Greaterf>(MatchPattern.Any("a"), MatchPattern.Any("c"))),
                 bound => Entity.Boolean.True.Provided(bound["a"].DomainCondition).Provided(bound["b"].DomainCondition).Provided(bound["c"].DomainCondition),
                 Soundness.SoundUnderAssumptions,
+                when: bound => Functions.Patterns.AreOrdered(bound["a"], bound["b"], bound["c"]),
                 description: "(((a > b) and (b > c)) implies (a > c)) = True"),
             new MatchedRule(
                 "a-chain-of-lesss-implies-its-own-ends",
                 MatchPattern.Node<Impliesf>(MatchPattern.Node<Andf>(MatchPattern.Node<Lessf>(MatchPattern.Any("a"), MatchPattern.Any("b")), MatchPattern.Node<Lessf>(MatchPattern.Any("b"), MatchPattern.Any("c"))), MatchPattern.Node<Lessf>(MatchPattern.Any("a"), MatchPattern.Any("c"))),
                 bound => Entity.Boolean.True.Provided(bound["a"].DomainCondition).Provided(bound["b"].DomainCondition).Provided(bound["c"].DomainCondition),
                 Soundness.SoundUnderAssumptions,
+                when: bound => Functions.Patterns.AreOrdered(bound["a"], bound["b"], bound["c"]),
                 description: "(((a < b) and (b < c)) implies (a < c)) = True"),
             new MatchedRule(
                 "a-equals-with-zero-on-the-left-turns-round",

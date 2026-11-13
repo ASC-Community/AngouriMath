@@ -103,13 +103,23 @@ namespace AngouriMath.Tests.PatternsTest
         [InlineData("x ^ 0 = 0", "false provided not x = 0")] // The 'provided' describes the domain where the expression is valid (it is 'undefined' outside). It is incorrect to drop the predicate.
         [InlineData("x ^ -1 = 0", "false provided not x = 0")]
         [InlineData("x ^ -2 = 0", "false provided not x = 0")]
-        [InlineData("x > y > z -> x > z", "true")]
-        [InlineData("x < y < z -> x < z", "true")]
         public void TestInequality(string expr, string expected)
         {
             var exp = expected.ToEntity();
             var act = expr.ToEntity();
             Assert.Equal(exp, act.Simplify());
+        }
+
+        // Transitivity is decided where the operands are ordered, which a symbol is over the
+        // reals. Over the complex plane x > y > z -> x > z need not have a truth value, and is
+        // left as written: see AChainOfComparisonsIsTransitiveWhereOrderedTest.
+        [Theory]
+        [InlineData("x > y > z -> x > z", "true")]
+        [InlineData("x < y < z -> x < z", "true")]
+        public void TestTransitivityOverTheReals(string expr, string expected)
+        {
+            using var _ = MathS.Settings.Codomain.Set(AngouriMath.Core.Domain.Real);
+            Assert.Equal(expected.ToEntity(), expr.ToEntity().Simplify());
         }
         [Theory]
         // InnerSimplified patterns

@@ -85,6 +85,22 @@ limitcheck; no issue was filed.
 | `"(tan(x) + 1)^(x^(x - 1))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `limitright((tan(x) + 1) ^ x ^ (x - 1), x, 0)` | `e` |
 | `"tan(x) * x^(x - 1)".ToEntity().Limit("x", 0, ApproachFrom.Right)` | `1` after 11 s | `1` in 0.21 s |
 
+### A chain of comparisons is decided by transitivity only where its operands are ordered
+
+**Silent: `(a > b and b > c) implies a > c`, and the same with `<`, is no longer simplified to `True` for symbols
+over the complex plane.** An order comparison has no truth value off the real line, so at `a = i, b = 1, c = 0`
+the implication is `NaN`, and the answer `True` gave it one. It is still `True` over the reals
+(`MathS.Settings.Codomain` set to `Domain.Real`) and for operands known to be real. A condition `a in RR` cannot be
+attached instead, as `x > x` attaches it ([#876](https://github.com/asc-community/AngouriMath/issues/876)): at
+`a = i, b = 0, c = 1` the conjunction is false and the implication is `True`. Found by the v3 definedness
+specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `"((a > b) and (b > c)) implies (a > c)".ToEntity().Simplify()` | `True` | `a > b and b > c implies a > c` |
+| `"((a < b) and (b < c)) implies (a < c)".ToEntity().Simplify()` | `True` | `a < b and b < c implies a < c` |
+| the same over `Domain.Real` | `True` | `True`, unchanged |
+
 ### A derivative keeps an exponent that is not rational exact
 
 **Silent: the power rule writes a constant exponent that is not rational as it is, where it wrote its decimal

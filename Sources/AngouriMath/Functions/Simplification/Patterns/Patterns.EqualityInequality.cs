@@ -137,6 +137,14 @@ namespace AngouriMath.Functions
         internal static Entity OrderedConditionFor(Entity entity) => OrderedCondition(entity);
 
         /// <summary>
+        /// Whether every operand is known to be ordered, so that a chain of comparisons between
+        /// them can be decided by transitivity. Asked rather than attached: see the rule
+        /// <c>a-chain-of-greaters-implies-its-own-ends</c>.
+        /// </summary>
+        internal static bool AreOrdered(params Entity[] operands)
+            => operands.All(operand => OrderedCondition(operand) == True);
+
+        /// <summary>
         /// Whether pushing a <c>not</c> through this conjunction or disjunction leaves the
         /// expression no more complex: at most one operand may be something other than a
         /// comparison, since only a comparison absorbs the negation into itself.
@@ -195,10 +203,10 @@ namespace AngouriMath.Functions
                 => PushNotInside(Orf.LinearChildren(a), disjoin: false),
 
             Impliesf(Andf(Greaterf(var any1, var any2), Greaterf(var any2a, var any3)), Greaterf(var any1a, var any3a))
-                when any1 == any1a && any2 == any2a && any3 == any3a => True.Provided(any1.DomainCondition).Provided(any2.DomainCondition).Provided(any3.DomainCondition),
+                when any1 == any1a && any2 == any2a && any3 == any3a && AreOrdered(any1, any2, any3) => True.Provided(any1.DomainCondition).Provided(any2.DomainCondition).Provided(any3.DomainCondition),
 
             Impliesf(Andf(Lessf(var any1, var any2), Lessf(var any2a, var any3)), Lessf(var any1a, var any3a))
-                when any1 == any1a && any2 == any2a && any3 == any3a => True.Provided(any1.DomainCondition).Provided(any2.DomainCondition).Provided(any3.DomainCondition),
+                when any1 == any1a && any2 == any2a && any3 == any3a && AreOrdered(any1, any2, any3) => True.Provided(any1.DomainCondition).Provided(any2.DomainCondition).Provided(any3.DomainCondition),
 
             Equalsf(var zero, var anyButZero) when IsZero(zero) && !IsZero(anyButZero) => anyButZero.EqualTo(zero),
             Greaterf(var zero, var anyButZero) when IsZero(zero) && !IsZero(anyButZero) => anyButZero < zero,
