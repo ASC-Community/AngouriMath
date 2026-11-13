@@ -53,7 +53,7 @@ jobs:
     - name: 'Generating exports'
       run: |
         cd Sources/Utils
-        dotnet run -p Utils ExportsGenerator
+        dotnet run --project Utils ExportsGenerator
         
     - name: 'Install some libs for Linux'
       if: ${{ matrix.os == 'ubuntu-latest' }}
