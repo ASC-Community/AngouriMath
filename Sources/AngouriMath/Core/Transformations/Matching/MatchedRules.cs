@@ -2057,12 +2057,15 @@ namespace AngouriMath.Core.Transformations.Matching
                 // larger the angle is.
                 growth: RewriteRuleGrowth.Collects),
 
+            // The four rules below are the definitions arccsc(z) = arcsin(1 / z) and its siblings,
+            // read through n / d = 1 / (d / n), which holds for a nonzero n. At n = 0 the left
+            // side is arcsin(0) = 0 and the right arccsc(d / 0), which has no value.
             new MatchedRule(
                 "an-arcsine-of-a-numeric-reciprocal-is-an-arccosecant",
                 MatchPattern.Node<Arcsinf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arccosecantf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arcsin(1 / c) = arccosec(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.
@@ -2073,7 +2076,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Arccosf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arcsecantf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arccos(1 / c) = arcsec(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.
@@ -2084,7 +2087,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Arccosecantf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arcsinf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arccosec(1 / c) = arcsin(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.
@@ -2095,7 +2098,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 MatchPattern.Node<Arcsecantf>(MatchPattern.Node<Divf>(MatchPattern.Any("n"), MatchPattern.Any("d"))),
                 bound => new Arccosf(bound["d"] / bound["n"]),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["n"] is Number && bound["d"] is not Number,
+                when: bound => bound["n"] is Number && bound["n"] != Integer.Zero && bound["d"] is not Number,
                 description: "arcsec(1 / c) = arccos(c), for a numeric c",
                 // One inverse function becomes another and the quotient stays a quotient with its
                 // operands the other way round, so the two are the same size whatever they are.

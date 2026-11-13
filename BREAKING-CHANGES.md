@@ -117,6 +117,19 @@ rational exponent is still written as its value. Found by limitcheck; no issue w
 | `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Left)` | unevaluated | `1` |
 | `"x^(abs(x)^arctan(2))".ToEntity().Limit("x", 0, ApproachFrom.Right)` | unevaluated | `1` |
 
+### An inverse function of a zero over a symbol is not turned into its reciprocal function
+
+**Silent, through the rule registry only: `arcsin(0 / x)` is no longer rewritten to `arccsc(x / 0)` by
+`RewriteRules.Trigonometric`, nor `arccos(0 / x)` to `arcsec(x / 0)`.** The rules read `n / d` as `1 / (d / n)`,
+which needs a nonzero `n`; at `n = 0` the input is `0` (or `pi / 2`) wherever `x` is not `0`, and the answer has no
+value. `Simplify` folds `0 / x` before the rules are asked, so its answers do not change. Found by the v3
+definedness specification; no issue was filed.
+
+| Input | Was (2.6.0) | Now |
+|---|---|---|
+| `Transformation.Rewriting(RewriteRules.Trigonometric).ApplyOrKeep("arcsin(0/x)")` | `arccsc(x / 0)` | `arcsin(0 / x)` |
+| `Transformation.Rewriting(RewriteRules.Trigonometric).ApplyOrKeep("arccos(0/x)")` | `arcsec(x / 0)` | `arccos(0 / x)` |
+
 ### A two-sided limit whose sides are undecided is left unevaluated
 
 **Silent: a two-sided limit is left unevaluated, rather than `NaN`, where a side's limit stops at an indeterminate form
