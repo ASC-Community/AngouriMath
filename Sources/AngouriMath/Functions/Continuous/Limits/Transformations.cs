@@ -1186,6 +1186,11 @@ namespace AngouriMath.Functions.Algebra
             {
                 MultithreadingFunctional.ExitIfCancelled();
                 derivative = derivative.Differentiate(x).Simplify();
+                // A derivative with an arccotangent at its jump in it has no single value at the point:
+                // x arccot(x) differentiates to arccot(x) - x / (1 + x^2), pi/2 there by putting 0 in
+                // and -pi/2 from the left, so its sign from the left came out -1 where it is +1.
+                if (HasAnArccotangentAtItsJump(derivative, x, dest))
+                    return null;
                 var atThePoint = EvalAssumingContinuous(derivative.Substitute(x, dest).InnerSimplified);
                 if (atThePoint is not Real { IsFinite: true } value)
                     return null;
@@ -1495,12 +1500,22 @@ namespace AngouriMath.Functions.Algebra
             => (lHopitalChain ??= new()).Contains(quotient);
 
         /// <summary>
+        /// Whether <paramref name="expr"/> holds an arccotangent whose argument is 0 at <paramref name="dest"/>, where it
+        /// jumps: it is arctan(1/t), with range (-pi/2, pi/2], so arccot(-0.001) = -1.5698 and arccot(0) = pi/2. Its value
+        /// there is not its limit from below, as a step function's value at a jump is not.
+        /// </summary>
+        private static bool HasAnArccotangentAtItsJump(Entity expr, Variable x, Entity dest)
+            => expr.Nodes.Any(node => node is Arccotanf(var argument) && argument.ContainsNode(x)
+                                      && argument.Substitute(x, dest).Evaled is Complex { IsZero: true });
+
+        /// <summary>
         /// The value of <paramref name="expr"/> at a finite <paramref name="dest"/>, where it is a finite real number and
         /// nothing in it jumps, which is its limit there; otherwise <see langword="null"/>.
         /// </summary>
         private static Entity? ItsValueAt(Entity expr, Variable x, Entity dest)
         {
-            if (!dest.IsFinite || expr.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise))
+            if (!dest.IsFinite || expr.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise)
+                || HasAnArccotangentAtItsJump(expr, x, dest))
                 return null;
             var there = expr.Substitute(x, dest);
             return there.Evaled is Real { IsFinite: true, IsNaN: false } ? there.InnerSimplified : null;
@@ -1523,7 +1538,8 @@ namespace AngouriMath.Functions.Algebra
         private static Entity? ItsValueOrPoleAt(Entity applied, Variable x, Entity dest, ApproachFrom side)
         {
             if (!dest.IsFinite || side is ApproachFrom.BothSides
-                || applied.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise))
+                || applied.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise)
+                || HasAnArccotangentAtItsJump(applied, x, dest))
                 return null;
             var distance = dest is Integer { IsZero: true } ? (Entity)x : x - dest;
             Entity finite = Integer.Zero;
@@ -2041,6 +2057,7 @@ namespace AngouriMath.Functions.Algebra
             {
                 if (factor.ContainsNode(x)
                     && !factor.Nodes.Any(static node => node is Floorf or Ceilf or Roundf or Signumf or Piecewise)
+                    && !(dest.IsFinite && HasAnArccotangentAtItsJump(factor, x, dest))
                     && TreeAnalyzer.IsRealValued(factor, x)
                     && (dest.IsFinite ? factor.Substitute(x, dest) : IsAPolynomialPower(factor, x) ? MathS.NaN : ComputeLimit(factor, x, dest, side) ?? MathS.NaN) is var there
                     && there.Evaled is Real { IsFinite: true, IsNaN: false, IsZero: false })

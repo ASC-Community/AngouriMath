@@ -96,8 +96,8 @@ namespace AngouriMath.Functions.Algebra
                && LimitFunctional.AtALargeDecimal(argument, x) is Complex and not Real;
 
         /// <summary>
-        /// Whether <paramref name="node"/> is a step function whose argument evaluates to one of its jumps: an integer for
-        /// <c>floor</c> and <c>ceil</c>, a half-integer for <c>round</c>, 0 for <c>sgn</c>. Taken on the real part, and on the
+        /// Whether <paramref name="node"/> is a step function, or an arccotangent, whose argument evaluates to one of its jumps: an integer for
+        /// <c>floor</c> and <c>ceil</c>, a half-integer for <c>round</c>, 0 for <c>sgn</c> and <c>arccot</c>. Taken on the real part, and on the
         /// imaginary part of a value that is not real, as LimitOfAStepFunction takes it.
         /// </summary>
         private static bool SitsOnAJump(Entity node)
@@ -112,6 +112,9 @@ namespace AngouriMath.Functions.Algebra
                 Ceilf(var argument) => OnAJump(argument, Whole),
                 Roundf(var argument) => OnAJump(argument, part => Whole((Real)(part + Rational.Create(1, 2)).Evaled)),
                 Signumf(var argument) => argument.Evaled is Complex { IsZero: true },
+                // The arccotangent is arctan(1/t), with range (-pi/2, pi/2], and jumps at 0 from -pi/2 to pi/2:
+                // arccot(-0.001) = -1.5698, arccot(0) = pi/2. Its override answers it from the side.
+                Arccotanf(var argument) => argument.Evaled is Complex { IsZero: true },
                 _ => false,
             };
         }
