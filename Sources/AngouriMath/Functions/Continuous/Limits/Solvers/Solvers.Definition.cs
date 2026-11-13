@@ -180,24 +180,48 @@ namespace AngouriMath.Functions.Algebra
         /// <a href="https://github.com/asc-community/AngouriMath/issues/719">#719</a>,
         /// <a href="https://github.com/asc-community/AngouriMath/issues/596">#596</a>
         /// </remarks>
-        private static Entity? WhereBothSidesAgree(Entity expr, Variable x, Entity dest)
+        private static Entity? WhereBothSidesAgree(Entity expr, Variable x, Entity dest, out bool aSideIsUndecided)
         {
+            // Set where no answer came because a side has none yet, rather than because a side
+            // does not exist or the two differ. Neither side is then known to be NaN, so neither
+            // is the limit: x floor(2/x) at 0 is 2 from each side, the one-sided paths do not
+            // decide it, and the two-sided one answered NaN.
+            aSideIsUndecided = false;
             if (bothSidesDepth >= MaxBothSidesDepth
                 || MathS.Settings.Codomain.Value is not AngouriMath.Core.Domain.Real && !IsRealOnBothSides(expr, x, dest))
                 return null;
             bothSidesDepth++;
             try
             {
-                if (ComputeLimit(expr, x, dest, ApproachFrom.Left) is not { } fromLeft
-                    || fromLeft.Evaled == MathS.NaN)
+                var fromLeft = Decided(ComputeLimit(expr, x, dest, ApproachFrom.Left));
+                if (fromLeft?.Evaled == MathS.NaN)
                     return null;
-                if (ComputeLimit(expr, x, dest, ApproachFrom.Right) is not { } fromRight
-                    || fromRight.Evaled == MathS.NaN)
+                // A side that does not exist settles the question whatever the other side does,
+                // so the right is still asked when the left is undecided.
+                var fromRight = Decided(ComputeLimit(expr, x, dest, ApproachFrom.Right));
+                if (fromRight?.Evaled == MathS.NaN)
                     return null;
+                if (fromLeft is null || fromRight is null)
+                {
+                    aSideIsUndecided = true;
+                    return null;
+                }
                 return fromLeft == fromRight || ExpressionNumerical.AreEqual(fromLeft, fromRight)
                     ? fromLeft : null;
             }
             finally { bothSidesDepth--; }
+
+            // An indeterminate form a side's own limit could not read is NaN inside the machinery,
+            // where it stops the search, and withheld at the outermost call, where it is not an
+            // answer. One with an infinity in it, 0 * floor(-oo) for x floor(2/x), is a product or
+            // a quotient of parts whose rates were never compared, so that side is undecided rather
+            // than absent. One of finite parts only stays a side without a limit, as before: 0 / 0
+            // for (x - x) / (x - x), which has no value anywhere, and ln(-2) / 0 for ln(-2) / ln(x)
+            // at 1, whose sides are infinities in different directions.
+            static Entity? Decided(Entity? limit)
+                => limit is { } && IsAnIndeterminateForm(limit)
+                   && limit.Nodes.Any(static node => node is Real { IsFinite: false })
+                    ? null : limit;
         }
 
         /// <summary>
@@ -719,9 +743,13 @@ namespace AngouriMath.Functions.Algebra
                     // again: tan(x/2) at pi, +oo and -oo, asked both sides through the whole of the
                     // machinery each time, and a definite integral over [0, pi] spent its budget of
                     // limits on that.
-                    if ((fromLeft.Evaled == MathS.NaN || fromRight.Evaled == MathS.NaN)
-                        && WhereBothSidesAgree(expr, x, dest) is { } agreed)
-                        return agreed;
+                    if (fromLeft.Evaled == MathS.NaN || fromRight.Evaled == MathS.NaN)
+                    {
+                        if (WhereBothSidesAgree(expr, x, dest, out var aSideIsUndecided) is { } agreed)
+                            return agreed;
+                        if (aSideIsUndecided)
+                            return null;
+                    }
                     return MathS.NaN; // A two-sided limit cannot exist if the limit from left and right don't match.
                 }
                 else
@@ -734,7 +762,7 @@ namespace AngouriMath.Functions.Algebra
                     // something that disagrees -- which is most of what the one-sided
                     // fallbacks are for, so it is where the promotion is worth the most.
                     // https://github.com/asc-community/AngouriMath/issues/719
-                    return WhereBothSidesAgree(expr, x, dest);
+                    return WhereBothSidesAgree(expr, x, dest, out _);
                 }
             }
             throw new AngouriBugException($"Unresolved enum parameter {side}");
