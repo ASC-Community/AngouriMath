@@ -22,6 +22,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             IEnumerable<(Type type, Variable variable)> typesAndNames
             ) where TDelegate : Delegate
         {
+            bool IsMatrixArgument(Variable variable) => typesAndNames.Any(c => c.variable == variable && TensorCompilation.IsMatrixType(c.type));
             // A matrix has no compiled form, but an expression built out of matrices often
             // has a value that is an ordinary number -- [0, 1]T * [[a, b], [c, d]] * [1, 0]
             // is c -- and there is nothing to stop that being compiled. Nothing simplified
@@ -29,10 +30,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             // be compiled (https://github.com/asc-community/AngouriMath/issues/425).
             // Only expressions that mention a matrix pay for this.
             if (expr.Nodes.Any(node => node is Entity.Matrix))
-                expr = expr.InnerSimplified;
+                expr = TensorCompilation.SimplifiedAroundMatrixArguments(expr, IsMatrixArgument);
             expr = CompiledMembership.Rewritten(expr);
             expr = Functions.ExponentialQuotients.Rewritten(expr);
             StatementPositions.Check(expr);
+            // Two matrices whose shapes are written into the expression and do not fit are refused here, rather than by
+            // a delegate that throws at every point it is called at. https://github.com/asc-community/AngouriMath/issues/526
+            TensorCompilation.CheckShapes(expr, IsMatrixArgument);
             if (MathS.Settings.RefuseNonRealCompilation && returnType is { } real && IsRealType(real)
                 && typesAndNames.All(c => IsRealType(c.type)) && !IsRealWhereverDefined(expr, typesAndNames))
                 throw new UncompilableNodeException(
@@ -42,6 +46,16 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             var functionArguments = subexpressionsCache.Select(c => c.Value).ToArray(); // copying
             var localVars = new List<ParameterExpression>();
             var variableAssignments = new List<Expression>();
+            // A matrix passed in as a two-dimensional array is read into the tensor the arithmetic runs on, once.
+            foreach (var (_, variable) in typesAndNames)
+                if (subexpressionsCache[variable] is var argument && TensorCompilation.IsMatrixArray(argument.Type))
+                {
+                    var asTensor = TensorCompilation.FromArrayArgument(argument);
+                    var local = Expression.Variable(asTensor.Type);
+                    localVars.Add(local);
+                    variableAssignments.Add(Expression.Assign(local, asTensor));
+                    subexpressionsCache[variable] = local;
+                }
 
             // Linq.Expression refuses a mismatch by throwing its own exceptions -- an
             // InvalidOperationException for `not x` where x is a double, an ArgumentException
@@ -54,10 +68,21 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             {
                 // Over Complex a constant is a Complex too, so that a function of it is taken over Complex: as a long,
                 // sqrt(-1) widened only to double and was NaN. https://github.com/asc-community/AngouriMath/issues/2235
-                var constantType = typesAndNames.Any(c => c.type == typeof(System.Numerics.Complex)) || returnType == typeof(System.Numerics.Complex)
+                // A matrix over Complex, as an argument or as the result, is a Complex the same way.
+                static bool IsComplex(Type? type)
+                    => type == typeof(System.Numerics.Complex) || (type is not null && TensorCompilation.ElementOfMatrixType(type) == typeof(System.Numerics.Complex));
+                // Over a matrix argument of one element type, a written matrix beside it is over that type too, so that
+                // the two combine: [[1, 0]] * A over double is not a matrix of long times a matrix of double.
+                var matrixElements = typesAndNames.Select(c => TensorCompilation.ElementOfMatrixType(c.type)).OfType<Type>().Distinct().ToList();
+                var constantType = typesAndNames.Any(c => IsComplex(c.type)) || IsComplex(returnType)
                     ? typeof(System.Numerics.Complex)
-                    : null;
+                    : matrixElements.Count == 1 ? matrixElements[0] : null;
                 var tree = BuildTree(expr, subexpressionsCache, variableAssignments, localVars, protocol, constantType);
+                // A matrix known to be 1 x 1 asked for as a number is its entry, as evaluation has it. Any other matrix
+                // is refused as a number by ConvertType.
+                if (TensorCompilation.IsTensor(tree.Type) && returnType is not null && !TensorCompilation.IsMatrixType(returnType)
+                    && TensorCompilation.IsOneByOne(expr, IsMatrixArgument))
+                    tree = TensorCompilation.ToScalar(tree);
                 var treeWithLocals = Expression.Block(localVars, variableAssignments.Append(tree));
                 Expression entireExpression = returnType is not null ? protocol.ConvertType(treeWithLocals, returnType) : treeWithLocals;
                 var finalLambda = Expression.Lambda<TDelegate>(entireExpression, functionArguments);

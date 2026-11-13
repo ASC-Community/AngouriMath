@@ -138,17 +138,24 @@ AngouriMath.Core.Compilation.IntoLinq.SingleOperations.Subtract(System.Single, S
 AngouriMath.Core.Compilation.IntoLinq.SingleOperations.ToString(System.Single) : System.String
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Add(GenTensor<T,TWrapper>, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.AddScalar(GenTensor<T,TWrapper>, T) : GenTensor<T,TWrapper>
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.DivideByMatrix(GenTensor<T,TWrapper>, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.DivideFromScalar(T, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.DivideScalar(GenTensor<T,TWrapper>, T) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Empty(System.Int32, System.Int32) : GenTensor<T,TWrapper>
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.FromArray(T[,]) : GenTensor<T,TWrapper>
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Inverse(GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Multiply(GenTensor<T,TWrapper>, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.MultiplyScalar(GenTensor<T,TWrapper>, T) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Power(GenTensor<T,TWrapper>, System.Int32) : GenTensor<T,TWrapper>
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.ScalarOverMatrix(T, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Set(GenTensor<T,TWrapper>, System.Int32, T) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.Subtract(GenTensor<T,TWrapper>, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.SubtractFromScalar(T, GenTensor<T,TWrapper>) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.SubtractScalar(GenTensor<T,TWrapper>, T) : GenTensor<T,TWrapper>
 AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.TensorTypeOf(System.Type) : System.Type
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.ToArray(GenTensor<T,TWrapper>) : T[,]
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.WholeExponent(System.Double) : System.Int32
+AngouriMath.Core.Compilation.IntoLinq.TensorCompilation.WholeExponent(System.Numerics.Complex) : System.Int32
 AngouriMath.Core.CostModel.<Clone>$() : AngouriMath.Core.CostModel
 AngouriMath.Core.CostModel.All { } : System.Collections.Generic.IReadOnlyList<AngouriMath.Core.CostModel>
 AngouriMath.Core.CostModel.Cost { } : System.Func<AngouriMath.Entity,System.Double>

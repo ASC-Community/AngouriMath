@@ -239,6 +239,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         private sealed class Kit
         {
             internal Type Tensor { get; }
+            internal Type Array { get; }
             internal MethodInfo Empty { get; }
             internal MethodInfo Set { get; }
             internal MethodInfo Add { get; }
@@ -250,19 +251,30 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             internal MethodInfo MultiplyScalar { get; }
             internal MethodInfo DivideScalar { get; }
             internal MethodInfo Power { get; }
+            internal MethodInfo ToArray { get; }
+            internal MethodInfo FromArray { get; }
+            internal MethodInfo ToScalar { get; }
+            /// <summary>Where the elements are a field, which the whole numbers are not: the inverse, and division by a matrix.</summary>
+            internal MethodInfo? Inverse { get; }
+            internal MethodInfo? DivideByMatrix { get; }
+            internal MethodInfo? ScalarOverMatrix { get; }
 
-            private Kit(Type tensor, MethodInfo empty, MethodInfo set, MethodInfo add, MethodInfo subtract, MethodInfo multiply,
+            private Kit(Type tensor, Type array, MethodInfo empty, MethodInfo set, MethodInfo add, MethodInfo subtract, MethodInfo multiply,
                 MethodInfo addScalar, MethodInfo subtractScalar, MethodInfo subtractFromScalar, MethodInfo multiplyScalar,
-                MethodInfo divideScalar, MethodInfo power)
-                => (Tensor, Empty, Set, Add, Subtract, Multiply, AddScalar, SubtractScalar, SubtractFromScalar, MultiplyScalar, DivideScalar, Power)
-                    = (tensor, empty, set, add, subtract, multiply, addScalar, subtractScalar, subtractFromScalar, multiplyScalar, divideScalar, power);
+                MethodInfo divideScalar, MethodInfo power, MethodInfo toArray, MethodInfo fromArray, MethodInfo toScalar,
+                MethodInfo? inverse, MethodInfo? divideByMatrix, MethodInfo? scalarOverMatrix)
+            {
+                (Tensor, Array, Empty, Set, Add, Subtract, Multiply, AddScalar, SubtractScalar, SubtractFromScalar, MultiplyScalar, DivideScalar, Power)
+                    = (tensor, array, empty, set, add, subtract, multiply, addScalar, subtractScalar, subtractFromScalar, multiplyScalar, divideScalar, power);
+                (ToArray, FromArray, ToScalar, Inverse, DivideByMatrix, ScalarOverMatrix) = (toArray, fromArray, toScalar, inverse, divideByMatrix, scalarOverMatrix);
+            }
 
             // An expression tree is how C# names a method without a string: the call inside it
             // is resolved at compile time, closed over T and TWrapper, and rooted for the trimmer.
             private static MethodInfo Named<TDelegate>(Expression<TDelegate> e) => ((MethodCallExpression)e.Body).Method;
 
-            internal static Kit For<T, TWrapper>() where TWrapper : struct, IOperations<T>
-                => new(typeof(GenTensor<T, TWrapper>),
+            internal static Kit For<T, TWrapper>(bool field) where TWrapper : struct, IOperations<T>
+                => new(typeof(GenTensor<T, TWrapper>), typeof(T[,]),
                     Named<Func<int, int, GenTensor<T, TWrapper>>>((r, c) => TensorCompilation.Empty<T, TWrapper>(r, c)),
                     Named<Func<GenTensor<T, TWrapper>, int, T, GenTensor<T, TWrapper>>>((t, i, v) => TensorCompilation.Set(t, i, v)),
                     Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((a, b) => TensorCompilation.Add(a, b)),
@@ -273,28 +285,61 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     Named<Func<T, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((s, a) => TensorCompilation.SubtractFromScalar(s, a)),
                     Named<Func<GenTensor<T, TWrapper>, T, GenTensor<T, TWrapper>>>((a, s) => TensorCompilation.MultiplyScalar(a, s)),
                     Named<Func<GenTensor<T, TWrapper>, T, GenTensor<T, TWrapper>>>((a, s) => TensorCompilation.DivideScalar(a, s)),
-                    Named<Func<GenTensor<T, TWrapper>, int, GenTensor<T, TWrapper>>>((a, n) => TensorCompilation.Power(a, n)));
+                    Named<Func<GenTensor<T, TWrapper>, int, GenTensor<T, TWrapper>>>((a, n) => TensorCompilation.Power(a, n)),
+                    Named<Func<GenTensor<T, TWrapper>, T[,]>>(a => TensorCompilation.ToArray(a)),
+                    Named<Func<T[,], GenTensor<T, TWrapper>>>(a => TensorCompilation.FromArray<T, TWrapper>(a)),
+                    Named<Func<GenTensor<T, TWrapper>, T>>(a => TensorCompilation.ToScalar(a)),
+                    field ? Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>(a => TensorCompilation.Inverse(a)) : null,
+                    field ? Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((a, b) => TensorCompilation.DivideByMatrix(a, b)) : null,
+                    field ? Named<Func<T, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((s, a) => TensorCompilation.ScalarOverMatrix(s, a)) : null);
         }
 
         [ConstantField]
         private static readonly Dictionary<Type, Kit> kits = new()
         {
-            { typeof(double), Kit.For<double, DoubleOperations>() },
-            { typeof(float), Kit.For<float, SingleOperations>() },
-            { typeof(Complex), Kit.For<Complex, ComplexOperations>() },
-            { typeof(int), Kit.For<int, Int32Operations>() },
-            { typeof(long), Kit.For<long, Int64Operations>() },
-            { typeof(BigInteger), Kit.For<BigInteger, BigIntegerOperations>() },
+            { typeof(double), Kit.For<double, DoubleOperations>(field: true) },
+            { typeof(float), Kit.For<float, SingleOperations>(field: true) },
+            { typeof(Complex), Kit.For<Complex, ComplexOperations>(field: true) },
+            { typeof(int), Kit.For<int, Int32Operations>(field: false) },
+            { typeof(long), Kit.For<long, Int64Operations>(field: false) },
+            { typeof(BigInteger), Kit.For<BigInteger, BigIntegerOperations>(field: false) },
         };
 
         [ConstantField]
         private static readonly Dictionary<Type, Kit> kitsByTensor = kits.Values.ToDictionary(kit => kit.Tensor);
+
+        [ConstantField]
+        private static readonly Dictionary<Type, Kit> kitsByArray = kits.Values.ToDictionary(kit => kit.Array);
 
         /// <summary>The tensor type a matrix over <paramref name="element"/> compiles to, or <see langword="null"/> where there is none.</summary>
         public static Type? TensorTypeOf(Type element)
             => kits.TryGetValue(element, out var kit) ? kit.Tensor : null;
 
         internal static bool IsTensor(Type type) => kitsByTensor.ContainsKey(type);
+
+        /// <summary>
+        /// Whether <paramref name="type"/> is a two-dimensional array of an element type a matrix compiles over, as
+        /// <c>double[,]</c> is: an argument or a result of that type is a matrix, converted to and from the tensor at
+        /// the delegate's boundary, so that a caller need not know GenericTensor.
+        /// </summary>
+        internal static bool IsMatrixArray(Type type) => kitsByArray.ContainsKey(type);
+
+        /// <summary>Whether a value of <paramref name="type"/> is a matrix, as a tensor or as a two-dimensional array.</summary>
+        internal static bool IsMatrixType(Type type) => IsTensor(type) || IsMatrixArray(type);
+
+        /// <summary>The element type of a matrix type, or <see langword="null"/> where it is not one.</summary>
+        internal static Type? ElementOfMatrixType(Type type)
+            => kitsByTensor.TryGetValue(type, out var kit) || kitsByArray.TryGetValue(type, out kit) ? ElementOf(kit.Tensor) : null;
+
+        /// <summary>A two-dimensional array argument as the tensor the compiled arithmetic runs on.</summary>
+        internal static Expression FromArrayArgument(Expression array) => Expression.Call(kitsByArray[array.Type].FromArray, array);
+
+        /// <summary>
+        /// A tensor as the two-dimensional array of the same element type, or <see langword="null"/> where
+        /// <paramref name="type"/> is not that array.
+        /// </summary>
+        internal static Expression? AsArray(Expression tensor, Type type)
+            => kitsByTensor.TryGetValue(tensor.Type, out var kit) && kit.Array == type ? Expression.Call(kit.ToArray, tensor) : null;
 
         private static Type ElementOf(Type tensor) => tensor.GetGenericArguments()[0];
 
@@ -384,13 +429,22 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// </remarks>
         public static GenTensor<T, TWrapper> DivideFromScalar<T, TWrapper>(T scalar, GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
             => Elementwise(a, x => default(TWrapper).Divide(scalar, x));
-        /// <summary>The matrix power, a non-negative whole exponent, by repeated squaring.</summary>
+        /// <summary>
+        /// The matrix power of a whole exponent, by repeated squaring; a negative exponent is that power of the inverse,
+        /// as evaluation has it.
+        /// </summary>
+        /// <exception cref="InvalidMatrixOperationException">
+        /// The matrix is not square, or the exponent is negative and the elements are whole numbers, which have no inverse
+        /// as a matrix of whole numbers.
+        /// </exception>
         public static GenTensor<T, TWrapper> Power<T, TWrapper>(GenTensor<T, TWrapper> a, int exponent) where TWrapper : struct, IOperations<T>
         {
             if (a.Shape[0] != a.Shape[1])
                 throw new InvalidMatrixOperationException($"A matrix of shape {a.Shape} is not square and has no power");
+            // A negative exponent was NotSupportedException, outside the library's own exceptions and thrown only when
+            // the compiled delegate was called. https://github.com/asc-community/AngouriMath/issues/526
             if (exponent < 0)
-                throw new NotSupportedException("A negative matrix power is not compiled: invert the matrix first");
+                return Power(Inverse(a), exponent == int.MinValue ? throw new InvalidMatrixOperationException($"A matrix power of {exponent} is not compiled") : -exponent);
             var result = GenTensor<T, TWrapper>.CreateIdentityMatrix(a.Shape[0]);
             var square = a;
             for (var remaining = exponent; remaining > 0; remaining >>= 1)
@@ -402,6 +456,144 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             }
             return result;
         }
+
+        /// <summary>
+        /// A compiled exponent as the whole number a matrix power takes. It was converted with a cast, which truncates, so
+        /// <c>A ^ x</c> at <c>x = 0.7</c> was the identity, where evaluation leaves a matrix to a power that is not whole
+        /// unevaluated: a power that is not whole is no answer here either.
+        /// </summary>
+        /// <exception cref="InvalidMatrixOperationException">The exponent is not a whole number that fits an <see cref="int"/>.</exception>
+        public static int WholeExponent(double exponent)
+            => Math.Floor(exponent) == exponent && exponent >= -int.MaxValue && exponent <= int.MaxValue
+                ? (int)exponent
+                : throw new InvalidMatrixOperationException($"A matrix power is compiled for a whole exponent, and {exponent.ToString(System.Globalization.CultureInfo.InvariantCulture)} is not one");
+
+        /// <inheritdoc cref="WholeExponent(double)"/>
+        public static int WholeExponent(Complex exponent)
+            => exponent.Imaginary == 0
+                ? WholeExponent(exponent.Real)
+                : throw new InvalidMatrixOperationException($"A matrix power is compiled for a whole exponent, and {exponent} is not one");
+
+        /// <summary>The tensor as a two-dimensional array, rows first.</summary>
+        public static T[,] ToArray<T, TWrapper>(GenTensor<T, TWrapper> matrix) where TWrapper : struct, IOperations<T>
+        {
+            var result = new T[matrix.Shape[0], matrix.Shape[1]];
+            for (var i = 0; i < matrix.Shape[0]; i++)
+                for (var j = 0; j < matrix.Shape[1]; j++)
+                    result[i, j] = matrix[i, j];
+            return result;
+        }
+
+        /// <summary>A 1 x 1 matrix as its entry, which is what evaluation makes of one.</summary>
+        /// <exception cref="InvalidMatrixOperationException">The matrix is not 1 x 1.</exception>
+        internal static T ToScalar<T, TWrapper>(GenTensor<T, TWrapper> matrix) where TWrapper : struct, IOperations<T>
+            => matrix.Shape[0] == 1 && matrix.Shape[1] == 1
+                ? matrix[0, 0]
+                : throw new InvalidMatrixOperationException($"A matrix of shape {matrix.Shape} is not a number");
+
+        /// <summary>A 1 x 1 matrix as its entry, checked when the delegate is called.</summary>
+        internal static Expression ToScalar(Expression tensor) => Expression.Call(kitsByTensor[tensor.Type].ToScalar, tensor);
+
+        /// <summary>
+        /// <paramref name="expr"/> with every part that does not mention a matrix argument simplified, and the rest as
+        /// written. Simplification reads a variable as a number, so with a matrix argument in it, it multiplied
+        /// <c>[[1, 0]] * A * [[0], [1]]</c> out to 0, whatever <c>A</c> was. A part with no matrix argument in it
+        /// simplifies as before (https://github.com/asc-community/AngouriMath/issues/425).
+        /// </summary>
+        internal static Entity SimplifiedAroundMatrixArguments(Entity expr, Func<Entity.Variable, bool> isMatrixArgument)
+            => expr.Vars.Any(isMatrixArgument)
+                ? expr.Replace(node => node.Nodes.Any(n => n is Entity.Matrix) && !node.Vars.Any(isMatrixArgument) ? node.InnerSimplified : node)
+                : expr.InnerSimplified;
+
+        /// <summary>A two-dimensional array, rows first, as a tensor.</summary>
+        /// <exception cref="InvalidMatrixOperationException">The array has no elements: there is no empty matrix.</exception>
+        public static GenTensor<T, TWrapper> FromArray<T, TWrapper>(T[,] matrix) where TWrapper : struct, IOperations<T>
+        {
+            if (matrix.GetLength(0) == 0 || matrix.GetLength(1) == 0)
+                throw new InvalidMatrixOperationException("An array with no elements is not a matrix");
+            var result = GenTensor<T, TWrapper>.CreateMatrix(matrix.GetLength(0), matrix.GetLength(1));
+            for (var i = 0; i < matrix.GetLength(0); i++)
+                for (var j = 0; j < matrix.GetLength(1); j++)
+                    result[i, j] = matrix[i, j];
+            return result;
+        }
+
+        // The size of an element, to choose the largest pivot by. Only the element types a matrix is inverted over have
+        // one; a typeof test on T is decided when the method is compiled for T, ahead of time as well.
+        private static double Magnitude<T>(T value)
+        {
+            if (typeof(T) == typeof(double)) return Math.Abs((double)(object)value!);
+            if (typeof(T) == typeof(float)) return Math.Abs((float)(object)value!);
+            if (typeof(T) == typeof(Complex)) return Complex.Abs((Complex)(object)value!);
+            throw new InvalidMatrixOperationException($"A matrix over {typeof(T).Name} is not inverted: the inverse of a matrix of whole numbers is not one");
+        }
+
+        /// <summary>
+        /// The inverse, by Gauss-Jordan elimination with partial pivoting. Where a pivot is exactly zero the matrix is
+        /// singular, and every entry is <c>0 / 0</c> in the element arithmetic -- NaN over <see cref="double"/>,
+        /// <see cref="float"/> and <see cref="Complex"/> -- as a compiled division by zero has no value. A matrix that is
+        /// singular only up to rounding is inverted as rounding leaves it.
+        /// </summary>
+        /// <exception cref="InvalidMatrixOperationException">The matrix is not square, or its elements are whole numbers.</exception>
+        public static GenTensor<T, TWrapper> Inverse<T, TWrapper>(GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
+        {
+            if (a.Shape[0] != a.Shape[1])
+                throw new InvalidMatrixOperationException($"A matrix of shape {a.Shape} is not square and has no inverse");
+            var ops = default(TWrapper);
+            var n = a.Shape[0];
+            var left = new T[n, n];
+            var right = new T[n, n];
+            for (var i = 0; i < n; i++)
+                for (var j = 0; j < n; j++)
+                {
+                    left[i, j] = a[i, j];
+                    right[i, j] = i == j ? ops.CreateOne() : ops.CreateZero();
+                }
+            for (var column = 0; column < n; column++)
+            {
+                var pivot = column;
+                for (var row = column + 1; row < n; row++)
+                    if (Magnitude(left[row, column]) > Magnitude(left[pivot, column]))
+                        pivot = row;
+                if (ops.IsZero(left[pivot, column]))
+                {
+                    var none = ops.Divide(ops.CreateZero(), ops.CreateZero());
+                    return GenTensor<T, TWrapper>.CreateMatrix(n, n, (_, _) => none);
+                }
+                if (pivot != column)
+                    for (var j = 0; j < n; j++)
+                    {
+                        (left[pivot, j], left[column, j]) = (left[column, j], left[pivot, j]);
+                        (right[pivot, j], right[column, j]) = (right[column, j], right[pivot, j]);
+                    }
+                var p = left[column, column];
+                for (var j = 0; j < n; j++)
+                {
+                    left[column, j] = ops.Divide(left[column, j], p);
+                    right[column, j] = ops.Divide(right[column, j], p);
+                }
+                for (var row = 0; row < n; row++)
+                {
+                    if (row == column || ops.IsZero(left[row, column]))
+                        continue;
+                    var factor = left[row, column];
+                    for (var j = 0; j < n; j++)
+                    {
+                        left[row, j] = ops.Subtract(left[row, j], ops.Multiply(factor, left[column, j]));
+                        right[row, j] = ops.Subtract(right[row, j], ops.Multiply(factor, right[column, j]));
+                    }
+                }
+            }
+            return GenTensor<T, TWrapper>.CreateMatrix(n, n, (i, j) => right[i, j]);
+        }
+
+        /// <summary>A matrix over a matrix, the first times the inverse of the second, as evaluation has it.</summary>
+        public static GenTensor<T, TWrapper> DivideByMatrix<T, TWrapper>(GenTensor<T, TWrapper> a, GenTensor<T, TWrapper> b) where TWrapper : struct, IOperations<T>
+            => Multiply(a, Inverse(b));
+
+        /// <summary>A scalar over a matrix, the scalar times its inverse, as evaluation has it.</summary>
+        public static GenTensor<T, TWrapper> ScalarOverMatrix<T, TWrapper>(T scalar, GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
+            => MultiplyScalar(Inverse(a), scalar);
 
         /// <summary>The compiled form of a matrix node over the given compiled elements, all of one type.</summary>
         internal static Expression Build(Entity.Matrix matrix, IReadOnlyList<Expression> elements)
@@ -432,19 +624,22 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     Entity.Sumf => Expression.Call(leftKit!.Add, left, right),
                     Entity.Minusf => Expression.Call(leftKit!.Subtract, left, right),
                     Entity.Mulf => Expression.Call(leftKit!.Multiply, left, right),
+                    // A matrix over a matrix is the first times the inverse of the second, as evaluation has it.
+                    Entity.Divf => Expression.Call(Field(leftKit!, leftKit!.DivideByMatrix), left, right),
                     _ => null,
                 };
             }
             if (leftTensor)
             {
-                var scalar = node is Entity.Powf ? convert(right, typeof(int)) : convert(right, ElementOf(left.Type));
+                if (node is Entity.Powf)
+                    return Expression.Call(leftKit!.Power, left, Exponent(right, convert));
+                var scalar = convert(right, ElementOf(left.Type));
                 return node switch
                 {
                     Entity.Sumf => Expression.Call(leftKit!.AddScalar, left, scalar),
                     Entity.Minusf => Expression.Call(leftKit!.SubtractScalar, left, scalar),
                     Entity.Mulf => Expression.Call(leftKit!.MultiplyScalar, left, scalar),
                     Entity.Divf => Expression.Call(leftKit!.DivideScalar, left, scalar),
-                    Entity.Powf => Expression.Call(leftKit!.Power, left, scalar),
                     _ => null,
                 };
             }
@@ -454,14 +649,114 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 Entity.Sumf => Expression.Call(rightKit!.AddScalar, right, value),
                 Entity.Minusf => Expression.Call(rightKit!.SubtractFromScalar, value, right),
                 Entity.Mulf => Expression.Call(rightKit!.MultiplyScalar, right, value),
-                // A scalar over a matrix is the scalar times its inverse, as evaluation has it, and the
-                // inverse is not compiled, as a negative power is not: dividing by every element
-                // instead gave 2 / [[1, 2], [3, 4]] as [[2, 1], [2/3, 1/2]].
+                // A scalar over a matrix is the scalar times its inverse, as evaluation has it. Dividing by every element
+                // instead gave 2 / [[1, 2], [3, 4]] as [[2, 1], [2/3, 1/2]], and it was refused until the inverse compiled.
                 // https://github.com/asc-community/AngouriMath/issues/2287
-                Entity.Divf => throw new UncompilableNodeException(
-                    "A scalar over a matrix is the scalar times its inverse, which is not compiled: invert the matrix first"),
+                Entity.Divf => Expression.Call(Field(rightKit!, rightKit!.ScalarOverMatrix), value, right),
                 _ => null,
             };
+        }
+
+        // The exponent of a matrix power as the whole number it must be, checked when the delegate is called: over the
+        // complex numbers a constant is complex too, and it was refused for want of a conversion to int.
+        private static Expression Exponent(Expression exponent, Func<Expression, Type, Expression> convert)
+            => Expression.Call(
+                exponent.Type == typeof(Complex) ? wholeComplexExponent : wholeRealExponent,
+                exponent.Type == typeof(Complex) ? exponent : convert(exponent, typeof(double)));
+
+        [ConstantField]
+        private static readonly MethodInfo wholeRealExponent = ((MethodCallExpression)((Expression<Func<double, int>>)(e => WholeExponent(e))).Body).Method;
+        [ConstantField]
+        private static readonly MethodInfo wholeComplexExponent = ((MethodCallExpression)((Expression<Func<Complex, int>>)(e => WholeExponent(e))).Body).Method;
+
+        private static MethodInfo Field(Kit kit, MethodInfo? method)
+            => method ?? throw new UncompilableNodeException(
+                $"A matrix over {ElementOf(kit.Tensor).Name} is not divided by a matrix: the inverse of a matrix of whole numbers is not one. Compile over double or Complex");
+
+        /// <summary>
+        /// The shape of every matrix in <paramref name="expr"/> that can be read off it before compiling, and a
+        /// refusal where two of them cannot be combined. Simplification has already carried out every operation it
+        /// can on matrices written into the expression, so one that is left with written matrices for operands is
+        /// usually left because their shapes do not fit -- <c>[[x, 1]] + [x, y]</c> -- and the compiled delegate
+        /// would only have thrown when called, at every point. A matrix argument's shape is known only when the
+        /// delegate is called, and is checked then.
+        /// </summary>
+        /// <param name="expr">The expression about to be compiled.</param>
+        /// <param name="isMatrix">Whether a variable is a matrix argument.</param>
+        /// <exception cref="InvalidMatrixOperationException">Two matrices whose shapes are known cannot be combined.</exception>
+        internal static void CheckShapes(Entity expr, Func<Entity.Variable, bool> isMatrix) => ShapeOf(expr, isMatrix);
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is known before the delegate is called to be a 1 x 1 matrix, as
+        /// <c>[[1, 0]] * A * [[0], [1]]</c> is whatever the shape of <c>A</c>: such a matrix is a number.
+        /// </summary>
+        internal static bool IsOneByOne(Entity expr, Func<Entity.Variable, bool> isMatrix) => ShapeOf(expr, isMatrix) == (1, 1);
+
+        // null: a number. Otherwise rows and columns, 0 for a count not known until the delegate is called: (0, 0) is a
+        // matrix argument, and a product keeps what its factors say, a 1 x n row times anything having one row.
+        private static (int Rows, int Columns)? ShapeOf(Entity expr, Func<Entity.Variable, bool> isMatrix)
+        {
+            static bool Known((int Rows, int Columns)? shape) => shape is { Rows: > 0, Columns: > 0 };
+            static string Show((int Rows, int Columns)? shape) => $"{shape!.Value.Rows}x{shape.Value.Columns}";
+            switch (expr)
+            {
+                case Entity.Matrix matrix:
+                    // By index: enumerating a matrix gives its rows, and a row of one element is itself.
+                    for (var i = 0; i < matrix.RowCount; i++)
+                        for (var j = 0; j < matrix.ColumnCount; j++)
+                            ShapeOf(matrix[i, j], isMatrix);
+                    return (matrix.RowCount, matrix.ColumnCount);
+                case Entity.Variable variable:
+                    return isMatrix(variable) ? (0, 0) : null;
+                case Entity.Sumf or Entity.Minusf:
+                {
+                    var operands = (IBinaryNode)expr;
+                    var (a, b) = (ShapeOf(operands.NodeFirstChild, isMatrix), ShapeOf(operands.NodeSecondChild, isMatrix));
+                    if (Known(a) && Known(b) && a != b)
+                        throw new InvalidMatrixOperationException(
+                            $"`{expr.Stringize()}` has no value: matrices of shapes {Show(a)} and {Show(b)} are not {(expr is Entity.Sumf ? "added" : "subtracted")}");
+                    return Known(a) ? a : Known(b) ? b : a ?? b;
+                }
+                case Entity.Mulf(var multiplier, var multiplicand):
+                {
+                    var (a, b) = (ShapeOf(multiplier, isMatrix), ShapeOf(multiplicand, isMatrix));
+                    if (a is null || b is null)
+                        return a ?? b;
+                    if (Known(a) && Known(b))
+                        return a.Value.Columns == b.Value.Rows
+                            ? (a.Value.Rows, b.Value.Columns)
+                            : throw new InvalidMatrixOperationException(
+                                $"`{expr.Stringize()}` has no value: a {Show(a)} matrix is not multiplied by a {Show(b)} one");
+                    return (a.Value.Rows, b.Value.Columns);
+                }
+                case Entity.Divf(var dividend, var divisor):
+                {
+                    var (a, b) = (ShapeOf(dividend, isMatrix), ShapeOf(divisor, isMatrix));
+                    if (Known(b) && b!.Value.Rows != b.Value.Columns)
+                        throw new InvalidMatrixOperationException($"`{expr.Stringize()}` has no value: a {Show(b)} matrix has no inverse to divide by");
+                    if (b is null)
+                        return a;
+                    if (a is null)
+                        return b;
+                    if (Known(a) && Known(b))
+                        return a.Value.Columns == b.Value.Rows
+                            ? a
+                            : throw new InvalidMatrixOperationException(
+                                $"`{expr.Stringize()}` has no value: a {Show(a)} matrix is not multiplied by the inverse of a {Show(b)} one");
+                    return (a.Value.Rows, b.Value.Columns);
+                }
+                case Entity.Powf(var @base, var exponent):
+                {
+                    var (a, b) = (ShapeOf(@base, isMatrix), ShapeOf(exponent, isMatrix));
+                    if (Known(a) && a!.Value.Rows != a.Value.Columns)
+                        throw new InvalidMatrixOperationException($"`{expr.Stringize()}` has no value: a {Show(a)} matrix is not square and has no power");
+                    return b is null ? a : null;
+                }
+                default:
+                    foreach (var child in expr.DirectChildren)
+                        ShapeOf(child, isMatrix);
+                    return null;
+            }
         }
     }
 }

@@ -5,9 +5,9 @@
 // Website: https://am.angouri.org.
 //
 
+using System;
 using AngouriMath;
 using AngouriMath.Core.Compilation.IntoLinq;
-using AngouriMath.Core.Exceptions;
 using AngouriMath.Extensions;
 using GenericTensor.Core;
 using Xunit;
@@ -15,18 +15,29 @@ using Xunit;
 namespace AngouriMath.Tests.Common
 {
     /// <summary>
-    /// A scalar over a matrix argument is not compiled, where it was compiled as the scalar over every element: evaluation
-    /// takes it as the scalar times the inverse, and the inverse is not compiled, as a negative matrix power is not. A matrix
-    /// written into the expression is inverted before it is compiled, and that is unchanged.
+    /// A scalar over a matrix argument is the scalar times the inverse, as evaluation takes it, where it was compiled as the
+    /// scalar over every element, and then refused until the inverse compiled. A matrix written into the expression is
+    /// inverted before it is compiled, and that is unchanged.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/2287">#2287</a>
     /// </summary>
     [Trait("Area", "Common")]
     public sealed class AScalarOverAMatrixArgumentTest
     {
         [Fact]
-        public void ItIsRefused()
-            => Assert.Throws<UncompilableNodeException>(() => "x / A".ToEntity()
-                .Compile<GenTensor<double, DoubleOperations>, double, GenTensor<double, DoubleOperations>>("A", "x"));
+        public void ItIsTheScalarTimesTheInverse()
+        {
+            var matrix = GenTensor<double, DoubleOperations>.CreateMatrix(new double[,] { { 1, 2 }, { 3, 4 } });
+            var divided = "x / A".ToEntity()
+                .Compile<GenTensor<double, DoubleOperations>, double, GenTensor<double, DoubleOperations>>("A", "x")(matrix, 2);
+            // 2 / [[1, 2], [3, 4]] evaluates to [[-4, 2], [3, -1]].
+            Assert.Equal(new[] { -4, 2, 3, -1.0 }, new[] { divided[0, 0], divided[0, 1], divided[1, 0], divided[1, 1] }, new ToleranceComparer());
+        }
+
+        private sealed class ToleranceComparer : System.Collections.Generic.IEqualityComparer<double>
+        {
+            public bool Equals(double a, double b) => Math.Abs(a - b) <= 1e-12;
+            public int GetHashCode(double a) => 0;
+        }
 
         [Fact]
         public void AMatrixArgumentOverAScalarIsStillCompiled()

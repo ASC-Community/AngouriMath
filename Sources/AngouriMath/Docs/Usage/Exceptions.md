@@ -169,8 +169,11 @@ the wrappers living in `AngouriMath.Core.Compilation.IntoLinq` — and that is t
 to and to pass a matrix in as: `"A * B".ToEntity().Compile<GenTensor<double, DoubleOperations>,
 GenTensor<double, DoubleOperations>, GenTensor<double, DoubleOperations>>("A", "B")` is the matrix
 product, `2 A + B - 1` scales, adds and shifts element by element, `A ^ 3` is the matrix power
-([#526](https://github.com/asc-community/AngouriMath/issues/526)). Compiling a matrix as a
-number, or a number as a matrix, or `sin(A)`, is still this exception.
+([#526](https://github.com/asc-community/AngouriMath/issues/526)). A two-dimensional array of the
+element type -- `double[,]`, `Complex[,]` -- is a matrix too, as an argument and as the result.
+Compiling a matrix as a number, or a number as a matrix, or `sin(A)`, is still this exception, and
+so is dividing by a matrix of `int`, `long` or `BigInteger`, whose inverse is not one of whole
+numbers.
 
 ### `CannotEvalException`
 
@@ -231,6 +234,10 @@ The general matrix complaint, and the one to reach for: the shapes do not agree 
 the matrix is not square, `AsScalar` on something that is not 1x1, a tensor of the wrong number of
 dimensions, a row of the wrong width added to a `MatrixBuilder`. The messages name the shapes
 involved.
+
+A compiled matrix raises it as well: `Compile` where the shapes of matrices written into the
+expression do not fit, and the compiled delegate where the shapes of matrix arguments do not, or
+where a matrix power's exponent is not a whole number.
 
 ### `BadMatrixShapeException`
 

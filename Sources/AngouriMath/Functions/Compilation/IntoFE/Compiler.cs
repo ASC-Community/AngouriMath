@@ -97,7 +97,9 @@ namespace AngouriMath
         partial record Matrix
         {
             private protected override void CompileNode(Compiler compiler) =>
-                throw new UncompilableNodeException($"A {nameof(Matrix)} cannot be compiled: `{Stringize()}`");
+                throw new UncompilableNodeException(
+                    $"A {nameof(Matrix)} cannot be compiled to a FastExpression, whose value is a number: `{Stringize()}`. "
+                    + "Compile it with Compile<..., double[,]> or Compile<..., Complex[,]> to have the matrix");
         }
 
         // Each function and operator processing
@@ -1020,6 +1022,11 @@ namespace AngouriMath.Core
                         varNamespace[varName] = id++;
                 foreach (var constant in Variable.NamedConstants.Values)
                     func = func.Substitute(constant, constant.Value);
+                // An expression built out of matrices often has a number for its value -- [1, 0]T * [[a, b], [c, d]] * [0, 1]
+                // is b -- and the LINQ compiler simplifies such an expression first, for that reason. This one did not, and
+                // refused it. https://github.com/asc-community/AngouriMath/issues/425
+                if (func.Nodes.Any(node => node is Matrix))
+                    func = func.InnerSimplified;
                 func = Compilation.CompiledMembership.Rewritten(func);
                 func = Functions.ExponentialQuotients.Rewritten(func);
                 Compilation.StatementPositions.Check(func);
