@@ -16,7 +16,8 @@ namespace AngouriMath.Numerics
     /// The functions of a factorisation, the p-adic valuation, the n-th prime and the prime-counting
     /// function, for the compilers, by the routines the interpreter uses: exact at a whole argument, and
     /// <c>NaN</c> at any other, where none of them has a value, and where the interpreter leaves one as
-    /// written, a number too large to factorise or a prime too far to build towards.
+    /// written, a number too large to factorise or a prime too far to build towards. The gcd and the lcm
+    /// likewise, though evaluation has them at a rational too.
     /// https://github.com/asc-community/AngouriMath/issues/2195
     /// </summary>
     internal static class NumberTheoreticFunctions
@@ -98,6 +99,35 @@ namespace AngouriMath.Numerics
             return Primes.CountUpTo(EInteger.FromInt64((long)Math.Floor(x.Real))) is { } count ? count : NaN;
         }
 
+        /// <summary>
+        /// A whole number held exactly, of any size a <see cref="double"/> has: every finite double past
+        /// <c>2^53</c> is whole, and is the integer it reads as.
+        /// </summary>
+        private static EInteger? Whole(NumericsComplex z)
+            => z.Imaginary != 0 || double.IsNaN(z.Real) || double.IsInfinity(z.Real) || Math.Floor(z.Real) != z.Real
+                ? null
+                : EFloat.FromDouble(z.Real).ToEInteger();
+
+        // gcd and lcm compile at whole arguments only. Evaluation takes them over the rationals, and every finite double
+        // is a rational, so a compiled gcd(0.1, 1) would be exact for the double nearest 0.1 and mean nothing for 0.1.
+        // Both are non-negative, as evaluation has them: gcd(-4, 6) = 2, gcd(0, 5) = gcd(0, -5) = 5, gcd(0, 0) = 0,
+        // lcm(-4, 6) = lcm(-4, -6) = 12, lcm(0, 3) = lcm(0, 0) = 0. Rounded once by EFloat, as (double)BigInteger
+        // truncates. https://github.com/asc-community/AngouriMath/issues/2195
+
+        /// <summary>The greatest common divisor of two whole numbers, and <c>NaN</c> where either is not whole.</summary>
+        public static NumericsComplex Gcd(NumericsComplex a, NumericsComplex b)
+            => Whole(a) is { } left && Whole(b) is { } right
+                ? EFloat.FromEInteger(left.GreatestCommonDivisor(right)).ToDouble()
+                : NaN;
+
+        /// <summary>The least common multiple of two whole numbers, <c>0</c> where either is, and <c>NaN</c> where either is not whole.</summary>
+        public static NumericsComplex Lcm(NumericsComplex a, NumericsComplex b)
+            => Whole(a) is { } left && Whole(b) is { } right
+                ? left.IsZero || right.IsZero
+                    ? 0
+                    : EFloat.FromEInteger((left * right).Abs() / left.GreatestCommonDivisor(right)).ToDouble()
+                : NaN;
+
         public static double Mobius(double n) => Real(Mobius(new NumericsComplex(n, 0)));
         public static double PrimeNu(double n) => Real(PrimeNu(new NumericsComplex(n, 0)));
         public static double PrimeOmega(double n) => Real(PrimeOmega(new NumericsComplex(n, 0)));
@@ -105,6 +135,8 @@ namespace AngouriMath.Numerics
         public static double Valuation(double n, double p) => Real(Valuation(new NumericsComplex(n, 0), new NumericsComplex(p, 0)));
         public static double Prime(double n) => Real(Prime(new NumericsComplex(n, 0)));
         public static double PrimePi(double x) => Real(PrimePi(new NumericsComplex(x, 0)));
+        public static double Gcd(double a, double b) => Real(Gcd(new NumericsComplex(a, 0), new NumericsComplex(b, 0)));
+        public static double Lcm(double a, double b) => Real(Lcm(new NumericsComplex(a, 0), new NumericsComplex(b, 0)));
 
         private static double Real(NumericsComplex z) => z.Imaginary == 0 ? z.Real : double.NaN;
     }

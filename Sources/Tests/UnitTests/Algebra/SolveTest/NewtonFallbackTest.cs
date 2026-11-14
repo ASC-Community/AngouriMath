@@ -46,8 +46,8 @@ namespace AngouriMath.Tests.Algebra
         }
 
         /// <summary>
-        /// No analytical route answers these, and the compiler has no form for the binomial
-        /// coefficient or for <c>gcd</c>, nor for their unevaluated derivatives.
+        /// No analytical route answers these, and the compiler has no form for the unevaluated
+        /// derivatives of the binomial coefficient and of <c>gcd</c>.
         /// </summary>
         [Theory]
         [InlineData("binomial(x, 3/2) = x/2")]

@@ -325,6 +325,11 @@ namespace AngouriMath.AotSmokeTest
             var linqNumberTheory = "divisorsigma(1, x) + valuation(x, 2)".Compile<double, double>(x);
             Check("compiled mobius(x) + prime(x) + primepi(x) at 30, divisorsigma(1, x) + valuation(x, 2) at 12",
                 fastNumberTheory.Call(30) == 122 && linqNumberTheory(12) == 30, $"{fastNumberTheory.Call(30)}, {linqNumberTheory(12)}");
+            // gcd(12, 18) = 6 and lcm(12, 18) = 36, and no value at 5/2.
+            var fastGcd = "gcd(x, 18)".Compile(x);
+            var linqLcm = "lcm(x, 18)".Compile<double, double>(x);
+            Check("compiled gcd(x, 18) and lcm(x, 18) at 12 and 5/2",
+                fastGcd.Call(12) == 6 && linqLcm(12) == 36 && double.IsNaN(linqLcm(2.5)), $"{fastGcd.Call(12)}, {linqLcm(12)}, {linqLcm(2.5)}");
             // 7 is a prime in [0; 10] and 3 divides 6; i is in no interval.
             var fastMembership = "iverson(x in (PP /\\ [0; 10])) + iverson(3 divides x - 1)".Compile(x);
             var linqMembership = "x in [0; 1] or 3 divides x".Compile<Complex, bool?>(x);

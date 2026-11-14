@@ -40,6 +40,29 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
+## Unreleased — since 2.7.0
+
+### `gcd` and `lcm` compile at whole arguments
+
+**Not silent: what was refused is compiled.** `gcd` and `lcm` were refused by both compilers with
+`UncompilableNodeException`. They compile now, exactly at whole arguments, rounded once, and to `NaN` at any other.
+Evaluation takes them over the rationals too, but a compiled argument is a double, and the double nearest `0.1` is not
+`1/10`, so a compiled value there would be exact for the wrong number. Both are non-negative, as evaluation has them
+([#2195](https://github.com/asc-community/AngouriMath/issues/2195)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"gcd(x, 6)".ToEntity().Compile("x").Call(4)` | `UncompilableNodeException` | `(2, 0)` |
+| `"lcm(x, 6)".ToEntity().Compile<double, double>("x")(4)` | `UncompilableNodeException` | `12` |
+| `"gcd(x, 6)".ToEntity().Compile<double, double>("x")(2.5)` | `UncompilableNodeException` | `NaN` |
+
+The calculus nodes and the binders — `derivative`, `integral`, `limit`, `sum`, `product`, an extremum over a set,
+`lambda` and `apply` — are still refused, by both compilers with `UncompilableNodeException` as before; the message now
+names the node and says to compile `.Evaled` or `Simplify()` instead. The LINQ compiler said the bound variable was not
+among the arguments.
+
+---
+
 ## 2.7.0 — since 2.6.0
 
 **Read these first: names that read differently.** Each of these was read as something else on 2.6.0. Code that used

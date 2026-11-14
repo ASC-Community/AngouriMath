@@ -321,6 +321,11 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     => Expression.Call(GetDef("DivisorSigma", 2, newLeft.Type), newLeft, newRight),
                 Valuationf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
                     => Expression.Call(GetDef("Valuation", 2, newLeft.Type), newLeft, newRight),
+                // Exact at whole arguments and NaN at any other. https://github.com/asc-community/AngouriMath/issues/2195
+                Gcdf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("Gcd", 2, newLeft.Type), newLeft, newRight),
+                Lcmf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("Lcm", 2, newLeft.Type), newLeft, newRight),
                 Dividesf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
                     => newLeft.Type == typeof(System.Numerics.Complex)
                         ? Expression.Call(complexDivisibility, newLeft, ConvertType(newRight, typeof(System.Numerics.Complex)))

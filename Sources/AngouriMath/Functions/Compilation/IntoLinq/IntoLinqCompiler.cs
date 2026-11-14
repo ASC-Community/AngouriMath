@@ -34,6 +34,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 expr = TensorCompilation.SimplifiedAroundMatrixArguments(expr, IsMatrixArgument);
             expr = CompiledMembership.Rewritten(expr);
             expr = Functions.ExponentialQuotients.Rewritten(expr);
+            Binders.Check(expr);
             StatementPositions.Check(expr);
             // Two matrices whose shapes are written into the expression and do not fit are refused here, rather than by
             // a delegate that throws at every point it is called at. https://github.com/asc-community/AngouriMath/issues/526

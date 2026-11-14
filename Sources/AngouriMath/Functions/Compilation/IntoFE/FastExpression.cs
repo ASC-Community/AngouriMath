@@ -100,6 +100,8 @@ namespace AngouriMath.Core
             CALL_HARMONIC_NUMBER,
             CALL_DIVISOR_SIGMA,
             CALL_VALUATION,
+            CALL_GCD,
+            CALL_LCM,
             CALL_DIVIDES,
 
             // 3-arg: whether two numbers are congruent modulo a third.
@@ -417,6 +419,12 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_VALUATION:
                         stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.Valuation(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_GCD:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.Gcd(stack.Pop(), stack.Pop()));
+                        break;
+                    case InstructionType.CALL_LCM:
+                        stack.Push(AngouriMath.Numerics.NumberTheoreticFunctions.Lcm(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_MEMBER:
                         stack.Push(Truth(AngouriMath.Numerics.NumberStatements.In(stack.Pop(), instruction.Reference)));

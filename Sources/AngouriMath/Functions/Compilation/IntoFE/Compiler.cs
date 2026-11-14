@@ -340,24 +340,6 @@ namespace AngouriMath
             }
         }
 
-        public partial record Derivativef
-        {
-            private protected override void CompileNode(Compiler compiler) =>
-                throw new UncompilableNodeException($"A derivative cannot be compiled: `{Stringize()}`");
-        }
-
-        public partial record Integralf
-        {
-            private protected override void CompileNode(Compiler compiler) =>
-                throw new UncompilableNodeException($"An integral cannot be compiled: `{Stringize()}`");
-        }
-
-        public partial record Limitf
-        {
-            private protected override void CompileNode(Compiler compiler) =>
-                throw new UncompilableNodeException($"A limit cannot be compiled: `{Stringize()}`");
-        }
-
         // The floors, the rounding and the extremes, which the solver's numerical search needs
         // compiled to run on `floor(x) = x/2 + 1/3` or `max(x, 1) = 2 x` at all.
         // https://github.com/asc-community/AngouriMath/issues/1603
@@ -761,6 +743,32 @@ namespace AngouriMath
             }
         }
 
+        // The gcd and the lcm, exact at whole arguments and NaN at any other.
+        // https://github.com/asc-community/AngouriMath/issues/2195
+        public partial record Gcdf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_GCD));
+            }
+        }
+
+        public partial record Lcmf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Right.InnerCompile(compiler);
+                Left.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_LCM));
+            }
+        }
+
         // A membership whose set the compilers rewrite into a statement about the element is gone by the time
         // a node is compiled, and what remains is one in a set of numbers, decided where evaluation decides it.
         // https://github.com/asc-community/AngouriMath/issues/2195
@@ -1076,6 +1084,7 @@ namespace AngouriMath.Core
                     func = func.InnerSimplified;
                 func = Compilation.CompiledMembership.Rewritten(func);
                 func = Functions.ExponentialQuotients.Rewritten(func);
+                Compilation.Binders.Check(func);
                 Compilation.StatementPositions.Check(func);
                 var visited = new HashSet<Entity>();
                 var cache = new Dictionary<Entity, int>();
