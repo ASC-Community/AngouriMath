@@ -1022,6 +1022,15 @@ file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed
 [AngouriMath/Functions/Compilation/StatementPositions.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 
+[AngouriMath/Functions/Compilation/Binders.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[Tests/UnitTests/Common/GcdLcmCompilationTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
+[Tests/UnitTests/Common/BinderCompilationRefusalTest.cs]
+file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
+
 [Tests/UnitTests/Common/StatementInANumericPositionTest.cs]
 file_header_template=\nCopyright (c) 2019-2026 Angouri.\nAngouriMath is licensed under MIT.\nDetails: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.\nWebsite: https://am.angouri.org.\n
 

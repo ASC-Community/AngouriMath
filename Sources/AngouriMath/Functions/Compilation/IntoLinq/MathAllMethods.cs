@@ -369,8 +369,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static System.Numerics.Complex HarmonicNumber(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(a, b);
         public static double HarmonicNumber(double a, double b) => AngouriMath.Numerics.PolygammaFunction.HarmonicNumber(a, b);
 
-        // The functions of a factorisation, the valuation, the n-th prime and the prime-counting function, by the
-        // interpreter's routines. https://github.com/asc-community/AngouriMath/issues/2195
+        // The functions of a factorisation, the valuation, the n-th prime, the prime-counting function, the gcd and
+        // the lcm, by the interpreter's routines. https://github.com/asc-community/AngouriMath/issues/2195
         public static System.Numerics.Complex Mobius(System.Numerics.Complex a) => AngouriMath.Numerics.NumberTheoreticFunctions.Mobius(a);
         public static double Mobius(double a) => AngouriMath.Numerics.NumberTheoreticFunctions.Mobius(a);
         public static System.Numerics.Complex PrimeNu(System.Numerics.Complex a) => AngouriMath.Numerics.NumberTheoreticFunctions.PrimeNu(a);
@@ -385,6 +385,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static double DivisorSigma(double a, double b) => AngouriMath.Numerics.NumberTheoreticFunctions.DivisorSigma(a, b);
         public static System.Numerics.Complex Valuation(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.NumberTheoreticFunctions.Valuation(a, b);
         public static double Valuation(double a, double b) => AngouriMath.Numerics.NumberTheoreticFunctions.Valuation(a, b);
+        public static System.Numerics.Complex Gcd(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.NumberTheoreticFunctions.Gcd(a, b);
+        public static double Gcd(double a, double b) => AngouriMath.Numerics.NumberTheoreticFunctions.Gcd(a, b);
+        public static System.Numerics.Complex Lcm(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.NumberTheoreticFunctions.Lcm(a, b);
+        public static double Lcm(double a, double b) => AngouriMath.Numerics.NumberTheoreticFunctions.Lcm(a, b);
 
         /// <summary>
         /// True where <c>System.Numerics.Complex.IsNaN</c> is, spelled out because that overload is
@@ -602,6 +606,10 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("DivisorSigma", 2, typeof(double)), Def<double>((a, b) => DivisorSigma(a, b)) },
             { ("Valuation", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Valuation(a, b)) },
             { ("Valuation", 2, typeof(double)), Def<double>((a, b) => Valuation(a, b)) },
+            { ("Gcd", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Gcd(a, b)) },
+            { ("Gcd", 2, typeof(double)), Def<double>((a, b) => Gcd(a, b)) },
+            { ("Lcm", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Lcm(a, b)) },
+            { ("Lcm", 2, typeof(double)), Def<double>((a, b) => Lcm(a, b)) },
         };
 
         // An expression tree is how C# spells "the MethodInfo of this method" without a string:

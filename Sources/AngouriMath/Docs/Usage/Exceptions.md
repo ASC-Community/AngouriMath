@@ -154,7 +154,10 @@ take.
 
 `Compile` was asked for a function it cannot build. Two distinct causes, and the message says which:
 
-- a node with no compiled form — a derivative, an integral, a limit, a comparison of a matrix;
+- a node with no compiled form — a comparison of a matrix, or a calculus node or a binder: a
+  derivative, an integral, a limit, a sum, a product, an extremum over a set, a lambda and its
+  application. For those the message says to call `.Evaled` or `Simplify()` first and compile the
+  result, which is computed once there rather than at every call;
 - a variable the expression mentions that the compilation was not given. The message names the
   variable and lists the ones it *was* given, since `Compile("x")` on `a * x` failing used to
   surface as a bare `KeyNotFoundException` about some dictionary.
