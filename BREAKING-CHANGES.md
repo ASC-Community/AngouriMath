@@ -40,7 +40,25 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
-## Unreleased — since 2.6.0
+## 2.7.0 — since 2.6.0
+
+**Read these first: names that read differently.** Each of these was read as something else on 2.6.0. Code that used
+the name for something of its own changes meaning without an error, except where the entry says the name is now
+refused.
+
+- `re(…)` and `im(…)`, and `real(…)` and `imag(…)`, are the real and the imaginary part, where they were products: `re(z)`
+  was the variable `re` times `z`. See *`re` and `im` are the real and the imaginary part*.
+- `conjugate(…)`, `conj(…)` and `arg(…)` are the conjugate and the principal argument, where they were products. See
+  *`conjugate`, `conj` and `arg` are functions*.
+- `det(…)`, `transpose(…)`, `dot(…)`, `cross(…)`, `resultant(…)` and `trace(…)` are computed, or are nodes of a name for
+  a matrix, where they were products; `A[k, l]` is an entry, counted from 1. See *`det`, `transpose`, `dot`, `cross`
+  and `resultant` are functions in an expression* and *`det`, `transpose`, `trace` and an entry `A[k, l]` of a name for
+  a matrix are nodes*.
+- The names of functions the library is to have, such as `zeta(…)`, are refused by name, where they were products. See
+  *The names of functions to come are refused by name*.
+- **Silent:** `eulergamma` and `EulerGamma` are Euler's constant, where they were a variable. See *`eulergamma` is
+  Euler's constant*.
+
 
 ### A step function of an unbounded argument times a vanishing factor has the limit of the factor times the argument
 
