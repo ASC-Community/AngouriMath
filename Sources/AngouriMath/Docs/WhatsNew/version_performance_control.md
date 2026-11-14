@@ -123,26 +123,29 @@ benchmark and the size of the move. A move nobody can explain is the finding, no
 
 ---
 
-|          Method |         [331st](https://github.com/asc-community/AngouriMath/commit/10e6e5a90e7270336b68dc5fd6aa36f3e0e65d2b) |          [380th](https://github.com/asc-community/AngouriMath/commit/73ae36488ddb863c1d6f35db5ed2f5dcf1484a26) |     [391st](https://github.com/asc-community/AngouriMath/commit/c7e08e6936bfdc2373377bec81ffd160e406244f)      |         [410th](https://github.com/asc-community/AngouriMath/commit/20814936bc740a9f410af4a4368e9895eab7aaf7) |           [483rd](https://github.com/asc-community/AngouriMath/commit/355963dcdf0ff9da568e9f1144ad2b7b68c19584) |         [520th](https://github.com/asc-community/AngouriMath/commit/70aa71acb73307c9f7df0aac006faae31b06058c) |         [690th](https://github.com/asc-community/AngouriMath/commit/5cc894939cb3657f0aa7ef5a25fd55011058929f) |         [826th](https://github.com/asc-community/AngouriMath/commit/87e33ec3590a95dd4ec59ff5c1f77064a64196d1) |         [914th](https://github.com/asc-community/AngouriMath/commit/6134338df083a908369b6bcfb69e70a4269ec51b) |         [920th](https://github.com/asc-community/AngouriMath/commit/501a0a3a9b2e07cddf92c4446b73ad6e2748253a) |        [1034th](https://github.com/asc-community/AngouriMath/commit/a3f48b47795b2dc2b3435152989a6e15639a65b4) |        [1066th](https://github.com/asc-community/AngouriMath/commit/a33746651f56a380b6c17913aa844f162f258d8c) |        [1090th](https://github.com/asc-community/AngouriMath/commit/9530c5b04484e98023941f7693bbeb1a3282cee6) |           [1446th](https://github.com/asc-community/AngouriMath/commit/2abb2b537c03977281f3fc2cab1da2c78c36a5f5) | [1620th](https://github.com/asc-community/AngouriMath/commit/e05d71797f53a9ac7dbdad6075cd7302a91036e7) | [1671st](https://github.com/asc-community/AngouriMath/commit/253b5a8d598a9a1d721b777340bd53ae3be12f99) | [1769th](https://github.com/asc-community/AngouriMath/commit/3ac24bc241e898509533bc980ec5dc91c5d79a07) | [1844th](https://github.com/asc-community/AngouriMath/commit/55cd1a58) |
-|---------------- |--------------:|---------------:|---------------:|--------------:|----------------:|--------------:|--------------:|--------------:|--------------:|--------------:|--------------:|--------------:|--------------:|-----------------:|--------------:|--------------:|--:| --------------: |
-|       ParseEasy |        28,599 |         73,669 |        134,120 |        44,328 |          54,675 |        21,722 |        32,212 |        32,138 |        34,702 |        32,199 |        33,008 |        27,483 |        33,043 |        34,664 | 11,760 ns | 10,857 ns | 10,080 ns |           6,846 ns |
-|       ParseHard |        92,037 |        208,710 |        415,440 |       178,760 |         287,865 |       209,853 |       624,769 |       698,094 |     4,272,898 |     3,862,375 |     4,731,275 |     4,051,823 |     5,284,613 |     5,657,058 | 2,617,362 ns | 2,493,337 ns | 2,235,852 ns |       1,621,902 ns |
-|    SimplifyEasy |     6,225,707 |     16,387,374 |     41,081,822 |       397,973 |       2,594,367 |       168,462 |       225,393 |       281,626 |       122,809 |        79,184 |        94,505 |        86,478 |       102,600 |        87,759 | 153,704 ns | 152,631 ns | 136,841 ns |         111,852 ns |
-|    SimplifyHard | 3,245,613,128 |  8,120,319,273 |  9,715,629,251 | 7,477,089,153 |  13,529,147,530 | 3,015,302,746 | 3,162,675,550 | 3,826,831,860 | 4,024,002,060 | 2,633,113,653 | 3,262,112,233 | 4,540,783,876 | 4,639,170,780 | 4,880,264,786 | 2,848,037,261 ns | 2,916,127,943 ns | 2,489,408,789 ns |   1,762,805,433 ns |
-|        Derivate |         5,550 |         39,895 |        161,507 |        50,858 |          56,255 |        37,702 |        46,083 |        86,751 |        68,604 |        41,388 |        58,340 |        48,376 |        54,228 |        60,425 | 26,808 ns | 25,629 ns | 23,674 ns |          16,507 ns |
-|       SolveEasy |       677,259 |      4,066,049 |     33,760,616 |     7,556,902 |     124,888,489 |    38,935,084 |    42,101,926 |    43,102,578 |    43,778,486 |    42,818,770 |    42,230,213 |    35,415,096 |    45,032,006 |    45,587,157 | 21,829,186 ns | 21,322,368 ns | 8,530,148 ns |       6,240,038 ns |
-| SolveEasyMedium |       192,319 |        741,114 |      2,861,751 |       646,063 |         789,993 |       124,082 |       154,729 |       142,744 |       138,836 |        78,712 |       110,144 |        88,021 |       106,430 |       108,175 | 48,368 ns | 48,863 ns | 50,203 ns |          37,304 ns |
-|     SolveMedium |    22,487,990 |    126,650,858 |    690,232,457 |   178,691,349 |     350,752,882 |     2,961,363 |     2,174,299 |     2,108,050 |     2,248,458 |     2,449,733 |     2,996,001 |     2,661,744 |     3,272,498 |     4,409,082 | 783,737 ns | 796,814 ns | 696,969 ns |         510,664 ns |
-| SolveMediumHard |       > 1 h   |       > 1 h    | 12,033,099,074 | 2,754,157,261 |   5,779,298,835 |   240,930,082 |   258,560,720 |   309,944,856 |   346,532,318 |   258,799,676 |   305,404,083 |   354,286,153 |   409,437,694 |   453,280,166 | 124,316,631 ns | 129,750,583 ns | 117,103,179 ns |      94,087,468 ns |
-|       SolveHard |       > 1 h   |       > 1 h    | 21,565,808,100 | 5,636,112,783 | 100,663,275,757 | 1,862,768,773 | 2,532,972,635 | 3,000,655,673 | 3,606,412,386 | 2,425,286,433 | 2,918,112,980 | 3,162,162,893 | 3,353,403,193 | 3,494,150,836 | 1,134,532,585 ns | 1,365,230,469 ns | 1,144,927,429 ns |     887,253,553 ns |
-|        EvalEasy |        12,059 |        200,766 |      1,548,901 |       550,676 |       3,354,484 |            34 |            72 |            68 |            84 |            28 |            11 |            11 |            13 |             9 | 2 ns | 2 ns | 1 ns |               2 ns |
-|        EvalTrig |             -- |              -- |              -- |            -- |               -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |               -- |               -- | 1,344,115 ns | 1,280,227 ns |         977,789 ns |
-| EvalTrigPrecise |             -- |              -- |              -- |            -- |               -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |               -- |               -- | 43,285,515 ns | 37,048,158 ns |      29,174,367 ns |
-|     CompileEasy |        24,771 |         38,300 |         62,328 |        33,684 |          40,751 |         9,208 |        15,467 |         5,487 |         5,623 |         6,283 |         6,254 |         5,143 |       565,597 |       589,540 | 352,800 ns | 352,449 ns | 314,521 ns |         215,593 ns |
-|     CompileHard |        61,572 |         84,042 |        139,499 |        73,738 |          96,203 |        18,274 |        26,390 |        14,782 |        15,657 |        17,986 |        17,672 |        14,902 |     1,234,995 |     1,321,375 | 595,593 ns | 596,664 ns | 585,717 ns |         424,923 ns |
-|         RunEasy |           138 |            126 |            123 |           117 |             128 |           157 |           170 |           165 |           175 |           167 |           161 |           149 |            48 |            43 | 42 ns | 42 ns | 28 ns |              21 ns |
-|       RunMedium |           833 |            950 |            920 |           844 |             838 |         1,008 |         1,081 |         1,064 |         1,155 |         1,089 |           982 |           875 |           630 |           549 | 318 ns | 320 ns | 238 ns |             181 ns |
-|         RunHard |         1,403 |          1,644 |          1,558 |         1,427 |           1,391 |         1,974 |         2,102 |         2,037 |         2,046 |         2,044 |         1,855 |         1,655 |         1,041 |           928 | 586 ns | 582 ns | 433 ns |             318 ns |
+|          Method |         [331st](https://github.com/asc-community/AngouriMath/commit/10e6e5a90e7270336b68dc5fd6aa36f3e0e65d2b) |          [380th](https://github.com/asc-community/AngouriMath/commit/73ae36488ddb863c1d6f35db5ed2f5dcf1484a26) |     [391st](https://github.com/asc-community/AngouriMath/commit/c7e08e6936bfdc2373377bec81ffd160e406244f)      |         [410th](https://github.com/asc-community/AngouriMath/commit/20814936bc740a9f410af4a4368e9895eab7aaf7) |           [483rd](https://github.com/asc-community/AngouriMath/commit/355963dcdf0ff9da568e9f1144ad2b7b68c19584) |         [520th](https://github.com/asc-community/AngouriMath/commit/70aa71acb73307c9f7df0aac006faae31b06058c) |         [690th](https://github.com/asc-community/AngouriMath/commit/5cc894939cb3657f0aa7ef5a25fd55011058929f) |         [826th](https://github.com/asc-community/AngouriMath/commit/87e33ec3590a95dd4ec59ff5c1f77064a64196d1) |         [914th](https://github.com/asc-community/AngouriMath/commit/6134338df083a908369b6bcfb69e70a4269ec51b) |         [920th](https://github.com/asc-community/AngouriMath/commit/501a0a3a9b2e07cddf92c4446b73ad6e2748253a) |        [1034th](https://github.com/asc-community/AngouriMath/commit/a3f48b47795b2dc2b3435152989a6e15639a65b4) |        [1066th](https://github.com/asc-community/AngouriMath/commit/a33746651f56a380b6c17913aa844f162f258d8c) |        [1090th](https://github.com/asc-community/AngouriMath/commit/9530c5b04484e98023941f7693bbeb1a3282cee6) |           [1446th](https://github.com/asc-community/AngouriMath/commit/2abb2b537c03977281f3fc2cab1da2c78c36a5f5) | [1620th](https://github.com/asc-community/AngouriMath/commit/e05d71797f53a9ac7dbdad6075cd7302a91036e7) | [1671st](https://github.com/asc-community/AngouriMath/commit/253b5a8d598a9a1d721b777340bd53ae3be12f99) | [1769th](https://github.com/asc-community/AngouriMath/commit/3ac24bc241e898509533bc980ec5dc91c5d79a07) | [1844th](https://github.com/asc-community/AngouriMath/commit/55cd1a58) | [2943rd](https://github.com/asc-community/AngouriMath/commit/842e8e9517ac0db3f3c31b906f197b3480fd07ee) |
+|---------------- |--------------:|---------------:|---------------:|--------------:|----------------:|--------------:|--------------:|--------------:|--------------:|--------------:|--------------:|--------------:|--------------:|-----------------:|--------------:|--------------:|--:| --------------: |--:|
+|       ParseEasy |        28,599 |         73,669 |        134,120 |        44,328 |          54,675 |        21,722 |        32,212 |        32,138 |        34,702 |        32,199 |        33,008 |        27,483 |        33,043 |        34,664 | 11,760 ns | 10,857 ns | 10,080 ns |           6,846 ns | 11,055 ns |
+|       ParseHard |        92,037 |        208,710 |        415,440 |       178,760 |         287,865 |       209,853 |       624,769 |       698,094 |     4,272,898 |     3,862,375 |     4,731,275 |     4,051,823 |     5,284,613 |     5,657,058 | 2,617,362 ns | 2,493,337 ns | 2,235,852 ns |       1,621,902 ns | 53,198 ns |
+|    SimplifyEasy |     6,225,707 |     16,387,374 |     41,081,822 |       397,973 |       2,594,367 |       168,462 |       225,393 |       281,626 |       122,809 |        79,184 |        94,505 |        86,478 |       102,600 |        87,759 | 153,704 ns | 152,631 ns | 136,841 ns |         111,852 ns | 95,565 ns |
+|    SimplifyHard | 3,245,613,128 |  8,120,319,273 |  9,715,629,251 | 7,477,089,153 |  13,529,147,530 | 3,015,302,746 | 3,162,675,550 | 3,826,831,860 | 4,024,002,060 | 2,633,113,653 | 3,262,112,233 | 4,540,783,876 | 4,639,170,780 | 4,880,264,786 | 2,848,037,261 ns | 2,916,127,943 ns | 2,489,408,789 ns |   1,762,805,433 ns | 166,915,182 ns |
+|        Derivate |         5,550 |         39,895 |        161,507 |        50,858 |          56,255 |        37,702 |        46,083 |        86,751 |        68,604 |        41,388 |        58,340 |        48,376 |        54,228 |        60,425 | 26,808 ns | 25,629 ns | 23,674 ns |          16,507 ns | 29,118 ns |
+|       SolveEasy |       677,259 |      4,066,049 |     33,760,616 |     7,556,902 |     124,888,489 |    38,935,084 |    42,101,926 |    43,102,578 |    43,778,486 |    42,818,770 |    42,230,213 |    35,415,096 |    45,032,006 |    45,587,157 | 21,829,186 ns | 21,322,368 ns | 8,530,148 ns |       6,240,038 ns | 447,578 ns |
+| SolveEasyMedium |       192,319 |        741,114 |      2,861,751 |       646,063 |         789,993 |       124,082 |       154,729 |       142,744 |       138,836 |        78,712 |       110,144 |        88,021 |       106,430 |       108,175 | 48,368 ns | 48,863 ns | 50,203 ns |          37,304 ns | 38,390 ns |
+|     SolveMedium |    22,487,990 |    126,650,858 |    690,232,457 |   178,691,349 |     350,752,882 |     2,961,363 |     2,174,299 |     2,108,050 |     2,248,458 |     2,449,733 |     2,996,001 |     2,661,744 |     3,272,498 |     4,409,082 | 783,737 ns | 796,814 ns | 696,969 ns |         510,664 ns | 497,053 ns |
+| SolveMediumHard |       > 1 h   |       > 1 h    | 12,033,099,074 | 2,754,157,261 |   5,779,298,835 |   240,930,082 |   258,560,720 |   309,944,856 |   346,532,318 |   258,799,676 |   305,404,083 |   354,286,153 |   409,437,694 |   453,280,166 | 124,316,631 ns | 129,750,583 ns | 117,103,179 ns |      94,087,468 ns | 14,234,151 ns |
+|       SolveHard |       > 1 h   |       > 1 h    | 21,565,808,100 | 5,636,112,783 | 100,663,275,757 | 1,862,768,773 | 2,532,972,635 | 3,000,655,673 | 3,606,412,386 | 2,425,286,433 | 2,918,112,980 | 3,162,162,893 | 3,353,403,193 | 3,494,150,836 | 1,134,532,585 ns | 1,365,230,469 ns | 1,144,927,429 ns |     887,253,553 ns | 118,299,251 ns |
+|        EvalEasy |        12,059 |        200,766 |      1,548,901 |       550,676 |       3,354,484 |            34 |            72 |            68 |            84 |            28 |            11 |            11 |            13 |             9 | 2 ns | 2 ns | 1 ns |               2 ns | 4 ns |
+|        EvalTrig |             -- |              -- |              -- |            -- |               -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |               -- |               -- | 1,344,115 ns | 1,280,227 ns |         977,789 ns | 60,728 ns |
+| EvalTrigPrecise |             -- |              -- |              -- |            -- |               -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |            -- |               -- |               -- | 43,285,515 ns | 37,048,158 ns |      29,174,367 ns | 726,611 ns |
+| EvalPolynomialFresh | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | 8,143 ns |
+| EvalTranscendentalFresh | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | 30,802 ns |
+| EvalPolynomialFresh15Digits | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | 9,104 ns |
+|     CompileEasy |        24,771 |         38,300 |         62,328 |        33,684 |          40,751 |         9,208 |        15,467 |         5,487 |         5,623 |         6,283 |         6,254 |         5,143 |       565,597 |       589,540 | 352,800 ns | 352,449 ns | 314,521 ns |         215,593 ns | 407,752 ns |
+|     CompileHard |        61,572 |         84,042 |        139,499 |        73,738 |          96,203 |        18,274 |        26,390 |        14,782 |        15,657 |        17,986 |        17,672 |        14,902 |     1,234,995 |     1,321,375 | 595,593 ns | 596,664 ns | 585,717 ns |         424,923 ns | 509,801 ns |
+|         RunEasy |           138 |            126 |            123 |           117 |             128 |           157 |           170 |           165 |           175 |           167 |           161 |           149 |            48 |            43 | 42 ns | 42 ns | 28 ns |              21 ns | 49 ns |
+|       RunMedium |           833 |            950 |            920 |           844 |             838 |         1,008 |         1,081 |         1,064 |         1,155 |         1,089 |           982 |           875 |           630 |           549 | 318 ns | 320 ns | 238 ns |             181 ns | 303 ns |
+|         RunHard |         1,403 |          1,644 |          1,558 |         1,427 |           1,391 |         1,974 |         2,102 |         2,037 |         2,046 |         2,044 |         1,855 |         1,655 |         1,041 |           928 | 586 ns | 582 ns | 433 ns |             318 ns | 505 ns |
 																													   
 
 
@@ -152,31 +155,145 @@ Bytes allocated per operation, measured in the same run as the timing column of 
 above. The 1671st is the first version measured for it, so the history is shorter than the
 timings'; later runs add to it the same way.
 
-| Method | [1671st](https://github.com/asc-community/AngouriMath/commit/253b5a8d598a9a1d721b777340bd53ae3be12f99) | [1769th](https://github.com/asc-community/AngouriMath/commit/3ac24bc241e898509533bc980ec5dc91c5d79a07) | [1844th](https://github.com/asc-community/AngouriMath/commit/55cd1a58) |
-|---|--:|--:| --: |
-| ParseEasy | 18,052 B | 18,040 B | 18,109 B |
-| ParseHard | 3,486,004 B | 3,522,411 B | 3,522,458 B |
-| SimplifyEasy | 127,578 B | 128,096 B | 128,096 B |
-| SimplifyHard | 3,710,538,008 B | 3,620,663,136 B | 3,632,010,176 B |
-| Derivate | 52,821 B | 52,822 B | 52,822 B |
-| SolveEasy | 20,213,448 B | 8,852,065 B | 8,853,472 B |
-| SolveEasyMedium | 79,613 B | 95,788 B | 97,192 B |
-| SolveMedium | 553,368 B | 658,051 B | 661,915 B |
-| SolveMediumHard | 152,243,208 B | 162,301,856 B | 164,544,992 B |
-| SolveHard | 1,341,716,112 B | 1,431,834,672 B | 1,446,779,520 B |
-| EvalEasy | none | none | none |
-| EvalTrig | 1,341,378 B | 1,341,378 B | 1,341,377 B |
-| EvalTrigPrecise | 12,743,208 B | 12,742,256 B | 12,742,216 B |
-| CompileEasy | 16,200 B | 16,139 B | 10,952 B |
-| CompileHard | 37,944 B | 37,793 B | 20,377 B |
-| RunEasy | none | none | none |
-| RunMedium | none | none | none |
-| RunHard | none | none | none |
+| Method | [1671st](https://github.com/asc-community/AngouriMath/commit/253b5a8d598a9a1d721b777340bd53ae3be12f99) | [1769th](https://github.com/asc-community/AngouriMath/commit/3ac24bc241e898509533bc980ec5dc91c5d79a07) | [1844th](https://github.com/asc-community/AngouriMath/commit/55cd1a58) | [2943rd](https://github.com/asc-community/AngouriMath/commit/842e8e9517ac0db3f3c31b906f197b3480fd07ee) |
+|---|--:|--:| --: |--:|
+| ParseEasy | 18,052 B | 18,040 B | 18,109 B | 18,424 B |
+| ParseHard | 3,486,004 B | 3,522,411 B | 3,522,458 B | 59,927 B |
+| SimplifyEasy | 127,578 B | 128,096 B | 128,096 B | 79,785 B |
+| SimplifyHard | 3,710,538,008 B | 3,620,663,136 B | 3,632,010,176 B | 161,716,160 B |
+| Derivate | 52,821 B | 52,822 B | 52,822 B | 57,227 B |
+| SolveEasy | 20,213,448 B | 8,852,065 B | 8,853,472 B | 448,295 B |
+| SolveEasyMedium | 79,613 B | 95,788 B | 97,192 B | 66,370 B |
+| SolveMedium | 553,368 B | 658,051 B | 661,915 B | 457,712 B |
+| SolveMediumHard | 152,243,208 B | 162,301,856 B | 164,544,992 B | 1,362,652 B |
+| SolveHard | 1,341,716,112 B | 1,431,834,672 B | 1,446,779,520 B | 9,530,109 B |
+| EvalEasy | none | none | none | none |
+| EvalTrig | 1,341,378 B | 1,341,378 B | 1,341,377 B | 69,888 B |
+| EvalTrigPrecise | 12,743,208 B | 12,742,256 B | 12,742,216 B | 336,498 B |
+| EvalPolynomialFresh | -- | -- | -- | 12,392 B |
+| EvalTranscendentalFresh | -- | -- | -- | 34,640 B |
+| EvalPolynomialFresh15Digits | -- | -- | -- | 11,920 B |
+| CompileEasy | 16,200 B | 16,139 B | 10,952 B | 14,898 B |
+| CompileHard | 37,944 B | 37,793 B | 20,377 B | 28,760 B |
+| RunEasy | none | none | none | none |
+| RunMedium | none | none | none | none |
+| RunHard | none | none | none | none |
 
 **`EvalEasy` allocating nothing is the proof of the caching note above**, rather than a further
 argument for it. Evaluating `1 + 2 + log(2, 3) + sqrt(4) - 4 ^ 7 + e * pi` cannot allocate zero
 bytes; a dictionary lookup can. `RunEasy`, `RunMedium` and `RunHard` allocate nothing for the
 honest reason -- a compiled delegate over `Complex` has nothing to put on the heap.
+
+---
+
+## The 2664th and the 2943rd, measured together on one runner — the pair for 2.7.0
+
+The pair the release checklist owes: `v2.6.0`
+([`1a72d4da`](https://github.com/asc-community/AngouriMath/commit/1a72d4da351a0666675ef09991138b4f8222707a), the 2664th)
+re-measured beside
+[`842e8e95`](https://github.com/asc-community/AngouriMath/commit/842e8e9517ac0db3f3c31b906f197b3480fd07ee), the 2943rd,
+which is the last change to the kernel before the release. The period is the whole of 2.7.0, 279 commits.
+
+Both columns come from one run of the Kernel Benchmark Across Key Commits workflow,
+[run 43536393809](https://github.com/asc-community/AngouriMath/actions/runs/43536393809), on 2026-11-14, on one
+`ubuntu-latest` runner. The list was the two commits twice, interleaved — `v2.6.0`, the 2943rd, `v2.6.0`, the 2943rd —
+so that the runner's own spread on an unchanged commit is measured in the same run as the change. The 2943rd column added
+to the two tables at the top of this file is the Kernel Benchmark's run on the same commit,
+[run 43534063686](https://github.com/asc-community/AngouriMath/actions/runs/43534063686).
+
+Three controls, all on allocation:
+
+- **Repeat.** Each commit's two measurements agree to within 0.03% on every gated row, and to the byte on twelve of the
+  nineteen, four of those being the rows that allocate nothing.
+- **Across machines.** The `v2.6.0` kernel is the 2662nd's — no kernel file changed between them — and the 2662nd was
+  measured on 2026-10-22 on one desktop machine, in the pair for 2.6.0 below. The two agree on every gated row to within
+  0.13% (`Derivate`, 56,247 there and 56,174 here), and to the byte on five.
+- **Across workflows.** The 2943rd column agrees with the Kernel Benchmark's run on the same commit to within 0.10% on
+  every gated row.
+
+### Allocation
+
+| benchmark | v2.6.0 | 2943rd | change |
+|---|--:|--:|--:|
+| `CompileEasy` | 10,971 | 14,594 | **+33.02%** |
+| `CompileHard` | 20,397 | 29,063 | **+42.49%** |
+| `Derivate` | 56,174 | 57,216 | **+1.85%** |
+| `EvalPolynomialFresh` | 12,536 | 12,392 | −1.15% |
+| `EvalPolynomialFresh15Digits` | 12,064 | 11,920 | −1.19% |
+| `EvalTranscendentalFresh` | 34,760 | 34,640 | −0.35% |
+| `EvalTrig` | 69,944 | 69,888 | −0.08% |
+| `EvalTrigPrecise` | 336,554 | 336,498 | −0.02% |
+| `ParseEasy` | 18,418 | 18,442 | +0.13% |
+| `ParseHard` | 60,023 | 59,927 | −0.16% |
+| `SimplifyEasy` | 79,681 | 79,785 | +0.13% |
+| `SimplifyHard` | 157,897,000 | 161,715,872 | **+2.42%** |
+| `SolveEasy` | 453,423 | 448,301 | −1.13% |
+| `SolveEasyMedium` | 66,602 | 66,369 | −0.35% |
+| `SolveHard` | 10,001,696 | 9,530,109 | **−4.72%** |
+| `SolveMedium` | 458,872 | 457,711 | −0.25% |
+| `SolveMediumHard` | 1,412,148 | 1,362,652 | **−3.51%** |
+
+Bytes allocated per call, from the first of each commit's two measurements. `EvalEasy`, `RunEasy`, `RunMedium` and
+`RunHard` allocate nothing in both columns and are left out.
+
+The steps below are read from the gate's output on each push to `master`: the Kernel Benchmark runs on every merge that
+touches the kernel, and allocation is deterministic, so the run where a row first moves names the commit that moved it.
+The gate baseline itself was re-recorded once in the release, by
+[#2310](https://github.com/asc-community/AngouriMath/pull/2310) at the 2827th, so every step before that sat inside
+the gate's 3% against the `v2.6.0` baseline without failing it.
+
+- **`SolveHard` −4.72% and `SolveMediumHard` −3.51%** are #2310, a union of solves solving each equation once. Its
+  description records −4.7% and −3.1% from the gate.
+- **`SimplifyHard` +2.42%** came in three consecutive steps:
+  157,879,560 at the 2738th, then 159,271,064 at the 2739th
+  ([#2175](https://github.com/asc-community/AngouriMath/pull/2175), +0.88%), 160,942,296 at the 2740th
+  ([#2176](https://github.com/asc-community/AngouriMath/pull/2176), +1.05%) and 161,669,968 at the 2741st
+  ([#2177](https://github.com/asc-community/AngouriMath/pull/2177), +0.45%). The three make the trigonometric identities
+  `sin² + cos²`, `1 + tan²` and the power reduction of `cos²` match anywhere in a sum, which is more searching on every
+  sum `SimplifyHard` simplifies. Each step was inside the gate's 3%; together they are 2.4%.
+- **`Derivate` +1.85%** is one step, 56,139 to 57,216 at the 2904th
+  ([#2393](https://github.com/asc-community/AngouriMath/pull/2393), the power rule keeping an irrational exponent
+  exact), inside the gate's 3%, and the baseline was not re-recorded after it. With the 2.6.0 pair's +5.65%, `Derivate`
+  has gone up 7.5% since `v2.5.0` without the gate failing once.
+- **`CompileEasy` +33% and `CompileHard` +42%** are not gated, because their allocation includes the runtime building a
+  delegate and moves by a few hundred bytes between runs of one build. The steps are far larger than that, and they are
+  the compilers learning new nodes: `CompileEasy` 10,971 to about 12,000 at the 2781st
+  ([#2223](https://github.com/asc-community/AngouriMath/pull/2223), membership and divisibility compile), 12,874 at the
+  2784th ([#2229](https://github.com/asc-community/AngouriMath/pull/2229)), 13,839 at the 2823rd
+  ([#2305](https://github.com/asc-community/AngouriMath/pull/2305)), 14,496 at the 2933rd
+  ([#2429](https://github.com/asc-community/AngouriMath/pull/2429), matrix arguments) and 14,593 at the 2937th
+  ([#2435](https://github.com/asc-community/AngouriMath/pull/2435)). `CompileHard` moved at the same commits. Each
+  step is attributed to its commit; what in each commit costs the bytes is not bisected.
+- **The evaluation rows' −0.02% to −1.19%, `SolveEasy` −1.13% and the rows under 0.4%** are not attributed.
+
+### Timings
+
+The interleaving gives each change two independent readings, and each commit's two measurements give the runner's spread
+on an unchanged kernel. In this run that spread reached 9.8% (`Derivate` at `v2.6.0`) and 8.9% (`SolveMediumHard`), far
+less than the 30–57% between two separate Kernel Benchmark runs, but too much to read a single-digit move from one pair.
+A timing is read as a change only where both pairs agree in sign and both are outside the spread:
+
+| benchmark | v2.6.0 | 2943rd | change | first pair / second pair | allocation |
+|---|--:|--:|--:|--:|--:|
+| `CompileEasy` | 332,547 | 413,679 | +24.40% | +24.23% / +24.56% | +33.02% |
+| `CompileHard` | 579,424 | 508,814 | −12.19% | −12.90% / −11.47% | +42.49% |
+| `RunHard` | 570 | 501 | −12.03% | −12.50% / −11.56% | none |
+| `RunMedium` | 316 | 302 | −4.27% | −4.11% / −4.43% | none |
+| `SimplifyEasy` | 89,591 | 94,556 | +5.54% | +5.92% / +5.17% | +0.13% |
+
+Nanoseconds per call, the mean of each commit's two measurements.
+
+- **`CompileEasy`** moved with its allocation, which is the work: building a delegate for more node kinds.
+- **`CompileHard`** moved against its allocation, faster while allocating 42% more; **`RunHard`** and **`RunMedium`**
+  moved with no allocation in either column. All three reproduced in both pairs to within 1.5 points, so on this runner
+  they are not the machine, and they are not attributed.
+  [#2438](https://github.com/asc-community/AngouriMath/pull/2438), computing only the case a compiled piecewise takes, is
+  the obvious candidate for `RunHard` and is untested.
+- **`SimplifyEasy` +5.5%** is a timing moving alone, just outside this run's same-commit spread of 3.6%. One run does
+  not say whether it is the code, so it is recorded as a question, not as a regression.
+
+`SimplifyHard` (+10.5% and +2.8% in the two pairs), `SolveHard` (+2.8% / −7.8%) and `SolveMediumHard` (−3.3% / −11.7%)
+disagree between their pairs or sit inside the spread, so only their allocation is read. The smaller rows are not quoted.
 
 ---
 
