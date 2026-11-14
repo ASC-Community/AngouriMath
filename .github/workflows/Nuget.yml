@@ -3,6 +3,13 @@ name: 'Upload to NuGet'
 on:
   release:
     types: [published]
+  # Publishes the packages of a tag that already has a release, when the run its release started failed
+  # after the release was published. The packages are built from the tag, as a release builds them.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The tag of a published release, such as v2.7.0'
+        required: true
 
 jobs:
   publish:
@@ -17,11 +24,15 @@ jobs:
           dotnet-version: '10.x'
           
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
         
       - name: 'Determine version'
         id: version
+        env:
+          TAGNAME: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
-          tagname="${{ github.event.release.tag_name }}"
+          tagname="$TAGNAME"
 
           # Validate tag name exists
           if [[ -z "$tagname" ]]; then
