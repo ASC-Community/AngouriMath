@@ -3779,6 +3779,7 @@ AngouriMath.MathS.Sin(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.SolveBooleanTable(AngouriMath.Entity, AngouriMath.Entity+Variable[]) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.SolveEquation(AngouriMath.Entity, AngouriMath.Entity+Variable) : AngouriMath.Entity+Set
 AngouriMath.MathS.SolveOde(AngouriMath.Entity, AngouriMath.Entity+Variable, AngouriMath.Entity+Variable) : AngouriMath.Entity
+AngouriMath.MathS.SolveSystem(AngouriMath.Entity, AngouriMath.Entity+Variable[]) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.Sqr(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Sqrt(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Sum(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity

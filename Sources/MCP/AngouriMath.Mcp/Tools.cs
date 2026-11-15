@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -93,7 +93,7 @@ internal static class Tools
         ["am_limit"] = [Catalogue.Limit],
         ["am_evaluate"] = [Catalogue.EvaluateNumerically],
         ["am_truth_table"] = [Catalogue.TruthTable, Catalogue.SatisfyingAssignments],
-        ["am_solve_system"] = [Catalogue.SolveSystem],
+        ["am_solve_system"] = [Catalogue.SolveSystem, Catalogue.SolveConjunction],
         ["am_represent"] = [Catalogue.ToBase, Catalogue.FromBase],
         ["am_matrix"] = [Catalogue.Determinant, Catalogue.Inverse, Catalogue.Transpose, Catalogue.Rank,
             Catalogue.ReducedRowEchelonForm, Catalogue.Trace, Catalogue.TensorProduct],
@@ -327,7 +327,8 @@ internal static class Tools
 
         Tool("am_solve_system",
             "Solve a system of simultaneous equations for several variables. Returns one row " +
-            "per solution. Note: nonlinear systems may return no solution even when one " +
+            "per solution. Give the system either as a list of equations or as one statement " +
+            "joining them with 'and'. Note: nonlinear systems may return no solution even when one " +
             "exists (a known library limitation).",
             Schema(new JsonObject
             {
@@ -335,7 +336,13 @@ internal static class Tools
                 {
                     ["type"] = "array",
                     ["items"] = new JsonObject { ["type"] = "string" },
-                    ["description"] = "Equations, e.g. ['x + y = 3', 'x - y = 1'].",
+                    ["description"] = "Equations, e.g. ['x + y = 3', 'x - y = 1']. Give this or 'statement'.",
+                },
+                ["statement"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["description"] = "The system as one conjunction of equations, e.g. 'x + y = 3 and x - y = 1'. " +
+                        "Declined where a conjunct is not an equation (an inequality, 'in', 'or', 'not'). Give this or 'equations'.",
                 },
                 ["variables"] = new JsonObject
                 {
@@ -343,7 +350,7 @@ internal static class Tools
                     ["items"] = new JsonObject { ["type"] = "string" },
                     ["description"] = "Variables to solve for, e.g. ['x','y'].",
                 },
-            }, "equations", "variables")),
+            }, "variables")),
 
         Tool("am_check_steps",
             "Check a chain of working step by step and report WHICH step broke. Use this to " +
@@ -1386,8 +1393,10 @@ internal static class Tools
     private static JsonObject SolveSystem(JsonObject args)
     {
         var equations = A(args, "equations");
+        var statement = S(args, "statement");
         var variables = A(args, "variables");
-        if (equations.Count == 0) return Fail("'equations' must not be empty");
+        if (statement is not null && equations.Count > 0) return Fail("give 'equations' or 'statement', not both");
+        if (statement is null && equations.Count == 0) return Fail("'equations' must not be empty");
         if (variables.Count == 0) return Fail("'variables' must not be empty");
 
         var parsed = new List<Entity>();
@@ -1402,8 +1411,28 @@ internal static class Tools
             warnings.AddRange(w);
         }
 
-        return FromOutcome(Guard.Run(() =>
-            Catalogue.SolveSystem.Ask(parsed, [.. variables.Select(Var)])), matrix =>
+        Entity? system = null;
+        if (statement is not null)
+        {
+            if (!TryParse(statement, "statement", false, out var e, out var w, out var error))
+                return error!;
+            // A conjunct that is not an equation is declined by the library as well; naming it
+            // here is what tells the caller why, where the library can only say null.
+            if (EquationSystem.EquationsOf(e, out var notAnEquation) is null)
+                return new JsonObject
+                {
+                    ["status"] = "declined",
+                    ["note"] = $"'{notAnEquation!.Stringize()}' is not an equation, and solving the other " +
+                        "conjuncts without it would answer a different question. Solve the statement for one " +
+                        "variable with am_solve instead.",
+                };
+            system = e;
+            warnings.AddRange(w);
+        }
+
+        return FromOutcome(Guard.Run(() => system is not null
+            ? Catalogue.SolveConjunction.Ask(system, [.. variables.Select(Var)])
+            : Catalogue.SolveSystem.Ask(parsed, [.. variables.Select(Var)])), matrix =>
         {
             var order = new JsonArray();
             foreach (var v in variables) order.Add(v);

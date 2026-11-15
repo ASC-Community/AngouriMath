@@ -67,7 +67,7 @@ let ownCommands =
 /// the question of #1019 item 16; an entry added to the catalogue joins this list or a command.
 /// </summary>
 let notOffered =
-    set [ "expand"; "factorize"; "integrate"; "limit"; "solve_system"; "evaluate_numerically"; "variables"
+    set [ "expand"; "factorize"; "integrate"; "limit"; "solve_system"; "solve_conjunction"; "evaluate_numerically"; "variables"
           "alternatives"; "sympy"; "truth_table"; "satisfying_assignments"; "series"; "to_base"; "from_base"
           "determinant"; "inverse"; "transpose"; "rank"; "reduced_row_echelon_form"; "trace"; "tensor_product"
           "prime_factorization"; "totient"; "greatest_common_divisor"; "divisor_count"; "is_prime"; "are_equal" ]

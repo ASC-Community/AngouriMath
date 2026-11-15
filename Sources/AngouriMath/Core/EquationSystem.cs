@@ -64,6 +64,46 @@ namespace AngouriMath.Core
             => equation is Equalsf(var left, var right) ? left - right : equation;
 
         /// <summary>
+        /// The equations of <paramref name="system"/>, each an expression equal to zero, where it
+        /// is a conjunction of equations -- nested or not, and one equation is a conjunction of
+        /// one -- or an expression, which is read as equal to zero. <see langword="null"/>, with
+        /// the first conjunct that is not an equation in <paramref name="notAnEquation"/>, where
+        /// any conjunct is something else: an inequality, a membership, a disjunction, a
+        /// negation or a boolean. Leaving one out would answer a different question.
+        /// </summary>
+        /// <remarks>
+        /// An equality whose side is itself a statement, <c>(x = 1) = (y = 2)</c>, is an
+        /// equivalence of statements rather than an equation in numbers, and is not one either.
+        /// https://github.com/asc-community/AngouriMath/issues/2450
+        /// </remarks>
+        internal static List<Entity>? EquationsOf(Entity system, out Entity? notAnEquation)
+        {
+            notAnEquation = null;
+            if (system is not Statement)
+                return new List<Entity> { system };
+            var equations = new List<Entity>();
+            var pending = new Stack<Entity>();
+            pending.Push(system);
+            while (pending.Count > 0)
+            {
+                switch (pending.Pop())
+                {
+                    case Andf(var left, var right):
+                        pending.Push(right);
+                        pending.Push(left);
+                        break;
+                    case Equalsf(var left, var right) when left is not Statement && right is not Statement:
+                        equations.Add(left - right);
+                        break;
+                    case var other:
+                        notAnEquation = other;
+                        return null;
+                }
+            }
+            return equations;
+        }
+
+        /// <summary>
         /// Solves a system of equations, if possible.
         /// </summary>
         /// <param name="vars">
