@@ -24,6 +24,8 @@ namespace AngouriMath.Core
         /// <summary>
         /// Each equation is an expression equal to zero, or an equality <c>a = b</c>, which is read as
         /// <c>a - b = 0</c>, as <see cref="MathS.SolveEquation"/> reads one in a single variable.
+        /// A conjunction of equations, <c>x + y = 3 and x - y = 1</c>, is read as the equations
+        /// it joins; one with any other conjunct is passed on as it is.
         /// After having created a system of equations, you may solve or latexize it.
         /// </summary>
         /// <param name="equations">
@@ -37,11 +39,13 @@ namespace AngouriMath.Core
         /// });
         /// </code>
         /// </example>
-        public EquationSystem(IEnumerable<Entity> equations) => this.equations = equations.Select(AsAnExpressionEqualToZero).ToList();
+        public EquationSystem(IEnumerable<Entity> equations) => this.equations = equations.SelectMany(AsExpressionsEqualToZero).ToList();
 
         /// <summary>
         /// Each equation is an expression equal to zero, or an equality <c>a = b</c>, which is read as
         /// <c>a - b = 0</c>, as <see cref="MathS.SolveEquation"/> reads one in a single variable.
+        /// A conjunction of equations, <c>x + y = 3 and x - y = 1</c>, is read as the equations
+        /// it joins; one with any other conjunct is passed on as it is.
         /// After having created a system of equations, you may solve or latexize it.
         /// </summary>
         /// <param name="equations">
@@ -55,13 +59,24 @@ namespace AngouriMath.Core
         /// );
         /// </code>
         /// </example>
-        public EquationSystem(params Entity[] equations) => this.equations = equations.Select(AsAnExpressionEqualToZero).ToList();
+        public EquationSystem(params Entity[] equations) => this.equations = equations.SelectMany(AsExpressionsEqualToZero).ToList();
 
         // An equality was passed on as it stood and the system answered that it had no solution:
         // `x + y = 3` and `x - y = 1` gave null, where `x + y - 3` and `x - y - 1` give `[[2, 1]]`.
         // https://github.com/asc-community/AngouriMath/issues/1673
         private static Entity AsAnExpressionEqualToZero(Entity equation)
             => equation is Equalsf(var left, var right) ? left - right : equation;
+
+        // A conjunction of equations was passed on as one equation and the system had no
+        // solution: x + y = 3 and x - y = 1 gave null, where the two equations listed give
+        // [[2, 1]]. A conjunction is its conjuncts, where each is an equation; one with any other
+        // conjunct -- an inequality, a membership -- is passed on as it was, since solving the
+        // equations alone would answer a different question.
+        // https://github.com/asc-community/AngouriMath/issues/2450
+        private static IEnumerable<Entity> AsExpressionsEqualToZero(Entity equation)
+            => equation is Andf && EquationsOf(equation, out _) is { } conjuncts
+                ? conjuncts
+                : new[] { AsAnExpressionEqualToZero(equation) };
 
         /// <summary>
         /// The equations of <paramref name="system"/>, each an expression equal to zero, where it
