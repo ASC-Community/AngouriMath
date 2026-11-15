@@ -2128,6 +2128,7 @@ AngouriMath.Entity+Number+Real.Codomain { } : AngouriMath.Core.Domain
 AngouriMath.Entity+Number+Real.CompareTo(AngouriMath.Entity+Number+Real) : System.Int32
 AngouriMath.Entity+Number+Real.CompareTo(System.Object) : System.Int32
 AngouriMath.Entity+Number+Real.Create(PeterO.Numbers.EDecimal) : AngouriMath.Entity+Number+Real
+AngouriMath.Entity+Number+Real.CreateWithoutDowncasting(PeterO.Numbers.EDecimal) : AngouriMath.Entity+Number+Real
 AngouriMath.Entity+Number+Real.Deconstruct(PeterO.Numbers.EDecimal&) : System.Void
 AngouriMath.Entity+Number+Real.EDecimal { } : PeterO.Numbers.EDecimal
 AngouriMath.Entity+Number+Real.EqualityContract { } : System.Type

@@ -75,6 +75,30 @@ namespace AngouriMath
                 public static Real Create(EDecimal value) => Create(value, fromMachineNumber: false, EDecimal.One);
 
                 /// <summary>
+                /// A <see cref="Real"/> holding exactly <paramref name="value"/>, never rounded onto an
+                /// <see cref="Integer"/> or a <see cref="Rational"/>, whatever
+                /// <see cref="MathS.Settings.DowncastingEnabled"/> says: what <see cref="Create(EDecimal)"/> answers
+                /// with the downcasting off, without opening a scope to turn it off.
+                /// </summary>
+                /// <example>
+                /// <code>
+                /// using System;
+                /// using AngouriMath;
+                /// using PeterO.Numbers;
+                ///
+                /// var half = EDecimal.FromString("0.5");
+                /// Console.WriteLine(Entity.Number.Real.Create(half).GetType().Name);
+                /// Console.WriteLine(Entity.Number.Real.CreateWithoutDowncasting(half).GetType().Name);
+                /// </code>
+                /// Prints
+                /// <code>
+                /// Rational
+                /// Real
+                /// </code>
+                /// </example>
+                public static Real CreateWithoutDowncasting(EDecimal value) => new Real(value);
+
+                /// <summary>
                 /// A value an arithmetic operation produced, which is a residual of cancellation, and zero, only below
                 /// half the working digits of <paramref name="cancelledScale"/>, the size of the terms that cancelled;
                 /// zero for a value no cancellation produced -- a product, a quotient or a power of nonzero values --
