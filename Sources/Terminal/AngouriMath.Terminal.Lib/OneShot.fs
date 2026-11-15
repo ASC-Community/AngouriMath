@@ -70,7 +70,7 @@ let notOffered =
     set [ "expand"; "factorize"; "integrate"; "limit"; "solve_system"; "evaluate_numerically"; "variables"
           "alternatives"; "sympy"; "truth_table"; "satisfying_assignments"; "series"; "to_base"; "from_base"
           "determinant"; "inverse"; "transpose"; "rank"; "reduced_row_echelon_form"; "trace"; "tensor_product"
-          "prime_factorization"; "totient"; "greatest_common_divisor"; "divisor_count"; "is_prime" ]
+          "prime_factorization"; "totient"; "greatest_common_divisor"; "divisor_count"; "is_prime"; "are_equal" ]
 
 /// The arguments still to read, falling back to a line of stdin where one is missing or is <c>_</c>.
 type private Arguments(given: string list, input: TextReader) =

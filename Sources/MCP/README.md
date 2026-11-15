@@ -59,6 +59,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | amcli mcp
 | `am_limit` | one-sided with `side`; tells "no limit" from failure |
 | `am_evaluate` | the exact form and a decimal, after optional substitutions |
 | `am_verify_equal` | did your own algebra change the meaning? Names the difference |
+| `am_are_equal` | `equal` only with a proof, `not_equal` only with a witness point, else `unknown`; never decided by sampling alone. Bounded in steps |
 | `am_check_steps` | checks a chain of working and names the step that broke |
 | `am_truth_table` | the table and the satisfying assignments |
 | `am_solve_system` | takes `x + y = 3` as well as `x + y - 3` |
@@ -137,6 +138,11 @@ a deep recursion takes the server down.
 - `am_verify_equal` decides on positive real points, then checks the negatives separately: for
   `sqrt(x^2)` against `x` it answers `equal: true` **with a note** that the two agree only on the
   positives. The note is part of the answer.
+- `am_are_equal` answers `unknown` often and honestly: its rules do not expand, so `(x + 1)^2`
+  against `x^2 + 2x + 1` is `unknown`, and it reads a name as a number, so `a*b` and `b*a` are
+  `equal` unless a matrix or a matrix operation is written somewhere in the question. Its
+  `not_equal` comes with a point, so the agent can check it. `am_verify_equal` gives a yes or no
+  more often, and its yes may rest on sampling.
 - `am_solve`'s `solutions[]` is tidied root by root and its raw `result` is not, so the two can
   read differently. Prefer `solutions[]`.
 - A nonlinear system can come back with no solution when one exists.

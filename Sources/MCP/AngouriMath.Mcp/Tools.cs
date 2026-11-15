@@ -104,6 +104,7 @@ internal static class Tools
         ["am_number_theory"] = [Catalogue.PrimeFactorization, Catalogue.Totient, Catalogue.GreatestCommonDivisor,
             Catalogue.DivisorCount, Catalogue.IsPrime],
         ["am_to_sympy"] = [Catalogue.Sympy],
+        ["am_are_equal"] = [Catalogue.AreEqual],
     };
 
     /// <summary>
@@ -270,6 +271,43 @@ internal static class Tools
             {
                 ["left"] = Str("First expression."),
                 ["right"] = Str("Second expression."),
+            }, "left", "right")),
+
+        Tool("am_are_equal",
+            "Ask whether two expressions are equal, and get one of three answers, each a claim " +
+            "you can rely on: 'equal' only with a proof (both sides rewritten into one class of " +
+            "an e-graph, by rules that state their soundness), 'not_equal' only with a witness " +
+            "(a point where both sides are defined and provably differ), and 'unknown' " +
+            "otherwise — which is NOT 'unequal'. Unlike am_verify_equal it never decides by " +
+            "sampling alone and never believes a simplification: use it when the answer has to " +
+            "be a proof or a counter-example. Bounded by a step budget, so the same question " +
+            "gets the same answer on any machine.",
+            Schema(new JsonObject
+            {
+                ["left"] = Str("First expression."),
+                ["right"] = Str("Second expression."),
+                ["steps"] = new JsonObject
+                {
+                    ["type"] = "integer",
+                    ["description"] = "Work budget in steps (a point tried, a rule's match attempt, a node " +
+                        "the graph grows by), 1-1000000. Default 20000. An 'unknown' that says the " +
+                        "budget stopped it may become an answer with more.",
+                },
+                ["domain"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["enum"] = new JsonArray("complex", "real"),
+                    ["description"] = "Where the variables range, and so where a witness may be. " +
+                        "Default 'complex'. sqrt(x^2) and abs(x) are not_equal over complex, unknown over real.",
+                },
+                ["weakest"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["enum"] = new JsonArray("sound", "sound_under_assumptions"),
+                    ["description"] = "The weakest soundness a proof may rest on. Default 'sound': only " +
+                        "rules with no side condition. 'sound_under_assumptions' admits conditional " +
+                        "rules too and names them in 'assumptions'.",
+                },
             }, "left", "right")),
 
         Tool("am_truth_table",
@@ -617,6 +655,7 @@ internal static class Tools
         "am_number_theory" => NumberTheory(args),
         "am_classify" => ClassifyFormula(args),
         "am_to_sympy" => ToSympy(args),
+        "am_are_equal" => AreEqual(args),
         _ => Fail($"unknown tool '{name}'"),
     };
 
@@ -1218,6 +1257,88 @@ internal static class Tools
                     "to the positives.";
             }
 
+            return response;
+        });
+    }
+
+    private static JsonObject AreEqual(JsonObject args)
+    {
+        if (!TryParse(S(args, "left"), "left", false, out var left, out var lw, out var le))
+            return le!;
+        if (!TryParse(S(args, "right"), "right", false, out var right, out var rw, out var re))
+            return re!;
+
+        var steps = args.TryGetPropertyValue("steps", out var st) && st is not null
+            ? st.GetValue<int>() : 20_000;
+        if (steps is < 1 or > 1_000_000) return Fail("'steps' must be between 1 and 1000000");
+        Domain domain;
+        switch (S(args, "domain") ?? "complex")
+        {
+            case "complex": domain = Domain.Complex; break;
+            case "real": domain = Domain.Real; break;
+            default: return Fail("'domain' must be 'complex' or 'real'");
+        }
+        AngouriMath.Core.Transformations.Soundness weakest;
+        switch (S(args, "weakest") ?? "sound")
+        {
+            case "sound": weakest = AngouriMath.Core.Transformations.Soundness.Sound; break;
+            case "sound_under_assumptions": weakest = AngouriMath.Core.Transformations.Soundness.SoundUnderAssumptions; break;
+            default: return Fail("'weakest' must be 'sound' or 'sound_under_assumptions'");
+        }
+
+        var budget = new AngouriMath.Core.Budgets.WorkBudget { Steps = steps };
+        return FromOutcome(Guard.Run(() => Catalogue.AreEqual.Ask(left, right, budget, weakest, domain)), answer =>
+        {
+            var verdict = answer.Verdict switch
+            {
+                AngouriMath.Core.Transformations.EqualityVerdict.Equal => "equal",
+                AngouriMath.Core.Transformations.EqualityVerdict.NotEqual => "not_equal",
+                _ => "unknown",
+            };
+            var assumptions = new JsonArray();
+            foreach (var step in answer.Assumptions) assumptions.Add(step);
+            JsonObject? witness = null;
+            if (answer.Witness is { } point)
+            {
+                witness = new JsonObject();
+                foreach (var (variable, value) in point.OrderBy(p => p.Key.Name, StringComparer.Ordinal))
+                    witness[variable.Name] = value.Stringize();
+            }
+            var response = new JsonObject
+            {
+                // Unknown is "inconclusive", never false: not proved is not refuted.
+                ["status"] = verdict == "unknown" ? "inconclusive" : "solved",
+                ["verdict"] = verdict,
+                ["equal"] = verdict switch { "equal" => true, "not_equal" => false, _ => null },
+                ["justification"] = answer.Justification switch
+                {
+                    AngouriMath.Core.Transformations.Soundness.Sound => "sound",
+                    AngouriMath.Core.Transformations.Soundness.SoundUnderAssumptions => "sound_under_assumptions",
+                    _ => null,
+                },
+                ["assumptions"] = assumptions,
+                ["witness"] = witness,
+                ["budget"] = new JsonObject
+                {
+                    ["steps"] = answer.Budget.Steps,
+                    ["completed"] = answer.Budget.Completed,
+                    ["stopped_by"] = answer.Budget.Reason,
+                },
+                ["left_parsed"] = left.Stringize(),
+                ["right_parsed"] = right.Stringize(),
+                ["note"] = verdict switch
+                {
+                    "equal" when answer.Assumptions.Count == 0 => "Proved equal, with no side condition.",
+                    "equal" => "Proved equal by steps that hold only under conditions; 'assumptions' names them. " +
+                        "Ask again with weakest='sound' for an unconditional answer.",
+                    "not_equal" => "The two sides differ at 'witness', where both are defined.",
+                    _ => answer.Budget.Completed
+                        ? "Neither proved nor refuted: the rules ran out of moves. Not proof of inequality."
+                        : "Neither proved nor refuted before the budget ran out. Not proof of inequality; " +
+                          "more 'steps' may settle it.",
+                },
+                ["warnings"] = Warn([.. lw, .. rw]),
+            };
             return response;
         });
     }
