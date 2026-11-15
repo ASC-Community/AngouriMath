@@ -283,6 +283,54 @@ namespace AngouriMath.Tests.Common
             }
         }
 
+        // https://github.com/asc-community/AngouriMath/issues/2446
+        // The declines here come of downcasting, which v3 removes:
+        // https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225
+        // P and Q are the Pell numbers with (1 + sqrt(2))^n = P + Q sqrt(2), so at y = sqrt(2)
+        // the coefficient P - Q y is (1 - sqrt(2))^n, which is 1.6e-27 for n = 70. The system was
+        // answered there with the one row [-2P, -sqrt(2)], which leaves exactly -2 + 2P (P - Q sqrt(2))
+        // in the second equation, about -2, and its four solutions were lost. Each equation is a
+        // quadratic in x for each y, so every answer has four rows; each row is put back into
+        // both equations and enclosed, by interval arithmetic, within 1e-80 of zero. Declining
+        // is allowed where the coefficients are too close to rounding to settle, and n = 10 is
+        // answered today and must stay answered. At n = 140 the terms are near 1e107, past the
+        // hundred digits evaluation works to, and the rows [sqrt(3), sqrt(2)] and
+        // [-sqrt(3), sqrt(2)] were answered too.
+        [Theory]
+        [InlineData(10, true)]
+        [InlineData(20, false)]
+        [InlineData(30, false)]
+        [InlineData(40, false)]
+        [InlineData(50, false)]
+        [InlineData(60, false)]
+        [InlineData(70, false)]
+        [InlineData(140, false)]
+        [InlineData(200, false)]
+        public void Issue2446_EveryRowOfASystemWithACancellingCoefficientIsASolution(int n, bool answered)
+        {
+            System.Numerics.BigInteger p = 1, q = 0;
+            for (var i = 0; i < n; i++)
+                (p, q) = (p + 2 * q, p + q);
+            var equations = new[] { "y^2 - 2".ToEntity(), $"x^2 + ({p} - {q} * y) * x - 3".ToEntity() };
+            var solutions = MathS.Equations(equations).Solve("x", "y");
+            if (solutions is null)
+            {
+                Assert.False(answered, "declined a system that is answered");
+                return;
+            }
+            Assert.Equal(4, solutions.RowCount);
+            for (var row = 0; row < solutions.RowCount; row++)
+                foreach (var equation in equations)
+                {
+                    var residual = equation.Substitute("x", solutions[row, 0]).Substitute("y", solutions[row, 1]);
+                    var enclosure = AngouriMath.Numerics.PreciseEvaluation.Of(residual, 200);
+                    Assert.True(enclosure is { } value
+                        && value.Re.Magnitude.CompareTo(PeterO.Numbers.EDecimal.FromString("1E-80")) <= 0
+                        && value.Im.Magnitude.CompareTo(PeterO.Numbers.EDecimal.FromString("1E-80")) <= 0,
+                        $"[{solutions[row, 0]}, {solutions[row, 1]}] leaves {residual.Evaled} in {equation}");
+                }
+        }
+
         // The complex reading is untouched: e^x + 1 = 0 has the root i pi there.
         [Fact]
         public void Issue2425_OverTheComplexNumbersTheRootIsKept()

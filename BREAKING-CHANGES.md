@@ -63,6 +63,24 @@ among the arguments.
 
 ---
 
+### A system row that is not a solution declines the system
+
+**Silent: a wrong row is now no answer.** With `P + Q sqrt(2) = (1 + sqrt(2))^70`, the coefficient `P - Q y` is
+`1.6e-27` at `y = sqrt(2)`, and solving one equation reads values that small as zero. The elimination then found the row
+`[-2P, -sqrt(2)]`, which leaves `-2` in the second equation, and lost all four solutions. A row with only exact numbers
+in it is now put back into the equations by interval arithmetic, and a residual whose interval leaves out zero declines
+the system ([#2446](https://github.com/asc-community/AngouriMath/issues/2446)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `MathS.Equations("y^2 - 2", "x^2 + (311363698964240484013304163 - 220167382952941249990598278 * y) * x - 3").Solve("x", "y")` | `[[-622727397928480968026608326, -sqrt(2)]]` | `null` |
+
+The same system for the exponents 20 to 60 was declined already, and for 10 it is still answered with its four rows.
+For 80 to 160 it was answered with the one row `[-2P, -sqrt(2)]` too, and for 140 and 200 with `[sqrt(3), sqrt(2)]` and
+`[-sqrt(3), sqrt(2)]` besides, which leave `sqrt(3) (P - Q sqrt(2))`; each of those is declined now.
+
+---
+
 ## 2.7.0 — since 2.6.0
 
 **Read these first: names that read differently.** Each of these was read as something else on 2.6.0. Code that used
