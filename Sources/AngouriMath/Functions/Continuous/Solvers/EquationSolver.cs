@@ -26,7 +26,6 @@ namespace AngouriMath.Functions.Algebra
             // https://github.com/asc-community/AngouriMath/issues/1673
             if (equation is Equalsf(var left, var right))
                 equation = left - right;
-            using var _ = MathS.Settings.PrecisionErrorZeroRange.Set(1e-12m);
             using var __ = MathS.Settings.FloatToRationalIterCount.Set(0);
             using var ___ = MathS.Settings.MaxExpansionTermCount.Set(50);
             var solutions = AnalyticalEquationSolver.Solve(equation, x);
@@ -173,7 +172,8 @@ namespace AngouriMath.Functions.Algebra
                         : null;
                 int initVarCount = vars.Length;
 
-                var res = InSolveSystem(equations, vars, Sumf.Sum(equations), ledger);
+                if (InSolveSystem(equations, vars, Sumf.Sum(equations), ledger) is not { } res)
+                    return null;
                 foreach (var tuple in res)
                     if (tuple.Count != initVarCount)
                         throw new AngouriBugException("InSolveSystem incorrect output");
@@ -271,7 +271,7 @@ namespace AngouriMath.Functions.Algebra
         /// <remarks>
         /// <para>
         /// A row is dropped on the evidence a root of one equation is dropped on,
-        /// <see cref="StatementSolver.IsEvidenceAgainst"/>: an equation that, with the row put
+        /// <see cref="StatementSolver.IsEvidenceAgainstUnlessEnclosed"/>: an equation that, with the row put
         /// in, has no symbol left and is a number away from zero, or is no finite number at all, as
         /// <c>x ln(y)</c> is at <c>(0, 0)</c>. Such a row is no solution for any value of anything,
         /// so dropping it loses none.
@@ -316,11 +316,11 @@ namespace AngouriMath.Functions.Algebra
                     replacements[variables[index]] = row[index];
                 var residuals = equations.Select(equation => equation.Substitute(replacements)).ToList();
                 if (residuals.Any(residual => !residual.Vars.Any()
-                        && (residual.Evaled is Complex { IsFinite: false } || StatementSolver.IsEvidenceAgainst(residual))))
+                        && (residual.Evaled is Complex { IsFinite: false } || StatementSolver.IsEvidenceAgainstUnlessEnclosed(residual))))
                     continue;
                 if (residuals.Any(residual => residual.Vars.Any() && StatementSolver.IsEvidenceAgainst(AtASamplePoint(residual, own))))
                     return null;
-                if (IsExact(row) && residuals.Any(residual => !residual.Vars.Any() && IsShownNotZero(residual)))
+                if (IsExact(row) && residuals.Any(residual => !residual.Vars.Any() && StatementSolver.IsShownNotZero(residual)))
                     return null;
                 kept.Add(row);
             }
@@ -329,56 +329,7 @@ namespace AngouriMath.Functions.Algebra
 
         /// <summary>Whether no entry of <paramref name="row"/> has a number in it that is not exact.</summary>
         private static bool IsExact(List<Entity> row)
-            => !row.Any(entry => entry.Nodes.Any(node => node is Number { IsExact: false }));
-
-        /// <summary>
-        /// Whether an interval enclosing <paramref name="residual"/>, a number with no symbol in
-        /// it, leaves out zero. Interval arithmetic rounds each bound outward, so that is a proof
-        /// and not an estimate; an interval that holds zero, or that cannot be worked out, proves
-        /// nothing either way.
-        /// </summary>
-        /// <remarks>
-        /// To as many decimal places as evaluation works to significant digits: a residual under
-        /// that is what the tolerance takes for zero whatever the terms are, and one that
-        /// evaluation took for zero above it is under about half of the digits next to its terms.
-        /// The digits are
-        /// significant ones, so where the terms are large the first interval is wider than that,
-        /// and it is worked out once more with the digits the terms take besides: with
-        /// <c>(1 + sqrt(2))^140</c> in the coefficients the terms are near <c>1e107</c>, and the
-        /// residual <c>-2</c> is inside an interval of a hundred digits.
-        /// </remarks>
-        private static bool IsShownNotZero(Entity residual)
-        {
-            var precision = MathS.Settings.DecimalPrecisionContext.Value.Precision;
-            var digits = precision.IsZero || !precision.CanFitInInt32() ? 100 : System.Math.Max(precision.ToInt32Unchecked(), 30);
-            if (Numerics.PreciseEvaluation.Of(residual, digits) is not { } enclosure)
-                return false;
-            if (Excludes(enclosure))
-                return true;
-            var width = PeterO.Numbers.EDecimal.Max(
-                enclosure.Re.High.Subtract(enclosure.Re.Low), enclosure.Im.High.Subtract(enclosure.Im.Low));
-            if (width.IsZero)
-                return false;
-            // The decimal exponent of the width: how many more digits put it under 10^-digits.
-            // Ten or fewer are what rounding leaves of terms near one, which is every row whose
-            // terms are not large, and are not worth a second evaluation.
-            var magnitude = width.Exponent.Add(width.UnsignedMantissa.GetDigitCountAsEInteger()).Subtract(1);
-            var more = magnitude.Add(digits);
-            if (more.CompareTo(10) <= 0)
-                return false;
-            if (!more.CanFitInInt32() || more.ToInt32Unchecked() > MostMoreDigits)
-                more = MostMoreDigits;
-            return Numerics.PreciseEvaluation.Of(residual, digits + more.ToInt32Unchecked()) is { } finer && Excludes(finer);
-
-            static bool Excludes(Numerics.PreciseComplexInterval enclosure)
-                => enclosure.Re.Mignitude.Sign > 0 || enclosure.Im.Mignitude.Sign > 0;
-        }
-
-        /// <summary>
-        /// The most digits <see cref="IsShownNotZero"/> adds for large terms, which bounds what one
-        /// residual costs: a thousand digits is terms past <c>1e900</c>.
-        /// </summary>
-        private const int MostMoreDigits = 1000;
+            => row.All(StatementSolver.IsExact);
 
         /// <summary>
         /// <paramref name="rows"/> without a row that is a copy of another: one equal to an
@@ -451,7 +402,10 @@ namespace AngouriMath.Functions.Algebra
             return residual;
         }
 
-        /// <summary>Solves system of equations</summary>
+        /// <summary>
+        /// Solves system of equations, or <see langword="null"/> where an equation is left
+        /// unsolved on the way and the rows found would not be all of them
+        /// </summary>
         /// <param name="equations"><see cref="List{T}"/> of <see cref="Entity"/></param>
         /// <param name="vars">
         /// <see cref="List{T}"/> of <see cref="Variable"/>s,
@@ -466,7 +420,7 @@ namespace AngouriMath.Functions.Algebra
         /// because the recursion passes it along and a caller may have none; where it is
         /// absent this is unbounded, which is what it always was.
         /// </param>
-        internal static List<List<Entity>> InSolveSystem(
+        internal static List<List<Entity>>? InSolveSystem(
             List<Entity> equations, ReadOnlySpan<Variable> vars, Entity nameSource,
             BudgetLedger? ledger = null)
         {
@@ -494,6 +448,13 @@ namespace AngouriMath.Functions.Algebra
                 // what the answer is in the same way the trigonometric solvers say it with n_1.
                 if (solutions == MathS.Sets.C)
                     return new() { new List<Entity> { Variable.CreateUnique(nameSource, "t") } };
+                // An equation left unsolved has roots that were not found, and no rows here would
+                // say it has none: the rows of the other branches would read as every solution.
+                // y^2 - 2, x^2 + (P - Q y) x - 3, with (1 + sqrt(2))^70 = P + Q sqrt(2), declines
+                // its equation in x at y = sqrt(2), and was answered with one row of four.
+                // https://github.com/asc-community/AngouriMath/issues/2448
+                if (solutions is ConditionalSet)
+                    return null;
                 return new();
             }
             var result = new List<List<Entity>>();
@@ -518,7 +479,10 @@ namespace AngouriMath.Functions.Algebra
                     rest.RemoveAt(i);
 
                     foreach (var sol in sols)
-                        foreach (var j in InSolveSystem(rest.Select(eq => eq.Substitute(var, sol)).ToList(), remainingVars, nameSource, ledger))
+                    {
+                        if (InSolveSystem(rest.Select(eq => eq.Substitute(var, sol)).ToList(), remainingVars, nameSource, ledger) is not { } rows)
+                            return null;
+                        foreach (var j in rows)
                         {
                             replacements.Clear();
                             for (int varid = 0; varid < remainingVars.Length; varid++)
@@ -526,6 +490,7 @@ namespace AngouriMath.Functions.Algebra
                             j.Add(sol.Substitute(replacements).InnerSimplified);
                             result.Add(j);
                         }
+                    }
 
                     if (result.Count > 0)
                         return result;
