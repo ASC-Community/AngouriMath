@@ -608,6 +608,10 @@ namespace AngouriMath.Numerics
                 // https://github.com/asc-community/AngouriMath/issues/1285
                 case SumOverSetf(var summand, Variable name, Set.ConditionalSet { Var: Variable w, Predicate: Equalsf(var left, var right) }):
                     return OverTheRoots(summand, name, left - right, w);
+                // And a product over them the same way, the factors multiplied.
+                // https://github.com/asc-community/AngouriMath/issues/2449
+                case ProductOverSetf(var factor, Variable name, Set.ConditionalSet { Var: Variable w, Predicate: Equalsf(var left, var right) }):
+                    return OverTheRoots(factor, name, left - right, w, product: true);
                 default:
                     return undefined;
             }
@@ -615,20 +619,22 @@ namespace AngouriMath.Numerics
 
         /// <summary>
         /// <paramref name="summand"/> added up over the roots of <paramref name="polynomial"/> in
-        /// <paramref name="w"/>, taken by <paramref name="name"/> in turn; undefined where a root
-        /// cannot be enclosed apart from the others.
+        /// <paramref name="w"/>, taken by <paramref name="name"/> in turn, or with
+        /// <paramref name="product"/> multiplied; undefined where a root cannot be enclosed apart
+        /// from the others.
         /// </summary>
-        private PreciseComplexInterval OverTheRoots(Entity summand, Variable name, Entity polynomial, Variable w)
+        private PreciseComplexInterval OverTheRoots(Entity summand, Variable name, Entity polynomial, Variable w, bool product = false)
         {
             if (RootsEnclosed(polynomial, w) is not { } roots)
                 return undefined;
-            var total = Real(PreciseInterval.Exactly(EDecimal.Zero));
+            var total = Real(PreciseInterval.Exactly(product ? EDecimal.One : EDecimal.Zero));
             foreach (var root in roots)
             {
                 bound ??= new();
                 var own = Variable.CreateTemp(summand.Vars.Concat(bound.Keys).Append(name));
                 bound[own] = root;
-                total = Add(total, Evaluate(summand.Substitute(name, own)));
+                var term = Evaluate(summand.Substitute(name, own));
+                total = product ? Multiply(total, term) : Add(total, term);
             }
             return total;
         }

@@ -697,6 +697,7 @@ namespace AngouriMath
                         // A sum over a set binds the name that ranges over the set:
                         // sum(w * a, w in { w : w^2 = 2 }) is a function of a alone.
                         SumOverSetf(var body, var bound, var over) => BoundBy(bound, body, over),
+                        ProductOverSetf(var body, var bound, var over) => BoundBy(bound, body, over),
                         // An extremum over a set binds the variable that ranges over the set:
                         // max(t^2 + a, t in [0; 1]) is a function of a alone.
                         Maximumf(var body, var bound, var over) => BoundBy(bound, body, over),

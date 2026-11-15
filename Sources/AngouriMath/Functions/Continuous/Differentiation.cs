@@ -606,6 +606,29 @@ namespace AngouriMath
                 : New(Expression.DerivativeOver(variable), Var, Over);
         }
 
+        partial record ProductOverSetf
+        {
+            /// <inheritdoc/>
+            /// <remarks>
+            /// The product rule over finitely many factors, where the set does not depend on the
+            /// variable: each factor differentiated in turn, times the product of the others,
+            /// <c>sum(f'(m) product(f(n), n in S \ { m }), m in S)</c>. It holds where a factor is
+            /// zero, which <c>product(f) sum(f'/f)</c> does not. Zero in the bound name.
+            /// https://github.com/asc-community/AngouriMath/issues/2449
+            /// </remarks>
+            protected override Entity InnerDifferentiate(Variable variable)
+            {
+                if (Var == variable)
+                    return Integer.Zero;
+                if (Over.ContainsNode(variable) || Var is not Variable member)
+                    return base.InnerDifferentiate(variable);
+                var other = Variable.CreateUnique(this + variable, member.Name);
+                var others = new ProductOverSetf(Expression.Substitute(member, other), other,
+                    new Set.SetMinusf(Over, new Set.FiniteSet(member)));
+                return new SumOverSetf(Expression.DerivativeOver(variable) * others, member, Over);
+            }
+        }
+
         partial record Limitf
         {
             /// <inheritdoc/>

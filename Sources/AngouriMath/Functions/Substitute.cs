@@ -825,6 +825,19 @@ namespace AngouriMath
             }
         }
 
+        partial record ProductOverSetf
+        {
+            /// <inheritdoc/>
+            // The variable is bound; renamed first, as a sum over a set's is.
+            public override Entity Substitute(Entity x, Entity value)
+            {
+                if (this == x)
+                    return value;
+                var (renamed, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                return New(renamed, boundName, Over.Substitute(x, value));
+            }
+        }
+
         partial record Maximumf
         {
             /// <inheritdoc/>

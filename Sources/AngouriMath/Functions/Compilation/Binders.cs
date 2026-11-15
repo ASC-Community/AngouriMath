@@ -40,6 +40,7 @@ namespace AngouriMath.Core.Compilation
             Summationf => "a sum",
             Productf => "a product",
             SumOverSetf => "a sum over a set",
+            ProductOverSetf => "a product over a set",
             Maximumf => "a maximum over a set",
             Minimumf => "a minimum over a set",
             Argmaxf => "the set of points where a maximum is taken",

@@ -4835,7 +4835,7 @@ internal partial class AngouriMathParser : Parser {
 				_localctx.args = function_arguments();
 				State = 932;
 				Match(T__34);
-				 Assert("product", 4, _localctx.args.list.Count); _localctx.value =  MathS.Product(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2], _localctx.args.list[3]); 
+				 if (_localctx.args.list.Count == 2 && AngouriMath.Functions.ExtremumOverSet.AsRange(_localctx.args.list[1]) is var (productVar, productOver)) _localctx.value =  MathS.Product(_localctx.args.list[0], productVar, productOver); else { Assert("product", 4, _localctx.args.list.Count); _localctx.value =  MathS.Product(_localctx.args.list[0], _localctx.args.list[1], _localctx.args.list[2], _localctx.args.list[3]); } 
 				}
 				break;
 			case 101:

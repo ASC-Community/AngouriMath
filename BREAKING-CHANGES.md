@@ -240,6 +240,29 @@ dropped ([#2458](https://github.com/asc-community/AngouriMath/issues/2458)).
 
 ---
 
+### A product over a set: `product(f, x in S)`
+
+**Not silent: what was refused now parses.** `product` took a range and nothing else, so `product(f, x in S)` threw
+`FunctionArgumentCountException`. It is now the node `ProductOverSetf`, the product of `f` over the members of `S`, each
+counted once, built by `MathS.Product(f, x, S)` and printed `\prod_{x \in S} f`. Its factors are multiplied out exactly
+where `sum(f, x in S)` adds its terms up, and it is left as written where the sum is; the product over no members is
+`1`. The range form is unchanged
+([#2449](https://github.com/asc-community/AngouriMath/issues/2449)).
+
+**Silent, for the sum too:** a set of roots with listed members taken out, `{ w : p(w) = 0 } \ { m }`, is now read,
+since the product rule over a set writes one. A member taken out is found as it was written; a number whose value is
+none of the roots takes nothing out; anything else, a symbol among them, leaves the sum as written.
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"product(p, p in PP /\\ [1; 30])".ToEntity().Simplify()` | throws `FunctionArgumentCountException` | `6469693230` |
+| `"product(1 - 1/p^2, p in {2, 3, 5})".ToEntity().Simplify()` | throws `FunctionArgumentCountException` | `16/25` |
+| `"product(x, x in {})".ToEntity().Simplify()` | throws `FunctionArgumentCountException` | `1` |
+| `"product(x, x in {a, b})".ToEntity().Simplify()` | throws `FunctionArgumentCountException` | `product(x, x in { a, b })`, left |
+| `"product(w + y, w in { w : w^3 + w + 1 = 0 })".ToEntity().Differentiate("y")` at `y = 1`, `.Evaled` | throws `FunctionArgumentCountException` | `4` |
+| `"sum(x, x in { w : w^2 - 2 = 0 } \\ { sqrt(2) })".ToEntity().Simplify()` | `sum(x, x in { w : w ^ 2 - 2 = 0 } \ { sqrt(2) })` | `-sqrt(2)` |
+| `"sum(x, x in { w : w^2 - 3w + 2 = 0 } \\ { 1 })".ToEntity().Simplify()` | `sum(x, x in { w : w ^ 2 - 3 * w + 2 = 0 } \ { 1 })` | `2` |
+
 ### A system row that is not a solution declines the system
 
 **Silent: a wrong row is now no answer.** With `P + Q sqrt(2) = (1 + sqrt(2))^70`, the coefficient `P - Q y` is
