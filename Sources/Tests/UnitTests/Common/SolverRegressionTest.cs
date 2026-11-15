@@ -292,17 +292,19 @@ namespace AngouriMath.Tests.Common
         // in the second equation, about -2, and its four solutions were lost. Each equation is a
         // quadratic in x for each y, so every answer has four rows; each row is put back into
         // both equations and enclosed, by interval arithmetic, within 1e-80 of zero. Declining
-        // is allowed where the coefficients are too close to rounding to settle, and n = 10 is
-        // answered today and must stay answered. At n = 140 the terms are near 1e107, past the
+        // is allowed where the coefficients are too close to rounding to settle, and n = 10 to 60
+        // are answered today and must stay answered: those were declined while one equation was
+        // solved at a zero tolerance of 1e-12 (https://github.com/asc-community/AngouriMath/issues/2448).
+        // At n = 70 the equation in x is declined at y = sqrt(2). At n = 140 the terms are near 1e107, past the
         // hundred digits evaluation works to, and the rows [sqrt(3), sqrt(2)] and
         // [-sqrt(3), sqrt(2)] were answered too.
         [Theory]
         [InlineData(10, true)]
-        [InlineData(20, false)]
-        [InlineData(30, false)]
-        [InlineData(40, false)]
-        [InlineData(50, false)]
-        [InlineData(60, false)]
+        [InlineData(20, true)]
+        [InlineData(30, true)]
+        [InlineData(40, true)]
+        [InlineData(50, true)]
+        [InlineData(60, true)]
         [InlineData(70, false)]
         [InlineData(140, false)]
         [InlineData(200, false)]
@@ -329,6 +331,52 @@ namespace AngouriMath.Tests.Common
                         && value.Im.Magnitude.CompareTo(PeterO.Numbers.EDecimal.FromString("1E-80")) <= 0,
                         $"[{solutions[row, 0]}, {solutions[row, 1]}] leaves {residual.Evaled} in {equation}");
                 }
+        }
+
+        // https://github.com/asc-community/AngouriMath/issues/2448
+        // The declines here come of downcasting, which v3 removes:
+        // https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225
+        // P and Q are the Pell numbers with (1 + sqrt(2))^n = P + Q sqrt(2), so P - Q sqrt(2) is
+        // (1 - sqrt(2))^n, which is 1.6e-27 for n = 70. With the coefficient P + Q sqrt(2) the
+        // roots are near -2P and 3 / (2P), and the answer was { -2P }, which leaves exactly -2;
+        // with P - Q sqrt(2) it was { sqrt(3), -sqrt(3) }, the coefficient dropped, and at n = 20
+        // the discriminant b^2 + 12 was read as 12. Both entry points are asked, since the solve
+        // of an equation and of a statement put their roots back the same way. Each answer must
+        // have both roots, each enclosed, by interval arithmetic, within 1e-80 of zero when put
+        // back. Declining is allowed only where the coefficient is too close to rounding to
+        // settle: at n = 70 the default downcasting still reads b^2 + 12 as 12 for P - Q sqrt(2).
+        [Theory]
+        [InlineData(20, "+", true)]
+        [InlineData(20, "-", true)]
+        [InlineData(40, "+", true)]
+        [InlineData(40, "-", true)]
+        [InlineData(70, "+", true)]
+        [InlineData(70, "-", false)]
+        public void Issue2448_EveryRootOfAQuadraticWithACancellingCoefficientIsARoot(int n, string sign, bool answered)
+        {
+            System.Numerics.BigInteger p = 1, q = 0;
+            for (var i = 0; i < n; i++)
+                (p, q) = (p + 2 * q, p + q);
+            var equation = $"x^2 + ({p} {sign} {q} * sqrt(2)) * x - 3".ToEntity();
+            foreach (var solutions in new[] { MathS.SolveEquation(equation, "x"), equation.Equalizes(0).Solve("x") })
+            {
+                if (solutions is not Entity.Set.FiniteSet roots)
+                {
+                    Assert.False(answered, $"declined an equation that is answered: {solutions}");
+                    Assert.IsType<Entity.Set.ConditionalSet>(solutions);
+                    continue;
+                }
+                Assert.Equal(2, roots.Count);
+                foreach (var root in roots)
+                {
+                    var residual = equation.Substitute("x", root);
+                    var enclosure = AngouriMath.Numerics.PreciseEvaluation.Of(residual, 200);
+                    Assert.True(enclosure is { } value
+                        && value.Re.Magnitude.CompareTo(PeterO.Numbers.EDecimal.FromString("1E-80")) <= 0
+                        && value.Im.Magnitude.CompareTo(PeterO.Numbers.EDecimal.FromString("1E-80")) <= 0,
+                        $"{root} leaves {residual.Evaled} in {equation}");
+                }
+            }
         }
 
         // The complex reading is untouched: e^x + 1 = 0 has the root i pi there.

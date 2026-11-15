@@ -40,21 +40,49 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// individual rewrites cannot always carry a condition that survives the chain of
         /// substitutions that follows, so the answers are checked once, here, against the
         /// equation as the caller wrote it.
+        /// <para>
+        /// A root with only exact numbers in it that the check keeps, and that an interval enclosing
+        /// its residual shows is none, leaves the equation unsolved; see
+        /// <see cref="RootVerdict.ShownNotARoot"/>.
+        /// </para>
         /// </remarks>
         internal static Set WithoutSpuriousRoots(Set roots, Entity equation, Variable x)
         {
-            if (roots is not FiniteSet finite || !finite.Any(root => IsSpurious(equation, x, root)))
+            if (roots is not FiniteSet finite)
                 return roots;
-            var kept = finite.Where(root => !IsSpurious(equation, x, root)).ToSet();
+            List<Entity>? survivors = null;
+            var index = 0;
+            foreach (var root in finite)
+            {
+                switch (Verdict(equation, x, root))
+                {
+                    case RootVerdict.ShownNotARoot:
+                        return Unsolved(equation, x);
+                    case RootVerdict.Spurious:
+                        survivors ??= finite.Take(index).ToList();
+                        break;
+                    default:
+                        survivors?.Add(root);
+                        break;
+                }
+                index++;
+            }
+            if (survivors is null)
+                return roots;
+            var kept = survivors.ToSet();
             // A polynomial of degree one or more has a root over the complex numbers, so where every
             // candidate for one fails, what failed is the solver, and the empty set left would claim
             // there is no root: (x + 1)^3 = 2 was { } while Cardano's C was 0 for a shifted cube, and
             // 31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0 while a biquadratic quartic was shifted by -b a / 4.
             // Left unsolved instead, which says only that the roots were not found.
             if (kept.Count == 0 && IsAPolynomialWithARoot(equation, x))
-                return new ConditionalSet(x, equation is Minusf(var left, var right) ? left.Equalizes(right) : equation.Equalizes(0));
+                return Unsolved(equation, x);
             return kept;
         }
+
+        /// <summary><paramref name="equation"/> as a condition on <paramref name="x"/>: the roots were not found.</summary>
+        private static Set Unsolved(Entity equation, Variable x)
+            => new ConditionalSet(x, equation is Minusf(var left, var right) ? left.Equalizes(right) : equation.Equalizes(0));
 
         /// <summary>
         /// Whether <paramref name="equation"/> is a polynomial in <paramref name="x"/> with numbers
@@ -165,7 +193,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// that a root is only ever dropped on positive evidence against it. A function
         /// undefined at exact arguments is such evidence; see <see cref="IsUndefinedExactly"/>.
         /// </summary>
-        private static bool IsSpurious(Entity equation, Variable x, Entity root)
+        private static RootVerdict Verdict(Entity equation, Variable x, Entity root)
         {
             // A root that still mentions the variable it solves for is the equation
             // rearranged, not an answer to it: x = sqrt(-1 - x) says nothing about x. This
@@ -181,12 +209,176 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // that, so the next caller to forget is caught here rather than in a bug report.
             // https://github.com/asc-community/AngouriMath/issues/744
             if (root.ContainsNode(x))
-                return true;
+                return RootVerdict.Spurious;
             if (root.Vars.Any())
-                return false;
+                return RootVerdict.Kept;
             var substituted = equation.Substitute(x, root);
-            return IsUndefinedExactly(substituted) || IsEvidenceAgainst(substituted);
+            if (IsUndefinedExactly(substituted))
+                return RootVerdict.Spurious;
+            if (IsEvidenceAgainstUnlessEnclosed(substituted))
+                return RootVerdict.Spurious;
+            return !substituted.Vars.Any() && IsAboveTheIntervalFloor(equation, x, root) && IsShownNotZero(substituted)
+                ? RootVerdict.ShownNotARoot
+                : RootVerdict.Kept;
         }
+
+        /// <summary>What <see cref="WithoutSpuriousRoots"/> does with a root.</summary>
+        private enum RootVerdict
+        {
+            /// <summary>Kept: nothing shows it is not a root.</summary>
+            Kept,
+            /// <summary>Dropped: it came of a rewrite that widened the domain, and fails the equation as written.</summary>
+            Spurious,
+            /// <summary>
+            /// Declines the equation. The root has only exact numbers in it, so it is a root only
+            /// where its residual is exactly zero, and an interval enclosing the residual leaves
+            /// zero out, however small the residual is next to the terms. That the check above
+            /// passed it means rounding reached the solve, which can have lost a true root as well
+            /// as made this one, so it is not dropped, which would answer an incomplete set. In
+            /// <c>x^2 + (P - Q sqrt(2)) x - 3</c>, with <c>(1 + sqrt(2))^70 = P + Q sqrt(2)</c>,
+            /// downcasting reads <c>b^2 + 12</c> as <c>12</c>, and the roots came back as
+            /// <c>(-b +- 2 sqrt(3)) / 2</c>, each leaving <c>-b^2 / 4</c>, about <c>-6.4e-55</c>, against
+            /// terms near <c>3</c>. Rounding reaches an exact solve through downcasting, which v3
+            /// removes; the decline is to be reconsidered then, and the check kept.
+            /// <a href="https://github.com/asc-community/AngouriMath/issues/2448">#2448</a>,
+            /// <a href="https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225">#1019</a>
+            /// </summary>
+            ShownNotARoot,
+        }
+
+        /// <summary>Whether <paramref name="entity"/> has no number in it that is not exact.</summary>
+        internal static bool IsExact(Entity entity)
+            => !entity.Nodes.Any(node => node is Number { IsExact: false });
+
+        /// <summary>
+        /// Whether an interval enclosing <paramref name="residual"/>, a number with no symbol in
+        /// it, leaves out zero. Interval arithmetic rounds each bound outward, so that is a proof
+        /// and not an estimate; an interval that holds zero, or that cannot be worked out, proves
+        /// nothing either way.
+        /// </summary>
+        /// <remarks>
+        /// To as many decimal places as evaluation works to significant digits: a residual under
+        /// that is what the tolerance takes for zero whatever the terms are, and one that
+        /// evaluation took for zero above it is under about half of the digits next to its terms.
+        /// The digits are significant ones, so where the terms are large the first interval is wider than that,
+        /// and it is worked out once more with the digits the terms take besides: with
+        /// <c>(1 + sqrt(2))^140</c> in the coefficients the terms are near <c>1e107</c>, and the
+        /// residual <c>-2</c> is inside an interval of a hundred digits.
+        /// </remarks>
+        internal static bool IsShownNotZero(Entity residual) => ExcludesZero(residual) is true;
+
+        /// <summary>
+        /// Whether an interval enclosing <paramref name="residual"/> leaves out zero, as
+        /// <see cref="IsShownNotZero"/> works it out; <see langword="false"/> where it holds zero,
+        /// and <see langword="null"/> where no interval can be worked out.
+        /// </summary>
+        private static bool? ExcludesZero(Entity residual)
+        {
+            var digits = IntervalDigits();
+            if (Numerics.PreciseEvaluation.Of(residual, digits) is not { } enclosure)
+                return null;
+            if (Excludes(enclosure))
+                return true;
+            var width = PeterO.Numbers.EDecimal.Max(
+                enclosure.Re.High.Subtract(enclosure.Re.Low), enclosure.Im.High.Subtract(enclosure.Im.Low));
+            if (width.IsZero)
+                return false;
+            // The decimal exponent of the width: how many more digits put it under 10^-digits.
+            // Ten or fewer are what rounding leaves of terms near one, which is every residual whose
+            // terms are not large, and are not worth a second evaluation.
+            var magnitude = width.Exponent.Add(width.UnsignedMantissa.GetDigitCountAsEInteger()).Subtract(1);
+            var more = magnitude.Add(digits);
+            if (more.CompareTo(10) <= 0)
+                return false;
+            if (!more.CanFitInInt32() || more.ToInt32Unchecked() > MostMoreDigits)
+                more = MostMoreDigits;
+            return Numerics.PreciseEvaluation.Of(residual, digits + more.ToInt32Unchecked()) is { } finer && Excludes(finer);
+
+            static bool Excludes(Numerics.PreciseComplexInterval enclosure)
+                => enclosure.Re.Mignitude.Sign > 0 || enclosure.Im.Mignitude.Sign > 0;
+        }
+
+        /// <summary>
+        /// The decimal places <see cref="IsShownNotZero"/> first encloses a residual to: as many as
+        /// evaluation works to significant digits.
+        /// </summary>
+        private static int IntervalDigits()
+        {
+            var precision = MathS.Settings.DecimalPrecisionContext.Value.Precision;
+            return precision.IsZero || !precision.CanFitInInt32() ? 100 : System.Math.Max(precision.ToInt32Unchecked(), 30);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="root"/> and <paramref name="equation"/> have only exact numbers in
+        /// them, and the residual, evaluated without downcasting, is further from zero than rounding
+        /// leaves of a true root's: only such a residual is enclosed by <see cref="IsShownNotZero"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The evaluation is what keeps the common case cheap. An interval evaluation of each exact
+        /// root was twice the allocation of solving <c>x^2 + x + 1</c>, whose roots leave <c>0</c>
+        /// here and are not enclosed; this costs about a tenth of that.
+        /// </para>
+        /// <para>
+        /// Without downcasting, because downcasting is what made the roots wrong, and it reads what
+        /// such a root leaves as zero too: <c>-b^2 / 4</c> evaluates to <c>0</c> with it, and to
+        /// <c>-6.4e-55</c> without. A fresh tree, since <see cref="Entity.Evaled"/> keeps a value
+        /// with the precision it was computed at and not with this setting. With the digits of the
+        /// largest number in the tree besides, where those are more than ten: at
+        /// <c>(1 + sqrt(2))^140 = P + Q sqrt(2)</c>, <c>P - Q sqrt(2)</c> is <c>2.6e-54</c> with
+        /// <c>P</c> near <c>1.9e53</c>, which takes 108 digits to tell from zero.
+        /// </para>
+        /// </remarks>
+        private static bool IsAboveTheIntervalFloor(Entity equation, Variable x, Entity root)
+        {
+            var substituted = equation.Substitute(x, root);
+            var mostDigits = 0;
+            foreach (var node in substituted.Nodes)
+                switch (node)
+                {
+                    case Number { IsExact: false }:
+                        return false;
+                    case Rational rational:
+                        mostDigits = System.Math.Max(mostDigits, DigitCount(rational));
+                        break;
+                    case Complex { RealPart: Rational re, ImaginaryPart: Rational im }:
+                        mostDigits = System.Math.Max(mostDigits, System.Math.Max(DigitCount(re), DigitCount(im)));
+                        break;
+                }
+            var digits = IntervalDigits();
+            Entity value;
+            using (MathS.Settings.DowncastingEnabled.Set(false))
+                if (mostDigits > 10)
+                    using (MathS.Settings.DecimalPrecisionContext.Set(
+                        MathS.Settings.DecimalPrecisionContext.Value.WithPrecision(digits + System.Math.Min(mostDigits, MostMoreDigits))))
+                        value = substituted.Evaled;
+                else
+                    value = substituted.Evaled;
+            if (value is not Complex residual)
+                return false;
+            var floor = EDecimal.Create(EInteger.One, EInteger.FromInt32(TrueRootFloorDigits - digits));
+            return residual.RealPart.EDecimal.Abs().GreaterThan(floor) || residual.ImaginaryPart.EDecimal.Abs().GreaterThan(floor);
+
+            static int DigitCount(Rational rational)
+            {
+                var count = EInteger.Max(rational.ERational.Numerator.Abs().GetDigitCountAsEInteger(),
+                    rational.ERational.Denominator.GetDigitCountAsEInteger());
+                return count.CanFitInInt32() ? count.ToInt32Unchecked() : int.MaxValue;
+            }
+        }
+
+        /// <summary>
+        /// How many of <see cref="IntervalDigits"/> rounding takes from a true root's residual,
+        /// by <see cref="IsAboveTheIntervalFloor"/>: the roots of <c>x^2 + 3x - 5</c> leave
+        /// <c>1e-98</c> at a hundred digits.
+        /// </summary>
+        private const int TrueRootFloorDigits = 5;
+
+        /// <summary>
+        /// The most digits <see cref="IsShownNotZero"/> adds for large terms, which bounds what one
+        /// residual costs: a thousand digits is terms past <c>1e900</c>.
+        /// </summary>
+        private const int MostMoreDigits = 1000;
 
         /// <summary>
         /// Whether <paramref name="substituted"/>, with no symbol left in it, has no value because
@@ -242,6 +434,22 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 return false;
             return size.GreaterThan(LargestTerm(substituted).Multiply(RelativeResidualTolerance));
         }
+
+        /// <summary>
+        /// <see cref="IsEvidenceAgainst"/>, weighed against an interval where
+        /// <paramref name="substituted"/> is exact numbers in sums, products, quotients and rational
+        /// powers, whose enclosures are tight: one that holds zero says the residual is what
+        /// rounding left, and is no evidence.
+        /// </summary>
+        /// <remarks>
+        /// The small root of <c>x^2 + b x - 3</c>, with <c>b = (1 + sqrt(2))^70</c> near
+        /// <c>6e26</c>, is <c>-b/2 + sqrt(b^2 + 12)/2</c>, and at a hundred digits that difference
+        /// keeps 46 digits of the root's <c>4.8e-27</c>, which leaves <c>5.9e-48</c> against terms
+        /// of <c>3</c>: over the bound for exact numbers, and rounding.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2448">#2448</a>
+        /// </remarks>
+        internal static bool IsEvidenceAgainstUnlessEnclosed(Entity substituted)
+            => IsEvidenceAgainst(substituted) && !(IsExactAndAlgebraic(substituted) && ExcludesZero(substituted) is false);
 
         /// <summary>
         /// Whether <paramref name="expression"/> is exact numbers in sums, products, quotients and

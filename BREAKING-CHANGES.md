@@ -113,6 +113,35 @@ matrix, so the operand is no longer multiplied into the components as a number
 
 ---
 
+### One equation is solved at the default zero tolerance, and a root shown not to be one declines it
+
+**Silent: wrong roots are now right, or no answer.** `SolveEquation` solved under a zero tolerance of `1e-12`, where the
+rest of the library works to `1e-50`, so a coefficient that nearly cancels was read as zero or rounded into the
+discriminant. It now solves at the default, as `Solve` on the equation already did. Where the default still rounds, a root
+with only exact numbers in it whose residual an interval shows is not zero leaves the equation unsolved, and a root that
+the residual's evaluation alone took for spurious is kept where an interval holds zero
+([#2448](https://github.com/asc-community/AngouriMath/issues/2448)). `P + Q sqrt(2) = (1 + sqrt(2))^n`:
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"x^2 + (22619537 - 15994428 * sqrt(2)) * x - 3".SolveEquation("x")`, `n = 20` | `{ (-(22619537 + -15994428 * sqrt(2)) - 2 * sqrt(3)) / 2, (-(22619537 + -15994428 * sqrt(2)) + 2 * sqrt(3)) / 2 }` | `{ (-b - sqrt(b ^ 2 - (-12))) / 2, (-b + sqrt(b ^ 2 - (-12))) / 2 }` for `b = 22619537 + -15994428 * sqrt(2)` |
+| `"x^2 + (311363698964240484013304163 + 220167382952941249990598278 * sqrt(2)) * x - 3".SolveEquation("x")`, `n = 70` | `{ -622727397928480968026608326 }` | both roots, as above |
+| `"x^2 + (311363698964240484013304163 - 220167382952941249990598278 * sqrt(2)) * x - 3".SolveEquation("x")`, `n = 70` | `{ sqrt(3), -sqrt(3) }` | `{ x : x ^ 2 + (311363698964240484013304163 - 220167382952941249990598278 * sqrt(2)) * x = 3 }` |
+| `"x^2 + (311363698964240484013304163 + 220167382952941249990598278 * sqrt(2)) * x - 3 = 0".Solve("x")`, `n = 70` | the root near `-2P` only | both roots |
+
+Measured for `n` = 5, 10, 20 to 60, 70 to 120, 140, 160 and 200, with each root checked against the true one at 400
+digits. `SolveEquation` was wrong for both signs from 20 up, but for `P + Q sqrt(2)` at 40 to 60, which it left unsolved;
+it is right now for both up to 60 and for `P + Q sqrt(2)` up to 120. `Solve` on the equation was right to 60 and missed the
+small root of `P + Q sqrt(2)` from 70 to 120, which it now finds. What is left unsolved now was wrong: `P - Q sqrt(2)` from
+70 and `P + Q sqrt(2)` from 140. `P - Q sqrt(2)` at 160 is still answered wrongly, with a residual near `1e-123`, past
+the hundred digits evaluation works to; downcasting, which v3 removes, is what reads it as zero.
+
+A system whose elimination leaves one of its equations unsolved is declined too, where the rows it found were
+returned as all of them. `MathS.Equations("y^2 - 2", "x^2 + (P - Q y) * x - 3").Solve("x", "y")` was declined for
+`n` = 20 to 60, and is answered now with its four rows.
+
+---
+
 ### A system row that is not a solution declines the system
 
 **Silent: a wrong row is now no answer.** With `P + Q sqrt(2) = (1 + sqrt(2))^70`, the coefficient `P - Q y` is
@@ -125,7 +154,8 @@ the system ([#2446](https://github.com/asc-community/AngouriMath/issues/2446)).
 |---|---|---|
 | `MathS.Equations("y^2 - 2", "x^2 + (311363698964240484013304163 - 220167382952941249990598278 * y) * x - 3").Solve("x", "y")` | `[[-622727397928480968026608326, -sqrt(2)]]` | `null` |
 
-The same system for the exponents 20 to 60 was declined already, and for 10 it is still answered with its four rows.
+The same system for the exponents 20 to 60 was declined already, and for 10 it is still answered with its four rows; 20
+to 60 are answered now, in the entry above.
 For 80 to 160 it was answered with the one row `[-2P, -sqrt(2)]` too, and for 140 and 200 with `[sqrt(3), sqrt(2)]` and
 `[-sqrt(3), sqrt(2)]` besides, which leave `sqrt(3) (P - Q sqrt(2))`; each of those is declined now.
 
