@@ -186,6 +186,23 @@ For 80 to 160 it was answered with the one row `[-2P, -sqrt(2)]` too, and for 14
 
 ---
 
+### A conjunction of equations given to `MathS.Equations` is read as its equations
+
+**Not silent: no answer becomes the answer.** `MathS.Equations` passed a conjunction on as one equation, and the
+system had no solution, so `x + y = 3 and x - y = 1` was `null` where the two equations listed are `[[2, 1]]`. A
+conjunction whose every conjunct is an equation is now read as those equations, as `MathS.SolveSystem` reads one. A
+conjunction with any other conjunct, an inequality or a membership, is passed on as it was, and its answer is
+unchanged ([#2450](https://github.com/asc-community/AngouriMath/issues/2450)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `MathS.Equations("x + y = 3 and x - y = 1").Solve("x", "y")` | `null` | `[[2, 1]]` |
+| `MathS.Equations("x + y = 3 and x - y = 1", "x + 2 y = 4").Solve("x", "y")` | `null` | `[[2, 1]]` |
+| `MathS.Equations("x^2 + y^2 = 25 and x - y = 1").Solve("x", "y")` | `null` | `[[-3, -4], [4, 3]]` |
+| `MathS.Equations("x + y = 3 and x > 0").Solve("x", "y")` | `null` | unchanged |
+
+---
+
 ## 2.7.0 — since 2.6.0
 
 **Read these first: names that read differently.** Each of these was read as something else on 2.6.0. Code that used

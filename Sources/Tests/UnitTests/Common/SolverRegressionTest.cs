@@ -458,5 +458,34 @@ namespace AngouriMath.Tests.Common
             Assert.Null(MathS.SolveSystem(statement, "x", "y"));
             Assert.Null(MathS.Equations(AngouriMath.Core.EquationSystem.EquationsOf(statement, out _)!).Solve("x", "y"));
         }
+
+        // MathS.Equations passed a conjunction on as one equation, and the system had no
+        // solution: x + y = 3 and x - y = 1 gave null, as did the same conjunction listed beside
+        // another equation. A conjunction of equations is now read as its conjuncts, so the
+        // answer is what the equations listed one by one give.
+        // https://github.com/asc-community/AngouriMath/issues/2450
+        [Theory]
+        [InlineData(new[] { "x + y = 3 and x - y = 1" }, new[] { "x + y = 3", "x - y = 1" })]
+        [InlineData(new[] { "x + y = 3 and x - y = 1", "x + 2 y = 4" }, new[] { "x + y = 3", "x - y = 1", "x + 2 y = 4" })]
+        [InlineData(new[] { "(x + y = 3 and x - y = 1) and x + 2 y = 4" }, new[] { "x + y = 3", "x - y = 1", "x + 2 y = 4" })]
+        [InlineData(new[] { "x^2 + y^2 = 25 and x - y = 1" }, new[] { "x^2 + y^2 = 25", "x - y = 1" })]
+        [InlineData(new[] { "x = y = 1" }, new[] { "x = y", "y = 1" })]
+        public void Issue2450_EquationsReadsAConjunctionAsItsEquations(string[] written, string[] listed)
+        {
+            var asWritten = MathS.Equations(written.Select(e => (Entity)e)).Solve("x", "y");
+            var asListed = MathS.Equations(listed.Select(e => (Entity)e)).Solve("x", "y");
+            Assert.NotNull(asListed);
+            Assert.Equal(asListed, asWritten);
+            Assert.Equal(asListed, MathS.Equations(written.Select(e => (Entity)e).ToArray()).Solve("x", "y"));
+        }
+
+        // A conjunction with a conjunct that is not an equation is passed on as it was, and the
+        // answer is unchanged: null, rather than the equations alone solved, which would answer
+        // a different question.
+        [Theory]
+        [InlineData("x + y = 3 and x > 0")]
+        [InlineData("x + y = 3 and x - y = 1 and x in RR")]
+        public void Issue2450_EquationsKeepsAConjunctionWithAnotherConjunct(string written)
+            => Assert.Null(MathS.Equations(written).Solve("x", "y"));
     }
 }
