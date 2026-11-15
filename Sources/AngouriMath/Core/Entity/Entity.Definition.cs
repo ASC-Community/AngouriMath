@@ -724,6 +724,12 @@ namespace AngouriMath
                         // https://github.com/asc-community/AngouriMath/issues/1409
                         Quantifier quantifier
                             => BoundBy(quantifier.Var, quantifier.Body, quantifier.Over),
+                        // An indexed union or intersection binds its index as a quantifier does, and
+                        // for the reason its membership is one: x in union(A_k, k in I) is
+                        // exists k in I : x in A_k. union({ 2 pi k + y }, k in ZZ) is a function of y.
+                        // https://github.com/asc-community/AngouriMath/issues/2458
+                        Set.IndexedSetOperation indexed
+                            => BoundBy(indexed.Var, indexed.Body, indexed.Over),
                         _ => new HashSet<Variable>(@this.DirectChildren.SelectMany(c => c.FreeVariables))
                     }
                 ,

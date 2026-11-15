@@ -129,5 +129,46 @@ namespace AngouriMath.Tests.Core
         [Fact]
         public void ASetBuildersOwnConditionIsMembership()
             => Assert.DoesNotContain("{ w : 1/w > a }".ToEntity().DomainCondition.Vars, v => v.Name == "w");
+
+        /// <summary>
+        /// The set builder's condition is of the predicate it publishes, in which its name is
+        /// renamed, so the test above held on a condition that mentioned <c>%1</c> instead:
+        /// <c>1 / %1 in RR and a in RR and not %1 = 0</c>. No name of the builder's, written or
+        /// invented, is left.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2458">#2458</a>
+        /// </summary>
+        [Theory]
+        [InlineData("{ w : 1/w > a }")]
+        [InlineData("{ w in ZZ : 1/w > a }")]
+        [InlineData("x in { w : w > a }")]
+        public void Issue2458_ASetBuilderLeavesNoPlaceholderInItsCondition(string exprRaw)
+            => Assert.Equal(new[] { "a" }, exprRaw.ToEntity().DomainCondition.Vars.Select(v => v.Name).ToArray());
+
+        /// <summary>
+        /// A lambda's condition on its parameter is where the function it denotes is defined,
+        /// and outside it that name is another one.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2458">#2458</a>
+        /// </summary>
+        [Fact]
+        public void Issue2458_ALambdaLeavesNoParameterInItsCondition()
+            => Assert.DoesNotContain("lambda(k, 1/(k - y))".ToEntity().DomainCondition.Vars, v => v.Name == "k");
+
+        /// <summary>
+        /// An indexed union or intersection is defined where every set of the family is, as a
+        /// sum is where every term is: over the index set, not at a free name of the same spelling.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2458">#2458</a>
+        /// </summary>
+        [Theory]
+        [InlineData("union({ 1/k }, k in ZZ)", "0", false)]
+        [InlineData("union({ 1/k }, k in ZZ+)", "0", true)]
+        [InlineData("intersection([-1/k; 1/k], k in ZZ+)", "0", true)]
+        [InlineData("union({ 1/(k - x) }, k in { 1, 2 })", "1", false)]
+        [InlineData("union({ 1/(k - x) }, k in { 1, 2 })", "3", true)]
+        public void Issue2458_AnIndexedFamilysConditionHoldsOverItsIndexSet(string family, string at, bool defined)
+        {
+            var condition = family.ToEntity().DomainCondition;
+            Assert.DoesNotContain(condition.FreeVariables, v => v.Name == "k");
+            Assert.Equal(defined ? MathS.Boolean.True : MathS.Boolean.False, condition.Substitute("x", at.ToEntity()).Simplify());
+        }
     }
 }

@@ -167,6 +167,30 @@ returned as all of them. `MathS.Equations("y^2 - 2", "x^2 + (P - Q y) * x - 3").
 
 ---
 
+### An indexed union or intersection binds its index
+
+**Silent: a bound name is no longer reported free.** `FreeVariables` of `union(A_k, k in I)` and `intersection(A_k, k in I)`
+listed `k`, though the family binds it as a quantifier does and `Substitute` already left it alone. `DomainCondition` left
+the family's condition on `k` free beside it; it now holds over the index set, as a sum's does over its range. The same
+condition of a set builder mentioned the name its predicate is renamed to for traversal, `%1`, and of a lambda its
+parameter; both are where the set's members or the function's arguments lie, not where the expression is defined, and are
+dropped ([#2458](https://github.com/asc-community/AngouriMath/issues/2458)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"union({2*pi*k + y}, k in ZZ)".ToEntity().FreeVariables` | `k, pi, y` | `pi, y` |
+| `"intersection({k, y}, k in ZZ)".ToEntity().FreeVariables` | `k, y` | `y` |
+| `"union({k*y}, k in {k, n})".ToEntity().FreeVariables` | `k, n, y` | `y, n` |
+| `"union({1/k}, k in ZZ)".ToEntity().DomainCondition` | `not k = 0` | `False` |
+| `"union({1/k}, k in ZZ+)".ToEntity().DomainCondition` | `not k = 0` | `True` |
+| `"{ k : 1/k > y }".ToEntity().DomainCondition` | `1 / %1 in RR and y in RR and not %1 = 0` | `y in RR` |
+| `"x in { k : k > y }".ToEntity().DomainCondition` | `%1 in RR and y in RR` | `y in RR` |
+| `"lambda(k, 1/(k - y))".ToEntity().DomainCondition` | `not k - y = 0` | `True` |
+
+`Vars` and `VarsAndConsts` still list the index, which occurs.
+
+---
+
 ### A system row that is not a solution declines the system
 
 **Silent: a wrong row is now no answer.** With `P + Q sqrt(2) = (1 + sqrt(2))^70`, the coefficient `P - Q y` is

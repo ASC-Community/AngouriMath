@@ -517,7 +517,14 @@ namespace AngouriMath
                 // https://github.com/asc-community/AngouriMath/issues/891
                 /// <inheritdoc/>
                 protected override Entity[] InitDirectChildren() =>
-                    new[] { Predicate.Substitute(Var, Variable.CreateTemp(Predicate.Vars)) };
+                    new[] { Predicate.Substitute(Var, Placeholder) };
+
+                /// <summary>
+                /// The name <see cref="Var"/> is renamed to in the predicate this set builder
+                /// publishes as its child, which is what a question asked of that child mentions
+                /// in place of <see cref="Var"/>.
+                /// </summary>
+                internal Variable Placeholder => Variable.CreateTemp(Predicate.Vars);
 
                 /// <summary>
                 /// The written parts, which is what a pattern has to be able to say. The rename

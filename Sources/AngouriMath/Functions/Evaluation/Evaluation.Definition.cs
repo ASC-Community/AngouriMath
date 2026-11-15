@@ -109,10 +109,13 @@ namespace AngouriMath
         /// coefficient is a number that is not zero. A finite range of numbers is the conjunction
         /// over it. Anything else is kept as <c>forall</c> over the range: the set, the whole
         /// numbers from the lower bound to the upper, the interval between a definite integral's
-        /// limits. A set builder admits the members its predicate is defined at, so its own
-        /// condition on its name is part of whom it admits rather than of where the set is defined.
-        /// A limit does not need its body defined throughout anything, and is left as it was.
+        /// limits, the index set of an indexed union or intersection. A set builder admits the
+        /// members its predicate is defined at, so its own condition on its name is part of whom it
+        /// admits rather than of where the set is defined; a lambda's condition on its parameter is
+        /// where the function it denotes is defined, and both are dropped. A limit does not need its
+        /// body defined throughout anything, and is left as it was.
         /// https://github.com/asc-community/AngouriMath/issues/1632
+        /// https://github.com/asc-community/AngouriMath/issues/2458
         /// </para>
         /// <para>
         /// For a definite integral this is sufficient for a value and not necessary: an integral
@@ -135,10 +138,16 @@ namespace AngouriMath
                 Argmaxf(_, var name, var over) => (name, over),
                 Argminf(_, var name, var over) => (name, over),
                 Quantifier quantifier => (quantifier.Var, quantifier.Over),
+                Set.IndexedSetOperation indexed => (indexed.Var, indexed.Over),
                 Summationf(_, var index, var from, var to) => (index, WholeNumbersBetween(index, from, to)),
                 Productf(_, var index, var from, var to) => (index, WholeNumbersBetween(index, from, to)),
                 Integralf { Range: { } limits } integral => (integral.Var, Between(integral.Var, limits.from, limits.to)),
-                Set.ConditionalSet(var name, _) => (name, null),
+                // The condition is of the child the set builder publishes, in which its name is
+                // renamed: that placeholder is the name the conjuncts mention.
+                Set.ConditionalSet set => (set.Placeholder, null),
+                // A lambda, like a set builder, binds its parameter over no range: a condition on
+                // the parameter is where the function is defined, not where the lambda is.
+                Lambda(var parameter, _) => (parameter, null),
                 _ => null
             };
             if (scope is not var (bound, range))
