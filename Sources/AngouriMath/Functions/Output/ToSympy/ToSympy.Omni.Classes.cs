@@ -182,6 +182,18 @@ namespace AngouriMath
             internal override string ToSymPy() => $"({Argument.ToSymPy()})[({Row.ToSymPy()}) - 1, ({Column.ToSymPy()}) - 1]";
         }
 
+        // SymPy's Matrix.dot conjugates neither side, as this node does not.
+        // https://github.com/asc-community/AngouriMath/issues/105
+        partial record DotProductf
+        {
+            internal override string ToSymPy() => $"({Left.ToSymPy()}).dot({Right.ToSymPy()})";
+        }
+
+        partial record CrossProductf
+        {
+            internal override string ToSymPy() => $"({Left.ToSymPy()}).cross({Right.ToSymPy()})";
+        }
+
         partial record Matrix
         {
             internal override string ToSymPy()

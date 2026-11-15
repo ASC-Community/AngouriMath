@@ -592,14 +592,46 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// An operation on two vectors, carried out where both operands are matrices once simplified, as
+        /// <see cref="OnMatrixArgument"/> carries out an operation on one: a vector written in place is kept a vector even
+        /// with one component, a name beside a written matrix leaves the operation as it is, and a condition or the cases
+        /// of a piecewise on either operand are carried through. The operands are kept in their order.
+        /// https://github.com/asc-community/AngouriMath/issues/105
+        /// </summary>
+        /// <param name="left">The first operand.</param>
+        /// <param name="right">The second operand.</param>
+        /// <param name="isExact">Whether to keep the answer exact, as for simplification against evaluation.</param>
+        /// <param name="ofMatrices">The value at two matrices, or null where they have none, as vectors of different lengths have no scalar product.</param>
+        /// <param name="unevaluated">The node, over the simplified operands.</param>
+        private static Entity OnTwoMatrixArguments(Entity left, Entity right, bool isExact,
+            Func<Matrix, Matrix, Entity?> ofMatrices, Func<Entity, Entity, Entity> unevaluated)
+        {
+            var leftReadsANameAsANumber = left is not Matrix && HasANameOutsideAWrittenMatrix(left);
+            var rightReadsANameAsANumber = right is not Matrix && HasANameOutsideAWrittenMatrix(right);
+            Entity Simplified(Entity operand)
+                => operand is Matrix written ? written.Elementwise(e => e.InnerSimplified(isExact)) : operand.InnerSimplified(isExact);
+            Entity Over(Entity l, Entity r) => (l, r) switch
+            {
+                (Providedf(var expression, var predicate), _) => Over(expression, r).Provided(predicate),
+                (_, Providedf(var expression, var predicate)) => Over(l, expression).Provided(predicate),
+                (Piecewise piecewise, _) => piecewise.ApplyToValues(value => Over(value, r)),
+                (_, Piecewise piecewise) => piecewise.ApplyToValues(value => Over(l, value)),
+                (Matrix a, Matrix b) when !leftReadsANameAsANumber && !rightReadsANameAsANumber
+                    => ofMatrices(a, b) ?? unevaluated(a, b),
+                _ => unevaluated(leftReadsANameAsANumber && l is Matrix ? left : l, rightReadsANameAsANumber && r is Matrix ? right : r),
+            };
+            return Over(Simplified(left), Simplified(right));
+        }
+
+        /// <summary>
         /// Whether a name stands somewhere in <paramref name="expr"/> other than as an entry of a matrix written out, or
-        /// inside a determinant, a trace or an entry, which are numbers whatever the name is. Such a name may stand for
-        /// a matrix, and a matrix operation over it is left until it is one.
+        /// inside a determinant, a trace, an entry or a scalar product, which are numbers whatever the name is. Such a
+        /// name may stand for a matrix, and a matrix operation over it is left until it is one.
         /// https://github.com/asc-community/AngouriMath/issues/2147
         /// </summary>
         internal static bool HasANameOutsideAWrittenMatrix(Entity expr)
         {
-            if (expr is Matrix or Determinantf or Tracef or MatrixEntryf)
+            if (expr is Matrix or Determinantf or Tracef or MatrixEntryf or DotProductf)
                 return false;
             if (expr is Variable { IsConstant: false })
                 return true;
@@ -669,6 +701,23 @@ namespace AngouriMath
                     other => other is Transposef(var inner) ? new MatrixEntryf(inner, column, row).InnerSimplified(isExact) : null,
                     argument => New(argument, row, column));
             }
+        }
+
+        partial record DotProductf
+        {
+            // Whether there is a scalar product depends on the shapes alone, which no condition on the entries can say.
+            private protected override Entity IntrinsicCondition => Boolean.True;
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => OnTwoMatrixArguments(Left, Right, isExact, (a, b) => Of(a, b)?.InnerSimplified(isExact), New);
+        }
+
+        partial record CrossProductf
+        {
+            private protected override Entity IntrinsicCondition => Boolean.True;
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => OnTwoMatrixArguments(Left, Right, isExact, (a, b) => Of(a, b)?.InnerSimplified(isExact), New);
         }
 
         partial record Matrix

@@ -481,6 +481,8 @@ namespace AngouriMath.Core.Transformations.Matching
             [typeof(Entity.Determinantf)] = (1, static c => new Entity.Determinantf(c[0])),
             [typeof(Entity.Transposef)] = (1, static c => new Entity.Transposef(c[0])),
             [typeof(Entity.Tracef)] = (1, static c => new Entity.Tracef(c[0])),
+            [typeof(Entity.DotProductf)] = (2, static c => new Entity.DotProductf(c[0], c[1])),
+            [typeof(Entity.CrossProductf)] = (2, static c => new Entity.CrossProductf(c[0], c[1])),
             [typeof(Entity.Alephf)] = (1, static c => new Entity.Alephf(c[0])),
             [typeof(Entity.Erfcf)] = (1, static c => new Entity.Erfcf(c[0])),
             [typeof(Entity.Erfif)] = (1, static c => new Entity.Erfif(c[0])),

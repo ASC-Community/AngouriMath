@@ -252,6 +252,16 @@ matrix, and `det(5)` is refused. A name beside a written matrix may stand for a 
 numbers and it is `x ^ 2 - 2`
 ([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
 
+`dot(a, b)` and `cross(a, b)` of a name are nodes too, carried out once both operands are vectors:
+`dot(a, b)` with `a` and `b` substituted by `[1, 2, 3]` and `[4, 5, 6]` simplifies to `32`, and
+`cross(W, r)` with `[0, 0, w]` and `[x, y, z]` to `[-w * y, w * x, 0]`. A compiled delegate takes
+the vectors as `double[]` or `double[,]`, and `cross` returns a column. `cross` is not commutative,
+and its operands are kept in their order, as is a product with a `cross` in it: `cross(a, b) + cross(b, a)`
+is left as it is. Vectors of different lengths, or a `cross` of vectors that do not have three
+components, have no value, and the node is left as it is; where the vector is written out, as in
+`cross(a, [1, 2])`, it is refused. `cross(a)` of one vector in the plane has no node, and takes a
+vector written out ([#105](https://github.com/asc-community/AngouriMath/issues/105)).
+
 `laplacian(f, [x, y, z])` is the sum of the second derivatives of a scalar `f`, `jacobian(F, [x, y])`
 the matrix of the first derivatives of the components of `F`, a row for each component and a column
 for each variable, and `hessian(f, [x, y])` the matrix of the second derivatives, the entry in row `i`

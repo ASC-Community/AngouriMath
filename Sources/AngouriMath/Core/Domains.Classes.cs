@@ -89,6 +89,24 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Complex;
         }
 
+        // The scalar product is a number, and the vector product a vector, which has no domain of numbers.
+        // https://github.com/asc-community/AngouriMath/issues/105
+        partial record DotProductf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
+        partial record CrossProductf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Any;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Any;
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

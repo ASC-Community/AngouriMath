@@ -68,6 +68,8 @@ namespace AngouriMath
         [EntityJsonConverter] partial record Transposef;
         [EntityJsonConverter] partial record Tracef;
         [EntityJsonConverter] partial record MatrixEntryf;
+        [EntityJsonConverter] partial record DotProductf;
+        [EntityJsonConverter] partial record CrossProductf;
         [EntityJsonConverter] partial record Maxf;
         [EntityJsonConverter] partial record Minf;
         [EntityJsonConverter] partial record Minusf;

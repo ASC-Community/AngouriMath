@@ -31,9 +31,9 @@ namespace AngouriMath.Core.Antlr
             return tb.ToMatrix() ?? throw new AngouriBugException("Should've been checked already");
         }
 
-        // det, transpose, dot, cross and resultant are computed from what they are applied to where it
-        // is a matrix written out, or an expression that is one once its operations are carried out,
-        // as 2 [[1, 2], [3, 4]] is. https://github.com/asc-community/AngouriMath/issues/2147
+        // cross of one vector and resultant are computed from what they are applied to where it is a
+        // matrix written out, or an expression that is one once its operations are carried out, as
+        // 2 [[1, 2], [3, 4]] is. https://github.com/asc-community/AngouriMath/issues/2147
         private static Matrix MatrixArgument(string function, Entity argument, string example)
             => argument as Matrix ?? argument.InnerSimplified as Matrix
                 ?? throw new InvalidArgumentParseException(
@@ -42,17 +42,30 @@ namespace AngouriMath.Core.Antlr
 
         // A matrix written out, or null where the argument may yet stand for one -- a name, or an
         // expression with a name in it beside a matrix, as A [[1, 2], [3, 4]] is, which simplifying
-        // would read as a number -- and det, transpose, trace and an entry are left as nodes over
-        // it. A number, a statement or a set is no matrix, and is refused as it was.
-        private static Matrix? MatrixOrUnknown(string function, Entity argument, string example)
+        // would read as a number -- and det, transpose, trace, an entry, dot and cross are left as
+        // nodes over it. A number, a statement or a set is no matrix, and is refused as it was.
+        private static Matrix? MatrixOrUnknown(string function, Entity argument, string example, string what = "a matrix")
             => (argument as Matrix ?? argument.InnerSimplified) switch
             {
                 Matrix when argument is not Matrix && HasANameOutsideAWrittenMatrix(argument) => null,
                 Matrix matrix => matrix,
                 Number or Statement or Set => throw new InvalidArgumentParseException(
-                    $"{function} is taken of a matrix, as in {example}, and {argument} is not one"),
+                    $"{function} is taken of {what}, as in {example}, and {argument} is not one"),
                 _ => null,
             };
+
+        // A vector written out, a column or a row, or null where the operand may yet stand for one, as
+        // MatrixOrUnknown reads it. A matrix written out that is not a vector is refused.
+        // https://github.com/asc-community/AngouriMath/issues/105
+        private static Matrix? VectorOrUnknown(string function, Entity operand)
+        {
+            if (MatrixOrUnknown(function, operand, $"{function}([1, 2, 3], [4, 5, 6])", "vectors") is not { } vector)
+                return null;
+            if (VectorComponents(vector) is null)
+                throw new InvalidArgumentParseException(
+                    $"{function} is taken of vectors, and {vector} is a {vector.RowCount} by {vector.ColumnCount} matrix");
+            return vector;
+        }
 
         /// <summary>The entries of a vector, written as a column or as a row.</summary>
         private static Entity[] Components(string function, Entity argument)
@@ -120,20 +133,21 @@ namespace AngouriMath.Core.Antlr
 
         /// <summary>
         /// <c>dot(a, b)</c>: the sum of the products of the components, without conjugating either
-        /// side, as SymPy's <c>dot</c> and Mathematica's <c>Dot</c> are.
+        /// side, as SymPy's <c>dot</c> and Mathematica's <c>Dot</c> are; or the node, where an operand
+        /// is a name that may stand for a vector.
         /// </summary>
         internal static Entity Dot(Entity left, Entity right)
         {
-            var a = Components("dot", left);
-            var b = Components("dot", right);
-            if (a.Length != b.Length)
-                throw new InvalidArgumentParseException(
-                    $"dot is taken of two vectors of one length, and these have {a.Length} and {b.Length} components");
-            return Enumerable.Range(0, a.Length).Select(i => a[i] * b[i]).Aggregate((sum, term) => sum + term);
+            var (a, b) = (VectorOrUnknown("dot", left), VectorOrUnknown("dot", right));
+            if (a is null || b is null)
+                return new DotProductf(left, right);
+            return DotProductf.Of(a, b) ?? throw new InvalidArgumentParseException(
+                $"dot is taken of two vectors of one length, and these have {VectorComponents(a)!.Length} and {VectorComponents(b)!.Length} components");
         }
 
         /// <summary>
-        /// <c>cross(a, b)</c>, the vector product in three dimensions, and <c>cross(a)</c>, the vector
+        /// <c>cross(a, b)</c>, the vector product in three dimensions, or the node where an operand is a
+        /// name that may stand for a vector; and <c>cross(a)</c> of a vector written out, the vector
         /// in the plane that <c>a</c> turns into through a right angle anticlockwise: <c>(-a_2, a_1)</c>,
         /// as Mathematica's <c>Cross</c> of one vector is. So <c>dot(cross(a), b)</c> is the plane's
         /// pseudo-scalar product <c>a_1 b_2 - a_2 b_1</c>.
@@ -148,15 +162,17 @@ namespace AngouriMath.Core.Antlr
                         $"cross of one vector is its turn through a right angle in the plane, and this vector has {a.Length} components");
                 return MathS.Vector(-a[1], a[0]);
             }
-            var u = Components("cross", arguments[0]);
-            var v = Components("cross", arguments[1]);
-            if (u.Length != 3 || v.Length != 3)
-                throw new InvalidArgumentParseException(
-                    $"cross of two vectors is the vector product in three dimensions, and these have {u.Length} and {v.Length} components");
-            return MathS.Vector(
-                u[1] * v[2] - u[2] * v[1],
-                u[2] * v[0] - u[0] * v[2],
-                u[0] * v[1] - u[1] * v[0]);
+            var (left, right) = (VectorOrUnknown("cross", arguments[0]), VectorOrUnknown("cross", arguments[1]));
+            if (left is null || right is null)
+            {
+                // A vector written out has no vector product unless it has three components, whatever the other one is.
+                if ((left ?? right) is { } written && VectorComponents(written)!.Length != 3)
+                    throw new InvalidArgumentParseException(
+                        $"cross of two vectors is the vector product in three dimensions, and {written} has {VectorComponents(written)!.Length} components");
+                return new CrossProductf(arguments[0], arguments[1]);
+            }
+            return CrossProductf.Of(left, right) ?? throw new InvalidArgumentParseException(
+                $"cross of two vectors is the vector product in three dimensions, and these have {VectorComponents(left)!.Length} and {VectorComponents(right)!.Length} components");
         }
 
         /// <summary><c>resultant(p, q, x)</c>, eliminating <c>x</c> between two polynomials.</summary>

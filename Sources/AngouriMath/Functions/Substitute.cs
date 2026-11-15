@@ -39,6 +39,20 @@ namespace AngouriMath
                 => this == x ? value : New(Argument.Substitute(x, value), Row.Substitute(x, value), Column.Substitute(x, value));
         }
 
+        partial record DotProductf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Left.Substitute(x, value), Right.Substitute(x, value));
+        }
+
+        partial record CrossProductf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Left.Substitute(x, value), Right.Substitute(x, value));
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>
