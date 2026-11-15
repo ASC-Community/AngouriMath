@@ -75,28 +75,42 @@ namespace AngouriMath
         /// </remarks>
         private static Entity? AcrossTheRange(Entity antiderivative, Variable x, Entity from, Entity to)
         {
-            if (from.Evaled is not Number.Real { IsNaN: false } lower || to.Evaled is not Number.Real { IsNaN: false } upper
-                || lower == upper)
+            var (lower, upper) = (from.Evaled as Number.Real, to.Evaled as Number.Real);
+            if (lower is { IsNaN: true } || upper is { IsNaN: true })
+                (lower, upper) = (null, null);
+            // Where an argument off the real line crosses a branch cut, or may, the antiderivative jumps there although the
+            // integrand does not. Between bounds that are not numbers any crossing is one that cannot be placed.
+            // https://github.com/asc-community/AngouriMath/issues/2460
+            if (AntiderivativeBreaks.CutCrossings(antiderivative, x,
+                    lower is null || upper is null ? null : lower < upper ? lower : upper,
+                    lower is null || upper is null ? null : lower < upper ? upper : lower) is not { } crossings)
+                return null;
+            if (lower is null || upper is null || lower == upper)
                 return AtTheBound(antiderivative, x, to, from, continuousInside: false) is { } atTheTop
                     && AtTheBound(antiderivative, x, from, to, continuousInside: false) is { } atTheBottom
                     ? atTheTop - atTheBottom
                     : null;
-            var breaks = lower < upper
-                ? AntiderivativeBreaks.Inside(antiderivative, x, lower, upper)
-                : AntiderivativeBreaks.Inside(antiderivative, x, upper, lower);
+            var (lowest, highest) = lower < upper ? (lower, upper) : (upper, lower);
+            var breaks = AntiderivativeBreaks.Inside(antiderivative, x, lowest, highest);
+            if (AcrossTheCuts(antiderivative, x, crossings, lowest, highest, breaks) is not { } acrossTheCuts)
+                return null;
+            if (lower > upper)
+                acrossTheCuts = -acrossTheCuts;
+            // Added only where a cut was crossed, so that an answer with none is written as it was.
+            Entity WithTheCuts(Entity value) => crossings.Count > 0 ? value + acrossTheCuts : value;
             if (breaks is not { Count: > 0 })
                 // An empty list is a range the antiderivative was read to be continuous across; no list, one where a
                 // break could not be listed.
                 return AtTheBound(antiderivative, x, to, from, continuousInside: breaks is not null) is { } atTheTop
                     && AtTheBound(antiderivative, x, from, to, continuousInside: breaks is not null) is { } atTheBottom
-                    ? atTheTop - atTheBottom
+                    ? WithTheCuts(atTheTop - atTheBottom)
                     : null;
             if (lower > upper)
                 breaks.Reverse();
             // Not across a break of an antiderivative in the incomplete gamma function: see AtTheBound.
             if (HoldsAnIncompleteGammaFunction(antiderivative) || AtTheBound(antiderivative, x, from, to, continuousInside: true) is not { } atTheStart)
                 return null;
-            var total = -atTheStart;
+            var total = WithTheCuts(-atTheStart);
             foreach (var (at, _) in breaks)
             {
                 // Approached from the side the range comes from, then left on the other.
@@ -108,6 +122,68 @@ namespace AngouriMath
                 total += before - after;
             }
             return AtTheBound(antiderivative, x, to, from, continuousInside: true) is { } atTheEnd ? total + atTheEnd : null;
+        }
+
+        /// <summary>
+        /// What the jumps of <paramref name="antiderivative"/> where it crosses a branch cut add to <c>F(b) - F(a)</c> over
+        /// <c>[<paramref name="lower"/>, <paramref name="upper"/>]</c>, or <see langword="null"/> where one cannot be
+        /// settled.
+        /// </summary>
+        /// <remarks>
+        /// A node that jumps by <c>J</c> at <c>t0</c> and stands in the antiderivative with the coefficient <c>c</c>
+        /// makes it jump by <c>c(t0) J</c>, which <c>F(b) - F(a)</c> counts and the integral does not. At a bound on the
+        /// cut, the antiderivative's value there is the one on the cut and the integral's is the one from inside the
+        /// range, and they differ by the part of the jump on that side. So <c>1/(1 + (t - 3i)^2)</c> over <c>[-2, 2]</c>
+        /// is <c>arctan(2 - 3i) - arctan(-2 - 3i) - pi</c>, and over the line 0.
+        /// https://github.com/asc-community/AngouriMath/issues/2460
+        /// </remarks>
+        private static Entity? AcrossTheCuts(Entity antiderivative, Variable x,
+            List<(Entity Node, Entity At, Number.Real Value, Entity Unit)> crossings, Number.Real lower, Number.Real upper,
+            List<(Entity At, Number.Real Value)>? breaks)
+        {
+            Entity total = Number.Integer.Zero;
+            // Close enough to the cut that the value has not moved by more than a part in 10^19 of the jump.
+            Entity near = Number.Rational.Create(EInteger.One, EInteger.FromInt32(10).Pow(20));
+            foreach (var (node, at, value, unit) in crossings)
+            {
+                if (value < lower || value > upper)
+                    continue;
+                // A pole or a jump of the real line at the same point would be read twice.
+                if (breaks is { } listed && listed.Any(@break => @break.Value.EDecimal.Subtract(value.EDecimal).Abs().CompareTo(EDecimal.Create(1, -30)) < 0))
+                    return null;
+                var before = value > lower ? at - near : at;
+                var after = value < upper ? at + near : at;
+                if (StepAcross(node, x, before, after, unit) is not { } step)
+                    return null;
+                if (step == 0)
+                    continue;
+                var standIn = Variable.CreateUnique(antiderivative, "u");
+                var coefficient = antiderivative.Substitute(node, standIn).Differentiate(standIn);
+                if (coefficient.ContainsNode(standIn))
+                    return null;
+                var there = coefficient.Substitute(x, at).InnerSimplified;
+                if (there.IsNaN || HoldsAnInfinity(there))
+                    return null;
+                total -= there * step * unit;
+            }
+            return total.InnerSimplified;
+        }
+
+        /// <summary>
+        /// How many <paramref name="unit"/>s <paramref name="node"/> moves by from <paramref name="before"/> to
+        /// <paramref name="after"/>, two points either side of a cut, or one on it and one beside it; or
+        /// <see langword="null"/> where that is not a whole number.
+        /// </summary>
+        private static int? StepAcross(Entity node, Variable x, Entity before, Entity after, Entity unit)
+        {
+            var moved = ((node.Substitute(x, after) - node.Substitute(x, before)) / unit).EvalNumerical();
+            if (moved is not { RealPart.EDecimal.IsFinite: true, ImaginaryPart.EDecimal.IsFinite: true })
+                return null;
+            var real = (double)moved.RealPart;
+            var whole = System.Math.Round(real);
+            if (System.Math.Abs(real - whole) > 1e-6 || System.Math.Abs((double)moved.ImaginaryPart) > 1e-6 || System.Math.Abs(whole) > 2)
+                return null;
+            return (int)whole;
         }
 
         private static bool HoldsAnIncompleteGammaFunction(Entity expr)
@@ -191,9 +267,10 @@ namespace AngouriMath
         /// symbolic <c>y</c>, and taking its limits would answer 0, the principal value, where a concrete <c>y = i</c>
         /// answers <c>NaN</c>. What the breaks read is the real line with the parameters real: <c>arctan(t - y)</c>
         /// is continuous in <c>t</c> for every real <c>y</c>, but for <c>|Im y| &gt; 1</c> it crosses arctan's cut,
-        /// and the integral of <c>1/(1 + (t - y)^2)</c> over the line is 0 there and not <c>pi</c>. That is the
-        /// answer at a concrete such <c>y</c> as well, and before this limit was taken; it is the antiderivative's
-        /// continuity that is not read off the real line, not this limit.
+        /// and the integral of <c>1/(1 + (t - y)^2)</c> over the line is 0 there and not <c>pi</c>. A symbol is read as
+        /// real wherever the breaks are read, so that is the answer for a symbolic <c>y</c>; at a concrete <c>y</c> off
+        /// the line the crossing is placed, and the answer is 0 (see <see cref="AcrossTheCuts"/>).
+        /// https://github.com/asc-community/AngouriMath/issues/2460
         /// </para>
         /// <para>
         /// A limit that is undecided, undefined, or still holds an infinity inside it -- <c>e^(-y t)</c> at

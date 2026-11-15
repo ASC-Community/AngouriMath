@@ -106,7 +106,40 @@ before. With `Simplify`:
 
 The continuity read is on the real line with real parameters, as it is for finite bounds: for a non-real `y` with
 `|Im y| > 1`, `arctan(t - y)` crosses arctan's cut and the integral of `1/(1 + (t - y)^2)` over the line is 0, not `pi`.
-That was already the answer at a concrete such `y` -- `integral(1/(1+(t-3i)^2), t, -oo, +oo)` is `pi` in 2.7.0 and now.
+At a concrete such `y` it is now 0: see the next entry.
+
+### A definite integral whose antiderivative crosses a branch cut off the real line counts the jump
+
+**Silent: a wrong value is corrected, and some are no longer answered.** The breaks of an antiderivative were looked for
+on the real line, where `arctan` and the logarithm of a real argument have no cut to cross. A complex constant takes the
+argument off the line, and there it can cross one where the integrand is continuous: `arctan(t - 3i)` meets the
+imaginary axis at `-3i`, on arctan's cut, and jumps by `pi`, so the answer was off by `pi`
+([#2460](https://github.com/asc-community/AngouriMath/issues/2460)). The crossings of arctan's cut and the logarithm's
+are now placed for a polynomial argument with numeric coefficients, and for the logarithm of the cosine or the sine of a
+linear one with numeric coefficients, which `tan` and `cot` integrate to, and each jump is counted; a bound on the cut
+takes the value from inside the range. Where a crossing cannot be placed or its jump is not a constant, the integral is
+left as written: a power whose base crosses the negative real axis, a bound that is not a number, a symbol beside the
+complex constant, an argument of any other shape. With `Simplify`, against mpmath's quadrature:
+
+| Input | Was (2.7.0) | Now | Value |
+|---|---|---|---|
+| `integral(1/(1+(t-3i)^2), t, -2, 2)` | `arctan(2 - 3i) - arctan(-2 - 3i)` = 2.8198 | `arctan(2 - 3i) - arctan(-2 - 3i) - pi` | -0.3218 |
+| `integral(1/(1+(t-3i)^2), t, -oo, +oo)` | `pi` | `0` | 0 |
+| `integral(1/(1+(t-2i)^2), t, -oo, +oo)` | `pi` | `0` | 0 |
+| `integral(1/(1+(t-3i)^2), t, 0, +oo)` | `pi / 2 - arctan(-3i)` = 3.1416 + 0.3466i | `-1/2 * pi - arctan(-3i)` | 0.3466i |
+| `integral(1/((1+i)*t-5-3i), t, 0, 5)` | `(1/2 - 1/2 * i) * ln(2i) + (-1/2 + 1/2 * i) * ln(-5 - 3i)` = 1.5510 + 2.6210i | `(1/2 - 1/2 * i) * ln(2i) + (-1/2 + 1/2 * i) * ln(-5 - 3i) + (-1 - i) * pi` | -1.5906 - 0.5206i |
+| `integral(t/(1+(t-3i)^2), t, -2, 2)` | `3i * arctan(2 - 3i) + (-3i) * arctan(-2 - 3i) + (ln(-4 - 12i) - ln(-4 + 12i)) / 2` = 6.5670i | the same `+ (-2i) * pi` | 0.2838i |
+| `integral(tan(t+i), t, 0, 4)` | `ln(cos(i)) - ln(cos(4 + i))` = 0.1376 - 2.4189i | `ln(cos(i)) - ln(cos(4 + i)) + 2i * pi` | 0.1376 + 3.8643i |
+| `integral(tan((1+i)*t), t, 0, 4)` | `(-1/2 + 1/2 * i) * ln(cos(4 + 4i))` = -2.7951 + 0.5116i | `(-1/2 + 1/2 * i) * ln(cos(4 + 4i)) + (1 + i) * pi` | 0.3464 + 3.6532i |
+| `integral(tan((2-i)*t+1/2), t, 0, 2)` | `(-2/5 - 1/5 * i) * ln(cos(9/2 - 2i)) + (2/5 + 1/5 * i) * ln(cos(1/2))` = -0.9264 + 0.4322i | the same `+ (2/5 - 4/5 * i) * pi` | 0.3302 - 2.0811i |
+| `integral(sqrt((1+i)*t-5-3i), t, 0, 5)` | `4/3 * i + (-1/3 + 1/3 * i) * (-5 - 3i) ^ (3/2)` = 0.1675 - 5.3020i | left as written | 2.0531 - 3.4186i |
+| `integral(1/(1+(t-i)^2), t, -1, 1)` | `arctan(1 - i) - arctan(-1 - i)` = 2.0344 | left as written | diverges: a pole at 0 |
+| `integral(1/(1+(t-3i)^2), t, 0, s)` | `arctan((-6i + 2 * s) / 2) - arctan(-3i)` | left as written | |
+| `integral(1/(1+(t-y-3i)^2), t, -2, 2)` | `arctan((4 - 6i + (-2) * y) / 2) - arctan((-4 - 6i + (-2) * y) / 2)` | left as written | |
+| `integral(1/(1+(t-i/2)^2), t, -oo, +oo)` | `pi` | unchanged: the path stays inside the strip | `pi` |
+
+A symbol is read as real here, as everywhere the breaks are read, so `integral(1/(1+(t-y)^2), t, -oo, +oo)` is still
+`pi`, which is the value for `|Im y| < 1`.
 
 ### `dot` and `cross` of a name for a vector are nodes
 
