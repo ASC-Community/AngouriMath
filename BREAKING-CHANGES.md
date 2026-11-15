@@ -61,6 +61,22 @@ The calculus nodes and the binders — `derivative`, `integral`, `limit`, `sum`,
 names the node and says to compile `.Evaled` or `Simplify()` instead. The LINQ compiler said the bound variable was not
 among the arguments.
 
+### A definite integral whose antiderivative splits into cases finds the breaks of each case
+
+**Silent: a wrong value is corrected.** The antiderivative of `1/(t^2 + y^2)` is a case split on `y`, and its case
+`y = 0`, `-1/t`, has a pole at 0. The breaks were looked for in the whole split, where the logarithm of the case
+`y^2 < 0` cannot be listed, so none were looked for at all, and the case `y = 0` answered `-1/t` taken at the bounds:
+`-2` over `[-1, 1]`, a negative value for a positive integrand whose integral diverges
+([#2461](https://github.com/asc-community/AngouriMath/issues/2461)). Each case whose condition is on the parameters is now
+taken across the range by itself, and the case `y = 0` diverges, as `integral(1/t^2, t, -1, 1)` does. The other cases
+are as they were. With `Simplify`, the case `y = 0` of:
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `integral(1/(t^2+y^2), t, -1, 1)` | `(-2) provided (y = 0)` | `+oo provided (y = 0)` |
+| `integral(1/(t^2+y^2), t, -oo, +oo)` | `0 provided (y = 0)` | `+oo provided (y = 0)` |
+| `integral(1/(t^2+y^2), t, 1, 2)` | `(1/2) provided (y = 0)` | unchanged |
+
 ### `factorize`, `nextprime`, `divisors`, `gradient`, `divergence` and `φ` are refused by name
 
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as

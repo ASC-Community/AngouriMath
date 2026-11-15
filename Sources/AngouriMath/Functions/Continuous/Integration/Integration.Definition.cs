@@ -75,6 +75,21 @@ namespace AngouriMath
         /// </remarks>
         private static Entity? AcrossTheRange(Entity antiderivative, Variable x, Entity from, Entity to)
         {
+            // Case by case where the cases are on the parameters, so that the breaks of each are found in it: 1/(t^2 + y^2)
+            // is 1/t^2 at y = 0, whose antiderivative -1/t has a pole at 0, and the logarithm of the case y^2 < 0, whose
+            // zeros cannot be listed, hid it when the antiderivative was read whole -- the integral over [-1, 1] was -2
+            // there. https://github.com/asc-community/AngouriMath/issues/2461
+            if (antiderivative is Piecewise piecewise && piecewise.Cases.All(@case => !@case.Predicate.ContainsNode(x)))
+            {
+                var cases = new List<Providedf>();
+                foreach (var @case in piecewise.Cases)
+                {
+                    if (AcrossTheRange(@case.Expression, x, from, to) is not { } value)
+                        return null;
+                    cases.Add(new Providedf(value, @case.Predicate));
+                }
+                return new Piecewise(cases);
+            }
             var (lower, upper) = (from.Evaled as Number.Real, to.Evaled as Number.Real);
             if (lower is { IsNaN: true } || upper is { IsNaN: true })
                 (lower, upper) = (null, null);
