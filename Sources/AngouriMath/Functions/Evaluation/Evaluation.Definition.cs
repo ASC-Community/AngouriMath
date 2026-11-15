@@ -465,6 +465,13 @@ namespace AngouriMath
         {
             get
             {
+                // A number is its own value at every precision: InnerSimplify answers the number, it has no
+                // children, and the codomain it was made with -- its own type's, or Any -- contains it, since the
+                // set of each is a test of the type alone (SpecialSet.MayContain). So the cache below, an object of
+                // 40 bytes on the first read, held only the number itself. A number given another codomain by
+                // WithCodomain may evaluate to NaN, and still goes through it.
+                if (this is Number && (Codomain == DefaultCodomain || Codomain == Domain.Any))
+                    return this;
                 // Cached with the precision it was computed at, and read back only at that
                 // precision: a hundred digits of pi are the wrong answer at five hundred. The
                 // stamp is the precision setting's frame for this flow, compared by reference.
