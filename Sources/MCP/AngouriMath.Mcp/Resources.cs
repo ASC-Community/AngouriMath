@@ -110,9 +110,10 @@ internal static class Resources
           apply lambda`
         - matrices and vectors: `det transpose trace dot cross resultant`, computed from a
           matrix or a vector written out, `[1, 2]` being a column and `[[1, 2], [3, 4]]` a
-          matrix. `det(A)`, `transpose(A)`, `trace(A)` and the entry `A[k, l]` (counted from 1)
-          of a name are nodes, carried out once the name is substituted by a matrix.
-          `cross(a, b)` is the vector product in space and `cross([x, y])` is `[-y, x]`;
+          matrix. `det(A)`, `transpose(A)`, `trace(A)`, the entry `A[k, l]` (counted from 1),
+          `dot(a, b)` and `cross(a, b)` of a name are nodes, carried out once the name is
+          substituted by a matrix or a vector. `cross(a, b)` is the vector product in space,
+          its operands kept in their order, and `cross([x, y])` of a vector written out is `[-y, x]`;
           `resultant(p, q, x)` eliminates `x`
         - `forwarddifference(f, k)`, which is `f(k + 1) - f(k)` once parsed
         - `laplacian(f, [x, y])`, `jacobian(F, [x, y])` and `hessian(f, [x, y])`, made of

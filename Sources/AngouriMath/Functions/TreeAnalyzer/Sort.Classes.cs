@@ -74,6 +74,18 @@ namespace AngouriMath
                 => Choice(level, "entry_", "entry_", "entry_");
         }
 
+        partial record DotProductf
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "dot_", "dot_", "dot_");
+        }
+
+        partial record CrossProductf
+        {
+            private protected override string SortHashName(SortLevel level)
+                => Choice(level, "cross_", "cross_", "cross_");
+        }
+
         partial record Matrix
         {
             private protected override string SortHashName(SortLevel level)

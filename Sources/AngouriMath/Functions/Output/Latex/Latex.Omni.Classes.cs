@@ -178,6 +178,23 @@ namespace AngouriMath
                 => $@"{{{Argument.Latexize(Argument.Priority < Priority.Func)}}}_{{{Row.Latexize()},{Column.Latexize()}}}";
         }
 
+        // The scalar product as a dot and the vector product as a cross, as ISO 80000-2 writes them, each operand in
+        // parentheses unless it is a name, a number or a call. The dot is the one a product is written with, and so the
+        // parentheses are kept around anything looser. https://github.com/asc-community/AngouriMath/issues/105
+        partial record DotProductf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => $@"{Left.Latexize(Left.Priority < Priority.Func)} \cdot {Right.Latexize(Right.Priority < Priority.Func)}";
+        }
+
+        partial record CrossProductf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => $@"{Left.Latexize(Left.Priority < Priority.Func)} \times {Right.Latexize(Right.Priority < Priority.Func)}";
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

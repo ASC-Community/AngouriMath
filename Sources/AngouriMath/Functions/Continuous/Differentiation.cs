@@ -180,6 +180,32 @@ namespace AngouriMath
                 : new MatrixEntryf(Argument.DerivativeOver(variable), Row, Column);
         }
 
+        // Both products are linear in each operand, so the derivative is the product rule's sum, the operands kept in their
+        // order, since the vector product is not commutative. An operand that does not vary contributes no term.
+        // https://github.com/asc-community/AngouriMath/issues/105
+        partial record DotProductf
+        {
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => ProductRule(Left, Right, variable, static (a, b) => new DotProductf(a, b));
+        }
+
+        partial record CrossProductf
+        {
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+                => ProductRule(Left, Right, variable, static (a, b) => new CrossProductf(a, b));
+        }
+
+        private static Entity ProductRule(Entity left, Entity right, Variable variable, System.Func<Entity, Entity, Entity> product)
+            => (left.IsConstantIn(variable), right.IsConstantIn(variable)) switch
+            {
+                (true, true) => Integer.Zero,
+                (false, true) => product(left.DerivativeOver(variable), right),
+                (true, false) => product(left, right.DerivativeOver(variable)),
+                _ => product(left.DerivativeOver(variable), right) + product(left, right.DerivativeOver(variable)),
+            };
+
         partial record Matrix
         {
             /// <inheritdoc/>

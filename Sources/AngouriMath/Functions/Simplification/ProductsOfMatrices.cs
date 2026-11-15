@@ -19,8 +19,10 @@ namespace AngouriMath.Functions
     /// factors simplified each on its own, in the order they were written. A name beside a transpose is kept in its
     /// place too, since it may stand for a matrix, and a name carries no type to say whether it does
     /// (https://github.com/asc-community/AngouriMath/issues/1237). The transpose of a matrix written out is not
-    /// set aside: simplification carries it out. A determinant, a transpose, a trace or an entry of a name beside a
-    /// written matrix is set aside whole, since simplifying its argument reads the name as a number.
+    /// set aside: simplification carries it out. A vector product not yet carried out is a vector, and a product with one
+    /// in it is set aside as one with a transpose is. A determinant, a transpose, a trace, an entry, or a scalar or a
+    /// vector product of a name beside a written matrix is set aside whole, since simplifying its argument reads the name
+    /// as a number.
     /// https://github.com/asc-community/AngouriMath/issues/2147
     /// </summary>
     internal static class ProductsOfMatrices
@@ -82,7 +84,8 @@ namespace AngouriMath.Functions
         private static bool HasMatrixOperation(Entity node)
         {
             if (node is Transposef { Argument: not Matrix } or Determinantf { Argument: not Matrix }
-                or Tracef { Argument: not Matrix } or MatrixEntryf { Argument: not Matrix })
+                or Tracef { Argument: not Matrix } or MatrixEntryf { Argument: not Matrix }
+                or DotProductf { Left: not Matrix } or DotProductf { Right: not Matrix } || IsAVectorProduct(node))
                 return true;
             var children = node.DirectChildren;
             for (var i = 0; i < children.Count; i++)
@@ -94,19 +97,31 @@ namespace AngouriMath.Functions
         // An operation on a matrix whose argument has a name beside a written matrix, as det(A [[2, 0], [0, 3]]) has:
         // simplifying the argument would read the name as a number and multiply it into the entries, and the
         // operation would then be carried out on that. It is set aside whole until the name is a matrix.
+        // A scalar or a vector product is set aside the same way where either operand is such an argument.
         private static bool ReadsANameAsANumber(Entity node)
             => node is Transposef or Determinantf or Tracef or MatrixEntryf
-               && node.DirectChildren[0] is not Matrix and var argument
+                   && ReadsANameAsANumberIn(node.DirectChildren[0])
+               || node is DotProductf or CrossProductf
+                   && (ReadsANameAsANumberIn(node.DirectChildren[0]) || ReadsANameAsANumberIn(node.DirectChildren[1]));
+
+        private static bool ReadsANameAsANumberIn(Entity argument)
+            => argument is not Matrix
                && argument.Nodes.Any(n => n is Matrix)
                && Entity.HasANameOutsideAWrittenMatrix(argument);
 
-        // A transpose, or a product already set aside, among two or more factors that are not numbers.
+        // A vector product that is not yet carried out, which is a vector, and so a matrix to a product it stands in:
+        // M cross(a, b) is not cross(a, b) M. https://github.com/asc-community/AngouriMath/issues/105
+        internal static bool IsAVectorProduct(Entity node)
+            => node is CrossProductf { Left: not Matrix } or CrossProductf { Right: not Matrix };
+
+        // A transpose, a vector product, or a product already set aside, among two or more factors that are not numbers.
         private static bool IsAProductOfMatrices(Entity product, List<(Variable Name, Entity Product)> products)
         {
             var factors = Mulf.LinearChildren(product);
             var (matrices, others) = (0, 0);
             foreach (var factor in factors)
                 if (factor is Transposef { Argument: not Matrix } or Powf(Transposef { Argument: not Matrix }, _)
+                    || IsAVectorProduct(factor) || factor is Powf(var poweredBase, _) && IsAVectorProduct(poweredBase)
                     || factor is Variable variable && products.Exists(p => p.Name == variable)
                     || factor is Powf(Variable powered, _) && products.Exists(p => p.Name == powered))
                     matrices++;

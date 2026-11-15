@@ -51,6 +51,18 @@ namespace AngouriMath
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) => null;
         }
 
+        // Neither product determines an operand from its value and the other operand: dot(a, b) = c leaves every
+        // component of a but one free, and cross(a, b) = c a multiple of b. https://github.com/asc-community/AngouriMath/issues/105
+        partial record DotProductf
+        {
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) => null;
+        }
+
+        partial record CrossProductf
+        {
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) => null;
+        }
+
         // Each function and operator processing
         partial record Sumf
         {

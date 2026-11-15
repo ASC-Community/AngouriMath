@@ -270,6 +270,23 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        // https://github.com/asc-community/AngouriMath/issues/105
+        partial record DotProductf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"dot({Left.Stringize()}, {Right.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record CrossProductf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"cross({Left.Stringize()}, {Right.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         partial record Matrix
         {
             /// <inheritdoc/>

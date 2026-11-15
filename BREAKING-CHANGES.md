@@ -83,6 +83,34 @@ Euler's totient is `phi(n)`, and `φ(n)` and `ϕ(n)` are refused. Each name with
 | `"divergence(x)".ToEntity()` | `divergence * x` | throws `UnrecognizedFunctionParseException` |
 | `"gradient(x^2*y, [x, y])".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
+### `dot` and `cross` of a name for a vector are nodes
+
+**Not silent: what was refused now parses.** `dot(a, b)` and `cross(a, b)` threw `InvalidArgumentParseException`
+where an operand was not a vector written out. Now they are the nodes `DotProductf` and `CrossProductf`. Each is
+computed once both operands are vectors: when they are substituted, by `Simplify`, `Evaled`, or a compiled delegate
+taking `double[]`, `double[,]` or `Complex[]`. Of vectors written out each is still computed as it is parsed, and prints
+as before. Vectors of different lengths, or a `cross` of vectors without three components, leave the node as it is.
+A number, or a written vector that cannot fit, is refused as before. The operands of `cross` are kept in their order, and
+so is a product with a `cross` in it. A name beside a written vector, as in `dot(x * [1, 2], [3, 4])`, may stand for a
+matrix, so the operand is no longer multiplied into the components as a number
+([#105](https://github.com/asc-community/AngouriMath/issues/105)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"dot(a, b)".ToEntity()` | throws `InvalidArgumentParseException` | `dot(a, b)`, a `DotProductf` |
+| `"cross(W, r)".ToEntity()` | throws `InvalidArgumentParseException` | `cross(W, r)`, a `CrossProductf` |
+| `"dot([1, 2, 3], b)".ToEntity()` | throws `InvalidArgumentParseException` | `dot([1, 2, 3], b)` |
+| `"dot(a, b)"` with `a = [1, 2, 3]`, `b = [4, 5, 6]` substituted, `.Simplify()` | throws `InvalidArgumentParseException` | `32` |
+| `"cross(W, r)"` with `W = [0, 0, w]`, `r = [x, y, z]` substituted, `.Simplify()` | throws `InvalidArgumentParseException` | `[-w * y, w * x, 0]` |
+| `"dot(a, b)"` with `a = [1, 2, 3]`, `b = [4, 5]` substituted, `.Evaled` | throws `InvalidArgumentParseException` | `dot([1, 2, 3], [4, 5])`, left |
+| `"dot(x * [1, 2], [3, 4])".ToEntity()` | `x * 3 + x * 2 * 4` | `dot(x * [1, 2], [3, 4])`: `x` may stand for a matrix |
+| `"dot(5, a)".ToEntity()` | throws `InvalidArgumentParseException` | throws `InvalidArgumentParseException`, saying `dot` is taken of vectors |
+| `"cross(a, [1, 2])".ToEntity()` | throws `InvalidArgumentParseException` | throws `InvalidArgumentParseException`, naming `[1, 2]` |
+| `"dot([1, 2, 3], [4, 5, 6])".ToEntity()` | `1 * 4 + 2 * 5 + 3 * 6` | unchanged |
+| `"cross([0, 0, w], [x, y, z])".ToEntity()` | `[0 * z - w * y, w * x - 0 * z, 0 * y - 0 * x]` | unchanged |
+
+`cross(a)` of one vector in the plane has no node, and still takes a vector written out.
+
 ---
 
 ### A system row that is not a solution declines the system

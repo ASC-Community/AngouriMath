@@ -6,10 +6,11 @@
 //
 
 using System;
+using System.Linq;
 
 namespace AngouriMath
 {
-    // The four operations on a matrix that an expression can name before the matrix is known. A
+    // The operations on a matrix or on vectors that an expression can name before the matrix is known. A
     // matrix written out is computed from its entries as soon as it is parsed, as it was without
     // these nodes; a node is what is left where the argument is not yet a matrix -- a name that
     // stands for one, det(A) -- and it is computed once the argument becomes a matrix, by
@@ -88,5 +89,71 @@ namespace AngouriMath
             /// <inheritdoc/>
             protected override Entity[] InitDirectChildren() => new[] { Argument, Row, Column };
         }
+
+        /// <summary>
+        /// The scalar product <c>dot(a, b)</c> of two vectors of one length: the sum of the products of their components,
+        /// neither side conjugated, as SymPy's <c>dot</c> and Mathematica's <c>Dot</c> are.
+        /// </summary>
+        /// <remarks>
+        /// Computed when both operands are vectors, each a column or a row. Vectors of different lengths, or a matrix that
+        /// is not a vector, have no scalar product, and the node is left as it is rather than given a value.
+        /// https://github.com/asc-community/AngouriMath/issues/105
+        /// </remarks>
+        public sealed partial record DotProductf(Entity Left, Entity Right) : Function
+        {
+            private DotProductf New(Entity left, Entity right) =>
+                ReferenceEquals(Left, left) && ReferenceEquals(Right, right) ? this : new(left, right) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Left.Replace(func), Right.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Left, Right };
+
+            /// <summary>
+            /// The sum of the products of the components, or null where the two are not vectors of one length. Written as
+            /// it was computed when parsed: <c>dot([1, 2], [3, 4])</c> is <c>1 * 3 + 2 * 4</c>.
+            /// </summary>
+            internal static Entity? Of(Matrix left, Matrix right)
+                => VectorComponents(left) is { } a && VectorComponents(right) is { } b && a.Length == b.Length
+                    ? Enumerable.Range(0, a.Length).Select(i => a[i] * b[i]).Aggregate((sum, term) => sum + term)
+                    : null;
+        }
+
+        /// <summary>
+        /// The vector product <c>cross(a, b)</c> of two vectors in three dimensions, a column. It is not commutative:
+        /// <c>cross(b, a)</c> is <c>-cross(a, b)</c>, and the operands are never put in another order.
+        /// </summary>
+        /// <remarks>
+        /// Computed when both operands are vectors of three components, each a column or a row. Anything else has no vector
+        /// product, and the node is left as it is rather than given a value. <c>cross(a)</c> of one vector in the plane is
+        /// computed from a vector written out only, and has no node.
+        /// https://github.com/asc-community/AngouriMath/issues/105
+        /// </remarks>
+        public sealed partial record CrossProductf(Entity Left, Entity Right) : Function
+        {
+            private CrossProductf New(Entity left, Entity right) =>
+                ReferenceEquals(Left, left) && ReferenceEquals(Right, right) ? this : new(left, right) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Left.Replace(func), Right.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Left, Right };
+
+            /// <summary>
+            /// The vector product, a column, or null where the two are not vectors of three components. Written as it was
+            /// computed when parsed: <c>cross([1, 2, 3], [4, 5, 6])</c> is <c>[2 * 6 - 3 * 5, 3 * 4 - 1 * 6, 1 * 5 - 2 * 4]</c>.
+            /// </summary>
+            internal static Entity? Of(Matrix left, Matrix right)
+                => VectorComponents(left) is { Length: 3 } u && VectorComponents(right) is { Length: 3 } v
+                    ? MathS.Vector(
+                        u[1] * v[2] - u[2] * v[1],
+                        u[2] * v[0] - u[0] * v[2],
+                        u[0] * v[1] - u[1] * v[0])
+                    : null;
+        }
+
+        /// <summary>The components of a vector, written as a column or as a row, or null where the matrix is neither.</summary>
+        internal static Entity[]? VectorComponents(Matrix vector)
+            => vector.ColumnCount == 1 ? Enumerable.Range(0, vector.RowCount).Select(i => vector[i, 0]).ToArray()
+                : vector.RowCount == 1 ? Enumerable.Range(0, vector.ColumnCount).Select(j => vector[0, j]).ToArray()
+                : null;
     }
 }

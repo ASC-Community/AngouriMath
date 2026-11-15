@@ -116,6 +116,8 @@ namespace AngouriMath.Tests.Common
         [InlineData("limit(x, x, 0)")]
         [InlineData("limitleft(x, x, 0)")]
         [InlineData("limitright(x, x, 0)")]
+        [InlineData("dot(a, b)")]
+        [InlineData("cross(a, b)")]
         public void FunctionsRoundTrip(string source) => AssertRoundTrip(source);
 
         [Theory]

@@ -262,14 +262,16 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             internal MethodInfo Determinant { get; }
             internal MethodInfo Trace { get; }
             internal MethodInfo Entry { get; }
+            internal MethodInfo Dot { get; }
+            internal MethodInfo Cross { get; }
 
             private Kit(Type tensor, Type array, MethodInfo empty, MethodInfo set, MethodInfo add, MethodInfo subtract, MethodInfo multiply,
                 MethodInfo addScalar, MethodInfo subtractScalar, MethodInfo subtractFromScalar, MethodInfo multiplyScalar,
                 MethodInfo divideScalar, MethodInfo power, MethodInfo toArray, MethodInfo fromArray, MethodInfo toScalar,
                 MethodInfo? inverse, MethodInfo? divideByMatrix, MethodInfo? scalarOverMatrix,
-                MethodInfo transpose, MethodInfo determinant, MethodInfo trace, MethodInfo entry)
+                MethodInfo transpose, MethodInfo determinant, MethodInfo trace, MethodInfo entry, MethodInfo dot, MethodInfo cross)
             {
-                (Transpose, Determinant, Trace, Entry) = (transpose, determinant, trace, entry);
+                (Transpose, Determinant, Trace, Entry, Dot, Cross) = (transpose, determinant, trace, entry, dot, cross);
                 (Tensor, Array, Empty, Set, Add, Subtract, Multiply, AddScalar, SubtractScalar, SubtractFromScalar, MultiplyScalar, DivideScalar, Power)
                     = (tensor, array, empty, set, add, subtract, multiply, addScalar, subtractScalar, subtractFromScalar, multiplyScalar, divideScalar, power);
                 (ToArray, FromArray, ToScalar, Inverse, DivideByMatrix, ScalarOverMatrix) = (toArray, fromArray, toScalar, inverse, divideByMatrix, scalarOverMatrix);
@@ -301,7 +303,9 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>(a => TensorCompilation.Transpose(a)),
                     Named<Func<GenTensor<T, TWrapper>, T>>(a => TensorCompilation.Determinant(a)),
                     Named<Func<GenTensor<T, TWrapper>, T>>(a => TensorCompilation.Trace(a)),
-                    Named<Func<GenTensor<T, TWrapper>, int, int, T>>((a, i, j) => TensorCompilation.Entry(a, i, j)));
+                    Named<Func<GenTensor<T, TWrapper>, int, int, T>>((a, i, j) => TensorCompilation.Entry(a, i, j)),
+                    Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>, T>>((a, b) => TensorCompilation.Dot(a, b)),
+                    Named<Func<GenTensor<T, TWrapper>, GenTensor<T, TWrapper>, GenTensor<T, TWrapper>>>((a, b) => TensorCompilation.Cross(a, b)));
         }
 
         [ConstantField]
@@ -685,6 +689,49 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 ? a[row - 1, column - 1]
                 : throw new InvalidMatrixOperationException($"A matrix of shape {a.Shape} has no entry at ({row}, {column}): its rows and columns are counted from 1");
 
+        // The components of a vector, a column or a row, by position; the length, or -1 where the matrix is neither.
+        private static int VectorLength<T, TWrapper>(GenTensor<T, TWrapper> a) where TWrapper : struct, IOperations<T>
+            => a.Shape[1] == 1 ? a.Shape[0] : a.Shape[0] == 1 ? a.Shape[1] : -1;
+
+        private static T Component<T, TWrapper>(GenTensor<T, TWrapper> a, int i) where TWrapper : struct, IOperations<T>
+            => a.Shape[1] == 1 ? a[i, 0] : a[0, i];
+
+        /// <summary>
+        /// The scalar product of two vectors of one length, each a column or a row: the sum of the products of their
+        /// components, neither side conjugated, as <c>dot</c> is evaluated.
+        /// https://github.com/asc-community/AngouriMath/issues/105
+        /// </summary>
+        /// <exception cref="InvalidMatrixOperationException">Either is not a vector, or their lengths differ.</exception>
+        internal static T Dot<T, TWrapper>(GenTensor<T, TWrapper> a, GenTensor<T, TWrapper> b) where TWrapper : struct, IOperations<T>
+        {
+            var n = VectorLength(a);
+            if (n < 0 || n != VectorLength(b))
+                throw new InvalidMatrixOperationException($"Matrices of shapes {a.Shape} and {b.Shape} are not two vectors of one length, and have no scalar product");
+            var ops = default(TWrapper);
+            var sum = ops.CreateZero();
+            for (var i = 0; i < n; i++)
+                sum = ops.Add(sum, ops.Multiply(Component(a, i), Component(b, i)));
+            return sum;
+        }
+
+        /// <summary>
+        /// The vector product of two vectors of three components, each a column or a row, as a column.
+        /// https://github.com/asc-community/AngouriMath/issues/105
+        /// </summary>
+        /// <exception cref="InvalidMatrixOperationException">Either is not a vector of three components.</exception>
+        internal static GenTensor<T, TWrapper> Cross<T, TWrapper>(GenTensor<T, TWrapper> a, GenTensor<T, TWrapper> b) where TWrapper : struct, IOperations<T>
+        {
+            if (VectorLength(a) != 3 || VectorLength(b) != 3)
+                throw new InvalidMatrixOperationException($"Matrices of shapes {a.Shape} and {b.Shape} are not two vectors of three components, and have no vector product");
+            var ops = default(TWrapper);
+            T Minor(int i, int j) => ops.Subtract(ops.Multiply(Component(a, i), Component(b, j)), ops.Multiply(Component(a, j), Component(b, i)));
+            var result = GenTensor<T, TWrapper>.CreateMatrix(3, 1);
+            result[0, 0] = Minor(1, 2);
+            result[1, 0] = Minor(2, 0);
+            result[2, 0] = Minor(0, 1);
+            return result;
+        }
+
         /// <summary>A compiled index as the whole number it must be, checked when the delegate is called.</summary>
         /// <exception cref="InvalidMatrixOperationException">The index is not a whole number that fits an <see cref="int"/>.</exception>
         public static int WholeIndex(double index)
@@ -704,12 +751,25 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         private static readonly MethodInfo wholeComplexIndex = ((MethodCallExpression)((Expression<Func<Complex, int>>)(e => WholeIndex(e))).Body).Method;
 
         /// <summary>
-        /// The compiled form of a transpose, a determinant, a trace or an entry, whose first operand is the matrix, or
-        /// <see langword="null"/> where the node is none of them.
+        /// The compiled form of a transpose, a determinant, a trace or an entry, whose first operand is the matrix, or of
+        /// a scalar or a vector product, whose two operands are vectors; or <see langword="null"/> where the node is none
+        /// of them.
         /// https://github.com/asc-community/AngouriMath/issues/2147
+        /// https://github.com/asc-community/AngouriMath/issues/105
         /// </summary>
         internal static Expression? MatrixOperation(Entity node, IReadOnlyList<Expression> operands, Func<Expression, Type, Expression> convert)
         {
+            if (node is Entity.DotProductf or Entity.CrossProductf)
+            {
+                foreach (var operand in operands)
+                    if (!kitsByTensor.ContainsKey(operand.Type))
+                        throw new UncompilableNodeException(
+                            $"`{node.Stringize()}` is taken of vectors, and an operand compiles to {operand.Type.Name}: compile it with a vector or a matrix type, such as double[] or double[,], for the operands");
+                if (operands[0].Type != operands[1].Type)
+                    throw new UncompilableNodeException($"Two vectors over different element types, {ElementOf(operands[0].Type)} and {ElementOf(operands[1].Type)}, cannot be combined");
+                var vectors = kitsByTensor[operands[0].Type];
+                return Expression.Call(node is Entity.DotProductf ? vectors.Dot : vectors.Cross, operands[0], operands[1]);
+            }
             if (node is not (Entity.Transposef or Entity.Determinantf or Entity.Tracef or Entity.MatrixEntryf))
                 return null;
             if (!kitsByTensor.TryGetValue(operands[0].Type, out var kit))
@@ -916,6 +976,23 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     if (Known(a) && a!.Value.Rows != a.Value.Columns)
                         throw new InvalidMatrixOperationException($"`{expr.Stringize()}` has no value: a {Show(a)} matrix is not square");
                     return null;
+                }
+                // A scalar product is a number, and a vector product a column of three; either is taken of two vectors,
+                // of one length for the first and of three components for the second.
+                // https://github.com/asc-community/AngouriMath/issues/105
+                case Entity.DotProductf or Entity.CrossProductf:
+                {
+                    var (a, b) = (ShapeOf(expr.DirectChildren[0], isMatrix), ShapeOf(expr.DirectChildren[1], isMatrix));
+                    static int? LengthOf((int Rows, int Columns)? shape)
+                        => shape is { Columns: 1, Rows: > 0 } column ? column.Rows : shape is { Rows: 1, Columns: > 0 } row ? row.Columns : null;
+                    foreach (var shape in new[] { a, b })
+                        if (Known(shape) && !IsVector(shape)
+                            || expr is Entity.CrossProductf && LengthOf(shape) is { } length && length != 3)
+                            throw new InvalidMatrixOperationException(
+                                $"`{expr.Stringize()}` has no value: a {Show(shape)} matrix is not a vector{(expr is Entity.CrossProductf ? " of three components" : "")}");
+                    if (expr is Entity.DotProductf && LengthOf(a) is { } m && LengthOf(b) is { } n && m != n)
+                        throw new InvalidMatrixOperationException($"`{expr.Stringize()}` has no value: vectors of {m} and {n} components have no scalar product");
+                    return expr is Entity.CrossProductf ? (3, 1) : null;
                 }
                 case Entity.MatrixEntryf(var argument, var row, var column):
                 {

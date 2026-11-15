@@ -6050,6 +6050,44 @@ namespace AngouriMath
             /// https://github.com/asc-community/AngouriMath/issues/2147
             /// </remarks>
             public static Entity Entry(Entity matrix, Entity row, Entity column) => new MatrixEntryf(matrix, row, column);
+
+            /// <summary>
+            /// The scalar product <c>dot(a, b)</c> of two vectors of one length, as a node: the sum of the products of
+            /// their components, neither side conjugated.
+            /// </summary>
+            /// <param name="left">The first vector, written out or a name that stands for one.</param>
+            /// <param name="right">The second vector, written out or a name that stands for one.</param>
+            /// <returns>The <see cref="Entity.DotProductf"/> node, computed once both operands are vectors</returns>
+            /// <remarks>
+            /// Vectors of different lengths have no scalar product, and the node is left as it is.
+            /// https://github.com/asc-community/AngouriMath/issues/105
+            /// </remarks>
+            /// <example>
+            /// <code>
+            /// var dot = MathS.Matrices.DotProduct("a", "b");
+            /// Console.WriteLine(dot);
+            /// Console.WriteLine(dot.Substitute("a", "[1, 2, 3]").Substitute("b", "[4, 5, 6]").Evaled);
+            /// </code>
+            /// Prints
+            /// <code>
+            /// dot(a, b)
+            /// 32
+            /// </code>
+            /// </example>
+            public static Entity DotProduct(Entity left, Entity right) => new DotProductf(left, right);
+
+            /// <summary>
+            /// The vector product <c>cross(a, b)</c> of two vectors in three dimensions, as a node. It is not
+            /// commutative, and its operands are kept in their order.
+            /// </summary>
+            /// <param name="left">The first vector, written out or a name that stands for one.</param>
+            /// <param name="right">The second vector, written out or a name that stands for one.</param>
+            /// <returns>The <see cref="Entity.CrossProductf"/> node, computed once both operands are vectors</returns>
+            /// <remarks>
+            /// Anything but two vectors of three components has no vector product, and the node is left as it is.
+            /// https://github.com/asc-community/AngouriMath/issues/105
+            /// </remarks>
+            public static Entity CrossProduct(Entity left, Entity right) => new CrossProductf(left, right);
         }
 
         /// <summary>
