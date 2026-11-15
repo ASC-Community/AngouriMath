@@ -7900,6 +7900,35 @@ namespace AngouriMath
             => new SumOverSetf(expr, var, over);
 
         /// <summary>
+        /// The product of <paramref name="expr"/> over the members of <paramref name="over"/> as
+        /// <paramref name="var"/> ranges over it, each member counted once: written
+        /// <c>product(expr, var in over)</c>. The product over no members is 1.
+        /// </summary>
+        /// <param name="expr">The factor, as a function of <paramref name="var"/>.</param>
+        /// <param name="var">The name that ranges over the set, bound by the product.</param>
+        /// <param name="over">The set.</param>
+        /// <returns>
+        /// The factors multiplied out where <see cref="Sum(Entity, Entity, Entity)"/> would add its
+        /// terms up: a listed set of numbers, or roots of a polynomial that are rational, roots of
+        /// a quadratic or roots of a binomial. Left as written otherwise.
+        /// </returns>
+        /// <remarks><a href="https://github.com/asc-community/AngouriMath/issues/2449">#2449</a></remarks>
+        /// <example>
+        /// <code>
+        /// using System;
+        /// using static AngouriMath.MathS;
+        ///
+        /// Console.WriteLine(Product("p", "p", "PP /\\ [1; 10]").Simplify());
+        /// </code>
+        /// Prints
+        /// <code>
+        /// 210
+        /// </code>
+        /// </example>
+        public static Entity Product(Entity expr, Entity var, Entity over)
+            => new ProductOverSetf(expr, var, over);
+
+        /// <summary>
         /// The largest value <paramref name="expr"/> takes as <paramref name="var"/> ranges over
         /// <paramref name="over"/>, written <c>max(expr, var in over)</c>. Answered over a finite
         /// set of numbers, and over a closed interval with numeric ends for an expression whose

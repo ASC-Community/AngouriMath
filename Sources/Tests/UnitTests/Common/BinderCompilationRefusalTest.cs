@@ -30,6 +30,7 @@ namespace AngouriMath.Tests.Common
         [InlineData("sum(x^k, k, 1, 3)", "sum(x ^ k, k, 1, 3)")]
         [InlineData("product(x + k, k, 1, 3)", "product(x + k, k, 1, 3)")]
         [InlineData("sum(x k, k in {1, 2})", "sum(x * k, k in { 1, 2 })")]
+        [InlineData("product(x k, k in {1, 2})", "product(x * k, k in { 1, 2 })")]
         [InlineData("max(x k, k in {1, 2})", "max(x * k, k in { 1, 2 })")]
         [InlineData("min(x k, k in {1, 2})", "min(x * k, k in { 1, 2 })")]
         [InlineData("argmax(x k, k in {1, 2})", "argmax(x * k, k in { 1, 2 })")]

@@ -578,6 +578,13 @@ namespace AngouriMath
                 null;
         }
 
+        partial record ProductOverSetf
+        {
+            // The unknown sits under a binder; see Summationf below.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
         partial record Maximumf
         {
             // The unknown sits under a binder; see Summationf below.

@@ -45,6 +45,15 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        public partial record ProductOverSetf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() =>
+                $"product({Expression.Stringize()}, {Var.Stringize()} in {Over.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Maximumf
         {
             /// <inheritdoc/>

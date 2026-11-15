@@ -133,6 +133,7 @@ namespace AngouriMath
             (Entity Name, Entity? Range)? scope = binder switch
             {
                 SumOverSetf(_, var name, var over) => (name, over),
+                ProductOverSetf(_, var name, var over) => (name, over),
                 Maximumf(_, var name, var over) => (name, over),
                 Minimumf(_, var name, var over) => (name, over),
                 Argmaxf(_, var name, var over) => (name, over),

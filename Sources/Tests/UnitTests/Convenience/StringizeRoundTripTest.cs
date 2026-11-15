@@ -118,6 +118,9 @@ namespace AngouriMath.Tests.Common
         [InlineData("limitright(x, x, 0)")]
         [InlineData("dot(a, b)")]
         [InlineData("cross(a, b)")]
+        [InlineData("sum(x ^ 2, x in S)")]
+        [InlineData("product(x ^ 2, x in S)")]
+        [InlineData("product(1 - 1 / p ^ 2, p in { 2, 3, 5 })")]
         public void FunctionsRoundTrip(string source) => AssertRoundTrip(source);
 
         [Theory]

@@ -35,6 +35,20 @@ namespace AngouriMath
             };
         }
 
+        public partial record ProductOverSetf
+        {
+            // SymPy has no RootProduct, so the roots go over as the CRootOf roots of the square-free
+            // part, each once, as a set counts them.
+            internal override string ToSymPy() => Over switch
+            {
+                Set.FiniteSet finite =>
+                    $"sympy.Mul(*[({Expression.ToSymPy()}).subs({Var.ToSymPy()}, member) for member in [{string.Join(", ", finite.Elements.Select(static e => e.ToSymPy()))}]])",
+                Set.ConditionalSet { Var: Variable w, Predicate: Equalsf(var left, var right) } when w == Var =>
+                    $"sympy.Mul(*[({Expression.ToSymPy()}).subs({Var.ToSymPy()}, member) for member in sympy.Poly(sympy.sqf_part(sympy.Poly({(left - right).ToSymPy()}, {Var.ToSymPy()})), {Var.ToSymPy()}).all_roots()])",
+                _ => throw new NotSufficientlySupportedException("SymPy has no product over a set; a listed set or the roots of a polynomial can be exported"),
+            };
+        }
+
         public partial record Maximumf
         {
             internal override string ToSymPy() =>

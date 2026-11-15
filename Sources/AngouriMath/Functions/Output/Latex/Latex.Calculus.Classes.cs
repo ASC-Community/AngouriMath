@@ -74,6 +74,14 @@ namespace AngouriMath
                 + Expression.Latexize(Expression.Priority < Priority.Sum);
         }
 
+        public partial record ProductOverSetf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode() =>
+                @"\prod_{" + Var.Latexize() + @" \in " + Over.Latexize() + "} "
+                + Expression.Latexize(Expression.Priority < Priority.Mul);
+        }
+
         public partial record Maximumf
         {
             /// <inheritdoc/>

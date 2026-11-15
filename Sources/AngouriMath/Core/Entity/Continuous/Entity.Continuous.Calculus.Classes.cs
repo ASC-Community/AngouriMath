@@ -143,6 +143,27 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// A product over a set: <c>product(f(x), x in S)</c> is the product of <c>f(x)</c> over
+        /// the members <c>x</c> of <c>S</c>, each counted once. See <see cref="SumOverSetf"/>, which
+        /// it mirrors: <c>product(p, p in PP /\ [1; 30])</c> is the primorial of 29.
+        /// https://github.com/asc-community/AngouriMath/issues/2449
+        /// </summary>
+        public sealed partial record ProductOverSetf(Entity Expression, Entity Var, Entity Over) : CalculusOperator(Expression, Var)
+        {
+            /// <summary>The set the variable ranges over.</summary>
+            public Entity Over { get; init; } = Binding.Of(Var).In(Over);
+
+            private ProductOverSetf New(Entity expression, Entity var, Entity over) =>
+                ReferenceEquals(Expression, expression) && ReferenceEquals(Var, var) && ReferenceEquals(Over, over)
+                ? this : new(expression, var, over) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) =>
+                func(New(Expression.Replace(func), Var, Over.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Expression, Var, Over };
+        }
+
+        /// <summary>
         /// A node of limit
         /// </summary>
         public sealed partial record Limitf(Entity Expression, Entity Var, Entity Destination, ApproachFrom ApproachFrom) : CalculusOperator(Expression, Var)

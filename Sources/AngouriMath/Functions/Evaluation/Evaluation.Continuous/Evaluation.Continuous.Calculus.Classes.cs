@@ -233,6 +233,25 @@ namespace AngouriMath
                     ?? New(Expression.InnerSimplified, Var, Over.InnerSimplified);
         }
 
+        partial record ProductOverSetf
+        {
+            /// <summary>
+            /// A product over a set is a well-formed expression whatever the set, as a sum over a set
+            /// is; multiplying its factors out is an evaluation, not a claim about where it is defined.
+            /// </summary>
+            private protected override Entity IntrinsicCondition => Boolean.True;
+            /// <inheritdoc/>
+            /// <remarks>
+            /// The factors are multiplied out where the sum's terms would be added up -- a listed set
+            /// of numbers, distinct by value, and the roots of a polynomial the solver writes all of
+            /// -- and the product is left as written, in its simplest parts, where they would not.
+            /// https://github.com/asc-community/AngouriMath/issues/2449
+            /// </remarks>
+            protected override Entity InnerSimplify(bool isExact)
+                => Functions.SumOverSet.Value(Expression, Var, Over, isExact, product: true)
+                    ?? New(Expression.InnerSimplified, Var, Over.InnerSimplified);
+        }
+
         // TODO: rewrite this part too
         public partial record Summationf
         {

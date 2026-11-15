@@ -470,7 +470,9 @@ A whole `a >= 1` is elementary, `gamma(3, x)` being `2 * e ^ (-x) * (1 + x + x ^
 
 **Calculus** — `derivative(expr, var, order)`, `integral(expr, var)`,
 `integral(expr, var, from, to)`, `limit(expr, var, dest)`, `limitleft(...)`, `limitright(...)`;
-`sum(expr, var in set)` for a sum over a set; `max(expr, var in set)` and `min` for the extremum of
+`sum(expr, var in set)` for a sum over a set and `product(expr, var in set)` for a product over one,
+each member counted once (`product(p, p in PP /\ [1; 30])` is `6469693230`, the empty product `1`);
+`max(expr, var in set)` and `min` for the extremum of
 an expression over a set, `argmax` and `argmin` for the set of points where it is taken —
 `max(a, b)` of two values is still the larger.
 `min(S)` with one argument that is a set is its least member, `min(x, x in S)`, and the range

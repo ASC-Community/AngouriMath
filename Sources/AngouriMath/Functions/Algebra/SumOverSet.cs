@@ -44,10 +44,12 @@ namespace AngouriMath.Functions
     internal static class SumOverSet
     {
         /// <summary>
-        /// The sum, or <see langword="null"/> where the members of the set are not known or not
-        /// finitely many.
+        /// The sum, or with <paramref name="product"/> the product, or <see langword="null"/> where
+        /// the members of the set are not known or not finitely many. A product over a set needs
+        /// its members known and distinct exactly as a sum does, and over no members it is 1 as
+        /// the sum is 0. https://github.com/asc-community/AngouriMath/issues/2449
         /// </summary>
-        internal static Entity? Value(Entity expression, Entity var, Entity over, bool isExact)
+        internal static Entity? Value(Entity expression, Entity var, Entity over, bool isExact, bool product = false)
         {
             if (var is not Variable x || over.InnerSimplified is not Set set)
                 return null;
@@ -60,9 +62,9 @@ namespace AngouriMath.Functions
             foreach (var member in members)
             {
                 var term = expression.Substitute(x, member);
-                sum = sum is null ? term : sum + term;
+                sum = sum is null ? term : product ? sum * term : sum + term;
             }
-            sum ??= Integer.Zero;
+            sum ??= product ? Integer.One : Integer.Zero;
             return isExact ? sum.InnerSimplified : sum.Evaled;
         }
 
@@ -79,8 +81,39 @@ namespace AngouriMath.Functions
                 ConditionalSet { Var: Variable w } builder when builder.DeclaredMembership is (Set universe, Equalsf(var left, var right))
                     => Roots(left - right, w) is { } roots ? Within(roots, universe) : null,
                 ConditionalSet { Var: Variable w, Predicate: Equalsf(var left, var right) } => Roots(left - right, w),
+                SetMinusf(Set from, FiniteSet removed) => Members(from) is { } members ? Without(members, removed) : null,
                 _ => null,
             };
+
+        /// <summary>
+        /// <paramref name="members"/> without the elements of <paramref name="removed"/>, or
+        /// <see langword="null"/> where it is not decided whether one of those is a member. An
+        /// element written as a member is that member; one whose value differs from every
+        /// member's is none of them, compared as <see cref="Distinct"/> compares; and one that
+        /// agrees in value with a member it is not written as is undecided. The product rule over
+        /// a set writes <c>S \ { m }</c> with <c>m</c> a member of <c>S</c>, and a member is
+        /// substituted for <c>m</c> as it was listed, so it is found as written.
+        /// https://github.com/asc-community/AngouriMath/issues/2449
+        /// </summary>
+        private static IReadOnlyList<Entity>? Without(IReadOnlyList<Entity> members, FiniteSet removed)
+        {
+            var kept = new List<Entity>(members);
+            foreach (var element in removed.Elements)
+            {
+                var at = kept.IndexOf(element);
+                if (at >= 0)
+                {
+                    kept.RemoveAt(at);
+                    continue;
+                }
+                if (element.Evaled is not Complex value || !value.IsFinite)
+                    return null;
+                foreach (var member in kept)
+                    if (member.Evaled is not Complex seen || seen == value)
+                        return null;
+            }
+            return kept;
+        }
 
         /// <summary>
         /// The members of <paramref name="members"/> that are in <paramref name="universe"/>, or
@@ -162,6 +195,7 @@ namespace AngouriMath.Functions
                 ConditionalSet { Var: Variable w } builder when builder.DeclaredMembership is (Set universe, Equalsf(var left, var right))
                     => NumericRoots(left - right, w) is { } roots ? Within(roots, universe) : null,
                 ConditionalSet { Var: Variable w, Predicate: Equalsf(var left, var right) } => NumericRoots(left - right, w),
+                SetMinusf(Set from, FiniteSet removed) => NumericMembers(from) is { } members ? Without(members, removed) : null,
                 _ => null,
             };
 
