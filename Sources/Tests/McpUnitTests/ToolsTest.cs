@@ -135,6 +135,79 @@ public sealed class ToolsTest
     }
 
     [Fact]
+    public void AreEqualProvesAReorderingUnconditionally()
+    {
+        var answer = Mcp.Call("am_are_equal", """{"left":"a*b + c","right":"c + b*a"}""");
+        Assert.Equal("solved", answer.Field("status"));
+        Assert.Equal("equal", answer.Field("verdict"));
+        Assert.True(answer["equal"]!.GetValue<bool>());
+        Assert.Equal("sound", answer.Field("justification"));
+        Assert.Empty(answer["assumptions"]!.AsArray());
+        Assert.True(answer["budget"]!["completed"]!.GetValue<bool>());
+    }
+
+    /// <summary>A refutation comes with the point, and the point checks.</summary>
+    [Fact]
+    public void AreEqualRefutesWithAWitness()
+    {
+        var answer = Mcp.Call("am_are_equal", """{"left":"ln(x*y)","right":"ln(x) + ln(y)"}""");
+        Assert.Equal("not_equal", answer.Field("verdict"));
+        Assert.False(answer["equal"]!.GetValue<bool>());
+        var witness = answer["witness"]!.AsObject();
+        Entity left = "ln(x*y)", right = "ln(x) + ln(y)";
+        foreach (var (name, value) in witness)
+        {
+            Entity at = value!.GetValue<string>();
+            left = left.Substitute(MathS.Var(name), at);
+            right = right.Substitute(MathS.Var(name), at);
+        }
+        Assert.True(System.Numerics.Complex.Abs(left.EvalNumerical().ToNumerics() - right.EvalNumerical().ToNumerics()) > 1e-6);
+    }
+
+    /// <summary>
+    /// Unknown is inconclusive, never false; and a conditional proof says so, and names its step.
+    /// </summary>
+    [Fact]
+    public void AreEqualSaysUnknownAndConditionalPlainly()
+    {
+        var unknown = Mcp.Call("am_are_equal", """{"left":"(x+1)^2","right":"x^2 + 2*x + 1"}""");
+        Assert.Equal("inconclusive", unknown.Field("status"));
+        Assert.Equal("unknown", unknown.Field("verdict"));
+        Assert.Null(unknown["equal"]);
+
+        var sound = Mcp.Call("am_are_equal", """{"left":"tan(x)","right":"sin(x)/cos(x)"}""");
+        Assert.Equal("unknown", sound.Field("verdict"));
+        var conditional = Mcp.Call("am_are_equal", """{"left":"tan(x)","right":"sin(x)/cos(x)","weakest":"sound_under_assumptions"}""");
+        Assert.Equal("equal", conditional.Field("verdict"));
+        Assert.Equal("sound_under_assumptions", conditional.Field("justification"));
+        Assert.NotEmpty(conditional["assumptions"]!.AsArray());
+    }
+
+    [Fact]
+    public void AreEqualLooksForAWitnessOnlyWhereTheVariablesRange()
+    {
+        Assert.Equal("not_equal", Mcp.Call("am_are_equal", """{"left":"sqrt(x^2)","right":"abs(x)"}""").Field("verdict"));
+        Assert.Equal("unknown", Mcp.Call("am_are_equal", """{"left":"sqrt(x^2)","right":"abs(x)","domain":"real"}""").Field("verdict"));
+    }
+
+    [Theory]
+    [InlineData("""{"left":"x","right":"x","steps":0}""")]
+    [InlineData("""{"left":"x","right":"x","domain":"rational"}""")]
+    [InlineData("""{"left":"x","right":"x","weakest":"heuristic"}""")]
+    public void AreEqualRefusesAnArgumentOutOfRange(string args)
+        => Assert.Equal("failed", Mcp.Call("am_are_equal", args).Field("status"));
+
+    /// <summary>A budget too small to answer says the budget stopped it.</summary>
+    [Fact]
+    public void AreEqualUnderASmallBudgetSaysWhy()
+    {
+        var answer = Mcp.Call("am_are_equal", """{"left":"(x+y)*(x-y)","right":"x^2 - y^2","steps":3}""");
+        Assert.Equal("unknown", answer.Field("verdict"));
+        Assert.False(answer["budget"]!["completed"]!.GetValue<bool>());
+        Assert.NotNull(answer["budget"]!["stopped_by"]);
+    }
+
+    [Fact]
     public void TruthTableListsTheSatisfyingAssignments()
     {
         var answer = Mcp.Call("am_truth_table", """{"expression":"a and (b or not c)"}""");

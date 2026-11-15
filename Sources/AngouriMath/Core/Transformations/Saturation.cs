@@ -119,8 +119,14 @@ namespace AngouriMath.Core.Transformations
         /// third (<a href="https://github.com/asc-community/AngouriMath/issues/1200">#1200</a>).
         /// <see cref="ProvesEqual"/> passes nothing: it needs a union, not an extraction.
         /// </param>
+        /// <param name="merged">
+        /// Told of every rule whose application joined two classes that were apart, so that a
+        /// caller can say which rules an equality it reads off the graph may rest on: every union
+        /// the graph holds is one of these or a congruence that follows from them.
+        /// </param>
         internal static bool Run(EGraph graph, IReadOnlyList<MatchedRule> rules,
-            BudgetLedger ledger, Func<Entity, double> witnessCost, Func<bool>? settled = null)
+            BudgetLedger ledger, Func<Entity, double> witnessCost, Func<bool>? settled = null,
+            Action<MatchedRule>? merged = null)
         {
             var chargedNodes = graph.NodeCount;
             bool ChargeGrowthSinceLastCall()
@@ -137,7 +143,7 @@ namespace AngouriMath.Core.Transformations
             var saturated = false;
             while (!saturated && !ledger.Exhausted)
             {
-                var merged = false;
+                var unioned = false;
                 foreach (var id in graph.Classes.ToList())
                 {
                     if (ledger.Exhausted) break;
@@ -150,7 +156,7 @@ namespace AngouriMath.Core.Transformations
                     //
                     // A union later in this same sweep can add a node type this set does not have,
                     // so a rule can be skipped in a pass where it had just become applicable. That
-                    // costs nothing: a union is exactly what sets `merged`, so there is another
+                    // costs nothing: a union is exactly what sets `unioned`, so there is another
                     // pass, and the set is gathered again there.
                     var held = new HashSet<Type>();
                     foreach (var node in graph.NodesOf(id)) held.Add(graph.RuntimeType(node));
@@ -207,7 +213,11 @@ namespace AngouriMath.Core.Transformations
                             if (rewritten is null || rewritten.Equals(t)) continue;
                             other = graph.AddEntity(rewritten);
                         }
-                        if (graph.Union(id, other)) merged = true;
+                        if (graph.Union(id, other))
+                        {
+                            unioned = true;
+                            merged?.Invoke(rule);
+                        }
                     }
 
                     // What the sweep grew, charged after it rather than before the next class's,
@@ -219,7 +229,7 @@ namespace AngouriMath.Core.Transformations
                 // congruent -- a round of it is work, and it had no ledger interaction anywhere.
                 if (!ledger.Spend()) break;
                 graph.Rebuild();
-                if (!merged) saturated = true;
+                if (!unioned) saturated = true;
                 else if (settled is not null && settled()) break;
             }
             return saturated;

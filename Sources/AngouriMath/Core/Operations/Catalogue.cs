@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AngouriMath.Core.Budgets;
 using AngouriMath.Core.Transformations;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Number;
@@ -157,6 +158,15 @@ namespace AngouriMath.Core.Operations
                 : MathS.Series.Taylor(e, degree + 1, (variable, around)),
             TheVariable, new Parameter("degree", "The highest power kept."), new Parameter("around", "The point, or none for zero."));
 
+        /// <summary><see cref="MathS.AreEqual(Entity, Entity, WorkBudget, Soundness, Domain)"/>.</summary>
+        public static Query<Func<Entity, Entity, WorkBudget, Soundness, Domain, EqualityAnswer>> AreEqual { get; } = new(
+            "are_equal", "Decides whether two expressions are equal: proved by rewrite rules, refuted at a point where both are defined, or neither within the budget.",
+            static (left, right, budget, weakest, domain) => MathS.AreEqual(left, right, budget, weakest, domain),
+            new Parameter("other", "The expression on the right."),
+            new Parameter("budget", "What the question may spend, in steps for an answer that does not depend on the machine."),
+            new Parameter("weakest", "The weakest soundness a proof may rest on: sound, or sound under assumptions."),
+            new Parameter("domain", "Where the variables range: the complex or the real numbers."));
+
         // ---------------------------------------------------------------- queries on a number
 
         /// <summary><see cref="MathS.ToBaseN(Real, int)"/>.</summary>
@@ -244,7 +254,7 @@ namespace AngouriMath.Core.Operations
         public static IReadOnlyList<Operation> All { get; } =
         [
             Simplify, Normalize, Expand, Factorize, Differentiate, Integrate, Limit, Substitute,
-            Solve, SolveSystem, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, TruthTable, SatisfyingAssignments, Series,
+            Solve, SolveSystem, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, TruthTable, SatisfyingAssignments, Series, AreEqual,
             ToBase, FromBase,
             Determinant, Inverse, Transpose, Rank, ReducedRowEchelonForm, Trace, TensorProduct,
             PrimeFactorization, Totient, GreatestCommonDivisor, DivisorCount, IsPrime,

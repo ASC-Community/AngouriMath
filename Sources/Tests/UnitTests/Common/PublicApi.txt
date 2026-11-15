@@ -277,6 +277,22 @@ AngouriMath.Core.Transformations.DerivationStep.Rewrites { } : System.Collection
 AngouriMath.Core.Transformations.DerivationStep.RuleSet { } : AngouriMath.Core.Transformations.RewriteRuleSet
 AngouriMath.Core.Transformations.DerivationStep.Soundness { } : System.Nullable<AngouriMath.Core.Transformations.Soundness>
 AngouriMath.Core.Transformations.DerivationStep.ToString() : System.String
+AngouriMath.Core.Transformations.EqualityAnswer.<Clone>$() : AngouriMath.Core.Transformations.EqualityAnswer
+AngouriMath.Core.Transformations.EqualityAnswer.Assumptions { } : System.Collections.Generic.IReadOnlyList<System.String>
+AngouriMath.Core.Transformations.EqualityAnswer.Budget { } : AngouriMath.Core.Budgets.BudgetOutcome
+AngouriMath.Core.Transformations.EqualityAnswer.Equals(AngouriMath.Core.Transformations.EqualityAnswer) : System.Boolean
+AngouriMath.Core.Transformations.EqualityAnswer.Equals(System.Object) : System.Boolean
+AngouriMath.Core.Transformations.EqualityAnswer.GetHashCode() : System.Int32
+AngouriMath.Core.Transformations.EqualityAnswer.Justification { } : System.Nullable<AngouriMath.Core.Transformations.Soundness>
+AngouriMath.Core.Transformations.EqualityAnswer.ToString() : System.String
+AngouriMath.Core.Transformations.EqualityAnswer.Verdict { } : AngouriMath.Core.Transformations.EqualityVerdict
+AngouriMath.Core.Transformations.EqualityAnswer.Witness { } : System.Collections.Generic.IReadOnlyDictionary<AngouriMath.Entity+Variable,AngouriMath.Entity>
+AngouriMath.Core.Transformations.EqualityAnswer.op_Equality(AngouriMath.Core.Transformations.EqualityAnswer, AngouriMath.Core.Transformations.EqualityAnswer) : System.Boolean
+AngouriMath.Core.Transformations.EqualityAnswer.op_Inequality(AngouriMath.Core.Transformations.EqualityAnswer, AngouriMath.Core.Transformations.EqualityAnswer) : System.Boolean
+AngouriMath.Core.Transformations.EqualityVerdict.Equal : AngouriMath.Core.Transformations.EqualityVerdict
+AngouriMath.Core.Transformations.EqualityVerdict.NotEqual : AngouriMath.Core.Transformations.EqualityVerdict
+AngouriMath.Core.Transformations.EqualityVerdict.Unknown : AngouriMath.Core.Transformations.EqualityVerdict
+AngouriMath.Core.Transformations.EqualityVerdict.value__ : System.Int32
 AngouriMath.Core.Transformations.RewriteRecording.Derivation { } : System.Collections.Generic.IReadOnlyList<AngouriMath.Core.Transformations.RewriteStep>
 AngouriMath.Core.Transformations.RewriteRecording.Dispose() : System.Void
 AngouriMath.Core.Transformations.RewriteRecording.PathFrom(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Core.Transformations.DerivationPath
@@ -3612,6 +3628,7 @@ AngouriMath.MathS.Arccotan(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Arcsec(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Arcsin(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Arctan(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.AreEqual(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Core.Budgets.WorkBudget, AngouriMath.Core.Transformations.Soundness, AngouriMath.Core.Domain) : AngouriMath.Core.Transformations.EqualityAnswer
 AngouriMath.MathS.Arg(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Argmax(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Argmin(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
@@ -3803,6 +3820,7 @@ class AngouriMath.Core.ReasonOfFailureWhileParsing+MissingOperator
 class AngouriMath.Core.ReasonOfFailureWhileParsing+Unknown
 class AngouriMath.Core.Serialization.EntityJsonConverter
 class AngouriMath.Core.Transformations.DerivationPath
+class AngouriMath.Core.Transformations.EqualityAnswer
 class AngouriMath.Core.Transformations.RewriteRecording
 class AngouriMath.Core.Transformations.RewriteRule
 class AngouriMath.Core.Transformations.RewriteRuleSet
@@ -3967,6 +3985,7 @@ class AngouriMath.ProofRecording
 class AngouriMath.ProofStep
 enum AngouriMath.Core.ApproachFrom
 enum AngouriMath.Core.Domain
+enum AngouriMath.Core.Transformations.EqualityVerdict
 enum AngouriMath.Core.Transformations.RewriteRuleGrowth
 enum AngouriMath.Core.Transformations.Soundness
 enum AngouriMath.Core.Transformations.TransformationRelation

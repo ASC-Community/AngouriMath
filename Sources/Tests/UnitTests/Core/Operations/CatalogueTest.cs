@@ -223,6 +223,11 @@ namespace AngouriMath.Tests.Core.Operations
             Assert.Equal(MathS.Series.Maclaurin("e^x", 4, x), Catalogue.Series.Ask("e^x", x, 3, null));
             Assert.Equal(MathS.Series.Taylor("e^x", 4, (x, 1)), Catalogue.Series.Ask("e^x", x, 3, 1));
             Assert.NotEqual(Catalogue.Series.Ask("e^x", x, 3, null), Catalogue.Series.Ask("e^x", x, 3, 1));
+            var steps = new AngouriMath.Core.Budgets.WorkBudget { Steps = 20_000 };
+            Assert.Equal(MathS.AreEqual("x + y", "y + x", steps).Verdict, Catalogue.AreEqual.Ask("x + y", "y + x", steps, Soundness.Sound, Domain.Complex).Verdict);
+            Assert.Equal(EqualityVerdict.Equal, Catalogue.AreEqual.Ask("x + y", "y + x", steps, Soundness.Sound, Domain.Complex).Verdict);
+            Assert.Equal(EqualityVerdict.NotEqual, Catalogue.AreEqual.Ask("ln(e^x)", "x", steps, Soundness.Sound, Domain.Complex).Verdict);
+            Assert.Equal(EqualityVerdict.Unknown, Catalogue.AreEqual.Ask("ln(e^x)", "x", steps, Soundness.Sound, Domain.Real).Verdict);
 
             Assert.Equal(MathS.ToBaseN(10.5m, 2), Catalogue.ToBase.Ask(10.5m, 2));
             Assert.Equal(MathS.FromBaseN("1010.1", 2), Catalogue.FromBase.Ask("1010.1", 2));
