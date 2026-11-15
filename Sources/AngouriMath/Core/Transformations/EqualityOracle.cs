@@ -43,14 +43,153 @@ namespace AngouriMath.Core.Transformations
         internal const string CanonicalizationStep = "canonicalization";
 
         /// <summary>
+        /// Commutativity and associativity of addition and of multiplication, as two
+        /// <see cref="Soundness.Sound"/> steps: a sum chain and a product chain each put into
+        /// one order, with nothing grouped, folded or rewritten.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <b>Why these are not <c>RewriteRules.CanonicalOrderExact</c>.</b> That set sorts and
+        /// also <i>groups</i> -- <c>x + x</c> becomes <c>2 x</c>, a quotient is read as a product
+        /// with a negative power -- and grouping is what makes it
+        /// <see cref="Soundness.SoundUnderAssumptions"/>. A reordering alone needs no condition,
+        /// and the e-graph has none: it does not sort a commutative pair or flatten a nested
+        /// chain. These belong to this oracle only and run nowhere else, so neither
+        /// <c>Simplify</c> nor any rule set's output moves.
+        /// </para>
+        /// <para>
+        /// <b>Why they are sound.</b> The variables range over the complex numbers, or the reals,
+        /// as <see cref="MathS.AreEqual"/>'s <c>domain</c> says, and addition and multiplication
+        /// there are commutative and associative with no side condition. Only <see cref="Sumf"/>
+        /// and <see cref="Mulf"/> chains are read: a difference or a quotient is an operand, never
+        /// flattened, so no subtraction is read as adding a negation. The order is
+        /// <see cref="EntityOrder.Canonical"/>, which is total, so two writings of one chain sort
+        /// to the same tree and meet by hash-consing. A chain is left alone (the step declines)
+        /// where an operand may be something other than a number -- see
+        /// <see cref="MayNotCommute"/> -- because a matrix product does not commute; and a
+        /// question with a matrix anywhere in it does not get these steps at all
+        /// (<see cref="MayHoldAMatrix"/>), since the library reads a name beside a transpose as
+        /// possibly a matrix (<a href="https://github.com/asc-community/AngouriMath/issues/2147">#2147</a>)
+        /// and that name may be multiplied elsewhere in the same question.
+        /// </para>
+        /// </remarks>
+        internal static IReadOnlyList<MatchedRule> OperandOrder { get; } = new[]
+        {
+            new MatchedRule(
+                "the-terms-of-a-sum-are-reordered",
+                MatchPattern.Any<Sumf>("x"),
+                (node, _) => Reordered<Sumf>(node, static (a, b) => new Sumf(a, b)),
+                Soundness.Sound,
+                RewriteRuleGrowth.Rearranges,
+                description: "a + (b + c) = (c + a) + b, and every other order and grouping of one sum"),
+            new MatchedRule(
+                "the-factors-of-a-product-are-reordered",
+                MatchPattern.Any<Mulf>("x"),
+                (node, _) => Reordered<Mulf>(node, static (a, b) => new Mulf(a, b)),
+                Soundness.Sound,
+                RewriteRuleGrowth.Rearranges,
+                description: "a * (b * c) = (c * a) * b, for numbers, and every other order and grouping of one product"),
+        };
+
+        /// <summary>
         /// The rules whose <see cref="MatchedRule.Soundness"/> is <see cref="Soundness.Sound"/>
-        /// at the safe growth ceiling, built once.
+        /// at the safe growth ceiling, and <see cref="OperandOrder"/>, built once.
         /// </summary>
         internal static IReadOnlyList<MatchedRule> SoundRules => soundRules.Value;
 
         [ConstantField]
         private static readonly Lazy<IReadOnlyList<MatchedRule>> soundRules
+            = new(() => Saturation.SafeRules.Where(rule => rule.Soundness == Soundness.Sound)
+                .Concat(OperandOrder).ToList());
+
+        /// <summary>
+        /// <see cref="SoundRules"/> without <see cref="OperandOrder"/>, for a question in which
+        /// something may be a matrix: see <see cref="MayHoldAMatrix"/>.
+        /// </summary>
+        private static IReadOnlyList<MatchedRule> SoundRulesWithoutOrder => soundRulesWithoutOrder.Value;
+
+        [ConstantField]
+        private static readonly Lazy<IReadOnlyList<MatchedRule>> soundRulesWithoutOrder
             = new(() => Saturation.SafeRules.Where(rule => rule.Soundness == Soundness.Sound).ToList());
+
+        /// <summary>
+        /// <see cref="Saturation.SafeRules"/> and <see cref="OperandOrder"/>, built once.
+        /// </summary>
+        private static IReadOnlyList<MatchedRule> AdmittedRules => admittedRules.Value;
+
+        [ConstantField]
+        private static readonly Lazy<IReadOnlyList<MatchedRule>> admittedRules
+            = new(() => Saturation.SafeRules.Concat(OperandOrder).ToList());
+
+        /// <summary>
+        /// The chain rooted at <paramref name="node"/>, flattened through nested
+        /// <typeparamref name="TChain"/> nodes only and rebuilt in <see cref="EntityOrder.Canonical"/>
+        /// order, grouped to the left -- or <paramref name="node"/> itself, which declines, where
+        /// it is already in that order or an operand may not commute.
+        /// </summary>
+        private static Entity Reordered<TChain>(Entity node, Func<Entity, Entity, Entity> build) where TChain : Entity
+        {
+            // The e-matcher hands over the class's cheapest member, which need not be the node
+            // type the pattern found in the class.
+            if (node is not TChain || !ReadByDefault(node)) return node;
+            var operands = new List<Entity>();
+            var pending = new Stack<Entity>();
+            pending.Push(node);
+            while (pending.Count > 0)
+            {
+                var next = pending.Pop();
+                // A link read over a narrower codomain than its own is an operand: rebuilding it
+                // would drop the reading.
+                if (next is TChain && ReadByDefault(next))
+                {
+                    // Right child first, so the left one is popped first: the written order.
+                    pending.Push(next.DirectChildren[1]);
+                    pending.Push(next.DirectChildren[0]);
+                }
+                else
+                {
+                    if (MayNotCommute(next)) return node;
+                    operands.Add(next);
+                }
+            }
+            operands.Sort(EntityOrder.Canonical);
+            var rebuilt = operands[0];
+            for (var i = 1; i < operands.Count; i++)
+                rebuilt = build(rebuilt, operands[i]);
+            return rebuilt.Equals(node) ? node : rebuilt;
+        }
+
+        private static bool ReadByDefault(Entity link) => link.Codomain == link.DefaultCodomain;
+
+        /// <summary>
+        /// Whether <paramref name="operand"/> may denote something addition or multiplication
+        /// does not commute over, or that is not a number at all: a matrix, a transpose (whose
+        /// argument the library reads as possibly a matrix), a set, a truth value, a function,
+        /// or an application of one whose value nothing says is a number.
+        /// </summary>
+        /// <remarks>
+        /// Any such node anywhere in the operand, not only at its root. Wider than it has to be
+        /// -- a determinant is a number, and a sum of matrices commutes -- because a decline costs
+        /// a proof and a wrong <see cref="Soundness.Sound"/> costs the answer.
+        /// </remarks>
+        private static bool MayNotCommute(Entity operand)
+        {
+            foreach (var node in operand.Nodes)
+                if (node is Matrix or Transposef or Set or Statement or Lambda or Application)
+                    return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Whether a matrix, or a matrix operation, occurs anywhere in <paramref name="expr"/>.
+        /// </summary>
+        private static bool MayHoldAMatrix(Entity expr)
+        {
+            foreach (var node in expr.Nodes)
+                if (node is Matrix or Transposef or Determinantf or Tracef or MatrixEntryf)
+                    return true;
+            return false;
+        }
 
         internal static EqualityAnswer Ask(Entity left, Entity right, WorkBudget budget, Soundness weakest, Domain domain)
         {
@@ -73,18 +212,21 @@ namespace AngouriMath.Core.Transformations
                 if (FindWitness(left, right, domain, ledger) is { } witness)
                     return new(EqualityVerdict.NotEqual, null, Array.Empty<string>(), witness, ledger.Outcome());
 
+                var matrices = MayHoldAMatrix(left) || MayHoldAMatrix(right);
+                var sound = matrices ? SoundRulesWithoutOrder : SoundRules;
                 if (weakest == Soundness.Sound)
-                    return Prove(left, right, SoundRules, canonicalize: false, ledger, out _)
+                    return Prove(left, right, sound, canonicalize: false, ledger, out _)
                         ? Equal(Soundness.Sound, Array.Empty<string>(), ledger)
                         : Unknown(ledger);
 
-                if (!Prove(left, right, Saturation.SafeRules, canonicalize: true, ledger, out var conditional))
+                var admitted = matrices ? Saturation.SafeRules : AdmittedRules;
+                if (!Prove(left, right, admitted, canonicalize: true, ledger, out var conditional))
                     return Unknown(ledger);
                 if (conditional.Count == 0)
                     return Equal(Soundness.Sound, Array.Empty<string>(), ledger);
                 // Proved, but a conditional step may have done it, or only been there when it was
                 // done. The sound rules alone, on what the budget has left, tell the two apart.
-                return Prove(left, right, SoundRules, canonicalize: false, ledger, out _)
+                return Prove(left, right, sound, canonicalize: false, ledger, out _)
                     ? Equal(Soundness.Sound, Array.Empty<string>(), ledger)
                     : Equal(Soundness.SoundUnderAssumptions, conditional, ledger);
             }
@@ -115,10 +257,10 @@ namespace AngouriMath.Core.Transformations
             var graph = new EGraph();
             var a = graph.AddEntity(left);
             var b = graph.AddEntity(right);
-            // The graph does not sort a commutative operand pair or flatten a nested sum -- the
-            // rules that do build their replacement in code, so no ceiling admits them -- and the
-            // canonical-form pass does both. It joins each side to its own canonical form, as one
-            // more conditional step: the pass declares SoundUnderAssumptions.
+            // The canonical-form pass sorts and also groups like terms, flattens differences and
+            // quotients and simplifies each side; OperandOrder only reorders. The pass joins each
+            // side to its own canonical form, as one more conditional step: it declares
+            // SoundUnderAssumptions.
             if (canonicalize)
                 foreach (var (side, id) in new[] { (left, a), (right, b) })
                 {

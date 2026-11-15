@@ -55,12 +55,9 @@ namespace AngouriMath.Tests.Core.Transformations
         /// An identity whose proof needs a step that declares
         /// <see cref="Soundness.SoundUnderAssumptions"/> is <see cref="EqualityVerdict.Unknown"/>
         /// to a caller who asked for an unconditional proof, and <see cref="EqualityVerdict.Equal"/>
-        /// naming the steps to a caller who admits them. Commutativity is here because the graph
-        /// does not sort operands and the pass that does declares the weaker soundness.
+        /// naming the steps to a caller who admits them.
         /// </summary>
         [Theory]
-        [InlineData("x + y", "y + x", "canonicalization")]
-        [InlineData("x * y", "y * x", "canonicalization")]
         [InlineData("tan(x)", "sin(x) / cos(x)", "sine-over-cosine-is-the-tangent")]
         [InlineData("exp(x + y)", "exp(x) * exp(y)", "two-powers-of-one-base-multiply-by-adding-exponents")]
         [InlineData("x ^ 2 * x ^ 3", "x ^ 5", "two-powers-of-one-base-multiply-by-adding-exponents")]
@@ -73,6 +70,122 @@ namespace AngouriMath.Tests.Core.Transformations
             Assert.Equal(EqualityVerdict.Equal, admitted.Verdict);
             Assert.Equal(Soundness.SoundUnderAssumptions, admitted.Justification);
             Assert.Contains(admitted.Assumptions, name => name.StartsWith(step, StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// Commutativity and associativity of a sum and of a product are unconditional over the
+        /// numbers, so reordering operands is a <see cref="Soundness.Sound"/> step: it groups
+        /// nothing, which is what keeps the canonical-form pass at the weaker soundness.
+        /// </summary>
+        [Theory]
+        [InlineData("x + y", "y + x")]
+        [InlineData("x * y", "y * x")]
+        [InlineData("a + b + c", "c + a + b")]
+        [InlineData("a + (b + c)", "(c + b) + a")]
+        [InlineData("a * b * c", "c * (b * a)")]
+        [InlineData("2 * x * y", "y * x * 2")]
+        [InlineData("x * y + z", "z + y * x")]
+        [InlineData("sin(x * y) + 1", "1 + sin(y * x)")]
+        [InlineData("(x + y) * (x - y)", "(x - y) * (y + x)")]
+        public void ReorderingASumOrAProductIsEqualUnconditionally(string left, string right)
+        {
+            foreach (var weakest in new[] { Soundness.Sound, Soundness.SoundUnderAssumptions })
+            {
+                var answer = Ask(left, right, weakest);
+                Assert.Equal(EqualityVerdict.Equal, answer.Verdict);
+                Assert.Equal(Soundness.Sound, answer.Justification);
+                Assert.Empty(answer.Assumptions);
+            }
+        }
+
+        /// <summary>
+        /// Matrices do not commute, so a product of two written matrices in the other order is
+        /// not proved: no witness either, since a matrix is not a value the sampling compares,
+        /// so the answer is <see cref="EqualityVerdict.Unknown"/>.
+        /// </summary>
+        [Theory]
+        [InlineData("[[1, 2], [3, 4]] * [[0, 1], [1, 0]]", "[[0, 1], [1, 0]] * [[1, 2], [3, 4]]")]
+        [InlineData("x * [[1, 2], [3, 4]] * [[0, 1], [1, 0]]", "[[0, 1], [1, 0]] * [[1, 2], [3, 4]] * x")]
+        [InlineData("[[1, 2], [3, 4]] * [[0, 1], [1, 0]] + y", "y + [[0, 1], [1, 0]] * [[1, 2], [3, 4]]")]
+        public void AProductOfMatricesIsNotReordered(string left, string right)
+        {
+            foreach (var weakest in new[] { Soundness.Sound, Soundness.SoundUnderAssumptions })
+                Assert.NotEqual(EqualityVerdict.Equal, Ask(left, right, weakest).Verdict);
+        }
+
+        /// <summary>
+        /// A name carries no type, and the library reads one beside a transpose as possibly a
+        /// matrix (https://github.com/asc-community/AngouriMath/issues/2147). So a question with a
+        /// matrix operation anywhere in it reorders no product -- not even one the transpose is
+        /// not a factor of, since the same name may be multiplied there.
+        /// </summary>
+        [Theory]
+        [InlineData("transpose(A) * A", "A * transpose(A)")]
+        [InlineData("A * B + transpose(A)", "B * A + transpose(A)")]
+        [InlineData("A * B + det(A)", "B * A + det(A)")]
+        [InlineData("A * B + A[1, 1]", "B * A + A[1, 1]")]
+        public void AProductBesideAMatrixOperationIsNotReorderedSoundly(string left, string right)
+        {
+            Assert.NotEqual(EqualityVerdict.Equal, Ask(left, right).Verdict);
+            Assert.NotEqual(Soundness.Sound, Ask(left, right, Soundness.SoundUnderAssumptions).Justification);
+        }
+
+        /// <summary>
+        /// The two reordering steps on their own: every order and grouping of one chain comes out
+        /// as the same tree, a difference or a quotient stays one operand, and a chain with an
+        /// operand that may not be a number is left as it is. The literal matrices are declined by
+        /// the step itself, not only by the e-graph, which cannot rebuild a matrix to show it.
+        /// </summary>
+        [Theory]
+        [InlineData("x + y + z", "z + (y + x)")]
+        [InlineData("(x + y) + z", "y + (z + x)")]
+        [InlineData("x * y * z", "z * (y * x)")]
+        [InlineData("(a - b) + c", "c + (a - b)")]
+        [InlineData("(a / b) * c", "c * (a / b)")]
+        public void TheReorderingStepsWriteEveryOrderOfAChainAlike(string left, string right)
+            => Assert.Equal(Reorder(left.ToEntity()), Reorder(right.ToEntity()));
+
+        [Theory]
+        [InlineData("transpose(A) * A")]
+        [InlineData("A * transpose(A)")]
+        [InlineData("[[0, 1], [1, 0]] * [[1, 2], [3, 4]]")]
+        [InlineData("[[1, 2], [3, 4]] * [[0, 1], [1, 0]]")]
+        [InlineData("x * [[1, 2], [3, 4]]")]
+        [InlineData("[[1, 2], [3, 4]] * x")]
+        [InlineData("y + [[1, 2], [3, 4]]")]
+        [InlineData("[[1, 2], [3, 4]] + y")]
+        [InlineData("y * { 1, 2 }")]
+        [InlineData("{ 1, 2 } * y")]
+        [InlineData("y * (x > 0)")]
+        [InlineData("(x > 0) * y")]
+        public void TheReorderingStepsDeclineAnOperandThatMayNotCommute(string written)
+        {
+            // Each is written in both orders above, so the step would rewrite one of the two.
+            var expr = written.ToEntity();
+            foreach (var rule in EqualityOracle.OperandOrder)
+                Assert.True(rule.TryApply(expr) is not { } rewritten || rewritten.Equals(expr),
+                    $"{rule.Name} rewrote {expr}");
+        }
+
+        /// <summary>
+        /// A link of a chain read over a narrower codomain than its own keeps that reading:
+        /// rebuilding the chain would drop it, so the link is one operand.
+        /// </summary>
+        [Fact]
+        public void TheReorderingStepsKeepALinkReadOverANarrowerCodomain()
+        {
+            var narrowed = "y + x".ToEntity().WithCodomain(Domain.Real);
+            Assert.Equal(narrowed, Reorder(narrowed));
+            var outer = (narrowed + "a".ToEntity());
+            Assert.Equal(new Sumf("a", narrowed), Reorder(outer));
+        }
+
+        private static Entity Reorder(Entity expr)
+        {
+            foreach (var rule in EqualityOracle.OperandOrder)
+                if (rule.TryApply(expr) is { } rewritten)
+                    expr = rewritten;
+            return expr;
         }
 
         /// <summary>
@@ -201,6 +314,8 @@ namespace AngouriMath.Tests.Core.Transformations
         [InlineData("sin(x) ^ 2 + cos(x) ^ 2", "1")]
         [InlineData("a * b + a * c", "a * (b + c)")]
         [InlineData("x + y", "y + x")]
+        [InlineData("a * b * c", "c * (b * a)")]
+        [InlineData("x * y + z", "z + y * x")]
         [InlineData("tan(x)", "sin(x) / cos(x)")]
         [InlineData("exp(x + y)", "exp(x) * exp(y)")]
         [InlineData("x ^ 2 * x ^ 3", "x ^ 5")]

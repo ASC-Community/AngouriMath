@@ -265,6 +265,28 @@ worse than no form at all**, because its whole value was that structural equalit
   at all. Use the residual — `(a - b).Simplify()` against zero — and even that is a semi-decision,
   by §2.
 
+To *ask* whether two expressions are equal, call `MathS.AreEqual(a, b, budget)`
+([#1251](https://github.com/asc-community/AngouriMath/issues/1251)). It answers `Equal`,
+`NotEqual` or `Unknown`, and each means one thing:
+
+- `Equal` only when both sides land in one class of an e-graph, which is a proof and not a
+  comparison of two canonical forms, so it does not need the rules to be confluent. The answer
+  carries the weakest soundness the proof rests on. Under the default, `Soundness.Sound`, only
+  rules that declare `Sound` fire, together with two steps of the oracle's own that reorder the
+  terms of a sum and the factors of a product and group nothing. Under `SoundUnderAssumptions` the
+  conditional rules and `Transformation.Canonicalization` fire as well, and the answer names the
+  ones that joined a class.
+- `NotEqual` only with a witness: a point where the library's evaluation and an enclosure of every
+  subexpression say both sides are defined, and enclosures of the two values are disjoint.
+- `Unknown` otherwise, which is not "unequal". The safe rules do not expand, so `(x + 1)^2` against
+  `x^2 + 2x + 1` is `Unknown`.
+
+The budget counts steps (a point tried, a match attempt, a node the graph grows by), so the same
+question gets the same answer on any machine. A name is a number of the `domain` asked, so
+`a * b` and `b * a` are `Equal`. A question with a matrix or a matrix operation anywhere in it has
+no product reordered, because a name beside a transpose may stand for a matrix
+([#2147](https://github.com/asc-community/AngouriMath/issues/2147)).
+
 The one thing it *is* required to be is sound, which is [SimplificationContract.md](SimplificationContract.md).
 
 ## 7. How this is checked

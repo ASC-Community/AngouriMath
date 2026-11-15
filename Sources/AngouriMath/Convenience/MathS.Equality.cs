@@ -29,14 +29,17 @@ namespace AngouriMath
         /// </param>
         /// <param name="weakest">
         /// The weakest soundness a proof may rest on. <see cref="Soundness.Sound"/>, the default,
-        /// admits only rules that hold with no side condition; a proof that needs more is
+        /// admits only rules that hold with no side condition -- reordering the terms of a sum or
+        /// the factors of a product among them -- and a proof that needs more is
         /// <see cref="EqualityVerdict.Unknown"/>. <see cref="Soundness.SoundUnderAssumptions"/>
         /// admits the conditional rules and the canonical-form pass as well, and names those it
         /// used in <see cref="EqualityAnswer.Assumptions"/>.
         /// </param>
         /// <param name="domain">
         /// <see cref="Domain.Complex"/>, the default, or <see cref="Domain.Real"/>: where the
-        /// variables range, and so where a witness may be looked for.
+        /// variables range, and so where a witness may be looked for. A name is a number here, so
+        /// <c>a * b</c> and <c>b * a</c> are equal; a question with a matrix or a matrix operation
+        /// anywhere in it has no product reordered, since a name in it may stand for a matrix.
         /// </param>
         /// <returns>
         /// <see cref="EqualityVerdict.Equal"/> only with a proof;
