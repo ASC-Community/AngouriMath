@@ -195,5 +195,30 @@ namespace AngouriMath.Tests.Common
             => Assert.Equal(
                 SeqVar("k", "n").OrderBy(v => v.Name),
                 "sum(k, k, 1, n) + k".ToEntity().FreeVariables.OrderBy(v => v.Name));
+
+        /// <summary>
+        /// An indexed union or intersection binds its index as a quantifier does, throughout the
+        /// family and the index set: <c>x in union(A_k, k in I)</c> is <c>exists k in I : x in A_k</c>.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2458">#2458</a>
+        /// </summary>
+        [Theory]
+        [InlineData("union({ 2*pi*k + y }, k in ZZ)", "pi y")]
+        [InlineData("intersection({ k, y }, k in ZZ)", "y")]
+        [InlineData("union([k; y], k in [0; n])", "n y")]
+        [InlineData("union({ k*y }, k in { k, n })", "n y")]
+        [InlineData("union({ 1/k }, k in ZZ)", "")]
+        public void Issue2458_AnIndexedFamilyBindsItsIndex(string exprRaw, string free)
+            => Assert.Equal(
+                free.Split(' ', System.StringSplitOptions.RemoveEmptyEntries),
+                exprRaw.ToEntity().FreeVariables.Select(v => v.Name).OrderBy(n => n, System.StringComparer.Ordinal));
+
+        /// <summary>Only inside the family that declares it, and it still occurs.</summary>
+        [Fact]
+        public void Issue2458_AnIndexOutsideItsFamilyIsStillFree()
+        {
+            var expr = "union({ 2*pi*k + y }, k in ZZ) \\/ { k }".ToEntity();
+            Assert.Equal(new[] { "k", "pi", "y" }, expr.FreeVariables.Select(v => v.Name).OrderBy(n => n, System.StringComparer.Ordinal));
+            Assert.Equal(new[] { "k", "y" }, "union({ 2*pi*k + y }, k in ZZ)".ToEntity().Vars.Select(v => v.Name).OrderBy(n => n, System.StringComparer.Ordinal));
+        }
     }
 }
