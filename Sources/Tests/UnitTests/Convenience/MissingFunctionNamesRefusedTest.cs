@@ -40,6 +40,10 @@ namespace AngouriMath.Tests.Convenience
         // fallingfactorial, factorialpower and risingfactorial, multinomial, catalannumber,
         // harmonicnumber, forwarddifference, and lambertw and productlog, were among them until they
         // were implemented, in the same issue.
+        // And names other systems call functions that this library has no node for, each refused
+        // with what to write today: factorize(360) was factorize * 360 and φ(10) was φ * 10.
+        // factorize, nextprime and divisors: https://github.com/asc-community/AngouriMath/issues/2449;
+        // gradient and divergence: https://github.com/asc-community/AngouriMath/issues/2182.
         [Theory]
         [InlineData("trunc(x)")]
         [InlineData("zeta(s)")]
@@ -54,6 +58,15 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("factorial2(n)")]
         [InlineData("fractionalpart(x)")]
         [InlineData("quotient(a, b)")]
+        [InlineData("factorize(360)")]
+        [InlineData("factorize(x^2 - 1)")]
+        [InlineData("nextprime(10)")]
+        [InlineData("divisors(12)")]
+        [InlineData("φ(10)")]
+        [InlineData("ϕ(10)")]
+        [InlineData("gradient(x^2)")]
+        [InlineData("gradient(x^2 * y, [x, y])")]
+        [InlineData("divergence(x)")]
         public void ANameTheLibraryDoesNotHaveIsRefused(string written) =>
             Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity());
 
@@ -65,6 +78,9 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("re * (x + 1)", "re * (x + 1)")]
         [InlineData("im + arg", "im + arg")]
         [InlineData("zeta + quotient * 2", "zeta + quotient * 2")]
+        [InlineData("factorize + nextprime * divisors", "factorize + nextprime * divisors")]
+        [InlineData("gradient - divergence", "gradient - divergence")]
+        [InlineData("φ * 2 + ϕ", "φ * 2 + ϕ")]
         [InlineData("rect(x)", "rect * x")]
         public void TheSameNameWithoutTheBracketIsStillAVariable(string written, string expected) =>
             Assert.Equal(expected, written.ToEntity().Stringize());
@@ -80,9 +96,31 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("heaviside(x)", "iverson(x >= 0)")]
         [InlineData("fractionalpart(x)", "x mod 1")]
         [InlineData("pochhammer(x, k)", "risingfactorial")]
+        [InlineData("factorize(360)", "MathS.NumberTheory.Factorize")]
+        [InlineData("nextprime(10)", "prime(primepi(n) + 1)")]
+        [InlineData("divisors(12)", "divisorsigma(0, n)")]
+        [InlineData("φ(10)", "phi(n)")]
+        [InlineData("ϕ(10)", "phi(n)")]
+        [InlineData("gradient(x^2)", "jacobian([f], [x, y])")]
+        [InlineData("divergence(x)", "trace(jacobian(F, [x, y]))")]
         public void TheRefusalNamesTheFunction(string written, string name) =>
             Assert.Contains(name,
                 Assert.Throws<UnrecognizedFunctionParseException>(() => written.ToEntity()).Message);
+
+        /// <summary>
+        /// A refusal that suggests a spelling has to suggest one that answers: the least prime
+        /// above 10 and above the prime 11, the count and the sum of the divisors of 12, and a
+        /// divergence and a gradient worked by hand.
+        /// </summary>
+        [Theory]
+        [InlineData("prime(primepi(10) + 1)", "11")]
+        [InlineData("prime(primepi(11) + 1)", "13")]
+        [InlineData("divisorsigma(0, 12)", "6")]
+        [InlineData("divisorsigma(1, 12)", "28")]
+        [InlineData("trace(jacobian([x^2 * y, y^3], [x, y]))", "2 * x * y + 3 * y ^ 2")]
+        [InlineData("jacobian([x^2 * y], [x, y]) - [[2 * x * y, x^2]]", "[[0, 0]]")]
+        public void TheSpellingARefusalSuggestsAnswers(string suggested, string value) =>
+            Assert.Equal(value.ToEntity(), suggested.ToEntity().Simplify());
 
         /// <summary>
         /// The argument count must not decide whether a missing name is reported. Before this,

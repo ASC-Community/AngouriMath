@@ -585,6 +585,16 @@ written exactly, and are refused with the spelling to use. `heaviside` takes `0`
 falling one to others. Short names that could be somebody's variable, such as `beta` or `norm`, are
 not refused.
 
+Some names other systems call functions have no node here yet and are refused with what to write
+today. `factorize(360)` was `factorize * 360`: in C#, `MathS.NumberTheory.Factorize(n)` gives the
+prime factors of an integer and `Factorize()` factors an expression. `nextprime(n)` is
+`prime(primepi(n) + 1)`, and `divisors(n)` is counted by `divisorsigma(0, n)` and summed by
+`divisorsigma(1, n)` ([#2449](https://github.com/asc-community/AngouriMath/issues/2449)). The
+gradient of `f` is the row `jacobian([f], [x, y])` and the divergence of `F` is
+`trace(jacobian(F, [x, y]))`, so `gradient(...)` and `divergence(...)` are refused until each is a
+function ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)). Euler's totient is
+`phi(n)`; `φ(n)` and `ϕ(n)` are refused, and `φ` alone is still a variable.
+
 ## `sum` and `product`, which declare a name
 
 `sum(body, name, from, to)` and `product(body, name, from, to)`. The **second** argument is the

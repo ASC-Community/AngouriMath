@@ -6571,10 +6571,17 @@ namespace AngouriMath
             /// (<a href="https://github.com/asc-community/AngouriMath/issues/373">#373</a>)
             /// </para>
             /// <para>
-            /// It is honoured only where an algorithm asks -- today that is the Gr&#246;bner
-            /// system solver. Everything else in the library bounds itself by ceilings of its
-            /// own that this does not reach, so setting it does not make an arbitrary call
-            /// bounded.
+            /// It is honoured only where an algorithm asks. Today that is the system solver --
+            /// its Gr&#246;bner path, and the ledger <see cref="Core.EquationSystem.Solve(Variable[])"/>
+            /// keeps over the whole call --, the rewrite graph wherever it runs:
+            /// <see cref="Core.Transformations.Transformation.EqualitySaturation(WorkBudget, Core.CostModel)"/>,
+            /// <see cref="Core.Transformations.Transformation.CanonicalizationOverGraph(WorkBudget)"/> and
+            /// <see cref="AreEqual(Entity, Entity, WorkBudget, Core.Transformations.Soundness, Core.Domain)"/>, and the proof that a written-out perfect
+            /// square is one, which <see cref="Entity.Factorize(int)"/> runs and
+            /// <see cref="Entity.Simplify(int)"/> offers as a candidate. <c>Simplify</c> itself
+            /// is not bounded by it, and nor is anything else in the library, each of which
+            /// bounds itself by ceilings of its own that this does not reach; so setting it does
+            /// not make an arbitrary call bounded.
             /// </para>
             /// </remarks>
             /// <example>
