@@ -161,8 +161,8 @@ namespace AngouriMath
             partial record Subsetf
             {
                 /// <inheritdoc/>
-                // The ASCII spelling; `⊆` is read by the parser and waits for a Unicode output
-                // flag (#1242). Not associative, for the same reason as `in`.
+                // `⊆` under MathS.Settings.UnicodeOutput, respelled with the rest of the output.
+                // Not associative, for the same reason as `in`.
                 private protected override string StringizeNode()
                     => $@"{Sub.Stringize(Sub.Priority < Priority)} subset {Super.Stringize(Super.Priority <= Priority)}";
                 /// <inheritdoc/>

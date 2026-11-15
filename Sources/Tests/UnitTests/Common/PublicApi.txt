@@ -3671,6 +3671,7 @@ AngouriMath.MathS+Settings.NewtonSolver { } : AngouriMath.Convenience.Setting<An
 AngouriMath.MathS+Settings.PrecisionErrorCommon { } : AngouriMath.Convenience.Setting<PeterO.Numbers.EDecimal>
 AngouriMath.MathS+Settings.PrecisionErrorZeroRange { } : AngouriMath.Convenience.Setting<PeterO.Numbers.EDecimal>
 AngouriMath.MathS+Settings.RefuseNonRealCompilation { } : AngouriMath.Convenience.Setting<System.Boolean>
+AngouriMath.MathS+Settings.UnicodeOutput { } : AngouriMath.Convenience.Setting<System.Boolean>
 AngouriMath.MathS+UnsafeAndInternal.AreEqualNumerically(AngouriMath.Entity, AngouriMath.Entity) : System.Boolean
 AngouriMath.MathS+UnsafeAndInternal.AreEqualNumerically(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity[]) : System.Boolean
 AngouriMath.MathS+UnsafeAndInternal.CheckPoints { } : AngouriMath.Convenience.Setting<AngouriMath.Entity[]>

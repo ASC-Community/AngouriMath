@@ -83,7 +83,7 @@ namespace AngouriMath.Core.Serialization
 
         /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, Entity value, JsonSerializerOptions options)
-            => writer.WriteStringValue(value.Stringize());
+            => writer.WriteStringValue(value.StringizeAscii());
 
         /// <inheritdoc/>
         public override Entity ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -91,7 +91,7 @@ namespace AngouriMath.Core.Serialization
 
         /// <inheritdoc/>
         public override void WriteAsPropertyName(Utf8JsonWriter writer, Entity value, JsonSerializerOptions options)
-            => writer.WritePropertyName(value.Stringize());
+            => writer.WritePropertyName(value.StringizeAscii());
 
         private static string Text(ref Utf8JsonReader reader)
             => reader.TokenType is JsonTokenType.String or JsonTokenType.PropertyName

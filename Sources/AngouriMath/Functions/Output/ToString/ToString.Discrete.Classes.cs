@@ -20,7 +20,13 @@ namespace AngouriMath
         partial record Notf
         {
             /// <inheritdoc/>
-            private protected override string StringizeNode() => $"not {Argument.Stringize(Argument.Priority < Priority)}";
+            // Under MathS.Settings.UnicodeOutput the negation of an equality is a ≠, printed here as
+            // the <> it is read as, with the brackets an equality's own operands take.
+            // https://github.com/asc-community/AngouriMath/issues/1242
+            private protected override string StringizeNode()
+                => SpelledForUnicode && Argument is Equalsf { PrintsItsCodomain: false } equality
+                ? $"{equality.Left.Stringize(equality.Left.Priority <= equality.Priority)} <> {equality.Right.Stringize(equality.Right.Priority <= equality.Priority)}"
+                : $"not {Argument.Stringize(Argument.Priority < Priority)}";
             /// <inheritdoc/>
             public override string ToString() => Stringize();
         }
@@ -109,11 +115,11 @@ namespace AngouriMath
         partial record Congruentf
         {
             /// <inheritdoc/>
-            // The ASCII spelling, with the modulus once at the end; `≡` is read by the parser
-            // and waits for a Unicode output flag (#1242). Not chained: two congruences print
-            // as the conjunction they are.
+            // With the modulus once at the end, and `≡` under MathS.Settings.UnicodeOutput
+            // (https://github.com/asc-community/AngouriMath/issues/1242). Not chained: two
+            // congruences print as the conjunction they are.
             private protected override string StringizeNode()
-                => $"{Left.Stringize(Left.Priority <= Priority)} = {Right.Stringize(Right.Priority <= Priority)} (mod {Modulus.Stringize(Modulus.Priority < Priority.SetOperation)})";
+                => $"{Left.Stringize(Left.Priority <= Priority)} {(SpelledForUnicode ? "≡" : "=")} {Right.Stringize(Right.Priority <= Priority)} (mod {Modulus.Stringize(Modulus.Priority < Priority.SetOperation)})";
             /// <inheritdoc/>
             public override string ToString() => Stringize();
         }

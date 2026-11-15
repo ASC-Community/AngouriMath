@@ -37,7 +37,7 @@ namespace AngouriMath
                 internal override string ToSymPy()
                     => this switch
                     {
-                        { IsFinite: true } => Stringize(),
+                        { IsFinite: true } => StringizeAscii(),
                         { IsNaN: true } => "sympy.nan",
                         { IsNegative: true } => "-sympy.oo",
                         _ => "sympy.oo",
@@ -58,7 +58,7 @@ namespace AngouriMath
             partial record Integer
             {
                 internal override string ToSymPy()
-                    => Stringize();
+                    => StringizeAscii();
             }
         }
     }

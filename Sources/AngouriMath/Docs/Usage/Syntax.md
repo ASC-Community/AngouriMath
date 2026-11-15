@@ -17,6 +17,19 @@ A lambda is now also *readable* as `x => x + 1`, and it still **prints** as `lam
 More than one spelling may be read; exactly one is printed, and it is the one this contract is
 about.
 
+**Unicode output.** With `MathS.Settings.UnicodeOutput` on, `Stringize` prints mathematical
+symbols in place of their ASCII spellings: `π` `ℯ` for `pi` `e`, `+∞` `−∞` for `+oo` `-oo`,
+`≤` `≥` `≠` for `<=` `>=` `<>` (and `a ≠ b` for `not a = b`), `∈` `⊆` for `in` `subset`, `≡`
+for a congruence's `=`, `∀` `∃` `∃!` for the quantifiers, `∪` `∩` for `\/` `/\`, `¬` `∧` `∨` for
+`not` `and` `or`, the minus sign `−` (U+2212) for `-`, and superscript digits for an integer
+exponent: `x ^ 2 - 1 <= pi` prints as `x² − 1 ≤ π`, and `x ^ (-1)` as `x⁻¹`. The setting is off by
+default, and the contract is the same with it on: every glyph is read as the ASCII operator it
+stands for, so the Unicode form parses back to the expression it printed. An exponent a
+superscript would misplace to the eye keeps its `^` — `x ^ 2 ^ 3` prints as `x ^ 2³`, and `x ^ 3!`
+as it is — and so does every exponent that is not an integer. `√`, `·` and `×` are not read, and
+a bare `∞` is not either, as a bare `oo` is not an infinity: each infinity is written with its sign
+([#1242](https://github.com/asc-community/AngouriMath/issues/1242)).
+
 A **codomain** is part of that. A node whose `Codomain` is not the one its type carries by default
 prints inside `domain(...)`, so `domain(x, ZZ)` prints as `domain(x, ZZ)` and reads back narrowed
 ([#1022](https://github.com/asc-community/AngouriMath/issues/1022)); it is not decoration, since
@@ -58,18 +71,18 @@ prints as `x + y + z` and reads back as `(x + y) + z` — the same number, a dif
 
 | | operators | notes |
 |---|---|---|
-| 0 | `forall … :`, `exists … :`, `exists! … :`, `=>` | prefix binders whose body **runs to the end of the line**; see the quantifier paragraph and the lambda arrow below |
+| 0 | `forall … :` `∀ … :`, `exists … :` `∃ … :`, `exists! … :` `∃! … :`, `=>` | prefix binders whose body **runs to the end of the line**; see the quantifier paragraph and the lambda arrow below |
 | 1 | `provided` | **groups to the right**: `a provided b provided c` is `a provided (b provided c)` |
 | 2 | `implies` `->` | |
-| 3 | `or` | |
+| 3 | `or` `∨` | |
 | 4 | `xor` | |
-| 5 | `and` `&` | |
-| 6 | `not` | prefix |
-| 7 | `=` `<>` `>` `>=` `<` `<=`, `≡` | chained: `a < b < c` means `a < b and b < c`; a trailing `(mod n)` makes the `=`/`≡` links congruences, see below |
-| 8 | `in`, `subset` `⊆`, `superset` `⊇`, `divides` `\|` | one level; `a divides b` and `a \| b` are the statement that `b` is a whole multiple of `a`, defined over the integers and `NaN` elsewhere; `A subset B` is the statement that every member of `A` is a member of `B`, and `B superset A` is the same statement (see the sets section) |
+| 5 | `and` `&` `∧` | |
+| 6 | `not` `¬` | prefix |
+| 7 | `=` `<>` `≠` `>` `>=` `≥` `<` `<=` `≤`, `≡` | chained: `a < b < c` means `a < b and b < c`; a trailing `(mod n)` makes the `=`/`≡` links congruences, see below |
+| 8 | `in` `∈`, `subset` `⊆`, `superset` `⊇`, `divides` `\|` | one level; `a divides b` and `a \| b` are the statement that `b` is a whole multiple of `a`, defined over the integers and `NaN` elsewhere; `A subset B` is the statement that every member of `A` is a member of `B`, and `B superset A` is the same statement (see the sets section) |
 
 **Congruence.** `a = b (mod n)` — also `a ≡ b (mod n)`, which the parser reads and `Stringize`
-does not yet print — is the statement that `n` divides `a - b`: a relation between integers with
+prints under `MathS.Settings.UnicodeOutput` — is the statement that `n` divides `a - b`: a relation between integers with
 the modulus written once at the end of the line, which is how mathematics writes it and not the
 remainder operator `a mod n`, which is a number. A chain `a ≡ b ≡ c (mod n)` is the conjunction of
 its links. Decided for numbers (`5^6 = 1 (mod 7)` is `True`, `-1 = 9 (mod 10)` is `True`,
@@ -90,12 +103,12 @@ inequality with an exponential or a factorial over the whole numbers, `n in ZZ a
 solved to the members of a window from the least member and the tails the quantifier proves by
 induction — `{ 0, 1 } \/ ZZ /\ [5; +oo)`, `n in ZZ+ and n! > 3^n` is `ZZ+ /\ [7; +oo)` — and where
 a tail is not proved the window is not an answer, and the inequality solver refuses as before.
-| 9 | `unite` `\/`, `setsubtract` `\` | one level, so `A \/ B \ C` is `(A \/ B) \ C` |
-| 10 | `intersect` `/\` | |
-| 11 | `+` `-` | |
+| 9 | `unite` `\/` `∪`, `setsubtract` `\` | one level, so `A \/ B \ C` is `(A \/ B) \ C` |
+| 10 | `intersect` `/\` `∩` | |
+| 11 | `+` `-` `−` | `−` is the minus sign, U+2212 |
 | 12 | `*` `/` `mod` | one level, so `x * y mod z` is `(x * y) mod z` |
-| 13 | `+` `-` | prefix |
-| 14 | `^` | **groups to the right**: `a ^ b ^ c` is `a ^ (b ^ c)` |
+| 13 | `+` `-` `−` | prefix |
+| 14 | `^`, superscript digits | **groups to the right**: `a ^ b ^ c` is `a ^ (b ^ c)`; `x²` is `x ^ 2` and `x⁻¹` is `x ^ (-1)`, an integer exponent in the digits `⁰`–`⁹` with an optional `⁻`, binding exactly as `^` does: `2x²` is `2 * x ^ 2`, `x²³` is `x ^ 23`, `(x + 1)²` is `(x + 1) ^ 2` |
 | 15 | `!` | postfix factorial |
 
 `%` is **not** an operator. It is left free to mean percent; the remainder is written `mod`.
@@ -116,6 +129,7 @@ first of those was a parse error.
 ## Numbers and constants
 
 `1`, `1.5`, `.5`, `1.`, `1/2`, `1e-9`, `i`, `e`, `pi`, `eulergamma`, `+oo`, `-oo`, `NaN`, `true`, `false`.
+The infinities are also `+∞` and `−∞` (or `-∞`).
 
 A trailing `i` makes the literal imaginary, exponent and all: `3i`, `1.5e3i`. `i` on its own is the
 imaginary unit, and it is a **number** rather than a name — which is why `x i` is `x ^ i` and not a
@@ -190,8 +204,8 @@ with an operator parses.
 | image, pre-image | `image(f(x), x in A)` is `{ f(x) : x in A }` — listed over a listed `A` (`image(x^2, x in {1, 2, 3})` is `{ 1, 4, 9 }`), an interval by interval arithmetic where the name occurs once (`image(9 c / 5 + 32, c in (0; 100))` is `(32; 212)`), and otherwise an object that answers membership; it is `union({f(x)}, x in A)`. `preimage(f(x), x in A, Y)` is `{ x in A : f(x) in Y }`, solved on evaluation where the membership is read: `preimage(x^2, x in RR, {1})` is `{ 1, -1 }` |
 | complement | `complement(A, U)` — the complement of `A` relative to the universe `U`, which is `U \ A`; there is no universal set, so a complement is always relative to one |
 
-**Subset.** `A subset B` — also `A ⊆ B`, which the parser reads and `Stringize` does not yet
-print, and `B superset A` / `B ⊇ A`, which parse to the same node — is the statement that every
+**Subset.** `A subset B` — also `A ⊆ B`, which the parser reads and `Stringize` prints
+under `MathS.Settings.UnicodeOutput`, and `B superset A` / `B ⊇ A`, which parse to the same node — is the statement that every
 member of `A` is a member of `B`. It is the relation between two sets that `in` is between an
 element and a set, and the two are different: `{1, 2} subset {1, 2, 3}` is `True` and
 `{1, 2} in {1, 2, 3}` is `False`. It is decided from the shapes of the sets — member by member for

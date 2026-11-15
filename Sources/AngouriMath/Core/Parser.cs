@@ -76,6 +76,40 @@ namespace AngouriMath.Core
         }
         
         /// <summary>
+        /// Replaces each superscript exponent, <c>x²</c> or <c>x⁻¹</c>, by the tokens of the
+        /// power written out, <c>^ 2</c> or <c>^ - 1</c>, so that it binds exactly as that does:
+        /// <c>2x²</c> is <c>2 * x ^ 2</c> and <c>-x²</c> is <c>-(x ^ 2)</c>. Done before the
+        /// omitted tokens are inserted, and whatever the explicit-parsing setting, since a
+        /// superscript is a written operator and not an omitted one.
+        /// https://github.com/asc-community/AngouriMath/issues/1242
+        /// </summary>
+        private static void ExpandSuperscripts(IList<IToken> tokenList, AngouriMathLexer lexer)
+        {
+            for (var i = 0; i < tokenList.Count; i++)
+            {
+                if (tokenList[i] is not { Type: AngouriMathLexer.SUPERSCRIPT } superscript)
+                    continue;
+                var text = superscript.Text;
+                var negative = text[0] == '⁻';
+                var digits = new StringBuilder(text.Length);
+                foreach (var glyph in negative ? text.Substring(1) : text)
+                    digits.Append(glyph switch
+                    {
+                        '¹' => '1',
+                        '²' => '2',
+                        '³' => '3',
+                        _ => (char)('0' + (glyph - '⁰')),
+                    });
+                var number = new CommonToken(AngouriMathLexer.NUMBER, digits.ToString())
+                    { Line = superscript.Line, Column = superscript.Column };
+                tokenList[i] = lexer.Power;
+                if (negative)
+                    tokenList.Insert(++i, lexer.Minus);
+                tokenList.Insert(++i, number);
+            }
+        }
+
+        /// <summary>
         /// This method inserts omitted tokens when no
         /// explicit-only parsing is enabled. Otherwise,
         /// it will throw an exception.
@@ -154,6 +188,7 @@ namespace AngouriMath.Core
                     )
                 );
             
+            ExpandSuperscripts(tokenList, lexer);
             if (InsertOmittedTokensOrProvideDiagnostic(tokenList, lexer).Is<ReasonWhyParsingFailed>(out var whyFailed))
                 return new Failure<ReasonWhyParsingFailed>(whyFailed);
 
