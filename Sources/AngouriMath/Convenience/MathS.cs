@@ -305,6 +305,55 @@ namespace AngouriMath
         public static Set SolveEquation(Entity equation, Variable var) => EquationSolver.Solve(equation, var);
 
         /// <summary>
+        /// Solves a system of equations written as one statement, a conjunction of equations,
+        /// jointly for several variables, as <see cref="Equations(Entity[])"/> solves one written
+        /// as a list.
+        /// </summary>
+        /// <param name="system">
+        /// Equations joined by <c>and</c>, nested or not: <c>x + y = 3 and x - y = 1</c>. An
+        /// equation <c>a = b</c> is read as <c>a - b = 0</c>, and a chain <c>a = b = c</c> is the
+        /// conjunction <c>a = b and b = c</c>. One equation is a system of one, and an expression
+        /// that is not a statement is read as equal to zero, as <see cref="SolveEquation"/> reads one.
+        /// </param>
+        /// <param name="variables">
+        /// The unknowns, in the order of the answer's columns, as many as there are equations or
+        /// not, as <see cref="EquationSystem.Solve(Variable[])"/> takes them.
+        /// </param>
+        /// <returns>
+        /// What <see cref="EquationSystem.Solve(Variable[])"/> answers for the equations: a matrix
+        /// with a row for each solution and a column for each variable, a variable the system
+        /// leaves free becoming a parameter. <see langword="null"/> where no solution was found,
+        /// which includes a system that has none, as <c>x + y = 1 and x + y = 2</c>, and one the
+        /// solver could not settle. Also <see langword="null"/> where a conjunct is not an
+        /// equation -- an inequality, an <c>in</c>, an <c>or</c>, a <c>not</c> or a boolean --
+        /// since solving the others alone would answer a different question; solve such a
+        /// statement for one variable at a time with <see cref="Entity.Solve(Variable)"/>.
+        /// </returns>
+        /// <remarks>
+        /// <see cref="Entity.Solve(Variable)"/> on the same statement solves it for one variable,
+        /// with the others as parameters: <c>x + y = 3 and x - y = 1</c> for <c>x</c> is
+        /// <c>{ 3 - y } ∩ { 1 + y }</c>, the values of <c>x</c> for each <c>y</c>. This is the
+        /// question for all of them at once, and answers the point <c>(2, 1)</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2450
+        /// </remarks>
+        /// <exception cref="NotSufficientlySupportedException">
+        /// As <see cref="EquationSystem.Solve(Variable[])"/>: the work the call may spend ran out
+        /// before the system was solved, which is "not settled", not "no solution".
+        /// </exception>
+        /// <example>
+        /// <code>
+        /// var solutions = MathS.SolveSystem("x^2 + y^2 = 25 and x - y = 1", "x", "y");
+        /// Console.WriteLine(solutions);
+        /// </code>
+        /// Prints
+        /// <code>
+        /// [[-3, -4], [4, 3]]
+        /// </code>
+        /// </example>
+        public static Matrix? SolveSystem(Entity system, params Variable[] variables)
+            => EquationSystem.EquationsOf(system, out _) is { } equations ? new EquationSystem(equations).Solve(variables) : null;
+
+        /// <summary>
         /// Solves a first-order linear ordinary differential equation
         /// <a href="https://en.wikipedia.org/wiki/Linear_differential_equation"/> by its
         /// integrating factor, or returns <see langword="null"/> where it cannot.

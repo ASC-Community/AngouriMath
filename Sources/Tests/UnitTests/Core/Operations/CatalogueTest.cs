@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -211,6 +211,9 @@ namespace AngouriMath.Tests.Core.Operations
             Assert.Equal(MathS.FromString("x^2 = 4").Solve(x), Catalogue.Solve.Ask("x^2 = 4", x));
             Entity[] system = ["x + y - 3", "x - y - 1"];
             Assert.Equal(MathS.Equations(system).Solve(x, y), Catalogue.SolveSystem.Ask(system, [x, y]));
+            Assert.Equal(MathS.SolveSystem("x + y = 3 and x - y = 1", x, y), Catalogue.SolveConjunction.Ask("x + y = 3 and x - y = 1", [x, y]));
+            Assert.NotNull(Catalogue.SolveConjunction.Ask("x + y = 3 and x - y = 1", [x, y]));
+            Assert.Null(Catalogue.SolveConjunction.Ask("x + y = 3 and x > 0", [x, y]));
             Assert.Equal(MathS.FromString("sqrt(2) + 1").Evaled, Catalogue.Evaluate.Ask("sqrt(2) + 1"));
             Assert.Equal(MathS.FromString("sqrt(2) + 1").EvalNumerical(), Catalogue.EvaluateNumerically.Ask("sqrt(2) + 1"));
             Assert.Equal(MathS.FromString("x + y").Vars, Catalogue.Variables.Ask("x + y"));

@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2022 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -387,6 +387,76 @@ namespace AngouriMath.Tests.Common
             var root = Assert.Single(Assert.IsType<Entity.Set.FiniteSet>(statement.Solve("x")));
             var value = Assert.IsAssignableFrom<Entity.Number.Complex>(root.Evaled);
             Assert.Equal(System.Math.PI, value.ImaginaryPart.EDecimal.ToDouble(), 12);
+        }
+
+        // A statement that is a conjunction of equations is a system, and it is solved for
+        // several variables at once as the same equations listed are: x + y = 3 and x - y = 1
+        // is the point (2, 1). Every row is put back into every conjunct, a parameter left
+        // free included, and the answer is what MathS.Equations answers for the conjuncts.
+        // https://github.com/asc-community/AngouriMath/issues/2450
+        [Theory]
+        [InlineData("x + y = 3 and x - y = 1", "x,y", 1)]
+        [InlineData("x^2 + y^2 = 25 and x - y = 1", "x,y", 2)]
+        [InlineData("x + y + z = 6 and (x - y = 0 and z = 2)", "x,y,z", 1)]
+        [InlineData("(x + y = 3 and x - y = 1) and (x + 2 y = 4)", "x,y", 1)]
+        [InlineData("x = y = 1", "x,y", 1)]
+        [InlineData("x + y = 3 and x - y = 1", "x,y,z", 1)]
+        [InlineData("x + y = 3", "x,y", 1)]
+        [InlineData("x + y - 3", "x,y", 1)]
+        public void Issue2450_AConjunctionOfEquationsIsSolvedAsASystem(string statement, string variables, int rows)
+        {
+            var unknowns = variables.Split(',').Select(name => MathS.Var(name)).ToArray();
+            var solutions = MathS.SolveSystem(statement, unknowns);
+            Assert.NotNull(solutions);
+            Assert.Equal(rows, solutions.RowCount);
+            var equations = AngouriMath.Core.EquationSystem.EquationsOf(statement, out _);
+            Assert.NotNull(equations);
+            Assert.Equal(MathS.Equations(equations).Solve(unknowns), solutions);
+            for (var row = 0; row < solutions.RowCount; row++)
+                foreach (var equation in equations)
+                {
+                    var residual = equation;
+                    for (var column = 0; column < unknowns.Length; column++)
+                        residual = residual.Substitute(unknowns[column], solutions[row, column]);
+                    Assert.True(residual.Simplify() == 0, $"row {row} leaves {residual.Simplify()} in {equation} = 0");
+                }
+        }
+
+        // The point the issue asked for.
+        [Fact]
+        public void Issue2450_TheIssuesSystemIsThePointTwoOne()
+        {
+            var solutions = MathS.SolveSystem("x + y = 3 and x - y = 1", "x", "y");
+            Assert.NotNull(solutions);
+            Assert.Equal(1, solutions.RowCount);
+            Assert.True(solutions[0, 0] == 2 && solutions[0, 1] == 1, solutions.ToString());
+        }
+
+        // A conjunct that is not an equation is not dropped: solving the others alone would
+        // answer a different question, so the system is declined.
+        [Theory]
+        [InlineData("x + y = 3 and x > 0")]
+        [InlineData("x + y = 3 and x in RR")]
+        [InlineData("x + y = 3 or x - y = 1")]
+        [InlineData("x + y = 3 and not (x - y = 1)")]
+        [InlineData("x + y = 3 and true")]
+        [InlineData("(x = 1) = (y = 2)")]
+        public void Issue2450_AConjunctThatIsNotAnEquationIsDeclined(string statement)
+        {
+            Assert.Null(AngouriMath.Core.EquationSystem.EquationsOf(statement, out var notAnEquation));
+            Assert.NotNull(notAnEquation);
+            Assert.Null(MathS.SolveSystem(statement, "x", "y"));
+        }
+
+        // A system with no solution is null, as the system solver answers it for the same
+        // equations listed: null is "no solution was found", which a system without one is.
+        [Theory]
+        [InlineData("x + y = 1 and x + y = 2")]
+        [InlineData("x + y = 3 and x - y = 1 and x + 2 y = 5")]
+        public void Issue2450_AnInconsistentSystemIsNull(string statement)
+        {
+            Assert.Null(MathS.SolveSystem(statement, "x", "y"));
+            Assert.Null(MathS.Equations(AngouriMath.Core.EquationSystem.EquationsOf(statement, out _)!).Solve("x", "y"));
         }
     }
 }

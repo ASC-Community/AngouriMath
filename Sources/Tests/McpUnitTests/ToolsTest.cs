@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -222,6 +222,28 @@ public sealed class ToolsTest
         Assert.Equal(1, answer["solution_count"]!.GetValue<int>());
         Assert.Equal("2 1", string.Join(" ", answer.Field("solutions").Split('\n')[1].Split(' ', StringSplitOptions.RemoveEmptyEntries)));
     }
+
+    // https://github.com/asc-community/AngouriMath/issues/2450
+    [Fact]
+    public void ASystemWrittenAsOneConjunctionIsSolved()
+    {
+        var answer = Mcp.Call("am_solve_system", """{"statement":"x + y = 3 and x - y = 1","variables":["x","y"]}""");
+        Assert.Equal(1, answer["solution_count"]!.GetValue<int>());
+        Assert.Equal("2 1", string.Join(" ", answer.Field("solutions").Split('\n')[1].Split(' ', StringSplitOptions.RemoveEmptyEntries)));
+    }
+
+    [Fact]
+    public void AConjunctThatIsNotAnEquationIsNamedAndDeclined()
+    {
+        var answer = Mcp.Call("am_solve_system", """{"statement":"x + y = 3 and x > 0","variables":["x","y"]}""");
+        Assert.Equal("declined", answer.Field("status"));
+        Assert.Contains("x > 0", answer.Field("note"));
+    }
+
+    [Fact]
+    public void ASystemIsGivenAsAListOrAsAStatementNotBoth() =>
+        Assert.Equal("failed", Mcp.Call("am_solve_system",
+            """{"equations":["x + y = 3"],"statement":"x - y = 1","variables":["x","y"]}""").Field("status"));
 
     [Fact]
     public void ToSympyWritesAProgram() =>

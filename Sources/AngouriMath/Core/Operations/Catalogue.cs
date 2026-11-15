@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -100,6 +100,12 @@ namespace AngouriMath.Core.Operations
         public static Query<Func<IEnumerable<Entity>, IReadOnlyList<Variable>, Matrix?>> SolveSystem { get; } = new(
             "solve_system", "Solves equations jointly for several variables, one row of the answer for each solution.",
             static (equations, variables) => MathS.Equations(equations).Solve([.. variables]),
+            new Parameter("variables", "The variables to solve for, in the order of the answer's columns."));
+
+        /// <summary><see cref="MathS.SolveSystem(Entity, Variable[])"/>.</summary>
+        public static Query<Func<Entity, IReadOnlyList<Variable>, Matrix?>> SolveConjunction { get; } = new(
+            "solve_conjunction", "Solves a conjunction of equations jointly for several variables, as solve_system solves them listed, and declines one with a conjunct that is not an equation.",
+            static (system, variables) => MathS.SolveSystem(system, [.. variables]),
             new Parameter("variables", "The variables to solve for, in the order of the answer's columns."));
 
         /// <summary><see cref="Entity.Evaled"/>.</summary>
@@ -254,7 +260,7 @@ namespace AngouriMath.Core.Operations
         public static IReadOnlyList<Operation> All { get; } =
         [
             Simplify, Normalize, Expand, Factorize, Differentiate, Integrate, Limit, Substitute,
-            Solve, SolveSystem, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, TruthTable, SatisfyingAssignments, Series, AreEqual,
+            Solve, SolveSystem, SolveConjunction, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, TruthTable, SatisfyingAssignments, Series, AreEqual,
             ToBase, FromBase,
             Determinant, Inverse, Transpose, Rank, ReducedRowEchelonForm, Trace, TensorProduct,
             PrimeFactorization, Totient, GreatestCommonDivisor, DivisorCount, IsPrime,
