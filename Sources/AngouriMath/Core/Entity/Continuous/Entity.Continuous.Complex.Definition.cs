@@ -107,22 +107,36 @@ namespace AngouriMath
                 /// A number from a pair of <see cref="double"/>s, each part rounded as
                 /// <see cref="Real.FromMachineNumber(EDecimal)"/> rounds it.
                 /// </summary>
-                internal static Complex FromMachineNumbers(EDecimal real, EDecimal imaginary) => Create(real, imaginary, EDecimal.One, EDecimal.One, fromMachineNumbers: true);
+                internal static Complex FromMachineNumbers(EDecimal real, EDecimal imaginary) => FromMachineNumbers(real, imaginary, double.NaN, double.NaN);
 
-                private static Complex Create(EDecimal real, EDecimal imaginary, EDecimal realScale, EDecimal imaginaryScale, bool fromMachineNumbers)
+                /// <summary>
+                /// <see cref="FromMachineNumbers(EDecimal, EDecimal)"/> of a pair of <see cref="double"/>s.
+                /// </summary>
+                internal static Complex FromMachineNumbers(double real, double imaginary)
+                    => FromMachineNumbers(EDecimal.FromDouble(real), EDecimal.FromDouble(imaginary), real, imaginary);
+
+                /// <summary>
+                /// <see cref="FromMachineNumbers(EDecimal, EDecimal)"/>, each part's exact value also given as a
+                /// <see cref="double"/>, or <see cref="double.NaN"/>, for <see cref="Real.FromMachineNumber(EDecimal, double)"/>.
+                /// </summary>
+                internal static Complex FromMachineNumbers(EDecimal real, EDecimal imaginary, double realMachine, double imaginaryMachine)
+                    => Create(real, imaginary, EDecimal.One, EDecimal.One, fromMachineNumbers: true, realMachine, imaginaryMachine);
+
+                private static Complex Create(EDecimal real, EDecimal imaginary, EDecimal realScale, EDecimal imaginaryScale, bool fromMachineNumbers,
+                    double realMachine = double.NaN, double imaginaryMachine = double.NaN)
                 {
                     if (!MathS.Settings.DowncastingEnabled)
                         return new Complex(real, imaginary);
-                    Real Part(EDecimal part, EDecimal scale) => fromMachineNumbers ? Real.FromMachineNumber(part) : Real.CreateAtScale(part, scale);
+                    Real Part(EDecimal part, EDecimal scale, double machine) => fromMachineNumbers ? Real.FromMachineNumber(part, machine) : Real.CreateAtScale(part, scale);
                     if (imaginary.IsZero)
-                        return Part(real, realScale);
+                        return Part(real, realScale, realMachine);
                     if (real.IsNaN() || imaginary.IsNaN())
                         return Real.NaN;
                     if (imaginary.IsFinite && !imaginaryScale.IsZero && imaginary.Abs().LessThan(
                         ReferenceEquals(imaginaryScale, EDecimal.One) ? MathS.Settings.DowncastingTolerance : MathS.Settings.DowncastingTolerance.Multiply(imaginaryScale.Abs())))
-                        return Part(real, realScale);
+                        return Part(real, realScale, realMachine);
                     else
-                        return new Complex(Part(real, realScale), Part(imaginary, imaginaryScale));
+                        return new Complex(Part(real, realScale, realMachine), Part(imaginary, imaginaryScale, imaginaryMachine));
                 }
 
                 /// <summary>
@@ -328,7 +342,7 @@ namespace AngouriMath
                 /// as the value that literal actually holds and not as one tenth.
                 /// </summary>
                 public static implicit operator Complex(float value)
-                    => FromMachineNumbers(EDecimal.FromSingle(value), EDecimal.Zero);
+                    => FromMachineNumbers(EDecimal.FromSingle(value), EDecimal.Zero, value, 0);
 
                 /// <summary>
                 /// The value as a <see cref="Complex"/> with no imaginary part, read as the
@@ -336,7 +350,7 @@ namespace AngouriMath
                 /// written as.
                 /// </summary>
                 public static implicit operator Complex(double value)
-                    => FromMachineNumbers(EDecimal.FromDouble(value), EDecimal.Zero);
+                    => FromMachineNumbers(EDecimal.FromDouble(value), EDecimal.Zero, value, 0);
 
                 /// <summary>
                 /// The value as a <see cref="Complex"/> with no imaginary part. A
@@ -351,7 +365,7 @@ namespace AngouriMath
                 /// <see langword="double"/> parts and their precision.
                 /// </summary>
                 public static implicit operator Complex(System.Numerics.Complex value) =>
-                    FromMachineNumbers(EDecimal.FromDouble(value.Real), EDecimal.FromDouble(value.Imaginary));
+                    FromMachineNumbers(value.Real, value.Imaginary);
 
                 /// <summary>The pair read as real and imaginary parts.</summary>
                 public static implicit operator Complex((int re, int im) v) => Create(v.re, v.im);

@@ -89,13 +89,13 @@ namespace AngouriMath
             /// The value as a <see cref="Real"/>, read as the binary <see langword="float"/> it
             /// is — so <c>0.1f</c> becomes the value that literal holds, not one tenth.
             /// </summary>
-            public static implicit operator Number(float value) => Real.FromMachineNumber(EDecimal.FromSingle(value));
+            public static implicit operator Number(float value) => Real.FromMachineNumber(EDecimal.FromSingle(value), value);
 
             /// <summary>
             /// The value as a <see cref="Real"/>, read as the binary <see langword="double"/> it
             /// is rather than as the decimal it was written as.
             /// </summary>
-            public static implicit operator Number(double value) => Real.FromMachineNumber(EDecimal.FromDouble(value));
+            public static implicit operator Number(double value) => Real.FromMachineNumber(EDecimal.FromDouble(value), value);
 
             /// <summary>
             /// The value as a <see cref="Real"/>. A <see langword="decimal"/> is decimal
@@ -108,7 +108,7 @@ namespace AngouriMath
             /// <see langword="double"/> parts and their precision.
             /// </summary>
             public static implicit operator Number(System.Numerics.Complex value)
-                => Complex.FromMachineNumbers(EDecimal.FromDouble(value.Real), EDecimal.FromDouble(value.Imaginary));
+                => Complex.FromMachineNumbers(value.Real, value.Imaginary);
             /// <summary>The big integer as an <see cref="Integer"/>, exactly and at any size.</summary>
             /// <remarks>
             /// Read as the two's-complement bytes it is, which is what
