@@ -83,6 +83,31 @@ Euler's totient is `phi(n)`, and `φ(n)` and `ϕ(n)` are refused. Each name with
 | `"divergence(x)".ToEntity()` | `divergence * x` | throws `UnrecognizedFunctionParseException` |
 | `"gradient(x^2*y, [x, y])".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
+### A definite integral with a parameter takes the limit at an infinite bound
+
+**Silent: an unsettled value is now settled.** An infinite bound was substituted into the antiderivative, and where a
+parameter stood beside it the infinity stayed inside a function: `erf(+oo - y)`, since `y` could itself be infinite. The
+limit is now taken there, reading the parameter as the finite value the integral is a function of
+([#2451](https://github.com/asc-community/AngouriMath/issues/2451)). It is taken only where the antiderivative was read to
+be continuous across the range, and only where the limit settles without an infinity left in it; otherwise the value is as
+before. With `Simplify`:
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `integral(e^(-(t-y)^2), t, -oo, +oo)` | `sqrt(pi) * (erf(+oo - y) - erf(-oo - y)) / 2` | `sqrt(pi)` |
+| `integral(e^(-(t-y)^2), t, 0, +oo)` | `sqrt(pi) * (erf(+oo - y) - erf(-y)) / 2` | `sqrt(pi) * (1/2 + -1/2 * erf(-y))` |
+| `integral(1/(1+(t-y)^2), t, -oo, +oo)` | `arctan((+oo + (-2) * y) / 2) - arctan(((-2) * y - +oo) / 2)` | `pi` |
+| `integral(1/(1+(t-y)^2), t, 0, +oo)` | `arctan((+oo + (-2) * y) / 2) - arctan(-y)` | `pi / 2 - arctan(-y)` |
+| `integral(t*e^(-(t-y)^2), t, -oo, +oo)` | `(y * sqrt(pi) * (erf(+oo - y) - erf(-oo - y)) + e ^ (-(-oo - y) ^ 2) - e ^ (-(+oo - y) ^ 2)) / 2` | `sqrt(pi) * y` |
+| `integral(e^(-t^2-2*y*t), t, -oo, +oo)` | `sqrt(pi) * (-erf(y - +oo) * e ^ y ^ 2 + erf(y + +oo) * e ^ y ^ 2) / 2` | `sqrt(pi) * e ^ y ^ 2` |
+| `integral(e^(-y*t), t, 0, +oo)` | `(1 - e ^ ((-oo) * y)) / y` | unchanged: the limit depends on the sign of `y` |
+| `integral(1/(t-y)^2, t, 0, +oo)` | `(-oo) / (y * (+oo - y))` | unchanged: the pole at `y` cannot be placed |
+| `integral(1/(1+(t-y)^2), t, -oo, y)` | `-arctan(((-2) * y - +oo) / 2)` | unchanged: a symbolic bound |
+
+The continuity read is on the real line with real parameters, as it is for finite bounds: for a non-real `y` with
+`|Im y| > 1`, `arctan(t - y)` crosses arctan's cut and the integral of `1/(1 + (t - y)^2)` over the line is 0, not `pi`.
+That was already the answer at a concrete such `y` -- `integral(1/(1+(t-3i)^2), t, -oo, +oo)` is `pi` in 2.7.0 and now.
+
 ### `dot` and `cross` of a name for a vector are nodes
 
 **Not silent: what was refused now parses.** `dot(a, b)` and `cross(a, b)` threw `InvalidArgumentParseException`
