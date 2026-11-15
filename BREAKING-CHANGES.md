@@ -61,6 +61,28 @@ The calculus nodes and the binders — `derivative`, `integral`, `limit`, `sum`,
 names the node and says to compile `.Evaled` or `Simplify()` instead. The LINQ compiler said the bound variable was not
 among the arguments.
 
+### `factorize`, `nextprime`, `divisors`, `gradient`, `divergence` and `φ` are refused by name
+
+**Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as
+products.** `factorize(360)` was `factorize * 360` and simplified to `360 * factorize`. The library has no node for any
+of them, so each is refused with what to write today: in C#, `MathS.NumberTheory.Factorize(n)` for the prime factors of
+an integer and `Factorize()` to factor an expression; `prime(primepi(n) + 1)` for the least prime above `n`;
+`divisorsigma(0, n)` and `divisorsigma(1, n)` for the count and the sum of the divisors
+([#2449](https://github.com/asc-community/AngouriMath/issues/2449)); `jacobian([f], [x, y])` for a gradient and
+`trace(jacobian(F, [x, y]))` for a divergence ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+Euler's totient is `phi(n)`, and `φ(n)` and `ϕ(n)` are refused. Each name without a bracket is still a variable.
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"factorize(360)".ToEntity()` | `factorize * 360` | throws `UnrecognizedFunctionParseException` |
+| `"nextprime(10)".ToEntity()` | `nextprime * 10` | throws `UnrecognizedFunctionParseException`: write `prime(primepi(n) + 1)` |
+| `"divisors(12)".ToEntity()` | `divisors * 12` | throws `UnrecognizedFunctionParseException`: write `divisorsigma(0, n)` or `divisorsigma(1, n)` |
+| `"φ(10)".ToEntity()` | `φ * 10` | throws `UnrecognizedFunctionParseException`: write `phi(n)` |
+| `"ϕ(10)".ToEntity()` | `ϕ * 10` | throws `UnrecognizedFunctionParseException`: write `phi(n)` |
+| `"gradient(x^2)".ToEntity()` | `gradient * x ^ 2` | throws `UnrecognizedFunctionParseException` |
+| `"divergence(x)".ToEntity()` | `divergence * x` | throws `UnrecognizedFunctionParseException` |
+| `"gradient(x^2*y, [x, y])".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
+
 ---
 
 ### A system row that is not a solution declines the system

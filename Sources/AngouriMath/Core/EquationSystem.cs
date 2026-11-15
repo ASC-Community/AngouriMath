@@ -72,7 +72,7 @@ namespace AngouriMath.Core
         /// <c>x</c> and <c>y</c> is two rows, <c>x = t_1</c> with <c>y</c> the positive and the
         /// negative square root of <c>1 - t_1^2</c>.
         /// </param>
-        /// <return>
+        /// <returns>
         /// If there exists at least one solution, returns a solution matrix
         /// The first axis of the matrix corresponds to the number of solutions,
         /// the second one corresponds to the number of variables.
@@ -80,7 +80,13 @@ namespace AngouriMath.Core
         /// The i-th column of the matrix represents the possible values of the i-th variable.
         /// 
         /// If no solution was found, returns a null.
-        /// </return>
+        /// </returns>
+        /// <exception cref="Exceptions.NotSufficientlySupportedException">
+        /// The work the call may spend ran out before the system was solved: the budget in
+        /// <see cref="MathS.Settings.Budget"/> where it is set, and the solver's own where it
+        /// is not. This is "not settled", not
+        /// "no solution"; raise the budget to allow more.
+        /// </exception>
         public Matrix? Solve(params Variable[] vars) => EquationSolver.SolveSystem(equations, vars);
 
         /// <returns>

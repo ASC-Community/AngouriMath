@@ -719,6 +719,17 @@ atom returns[Entity value]
     | 'factorial2(' args = function_arguments ')' { $value = NotAFunctionHere("factorial2", "the double factorial is the postfix n!!"); }
     | 'fractionalpart(' args = function_arguments ')' { $value = NotAFunctionHere("fractionalpart", "write x mod 1, which is in [0, 1)"); }
     | 'quotient(' args = function_arguments ')' { $value = NotAFunctionHere("quotient", "write floor(a / b)"); }
+    /* Names another system calls a function and this library has no node for, each refused
+       with what can be written today: factorize(360) was factorize * 360, and φ(10) was φ * 10.
+       factorize, nextprime and divisors: https://github.com/asc-community/AngouriMath/issues/2449.
+       gradient and divergence: https://github.com/asc-community/AngouriMath/issues/2182 */
+    | 'factorize(' args = function_arguments ')' { $value = NotImplementedFunction("factorize", "factorization node yet; in C#, MathS.NumberTheory.Factorize(n) gives the prime factors of an integer and Factorize() factors an expression"); }
+    | 'nextprime(' args = function_arguments ')' { $value = NotImplementedFunction("nextprime", "nextprime yet; prime(primepi(n) + 1) is the least prime greater than n"); }
+    | 'divisors(' args = function_arguments ')' { $value = NotImplementedFunction("divisors", "set of divisors yet; divisorsigma(0, n) counts them and divisorsigma(1, n) is their sum"); }
+    | 'gradient(' args = function_arguments ')' { $value = NotImplementedFunction("gradient", "gradient yet; jacobian([f], [x, y]) is the row of partial derivatives of f"); }
+    | 'divergence(' args = function_arguments ')' { $value = NotImplementedFunction("divergence", "divergence yet; trace(jacobian(F, [x, y])) is the divergence of F"); }
+    | 'φ(' args = function_arguments ')' { $value = NotAFunctionHere("φ", "Euler's totient is written phi(n)"); }
+    | 'ϕ(' args = function_arguments ')' { $value = NotAFunctionHere("ϕ", "Euler's totient is written phi(n)"); }
     | 'domain(' args = function_arguments ')' 
         { 
             Assert("domain", 2, $args.list.Count); 
