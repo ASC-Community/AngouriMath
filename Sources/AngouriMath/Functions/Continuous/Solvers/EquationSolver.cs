@@ -288,6 +288,21 @@ namespace AngouriMath.Functions.Algebra
         /// Anything else is kept, as a root of one equation is: a residual that cannot be
         /// evaluated, or one too small next to its terms to be told from rounding.
         /// </para>
+        /// <para>
+        /// Except where the row is exact and an interval enclosing a residual leaves out zero,
+        /// which declines the system. An exact row is a solution only where every residual is
+        /// exactly zero, so such a row is none, however small the residual is next to its terms;
+        /// and that the tolerance took it for one means rounding reached the elimination, which
+        /// can have lost true rows as well as made this one. In
+        /// <c>y^2 - 2, x^2 + (P - Q y) x - 3</c>, with <c>(1 + sqrt(2))^70 = P + Q sqrt(2)</c>,
+        /// <c>P - Q sqrt(2)</c> is <c>1.6e-27</c>, and the zero tolerance of one equation's solve
+        /// reads it, and terms of that size, as nothing: the row <c>[-2P, -sqrt(2)]</c> leaves
+        /// <c>-2</c> against terms of <c>4e53</c>, under a tolerance relative to them, and all
+        /// four solutions were gone. Rounding reaches an exact elimination through downcasting,
+        /// which v3 removes; the decline is to be reconsidered then, and the check kept.
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/2446">#2446</a>,
+        /// <a href="https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225">#1019</a>
+        /// </para>
         /// </remarks>
         private static List<List<Entity>>? RowsThatHold(List<Entity> equations, Variable[] variables, List<List<Entity>> rows)
         {
@@ -305,10 +320,65 @@ namespace AngouriMath.Functions.Algebra
                     continue;
                 if (residuals.Any(residual => residual.Vars.Any() && StatementSolver.IsEvidenceAgainst(AtASamplePoint(residual, own))))
                     return null;
+                if (IsExact(row) && residuals.Any(residual => !residual.Vars.Any() && IsShownNotZero(residual)))
+                    return null;
                 kept.Add(row);
             }
             return WithoutDecimalCopies(kept);
         }
+
+        /// <summary>Whether no entry of <paramref name="row"/> has a number in it that is not exact.</summary>
+        private static bool IsExact(List<Entity> row)
+            => !row.Any(entry => entry.Nodes.Any(node => node is Number { IsExact: false }));
+
+        /// <summary>
+        /// Whether an interval enclosing <paramref name="residual"/>, a number with no symbol in
+        /// it, leaves out zero. Interval arithmetic rounds each bound outward, so that is a proof
+        /// and not an estimate; an interval that holds zero, or that cannot be worked out, proves
+        /// nothing either way.
+        /// </summary>
+        /// <remarks>
+        /// To as many decimal places as evaluation works to significant digits: a residual under
+        /// that is what the tolerance takes for zero whatever the terms are, and one that
+        /// evaluation took for zero above it is under about half of the digits next to its terms.
+        /// The digits are
+        /// significant ones, so where the terms are large the first interval is wider than that,
+        /// and it is worked out once more with the digits the terms take besides: with
+        /// <c>(1 + sqrt(2))^140</c> in the coefficients the terms are near <c>1e107</c>, and the
+        /// residual <c>-2</c> is inside an interval of a hundred digits.
+        /// </remarks>
+        private static bool IsShownNotZero(Entity residual)
+        {
+            var precision = MathS.Settings.DecimalPrecisionContext.Value.Precision;
+            var digits = precision.IsZero || !precision.CanFitInInt32() ? 100 : System.Math.Max(precision.ToInt32Unchecked(), 30);
+            if (Numerics.PreciseEvaluation.Of(residual, digits) is not { } enclosure)
+                return false;
+            if (Excludes(enclosure))
+                return true;
+            var width = PeterO.Numbers.EDecimal.Max(
+                enclosure.Re.High.Subtract(enclosure.Re.Low), enclosure.Im.High.Subtract(enclosure.Im.Low));
+            if (width.IsZero)
+                return false;
+            // The decimal exponent of the width: how many more digits put it under 10^-digits.
+            // Ten or fewer are what rounding leaves of terms near one, which is every row whose
+            // terms are not large, and are not worth a second evaluation.
+            var magnitude = width.Exponent.Add(width.UnsignedMantissa.GetDigitCountAsEInteger()).Subtract(1);
+            var more = magnitude.Add(digits);
+            if (more.CompareTo(10) <= 0)
+                return false;
+            if (!more.CanFitInInt32() || more.ToInt32Unchecked() > MostMoreDigits)
+                more = MostMoreDigits;
+            return Numerics.PreciseEvaluation.Of(residual, digits + more.ToInt32Unchecked()) is { } finer && Excludes(finer);
+
+            static bool Excludes(Numerics.PreciseComplexInterval enclosure)
+                => enclosure.Re.Mignitude.Sign > 0 || enclosure.Im.Mignitude.Sign > 0;
+        }
+
+        /// <summary>
+        /// The most digits <see cref="IsShownNotZero"/> adds for large terms, which bounds what one
+        /// residual costs: a thousand digits is terms past <c>1e900</c>.
+        /// </summary>
+        private const int MostMoreDigits = 1000;
 
         /// <summary>
         /// <paramref name="rows"/> without a row that is a copy of another: one equal to an
