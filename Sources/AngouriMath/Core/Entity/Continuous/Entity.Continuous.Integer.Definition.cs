@@ -76,10 +76,20 @@ namespace AngouriMath
                 public Integer Phi() => EInteger.Phi();
 
                 /// <summary>
-                /// Factorization of integer
+                /// The prime factorisation of a positive integer: each prime that divides it with its power, the
+                /// smallest prime first. Empty for 1, the empty product.
                 /// </summary>
+                /// <exception cref="Core.Exceptions.InvalidNumberException">
+                /// Thrown where the integer is 0 or negative. 0 has no factorisation into primes, and a negative
+                /// integer factors as -1 times the factorisation of its absolute value, which a list of primes
+                /// cannot write; so neither is answered as a list, which would claim the integer is 1 or its
+                /// absolute value. https://github.com/asc-community/AngouriMath/issues/2466
+                /// </exception>
                 public IEnumerable<(Integer prime, Integer power)> Factorize() =>
-                    EInteger.Factorize().Select(x => ((Integer) x.prime, (Integer) x.power));
+                    EInteger.Sign > 0
+                    ? EInteger.Factorize().Select(x => ((Integer) x.prime, (Integer) x.power))
+                    : throw new Core.Exceptions.InvalidNumberException(
+                        $"A prime factorisation is of a positive integer, and {EInteger} was given");
 
                 /// <summary>
                 /// Count of all divisors of an integer

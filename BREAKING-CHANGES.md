@@ -61,6 +61,23 @@ The calculus nodes and the binders — `derivative`, `integral`, `limit`, `sum`,
 names the node and says to compile `.Evaled` or `Simplify()` instead. The LINQ compiler said the bound variable was not
 among the arguments.
 
+### `MathS.NumberTheory.Factorize` refuses 0 and negative integers
+
+**Not silent: a wrong answer now throws.** `Factorize` answered 0, -1 and -12 with the empty list, which is the
+factorisation of 1. 0 has no factorisation into primes, and a negative integer is -1 times the factorisation of its
+absolute value, which a list of primes cannot write. Each now throws `InvalidNumberException`, the type for a numeric
+argument an operation cannot use, as a negative term count for a Taylor expansion does. 1 is still the empty list. `phi`,
+`divisorsigma`, `mobius`, `primenu`, `primeomega`, `valuation` and `CountDivisors` do not go through it and are unchanged
+([#2466](https://github.com/asc-community/AngouriMath/issues/2466)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `MathS.NumberTheory.Factorize(0)` | `[]` | throws `InvalidNumberException` |
+| `MathS.NumberTheory.Factorize(-1)` | `[]` | throws `InvalidNumberException` |
+| `MathS.NumberTheory.Factorize(-12)` | `[]` | throws `InvalidNumberException` |
+| `MathS.NumberTheory.Factorize(1)` | `[]` | unchanged |
+| `MathS.NumberTheory.Factorize(360)` | `[(2, 3), (3, 2), (5, 1)]` | unchanged |
+
 ### A definite integral whose antiderivative splits into cases finds the breaks of each case
 
 **Silent: a wrong value is corrected.** The antiderivative of `1/(t^2 + y^2)` is a case split on `y`, and its case

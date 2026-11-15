@@ -8,6 +8,8 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using AngouriMath.Core.Exceptions;
+using AngouriMath.Core.Operations;
 using AngouriMath.Extensions;
 using PeterO.Numbers;
 using Xunit;
@@ -79,6 +81,50 @@ namespace AngouriMath.Tests.Common
             Assert.Equal("(2 ^ 89 - 1) ^ (k - 1) * (2 ^ 89 - 2)".ToEntity().Simplify(),
                 Within(() => "phi((2^89 - 1)^k)".ToEntity().Simplify()));
         }
+
+        /// <summary>
+        /// An empty list is the factorisation of 1, so it answered 0, -1 and -12 as though each were 1.
+        /// https://github.com/asc-community/AngouriMath/issues/2466
+        /// </summary>
+        [Theory]
+        [InlineData("0")]
+        [InlineData("-1")]
+        [InlineData("-12")]
+        [InlineData("-18446744073709551616")]
+        public void Issue2466_ANumberThatIsNotPositiveIsRefused(string number)
+        {
+            var integer = Integer.Create(EInteger.FromString(number));
+            Assert.Throws<InvalidNumberException>(() => MathS.NumberTheory.Factorize(integer));
+            Assert.Throws<InvalidNumberException>(() => integer.Factorize());
+            Assert.Throws<InvalidNumberException>(() => Catalogue.PrimeFactorization.Ask(integer));
+        }
+
+        [Fact]
+        public void Issue2466_OneIsTheEmptyProduct()
+            => Assert.Empty(MathS.NumberTheory.Factorize(Integer.One));
+
+        /// <summary>
+        /// The functions of a factorisation do not ask <see cref="MathS.NumberTheory.Factorize"/>, and keep their
+        /// own answers at 0 and below. https://github.com/asc-community/AngouriMath/issues/2466
+        /// </summary>
+        [Theory]
+        [InlineData("phi(0)", "0")]
+        [InlineData("phi(-12)", "0")]
+        [InlineData("divisorsigma(1, -12)", "NaN")]
+        [InlineData("divisorsigma(1, 0)", "NaN")]
+        [InlineData("mobius(-12)", "NaN")]
+        [InlineData("primenu(-12)", "NaN")]
+        [InlineData("primeomega(0)", "NaN")]
+        [InlineData("valuation(-12, 2)", "2")]
+        [InlineData("valuation(0, 2)", "+oo")]
+        public void Issue2466_TheFunctionsOfAFactorisationKeepTheirAnswers(string input, string expected)
+            => Assert.Equal(expected == "NaN" ? MathS.NaN : expected.ToEntity(), input.ToEntity().Evaled);
+
+        [Theory]
+        [InlineData("0")]
+        [InlineData("-12")]
+        public void Issue2466_DivisorsOfANumberThatIsNotPositiveStillCountZero(string number)
+            => Assert.Equal(Integer.Zero, MathS.NumberTheory.CountDivisors(Integer.Create(EInteger.FromString(number))));
 
         private static T Within<T>(Func<T> evaluation)
         {
