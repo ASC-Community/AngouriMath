@@ -5,6 +5,7 @@
 // Website: https://am.angouri.org.
 //
 
+using System.Linq;
 using AngouriMath.Extensions;
 using Xunit;
 
@@ -90,5 +91,77 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("1/x", "1", "+oo", "+oo")]
         public void ABoundWithAValueKeepsIt(string integrand, string from, string to, string value)
             => Assert.Equal(value.ToEntity(), Definite(integrand, from, to));
+
+        private static Entity DefiniteOverT(string integrand, string from, string to)
+            => MathS.Integral(integrand.ToEntity(), "t", from.ToEntity(), to.ToEntity()).Simplify();
+
+        private static bool HoldsAnInfinity(Entity expr)
+            => expr.Nodes.Any(node => node is Entity.Number.Complex number
+                && (!number.RealPart.EDecimal.IsFinite || !number.ImaginaryPart.EDecimal.IsFinite));
+
+        private static void AgreeAtRealY(Entity got, Entity want, string what)
+        {
+            foreach (var at in new[] { -2.3, -0.7, 0, 0.4, 1.9 })
+            {
+                var g = got.Substitute("y", at).EvalNumerical();
+                var w = want.Substitute("y", at).EvalNumerical();
+                Assert.True(System.Math.Abs((double)(g - w).RealPart) + System.Math.Abs((double)(g - w).ImaginaryPart)
+                            < 1e-12 * System.Math.Max(1, System.Math.Abs((double)w.RealPart)),
+                    $"{what} is {g} at y = {at}, where it should be {w}");
+            }
+        }
+
+        /// <summary>
+        /// An infinite bound substituted into an antiderivative with a parameter left the infinity inside it,
+        /// <c>erf(+oo - y)</c>, which the arithmetic does not settle; the limit there does, reading <c>y</c> as the
+        /// finite value an integral with a parameter is a function of. Checked against the closed forms, which were
+        /// checked against quadrature to forty digits at the same five points.
+        /// https://github.com/asc-community/AngouriMath/issues/2451
+        /// </summary>
+        [Theory]
+        [InlineData("e^(-(t-y)^2)", "-oo", "+oo", "sqrt(pi)")]
+        [InlineData("e^(-(t-y)^2)", "0", "+oo", "sqrt(pi) * (1 + erf(y)) / 2")]
+        [InlineData("e^(-(t-y)^2)", "-oo", "0", "sqrt(pi) * (1 - erf(y)) / 2")]
+        [InlineData("e^(-(t-y)^2)", "1", "+oo", "sqrt(pi) * (1 - erf(1 - y)) / 2")]
+        [InlineData("1/(1+(t-y)^2)", "-oo", "+oo", "pi")]
+        [InlineData("1/(1+(t-y)^2)", "0", "+oo", "pi / 2 + arctan(y)")]
+        [InlineData("t * e^(-(t-y)^2)", "-oo", "+oo", "sqrt(pi) * y")]
+        [InlineData("t^2 * e^(-(t-y)^2)", "-oo", "+oo", "sqrt(pi) * (1/2 + y^2)")]
+        [InlineData("e^(-(t-y)^2/2)", "-oo", "+oo", "sqrt(2 pi)")]
+        [InlineData("e^(-t^2 - 2 y t)", "-oo", "+oo", "sqrt(pi) * e^(y^2)")]
+        public void Issue2451_AnInfiniteBoundWithAParameterIsALimit(string integrand, string from, string to, string value)
+        {
+            var result = DefiniteOverT(integrand, from, to);
+            Assert.DoesNotContain(result.Nodes, node => node is Entity.Integralf);
+            Assert.False(HoldsAnInfinity(result), $"{result} still holds an infinity");
+            AgreeAtRealY(result, value.ToEntity(), $"the integral of {integrand} from {from} to {to}");
+        }
+
+        /// <summary>
+        /// And differentiated in the parameter, under the integral sign: the integral of <c>f(t - y)</c> from 0 to
+        /// <c>+oo</c> has derivative <c>f(-y)</c> in <c>y</c>, since <c>f</c> vanishes at the infinite end.
+        /// https://github.com/asc-community/AngouriMath/issues/2451
+        /// </summary>
+        [Theory]
+        [InlineData("e^(-(t-y)^2)", "e^(-y^2)")]
+        [InlineData("1/(1+(t-y)^2)", "1/(1+y^2)")]
+        public void Issue2451_TheIntegralDifferentiatesBackInItsParameter(string integrand, string derivative)
+            => AgreeAtRealY(DefiniteOverT(integrand, "0", "+oo").Differentiate("y"), derivative.ToEntity(),
+                $"d/dy of the integral of {integrand} from 0 to +oo");
+
+        /// <summary>
+        /// Where the limit depends on more than the parameter being finite it is not decided, and the value is left as
+        /// the substitution gave it: <c>e^(-y t)</c> vanishes at <c>+oo</c> only for a positive <c>y</c>. Nor is it
+        /// taken where a break of the antiderivative moves with the parameter and cannot be listed: <c>1/(t - y)^2</c>
+        /// over <c>[0, +oo)</c> diverges for a positive <c>y</c>, and <c>1/(t^2 + y^2)</c>'s logarithm for
+        /// <c>y^2 &lt; 0</c> would answer the principal value, 0, where the integral does not exist.
+        /// https://github.com/asc-community/AngouriMath/issues/2451
+        /// </summary>
+        [Theory]
+        [InlineData("e^(-y*t)", "0", "+oo")]
+        [InlineData("1/(t-y)^2", "0", "+oo")]
+        [InlineData("1/(t^2+y^2)", "-oo", "+oo")]
+        public void Issue2451_ALimitThatDependsOnTheParameterIsNotTaken(string integrand, string from, string to)
+            => Assert.True(HoldsAnInfinity(DefiniteOverT(integrand, from, to)));
     }
 }

@@ -76,17 +76,25 @@ namespace AngouriMath
         private static Entity? AcrossTheRange(Entity antiderivative, Variable x, Entity from, Entity to)
         {
             if (from.Evaled is not Number.Real { IsNaN: false } lower || to.Evaled is not Number.Real { IsNaN: false } upper
-                || lower == upper
-                || (lower < upper
-                    ? AntiderivativeBreaks.Inside(antiderivative, x, lower, upper)
-                    : AntiderivativeBreaks.Inside(antiderivative, x, upper, lower)) is not { Count: > 0 } breaks)
-                return AtTheBound(antiderivative, x, to, from) is { } atTheTop && AtTheBound(antiderivative, x, from, to) is { } atTheBottom
+                || lower == upper)
+                return AtTheBound(antiderivative, x, to, from, continuousInside: false) is { } atTheTop
+                    && AtTheBound(antiderivative, x, from, to, continuousInside: false) is { } atTheBottom
+                    ? atTheTop - atTheBottom
+                    : null;
+            var breaks = lower < upper
+                ? AntiderivativeBreaks.Inside(antiderivative, x, lower, upper)
+                : AntiderivativeBreaks.Inside(antiderivative, x, upper, lower);
+            if (breaks is not { Count: > 0 })
+                // An empty list is a range the antiderivative was read to be continuous across; no list, one where a
+                // break could not be listed.
+                return AtTheBound(antiderivative, x, to, from, continuousInside: breaks is not null) is { } atTheTop
+                    && AtTheBound(antiderivative, x, from, to, continuousInside: breaks is not null) is { } atTheBottom
                     ? atTheTop - atTheBottom
                     : null;
             if (lower > upper)
                 breaks.Reverse();
             // Not across a break of an antiderivative in the incomplete gamma function: see AtTheBound.
-            if (HoldsAnIncompleteGammaFunction(antiderivative) || AtTheBound(antiderivative, x, from, to) is not { } atTheStart)
+            if (HoldsAnIncompleteGammaFunction(antiderivative) || AtTheBound(antiderivative, x, from, to, continuousInside: true) is not { } atTheStart)
                 return null;
             var total = -atTheStart;
             foreach (var (at, _) in breaks)
@@ -99,7 +107,7 @@ namespace AngouriMath
                     return null;
                 total += before - after;
             }
-            return AtTheBound(antiderivative, x, to, from) is { } atTheEnd ? total + atTheEnd : null;
+            return AtTheBound(antiderivative, x, to, from, continuousInside: true) is { } atTheEnd ? total + atTheEnd : null;
         }
 
         private static bool HoldsAnIncompleteGammaFunction(Entity expr)
@@ -125,12 +133,19 @@ namespace AngouriMath
         /// undefined, the value stays undefined, as it is for <c>sin(x)</c> from 0 to <c>+oo</c>,
         /// whose antiderivative has no limit there. Where the limit is not decided there is no value,
         /// <see langword="null"/>, and the integral is left as written.
+        /// <para>
+        /// An infinite bound substituted can also leave an infinity standing inside the value, where the
+        /// arithmetic cannot settle it because a parameter is in the way: <c>erf(+oo - y)</c>, the antiderivative
+        /// of <c>e^(-(t - y)^2)</c> at <c>+oo</c>. That is not a value either, and the limit is taken there too
+        /// (<paramref name="continuousInside"/> permitting; see <see cref="AtAnInfiniteBound"/>).
+        /// https://github.com/asc-community/AngouriMath/issues/2451
+        /// </para>
         /// </remarks>
-        private static Entity? AtTheBound(Entity antiderivative, Variable x, Entity bound, Entity otherBound)
+        private static Entity? AtTheBound(Entity antiderivative, Variable x, Entity bound, Entity otherBound, bool continuousInside)
         {
             var value = antiderivative.Substitute(x, bound);
             if (!value.InnerSimplified.IsNaN)
-                return value;
+                return continuousInside && AtAnInfiniteBound(antiderivative, x, bound, value) is { } atInfinity ? atInfinity : value;
             // The bounds' values, so that a bound written as pi or 2 pi is placed as well as 3.
             ApproachFrom? side = (bound.Evaled, otherBound.Evaled) switch
             {
@@ -155,6 +170,56 @@ namespace AngouriMath
             if (limit.Nodes.Any(node => node is Limitf))
                 return null;
             return limit.IsNaN ? value : limit;
+        }
+
+        /// <summary>
+        /// The antiderivative's limit at an infinite bound, where substituting the bound left an infinity inside
+        /// the value, or <see langword="null"/> to keep the substituted value as it was.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>erf(+oo - y)</c> is left as it is by the arithmetic, since <c>y</c> could itself be infinite; but an
+        /// integral with a parameter is a function of that parameter at each of its finite values, and the limit
+        /// of <c>erf(t - y)</c> as <c>t</c> grows reads <c>y</c> as exactly that, a finite constant, and is 1. So
+        /// <c>e^(-(t - y)^2)</c> over the line is <c>sqrt(pi)</c> rather than a difference of two unsettled error
+        /// functions. https://github.com/asc-community/AngouriMath/issues/2451
+        /// </para>
+        /// <para>
+        /// It is taken only where the antiderivative was read to be continuous across the range, so that the limit
+        /// at the end is the whole integral and not the last piece of it: <c>1/(t^2 + y^2)</c>'s antiderivative
+        /// for <c>y^2 &lt; 0</c> is a logarithm with zeros at <c>t = ±sqrt(-y^2)</c>, which cannot be listed for a
+        /// symbolic <c>y</c>, and taking its limits would answer 0, the principal value, where a concrete <c>y = i</c>
+        /// answers <c>NaN</c>. What the breaks read is the real line with the parameters real: <c>arctan(t - y)</c>
+        /// is continuous in <c>t</c> for every real <c>y</c>, but for <c>|Im y| &gt; 1</c> it crosses arctan's cut,
+        /// and the integral of <c>1/(1 + (t - y)^2)</c> over the line is 0 there and not <c>pi</c>. That is the
+        /// answer at a concrete such <c>y</c> as well, and before this limit was taken; it is the antiderivative's
+        /// continuity that is not read off the real line, not this limit.
+        /// </para>
+        /// <para>
+        /// A limit that is undecided, undefined, or still holds an infinity inside it -- <c>e^(-y t)</c> at
+        /// <c>+oo</c> depends on the sign of <c>y</c>, and the limit says so by staying <c>e^(+oo * -y)</c> -- leaves
+        /// the substituted value as it was.
+        /// </para>
+        /// </remarks>
+        private static Entity? AtAnInfiniteBound(Entity antiderivative, Variable x, Entity bound, Entity value)
+        {
+            if (bound.Evaled is not Number.Real { EDecimal: var at } || !at.IsInfinity())
+                return null;
+            var settled = value.InnerSimplified;
+            if (settled is Number || !HoldsAnInfinity(settled) || HoldsAnIncompleteGammaFunction(antiderivative))
+                return null;
+            var limit = LimitAtTheBound(antiderivative, x, bound, at.IsPositiveInfinity() ? ApproachFrom.Left : ApproachFrom.Right);
+            if (limit.IsNaN || limit.Nodes.Any(node => node is Limitf) || (limit is not Number && HoldsAnInfinity(limit)))
+                return null;
+            return limit;
+        }
+
+        private static bool HoldsAnInfinity(Entity expr)
+        {
+            foreach (var node in expr.Nodes)
+                if (node is Number.Complex number && (!number.RealPart.EDecimal.IsFinite || !number.ImaginaryPart.EDecimal.IsFinite))
+                    return true;
+            return false;
         }
 
         /// <summary>
