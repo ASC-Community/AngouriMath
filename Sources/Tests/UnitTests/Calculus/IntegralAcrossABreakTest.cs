@@ -133,5 +133,29 @@ namespace AngouriMath.Tests.Calculus
         [InlineData("1/(1 + (x - i)^2)", "-1", "1")]
         public void Issue2460_ACrossingThatCannotBeSettledIsNotAnswered(string integrand, string from, string to)
             => Assert.Contains(Definite(integrand, from, to).Nodes, node => node is Entity.Integralf);
+
+        /// <summary>
+        /// The antiderivative of <c>1/(x^2 + y^2)</c> is a case split on <c>y</c>, and its case <c>y = 0</c>, <c>-1/x</c>,
+        /// has a pole at 0 that was not looked for, since the breaks were read on the whole split and the logarithm of
+        /// the case <c>y^2 &lt; 0</c> could not be listed: the integral over <c>[-1, 1]</c> was <c>-2</c> at
+        /// <c>y = 0</c>. Each case is now taken across the range by itself, and that one diverges, as <c>1/x^2</c> does.
+        /// https://github.com/asc-community/AngouriMath/issues/2461
+        /// </summary>
+        [Theory]
+        [InlineData("1/(x^2 + y^2)", "-1", "1", "+oo")]
+        [InlineData("1/(x^2 + y^2)", "-oo", "+oo", "+oo")]
+        [InlineData("1/(x^2 + y^2)", "1", "2", "1/2")]
+        [InlineData("1/(x^2 + y^2)", "1", "-1", "-oo")]
+        public void Issue2461_TheCaseOfAParameterIsTakenAcrossTheRangeByItself(string integrand, string from, string to, string atZero)
+            => Assert.Equal(atZero.ToEntity().Simplify(), Definite(integrand, from, to).Substitute("y", 0).Simplify());
+
+        /// <summary>And the other cases are as they were: <c>2 arctan(1/|y|)/|y|</c> over <c>[-1, 1]</c> for a real <c>y</c>.</summary>
+        [Theory]
+        [InlineData(0.5)]
+        [InlineData(-0.7)]
+        [InlineData(2)]
+        public void Issue2461_ANonzeroParameterKeepsItsValue(double y)
+            => AgreesWith(Definite("1/(x^2 + y^2)", "-1", "1").Substitute("y", y).Simplify(),
+                2 * System.Math.Atan(1 / System.Math.Abs(y)) / System.Math.Abs(y), 0, $"the integral of 1/(x^2 + y^2) over [-1, 1] at y = {y}");
     }
 }
