@@ -40,7 +40,32 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
-## Unreleased — since 2.7.0
+## 2.8.0 — since 2.7.0
+
+**Read these first.**
+
+- **An equation with infinitely many roots is answered with all of them, as an indexed union, not a `FiniteSet`.**
+  `SolveEquation` and `Solve` over the complex numbers give `union({ ln(2) + 2 * pi * i * n }, n in ZZ)` for `e^x = 2`,
+  and the trigonometric and Lambert W families are unions too. Code that takes a solver's answer apart as a
+  `FiniteSet` sees another node. Over the reals an exponential equation is answered as before. See *A family of roots
+  is an indexed union, and an exponential equation has all of its roots*.
+- **Names that read differently.** Each of these was read as something else on 2.7.0; code that used the name for
+  something of its own changes meaning, except where the entry says the name is now refused.
+  - `factorization(…)` and `primefactors(…)` are functions, where they were products. See *`factorization(n)` and
+    `primefactors(n)` are functions*.
+  - `factorize(…)`, `nextprime(…)`, `divisors(…)`, `φ(…)` and `ϕ(…)` are refused by name, and so are the one-argument
+    `gradient(…)`, `divergence(…)` and `curl(…)`, where they were products. See *`factorize`, `nextprime`,
+    `divisors`, `gradient`, `divergence` and `φ` are refused by name* and *The gradient, the divergence and the curl*.
+  - `partialderivative(…)` with one argument is an arity error, where it was a product. See *A partial derivative:
+    `partialderivative(expr, q)`*.
+- **Silent: a value no longer depends on where it was first asked.** A string parsed inside a settings scope is parsed
+  under that scope, and a value cached on a node (`Evaled`, `InnerSimplified`, `DomainCondition`, a matrix's
+  determinant, inverse and rank, an interval's ends) is the value under the settings in force. Code that relied on a
+  value computed under other settings, on another thread, gets the value for its own. See *A string parsed inside a
+  settings scope is parsed under that scope* and *A value cached on a node is the value under the settings in force*.
+- `MathS.NumberTheory.Factorize` throws `InvalidNumberException` for 0 and negative integers, where it answered the
+  empty list. See *`MathS.NumberTheory.Factorize` refuses 0 and negative integers*.
+
 
 ### A value for a variable a derivative is taken over goes into its answer
 
