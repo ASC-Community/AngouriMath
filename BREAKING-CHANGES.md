@@ -280,6 +280,23 @@ none of the roots takes nothing out; anything else, a symbol among them, leaves 
 | `"sum(x, x in { w : w^2 - 2 = 0 } \\ { sqrt(2) })".ToEntity().Simplify()` | `sum(x, x in { w : w ^ 2 - 2 = 0 } \ { sqrt(2) })` | `-sqrt(2)` |
 | `"sum(x, x in { w : w^2 - 3w + 2 = 0 } \\ { 1 })".ToEntity().Simplify()` | `sum(x, x in { w : w ^ 2 - 3 * w + 2 = 0 } \ { 1 })` | `2` |
 
+### Shader source: `MathS.Shaders.Hlsl` and `Glsl`
+
+**Not silent: a new entry point.** `MathS.Shaders.Hlsl` and `MathS.Shaders.Glsl` print expressions as straight-line
+HLSL or GLSL, one assignment per named output with each repeated subexpression computed once, and return a
+`GeneratedSource` that holds the code or names the node it declined. The code computes what `Compile<double, …>`
+computes, except at a zero divisor and at zero to a power that is not positive, where `Compile` answers `NaN` and the
+shader ±inf (or `1.0` for an unsimplified `x^0`). The catalogue has them as `hlsl` and `glsl`. Nothing that existed
+changes. See [`Docs/Usage/Shaders.md`](Sources/AngouriMath/Docs/Usage/Shaders.md)
+([#2293](https://github.com/asc-community/AngouriMath/issues/2293)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `MathS.Shaders.Hlsl([new("r", "x^(-1/2) + sin(x) cos(x)")]).Code` | no such member | `float am0, am1;`<br>`sincos(x, am0, am1);`<br>`r = (rsqrt(x) + (am0 * am1));` |
+| `MathS.Shaders.Hlsl([new("r", "x!")]).ToString()` | no such member | ``Declined at x!: `x!` has no intrinsic in HLSL or GLSL and no straight-line form`` |
+
+---
+
 ### A system row that is not a solution declines the system
 
 **Silent: a wrong row is now no answer.** With `P + Q sqrt(2) = (1 + sqrt(2))^70`, the coefficient `P - Q y` is

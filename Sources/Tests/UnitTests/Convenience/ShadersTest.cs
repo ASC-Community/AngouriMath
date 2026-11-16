@@ -87,6 +87,15 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("pi x + e")]
         [InlineData("x / 3 + 0.25 y")]
         [InlineData("derivative(sqrt(x^2 + y^2), x)")]
+        [InlineData("x^(1/3) + y^(2/3)")]
+        [InlineData("x^(-1/3) - y^(5/3)")]
+        [InlineData("x^(1/(1 + 2))")]
+        [InlineData("cotan(x) + sec(y) + cosec(x y)")]
+        [InlineData("arccotan(x) + arcsec(y + 4) + arccosec(x - 4)")]
+        [InlineData("conjugate(x) + re(y) + im(x y) + arg(x)")]
+        [InlineData("iverson(x > y) + iverson((x > 0) xor (y > 0)) + iverson((x > 0) implies (y > 1))")]
+        [InlineData("iverson(x in [-1; 1] or x in {2, 3})")]
+        [InlineData("tanh(x y)")]
         public void ThePrintedCodeComputesWhatCompileComputes(string input)
         {
             var expr = input.ToEntity();
@@ -109,6 +118,42 @@ namespace AngouriMath.Tests.Convenience
             }
             // A comparison that skipped every sample would pass having checked nothing.
             Assert.True(compared >= 50, $"{input}: only {compared} samples had a real value");
+        }
+
+        [Fact]
+        public void TanhDoesNotDivideAnOverflowByAnOverflow()
+        {
+            // e^(2x) overflows past x = 355 in double, as it does past x = 45 in a shader's float.
+            Entity tanh = "tanh(x)";
+            var printed = Printed(tanh);
+            Assert.Equal(1.0, printed(400, 0));
+            Assert.Equal(-1.0, printed(-400, 0));
+            Assert.Equal(tanh.Compile<double, double, double>("x", "y")(400, 0), printed(400, 0));
+        }
+
+        // The parser reduces an operation on matrices written out, so these are built as nodes, the
+        // way Differentiate or a substitution leaves them.
+        public static TheoryData<Entity> MatrixOperations => new()
+        {
+            new DotProductf(MathS.Vector("x", "y"), MathS.Vector("y", "x")),
+            new Determinantf(MathS.Matrix(new Entity[,] { { "x", "y" }, { "1", "x" } })),
+            new Tracef(MathS.Matrix(new Entity[,] { { "x", "y" }, { "1", "x" } })),
+            (Entity)"sin(x)" + new DotProductf(new CrossProductf(MathS.Vector("x", "y", "1"), MathS.Vector("1", "y", "x")), MathS.Vector("1", "1", "1")),
+        };
+
+        [Theory]
+        [MemberData(nameof(MatrixOperations))]
+        public void AMatrixOperationOnMatricesWrittenOutIsTheNumberItGives(Entity expr)
+        {
+            var printed = Printed(expr);
+            var compiled = expr.Compile<double, double, double>("x", "y");
+            var rng = new Random(7);
+            for (var k = 0; k < 200; k++)
+            {
+                var (x, y) = (rng.NextDouble() * 6 - 3, rng.NextDouble() * 6 - 3);
+                var (got, want) = (printed(x, y), compiled(x, y));
+                Assert.True(Math.Abs(got - want) <= 1e-9 * Math.Max(1, Math.Abs(want)), $"{expr} at ({x}, {y}): printed {got}, compiled {want}");
+            }
         }
 
         [Fact]
@@ -147,12 +192,43 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("x + i", "i")]
         [InlineData("x + theta", "theta")]
         [InlineData("x!", "x!")]
+        [InlineData("gcd(x, y) + 1", "gcd(x, y)")]
+        [InlineData("lcm(x, y) + 1", "lcm(x, y)")]
+        [InlineData("round(x)", "round(x)")]
+        [InlineData("x provided x > 0", "x provided x > 0")]
+        [InlineData("piecewise(x provided x > 0, -x provided x < 0)", "piecewise(x provided (x > 0), (-x) provided (x < 0))")]
+        [InlineData("x + dot(x, y)", "dot(x, y)")]
+        [InlineData("x + cross(x, y)", "cross(x, y)")]
+        [InlineData("det(x)", "det(x)")]
+        [InlineData("transpose(x)", "transpose(x)")]
+        [InlineData("[x, y]", "[x, y]")]
+        [InlineData("iverson(x in RR)", "x in RR")]
+        [InlineData("x + {1, 2}", "{ 1, 2 }")]
         public void WhatHasNoFaithfulFormIsDeclined(string input, string at)
         {
             var names = new Dictionary<Variable, string> { ["theta"] = "θ" };
             var source = MathS.Shaders.Hlsl(new[] { new KeyValuePair<string, Entity>("r", input) }, names);
             Assert.False(source.Succeeded);
             Assert.Equal(at, source.At!.ToString());
+        }
+
+        // What Compile refuses is declined with the message Compile gives.
+        [Theory]
+        [InlineData("product(x, x in {1, 2}) + y", "product(x, x in { 1, 2 })")]
+        [InlineData("sum(x, x in {1, 2}) + y", "sum(x, x in { 1, 2 })")]
+        [InlineData("x + integral(y, y)", "integral(y, y)")]
+        [InlineData("x + limit(y, y, 0)", "limit(y, y, 0)")]
+        [InlineData("sin(x > 0)", "x > 0")]
+        public void WhatCompileRefusesIsDeclinedWithItsMessage(string input, string at)
+        {
+            Entity expr = input;
+            var refusal = Assert.ThrowsAny<AngouriMath.Core.Exceptions.UncompilableNodeException>(() => expr.Compile<double, double, double>("x", "y"));
+            foreach (var source in new[] { MathS.Shaders.Hlsl([new("r", expr)]), MathS.Shaders.Glsl([new("r", expr)]) })
+            {
+                Assert.False(source.Succeeded);
+                Assert.Equal(at, source.At!.ToString());
+                Assert.Equal(refusal.Message, source.Reason);
+            }
         }
     }
 }

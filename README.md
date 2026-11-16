@@ -453,6 +453,10 @@ False
 False
 ```
 
+The same expressions can be printed as HLSL or GLSL for a shader, an exact gradient for a
+signed distance field for instance: see
+<a href="./Sources/AngouriMath/Docs/Usage/Shaders.md">Docs/Usage/Shaders.md</a>.
+
 </details>
   
 <details><summary><strong>Multithreading</strong></summary>

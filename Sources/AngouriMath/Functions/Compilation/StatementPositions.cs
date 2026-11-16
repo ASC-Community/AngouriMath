@@ -24,16 +24,24 @@ namespace AngouriMath.Core.Compilation
     {
         internal static void Check(Entity expression)
         {
+            if (Refusal(expression) is { } refusal)
+                throw new UncompilableNodeException(refusal.Message);
+        }
+
+        /// <summary>The first statement in <paramref name="expression"/> where a number is expected and why it is refused, or null where there is none.</summary>
+        internal static (Entity Node, string Message)? Refusal(Entity expression)
+        {
             foreach (var node in expression.Nodes)
             {
                 if (TakesStatements(node))
                     continue;
                 foreach (var child in node.DirectChildren)
                     if (IsStatementValued(child))
-                        throw new UncompilableNodeException(
+                        return (child,
                             $"`{child.Stringize()}` is a statement where `{node.Stringize()}` expects a number, and has no value there. "
                             + $"Its truth value as a number is iverson({child.Stringize()}).");
             }
+            return null;
         }
 
         private static bool TakesStatements(Entity node)

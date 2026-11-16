@@ -821,6 +821,7 @@ are short, and a stale one is worse than none — if you change what a file desc
 | [CONTRIBUTING.md](CONTRIBUTING.md) | for humans; how to get set up and what a PR should look like |
 | [`Docs/Usage/Syntax.md`](Sources/AngouriMath/Docs/Usage/Syntax.md) | what the parser accepts. The grammar was the only statement of it until [#706](https://github.com/asc-community/AngouriMath/pull/706) |
 | [`Docs/Usage/Exceptions.md`](Sources/AngouriMath/Docs/Usage/Exceptions.md) | the exception hierarchy under `AngouriMathBaseException` |
+| [`Docs/Usage/Shaders.md`](Sources/AngouriMath/Docs/Usage/Shaders.md) | `MathS.Shaders.Hlsl` and `Glsl`: a worked example, and where the printed shader and `Compile<double>` differ |
 | [`Docs/Usage/Comparison.md`](Sources/AngouriMath/Docs/Usage/Comparison.md) | how we measure against Math.NET Symbolics, Symbolism and SymPy, with the versions and what each comparison does not establish |
 | [`Docs/References.md`](Sources/AngouriMath/Docs/References.md) | the books, papers, corpora and reference works the code and its tests draw on, with the link and what each is used for. Add a work there when it is first cited |
 | [`Docs/Acknowledgements.md`](Sources/AngouriMath/Docs/Acknowledgements.md) and [`Docs/Articles.md`](Sources/AngouriMath/Docs/Articles.md) | the projects AngouriMath is built with, and the maintainers' articles about it, moved from the archived AngouriMathLab |
