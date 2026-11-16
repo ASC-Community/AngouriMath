@@ -66,5 +66,53 @@ namespace AngouriMath.Tests.Core
             }
             Assert.Equal(67, MaxExpansionTermCount.Value);
         }
+
+        // A scope is released by its own id and nothing else, so a second disposal -- of the same
+        // struct, or of a copy of it -- releases nothing, even once a scope of the same setting at
+        // the same value is open again in its place.
+        // https://github.com/asc-community/AngouriMath/issues/2479
+        [Fact]
+        public void DisposingTwiceReleasesNothingMore()
+        {
+            using var _ = MaxExpansionTermCount.Set(10);
+            var scope = MaxExpansionTermCount.Set(25);
+            var copy = scope;
+            scope.Dispose();
+            scope.Dispose();
+            Assert.Equal(10, MaxExpansionTermCount.Value);
+            copy.Dispose();
+            Assert.Equal(10, MaxExpansionTermCount.Value);
+        }
+
+        [Fact]
+        public void AStaleCopyDoesNotReleaseTheScopeOpenedAgain()
+        {
+            using var _ = MaxExpansionTermCount.Set(10);
+            var first = MaxExpansionTermCount.Set(25);
+            var copy = first;
+            first.Dispose();
+            using var again = MaxExpansionTermCount.Set(25);
+            copy.Dispose();
+            Assert.Equal(25, MaxExpansionTermCount.Value);
+        }
+
+        [Fact]
+        public void ScopesClosedOutOfOrderLeaveTheOthers()
+        {
+            using var _ = MaxExpansionTermCount.Set(10);
+            var outer = MaxExpansionTermCount.Set(20);
+            var other = MaxAbsNumeratorOrDenominatorValue.Set(PeterO.Numbers.EInteger.FromInt32(77));
+            var inner = MaxExpansionTermCount.Set(30);
+            outer.Dispose();
+            Assert.Equal(30, MaxExpansionTermCount.Value);
+            Assert.Equal(PeterO.Numbers.EInteger.FromInt32(77), MaxAbsNumeratorOrDenominatorValue.Value);
+            inner.Dispose();
+            Assert.Equal(10, MaxExpansionTermCount.Value);
+            other.Dispose();
+            Assert.Equal(MaxAbsNumeratorOrDenominatorValue.Default, MaxAbsNumeratorOrDenominatorValue.Value);
+            outer.Dispose();
+            inner.Dispose();
+            Assert.Equal(10, MaxExpansionTermCount.Value);
+        }
     }
 }

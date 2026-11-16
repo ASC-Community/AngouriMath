@@ -281,6 +281,172 @@ namespace AngouriMath.Tests.Common
             Assert.Equal(MathS.IdentityMatrix(4), product);
         }
 
+        // A value cached on a node was answered under whatever settings it had first been
+        // computed under, though an evaluation rounds by them: 1/3 - 0.33333333333333333333
+        // evaluated inside a zero range of 1e-10 was 0 afterwards at the defaults, where it is
+        // 3.3E-21. https://github.com/asc-community/AngouriMath/issues/2479
+        private static System.IDisposable CacheScope(string setting) => setting switch
+        {
+            "zero range 1e-10" => MathS.Settings.PrecisionErrorZeroRange.Set(EDecimal.Create(1, -10)),
+            "20 digits" => MathS.Settings.DecimalPrecisionContext.Set(new EContext(20, ERounding.HalfUp, -100000, 100000, false)),
+            _ => throw new System.ArgumentException(setting),
+        };
+
+        // Compared with Equals rather than Assert.Equal, which reads a matrix as a sequence and
+        // recursed until the stack overflowed on a failure.
+        private static void ValueIs(object expected, object actual)
+            => Assert.True(Equals(expected, actual), $"{actual} where {expected}");
+
+        private static (Entity Node, System.Func<Entity, object> Read) CachedValue(string cache) => cache switch
+        {
+            "Evaled" => (MathS.FromString("1/3 - 0.33333333333333333333", useCache: false), e => e.Evaled),
+            "Evaled 1 + 1e-20" => (MathS.FromString("1 + 1e-20", useCache: false), e => e.Evaled),
+            "InnerSimplified" => (MathS.FromString("x * (1/3 - 0.33333333333333333333)", useCache: false), e => e.InnerSimplified),
+            "DomainCondition" => (MathS.FromString("1 / (x - (1/3 - 0.33333333333333333333))", useCache: false), e => e.DomainCondition),
+            "Determinant" => (MathS.FromString("[[0.333333333333333333333333, 1], [1, 3]]", useCache: false), e => ((Entity.Matrix)e).Determinant!),
+            "Rank" => (MathS.FromString("[[0.333333333333333333333333, 1], [1, 3]]", useCache: false), e => ((Entity.Matrix)e).Rank),
+            "Inverse" => (MathS.FromString("[[0.333333333333333333333333, 1], [1, 3]]", useCache: false), e => (object?)((Entity.Matrix)e).Inverse ?? "none"),
+            "Interval ends" => (MathS.FromString("[1/3 - 0.33333333333333333333; 1]", useCache: false), e => ((Entity.Set)e).Contains(0)),
+            _ => throw new System.ArgumentException(cache),
+        };
+
+        [Theory]
+        [InlineData("Evaled", "zero range 1e-10")]
+        [InlineData("Evaled 1 + 1e-20", "zero range 1e-10")]
+        [InlineData("Evaled 1 + 1e-20", "20 digits")]
+        [InlineData("InnerSimplified", "zero range 1e-10")]
+        [InlineData("DomainCondition", "zero range 1e-10")]
+        [InlineData("Determinant", "zero range 1e-10")]
+        [InlineData("Rank", "zero range 1e-10")]
+        [InlineData("Inverse", "zero range 1e-10")]
+        [InlineData("Interval ends", "zero range 1e-10")]
+        public void Issue2479_ACachedValueIsTheValueUnderTheSettingsInForce(string cache, string setting)
+        {
+            var atDefaults = CachedValue(cache).Read(CachedValue(cache).Node);
+            object inScope;
+            using (CacheScope(setting))
+                inScope = CachedValue(cache).Read(CachedValue(cache).Node);
+            Assert.False(Equals(atDefaults, inScope), $"{atDefaults} is the value in the scope too");
+
+            // The defaults first, then the scope, then the defaults again, on one node.
+            var (first, read) = CachedValue(cache);
+            ValueIs(atDefaults, read(first));
+            using (CacheScope(setting))
+                ValueIs(inScope, read(first));
+            ValueIs(atDefaults, read(first));
+
+            // The scope first, then the defaults, then the scope again.
+            var (second, _) = CachedValue(cache);
+            using (CacheScope(setting))
+                ValueIs(inScope, read(second));
+            ValueIs(atDefaults, read(second));
+            using (CacheScope(setting))
+                ValueIs(inScope, read(second));
+        }
+
+        // A scope is the calling flow's, so one thread's scope must not decide what another
+        // thread reads from the same node, in either order.
+        // https://github.com/asc-community/AngouriMath/issues/2479
+        [Fact]
+        public void Issue2479_AScopeOnOneThreadDoesNotReachAnothersValue()
+        {
+            Entity Evaluated(Entity node, bool scoped)
+            {
+                Entity result = node;
+                var thread = new System.Threading.Thread(() =>
+                {
+                    using var _ = scoped ? CacheScope("zero range 1e-10") : null;
+                    result = node.Evaled;
+                });
+                thread.Start();
+                thread.Join();
+                return result;
+            }
+            const string expression = "1/3 - 0.33333333333333333333";
+            var atDefaults = MathS.FromString(expression, useCache: false).Evaled;
+            Entity inScope;
+            using (CacheScope("zero range 1e-10"))
+                inScope = MathS.FromString(expression, useCache: false).Evaled;
+            Assert.False(Equals(atDefaults, inScope), $"{atDefaults} is the value in the scope too");
+
+            var first = MathS.FromString(expression, useCache: false);
+            ValueIs(atDefaults, Evaluated(first, scoped: false));
+            ValueIs(inScope, Evaluated(first, scoped: true));
+
+            var second = MathS.FromString(expression, useCache: false);
+            ValueIs(inScope, Evaluated(second, scoped: true));
+            ValueIs(atDefaults, Evaluated(second, scoped: false));
+        }
+
+        // Scopes opened and closed in order put the settings back as they were, so a value
+        // computed before them is still the value after them, and is not computed again.
+        // https://github.com/asc-community/AngouriMath/issues/2479
+        [Fact]
+        public void Issue2479_ABalancedScopeKeepsTheCachedValue()
+        {
+            var node = MathS.FromString("sin(1) + x", useCache: false);
+            var before = node.Evaled;
+            using (CacheScope("zero range 1e-10"))
+            using (CacheScope("20 digits"))
+            { }
+            Assert.Same(before, node.Evaled);
+        }
+
+        // Threads opening and closing scopes of their own, nested, at once, over one node, each
+        // read the value an evaluation from scratch gives under its own settings -- while the
+        // states they reach are made, raced for and shared between them.
+        // https://github.com/asc-community/AngouriMath/issues/2479
+        [Fact]
+        public void Issue2479_ThreadsInScopesOfTheirOwnReadTheirOwnValues()
+        {
+            const string expression = "1/3 - 0.33333333333333333333 + sqrt(2) / 10^30";
+            var shared = MathS.FromString(expression, useCache: false);
+            var scopes = new System.Func<System.IDisposable>[]
+            {
+                () => MathS.Settings.PrecisionErrorZeroRange.Set(EDecimal.Create(1, -10)),
+                () => MathS.Settings.DecimalPrecisionContext.Set(new EContext(20, ERounding.HalfUp, -100000, 100000, false)),
+                () => MathS.Settings.DecimalPrecisionContext.Set(new EContext(40, ERounding.HalfUp, -100000, 100000, false)),
+                () => MathS.Settings.DowncastingEnabled.Set(false),
+            };
+            var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+            var threads = new System.Threading.Thread[8];
+            for (var t = 0; t < threads.Length; t++)
+            {
+                var seed = t;
+                threads[t] = new System.Threading.Thread(() =>
+                {
+                    var random = new System.Random(seed);
+                    for (var round = 0; round < 150; round++)
+                    {
+                        var open = new System.Collections.Generic.List<System.IDisposable>();
+                        for (var depth = random.Next(4); depth > 0; depth--)
+                        {
+                            open.Add(scopes[random.Next(scopes.Length)]());
+                            var expected = MathS.FromString(expression, useCache: false).Evaled;
+                            var actual = shared.Evaled;
+                            if (!Equals(expected, actual))
+                                failures.Add($"{actual} where {expected}");
+                        }
+                        // Closed in a random order, so that some are out of order.
+                        while (open.Count > 0)
+                        {
+                            var at = random.Next(open.Count);
+                            open[at].Dispose();
+                            open.RemoveAt(at);
+                            var expected = MathS.FromString(expression, useCache: false).Evaled;
+                            if (!Equals(expected, shared.Evaled))
+                                failures.Add($"{shared.Evaled} where {expected}, after a close");
+                        }
+                    }
+                });
+            }
+            foreach (var thread in threads)
+                thread.Start();
+            foreach (var thread in threads)
+                thread.Join();
+            Assert.Empty(failures);
+        }
+
         // Tightening the tolerance above stops Newton's own noise from being rounded away
         // with it. The iteration works in double precision and starts from a grid, so the
         // same root reached from different starting points differs in the last digits;

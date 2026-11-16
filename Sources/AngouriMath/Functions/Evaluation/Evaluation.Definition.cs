@@ -50,7 +50,9 @@ namespace AngouriMath
                 (Boolean(true), var r) => r,
                 (var l, var r) => l & r,
             }))), this).InnerSimplified;
-        private LazyPropertyA<Entity> domainCondition;
+        // What a condition simplifies to depends on the settings, as any evaluation does.
+        // https://github.com/asc-community/AngouriMath/issues/2479
+        private Convenience.SettingsDependent<Entity> domainCondition;
 
         /// <summary>
         /// Where a piecewise is defined: where some case's predicate holds, no earlier one does,
@@ -482,47 +484,19 @@ namespace AngouriMath
                 // WithCodomain may evaluate to NaN, and still goes through it.
                 if (this is Number && (Codomain == DefaultCodomain || Codomain == Domain.Any))
                     return this;
-                // Cached with the precision it was computed at, and read back only at that
-                // precision: a hundred digits of pi are the wrong answer at five hundred. The
-                // stamp is the precision setting's frame for this flow, compared by reference.
-                // Frames are immutable, a scope opened and closed in order restores the very
-                // frame that was under it, and a flow outside every scope has none. It was a
-                // count of precision changes for the whole process, which could not tell one
-                // flow's scope from another's, so a flow at a hundred digits read pi at three
-                // hundred while another flow's scope was open.
-                // https://github.com/asc-community/AngouriMath/issues/1505
-                // The frame is read before the computation, so a scope opened and closed inside
-                // it leaves the value stamped with the frame it was asked in.
-                // https://github.com/asc-community/AngouriMath/issues/1367
-                // And stamped with its owner: a record's `with` -- WithCodomain, and the
-                // derivative's rewrites -- copies every field, this one included, and a value
-                // computed for the original is not the copy's.
-                // The value and its stamps are one object, published in one store, so that no
-                // flow reads one flow's value under another's stamp.
-                // Until a precision scope has been opened somewhere, no flow has a frame, and a
-                // cached value is read without asking for one: the flow's frame is an async-local
-                // read, several times the cost of the rest of this path.
-                var precisionSetting = MathS.Settings.DecimalPrecisionContext;
-                var precision = precisionSetting.EverScoped ? ((Convenience.ISettingState)precisionSetting).CurrentState : null;
-                if (System.Threading.Volatile.Read(ref evaled) is { } cached
-                    && ReferenceEquals(cached.Owner, this) && ReferenceEquals(cached.Precision, precision))
-                    return cached.Value;
-                var computed = InnerSimplifyWithCheck(false);
-                System.Threading.Volatile.Write(ref evaled, new EvaledValue(computed, this, precision));
-                return computed;
+                // Cached with the settings it was computed under, and read back only under those: a
+                // hundred digits of pi are the wrong answer at five hundred
+                // (https://github.com/asc-community/AngouriMath/issues/1505), and 1/3 -
+                // 0.33333333333333333333 is 0 with the zero range at 1e-10 and 3.3E-21 at the
+                // default (https://github.com/asc-community/AngouriMath/issues/2479). The state is
+                // taken before the computation, so a scope opened and closed inside it leaves the
+                // value stamped with the state it was asked in
+                // (https://github.com/asc-community/AngouriMath/issues/1367); a `with` copy does not
+                // carry it, which the copy constructor sees to.
+                return evaled.TryGetValue(out var value) ? value : evaled.Computed(static @this => @this.InnerSimplifyWithCheck(false), this);
             }
         }
-
-        /// <summary>A value of <see cref="Evaled"/>, with the node and the precision it was computed for.</summary>
-        private sealed class EvaledValue
-        {
-            internal readonly Entity Value;
-            internal readonly Entity Owner;
-            internal readonly object? Precision;
-            internal EvaledValue(Entity value, Entity owner, object? precision)
-                => (Value, Owner, Precision) = (value, owner, precision);
-        }
-        private EvaledValue? evaled;
+        private Convenience.SettingsDependent<Entity> evaled;
 
         /// <summary>
         /// This is the result of naive simplifications, but not creating imprecise <see cref="Real"/> values unlike <see cref="Evaled"/>. In other 
@@ -551,7 +525,9 @@ namespace AngouriMath
         /// </code>
         /// </example>
         public Entity InnerSimplified => innerSimplified.GetValue(static @this => @this.InnerSimplifyWithCheck(true), this);
-        private LazyPropertyA<Entity> innerSimplified;
+        // Numbers are rounded as they are combined, by the settings in force: see Evaled.
+        // https://github.com/asc-community/AngouriMath/issues/2479
+        private Convenience.SettingsDependent<Entity> innerSimplified;
 
         /// <summary>
         /// Expands an equation trying to eliminate all the parentheses ( e. g. 2 * (x + 3) = 2 * x + 2 * 3 )

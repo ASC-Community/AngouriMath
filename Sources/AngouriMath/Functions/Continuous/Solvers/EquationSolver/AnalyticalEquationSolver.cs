@@ -164,12 +164,20 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             {
                 if (root.Evaled is not Complex preciseValue)
                     return root;
-                using var _ = MathS.Settings.FloatToRationalIterCount.Set(20);
-                using var __ = MathS.Settings.PrecisionErrorZeroRange.Set(1e-7m);
-                var downcasted = Complex.Create(preciseValue.RealPart, preciseValue.ImaginaryPart);
-                if (equation.Substitute(x, downcasted).Evaled is not Complex error)
-                    return root;
-                return IsGenuineRoot(error) && downcasted.RealPart is Rational && downcasted.ImaginaryPart is Rational
+                Complex downcasted;
+                bool genuine;
+                using (MathS.Settings.FloatToRationalIterCount.Set(20))
+                using (MathS.Settings.PrecisionErrorZeroRange.Set(1e-7m))
+                {
+                    downcasted = Complex.Create(preciseValue.RealPart, preciseValue.ImaginaryPart);
+                    if (equation.Substitute(x, downcasted).Evaled is not Complex error)
+                        return root;
+                    genuine = IsGenuineRoot(error);
+                }
+                // The root the guess is not, simplified under the solver's own settings rather than
+                // the loose tolerance the guess is made with, which would round it.
+                // https://github.com/asc-community/AngouriMath/issues/2479
+                return genuine && downcasted.RealPart is Rational && downcasted.ImaginaryPart is Rational
                        ? downcasted : root.InnerSimplified;
             }
 

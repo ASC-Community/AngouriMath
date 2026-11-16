@@ -244,6 +244,31 @@ complex constant, an argument of any other shape. With `Simplify`, against mpmat
 A symbol is read as real here, as everywhere the breaks are read, so `integral(1/(1+(t-y)^2), t, -oo, +oo)` is still
 `pi`, which is the value for `|Im y| < 1`.
 
+### A value cached on a node is the value under the settings in force
+
+**Silent: a stale value is corrected.** `Evaled`, `InnerSimplified`, `DomainCondition`, a matrix's `Determinant`,
+`Inverse`, `Adjugate`, `Rank`, `Eigenvalues` and row echelon forms, and the ends of an interval as `Contains` reads them,
+are computed once per node and kept. Each was kept whatever the settings were then, and answered under any settings
+afterwards, on any thread; only `Evaled` noted `DecimalPrecisionContext`. An evaluation rounds by the settings —
+`PrecisionErrorZeroRange` decides what is zero — so the same node answered differently depending on where it had first
+been asked ([#2479](https://github.com/asc-community/AngouriMath/issues/2479)). Each is now kept with the settings it
+was computed under and answered only under those. Asked of one node first inside `PrecisionErrorZeroRange.Set(1e-10)`,
+then at the defaults:
+
+| Input | At the defaults, was (2.7.0) | Now |
+|---|---|---|
+| `(1/3 - 0.33333333333333333333).Evaled` | `0` | `3.333…E-21` |
+| `(1 + 1e-20).Evaled` | `1` | `1.00000000000000000001` |
+| `(x * (1/3 - 0.33333333333333333333)).InnerSimplified` | `0` | `x * (1/3 - 0.33333333333333333333)` |
+| `(1 / (x - (1/3 - 0.33333333333333333333))).DomainCondition` | `not x = 0` | `not x - (1/3 - 0.33333333333333333333) = 0` |
+| `[[0.333333333333333333333333, 1], [1, 3]].Determinant` | `0` | `0.333333333333333333333333 * 3 - 1` |
+| the same matrix's `Rank` | `1` | `2` |
+| the same matrix's `Inverse` | `null` | `[[-3000000000000000000000000, 1000000000000000000000000], [1000000000000000000000000, -333333333333333333333333]]` |
+| `[1/3 - 0.33333333333333333333; 1].Contains(0)` | `True` | `False` |
+
+In the other order each value computed at the defaults came back inside the scope: `Evaled` of the first was
+`3.333…E-21` there, where the scope's answer is `0`. Outside any scope nothing moves.
+
 ### `dot` and `cross` of a name for a vector are nodes
 
 **Not silent: what was refused now parses.** `dot(a, b)` and `cross(a, b)` threw `InvalidArgumentParseException`
