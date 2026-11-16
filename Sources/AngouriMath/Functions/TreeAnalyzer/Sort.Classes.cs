@@ -624,6 +624,20 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "phi_";
         }
 
+        partial record PrimeFactorizationf
+        {
+            private protected override string SortHashName(SortLevel level) => "factorization_";
+        }
+
+        partial record Set
+        {
+            partial record PrimeFactorsf
+            {
+                private protected override string SortHashName(SortLevel level)
+                    => level == SortLevel.LOW_LEVEL ? "primefactors_" : "";
+            }
+        }
+
         partial record Primef
         {
             private protected override string SortHashName(SortLevel level) => "prime_";

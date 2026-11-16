@@ -392,6 +392,40 @@ namespace AngouriMath
                 => "{" + Argument.Latexize(Argument.LatexPriority <= LatexPriority) + @"}^{\overline{" + Order.Latexize() + "}}";
         }
 
+        partial record PrimeFactorizationf
+        {
+            /// <inheritdoc/>
+            // What a mathematician writes, 2^{3} \cdot 3^{2} \cdot 5, once the map is known; 1 for the
+            // empty map, the empty product. Read back, that is the number and not the node, the loss
+            // \binom and \pmod already accept. https://github.com/asc-community/AngouriMath/issues/2449
+            private protected override string LatexizeNode()
+                => Factors switch
+                {
+                    null => $@"\operatorname{{factorization}}\left({Argument.Latexize()}\right)",
+                    { Count: 0 } => "1",
+                    var factors => string.Join(@" \cdot ", factors.Select(factor =>
+                        factor.Power == Integer.One ? factor.Prime.Latexize() : $@"{factor.Prime.Latexize()}^{{{factor.Power.Latexize()}}}"))
+                };
+
+            /// <inheritdoc/>
+            internal override Priority LatexPriority
+                => Factors switch
+                {
+                    { Count: > 1 } => Priority.Mul,
+                    [var (_, power)] when power != Integer.One => Priority.Pow,
+                    _ => Priority.Func
+                };
+        }
+
+        partial record Set
+        {
+            partial record PrimeFactorsf
+            {
+                /// <inheritdoc/>
+                private protected override string LatexizeNode() => $@"\operatorname{{primefactors}}\left({Argument.Latexize()}\right)";
+            }
+        }
+
         partial record Primef
         {
             /// <inheritdoc/>

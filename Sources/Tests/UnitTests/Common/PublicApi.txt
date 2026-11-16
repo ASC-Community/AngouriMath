@@ -2376,6 +2376,26 @@ AngouriMath.Entity+Powf.ToString() : System.String
 AngouriMath.Entity+Powf.ctor(AngouriMath.Entity, AngouriMath.Entity)
 AngouriMath.Entity+Powf.op_Equality(AngouriMath.Entity+Powf, AngouriMath.Entity+Powf) : System.Boolean
 AngouriMath.Entity+Powf.op_Inequality(AngouriMath.Entity+Powf, AngouriMath.Entity+Powf) : System.Boolean
+AngouriMath.Entity+PrimeFactorizationf.<Clone>$() : AngouriMath.Entity+PrimeFactorizationf
+AngouriMath.Entity+PrimeFactorizationf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+PrimeFactorizationf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+PrimeFactorizationf.Deconstruct(AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+PrimeFactorizationf.EqualityContract { } : System.Type
+AngouriMath.Entity+PrimeFactorizationf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+PrimeFactorizationf.Equals(AngouriMath.Entity+PrimeFactorizationf) : System.Boolean
+AngouriMath.Entity+PrimeFactorizationf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+PrimeFactorizationf.Factors { } : System.Collections.Generic.IReadOnlyList<System.ValueTuple<AngouriMath.Entity+Number+Integer,AngouriMath.Entity+Number+Integer>>
+AngouriMath.Entity+PrimeFactorizationf.GetHashCode() : System.Int32
+AngouriMath.Entity+PrimeFactorizationf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+PrimeFactorizationf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+PrimeFactorizationf.NodeChild { } : AngouriMath.Entity
+AngouriMath.Entity+PrimeFactorizationf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+PrimeFactorizationf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+PrimeFactorizationf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+PrimeFactorizationf.ToString() : System.String
+AngouriMath.Entity+PrimeFactorizationf.ctor(AngouriMath.Entity)
+AngouriMath.Entity+PrimeFactorizationf.op_Equality(AngouriMath.Entity+PrimeFactorizationf, AngouriMath.Entity+PrimeFactorizationf) : System.Boolean
+AngouriMath.Entity+PrimeFactorizationf.op_Inequality(AngouriMath.Entity+PrimeFactorizationf, AngouriMath.Entity+PrimeFactorizationf) : System.Boolean
 AngouriMath.Entity+PrimeNuf.<Clone>$() : AngouriMath.Entity+PrimeNuf
 AngouriMath.Entity+PrimeNuf.Argument { } : AngouriMath.Entity
 AngouriMath.Entity+PrimeNuf.Codomain { } : AngouriMath.Core.Domain
@@ -2808,6 +2828,29 @@ AngouriMath.Entity+Set+Powersetf.TryContains(AngouriMath.Entity, System.Boolean&
 AngouriMath.Entity+Set+Powersetf.ctor(AngouriMath.Entity)
 AngouriMath.Entity+Set+Powersetf.op_Equality(AngouriMath.Entity+Set+Powersetf, AngouriMath.Entity+Set+Powersetf) : System.Boolean
 AngouriMath.Entity+Set+Powersetf.op_Inequality(AngouriMath.Entity+Set+Powersetf, AngouriMath.Entity+Set+Powersetf) : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.<Clone>$() : AngouriMath.Entity+Set+PrimeFactorsf
+AngouriMath.Entity+Set+PrimeFactorsf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+Set+PrimeFactorsf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+Set+PrimeFactorsf.Deconstruct(AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+Set+PrimeFactorsf.EqualityContract { } : System.Type
+AngouriMath.Entity+Set+PrimeFactorsf.Equals(AngouriMath.Entity+Set) : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.Equals(AngouriMath.Entity+Set+PrimeFactorsf) : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.Filter(AngouriMath.Entity, AngouriMath.Entity+Variable) : AngouriMath.Entity+Set
+AngouriMath.Entity+Set+PrimeFactorsf.GetHashCode() : System.Int32
+AngouriMath.Entity+Set+PrimeFactorsf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+Set+PrimeFactorsf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+Set+PrimeFactorsf.IsSetEmpty { } : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.IsSetFinite { } : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.NodeChild { } : AngouriMath.Entity
+AngouriMath.Entity+Set+PrimeFactorsf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+Set+PrimeFactorsf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+Set+PrimeFactorsf.ToString() : System.String
+AngouriMath.Entity+Set+PrimeFactorsf.TryContains(AngouriMath.Entity, System.Boolean&) : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.ctor(AngouriMath.Entity)
+AngouriMath.Entity+Set+PrimeFactorsf.op_Equality(AngouriMath.Entity+Set+PrimeFactorsf, AngouriMath.Entity+Set+PrimeFactorsf) : System.Boolean
+AngouriMath.Entity+Set+PrimeFactorsf.op_Inequality(AngouriMath.Entity+Set+PrimeFactorsf, AngouriMath.Entity+Set+PrimeFactorsf) : System.Boolean
 AngouriMath.Entity+Set+SetMinusf.<Clone>$() : AngouriMath.Entity+Set+SetMinusf
 AngouriMath.Entity+Set+SetMinusf.Codomain { } : AngouriMath.Core.Domain
 AngouriMath.Entity+Set+SetMinusf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
@@ -3604,12 +3647,14 @@ AngouriMath.MathS+NumberTheory.Congruent(AngouriMath.Entity, AngouriMath.Entity,
 AngouriMath.MathS+NumberTheory.CountDivisors(AngouriMath.Entity+Number+Integer) : AngouriMath.Entity+Number+Integer
 AngouriMath.MathS+NumberTheory.Divides(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+NumberTheory.DivisorSigma(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS+NumberTheory.Factorization(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+NumberTheory.Factorize(AngouriMath.Entity+Number+Integer) : System.Collections.Generic.IEnumerable<System.ValueTuple<AngouriMath.Entity+Number+Integer,AngouriMath.Entity+Number+Integer>>
 AngouriMath.MathS+NumberTheory.GreatestCommonDivisor(AngouriMath.Entity+Number+Integer, AngouriMath.Entity+Number+Integer) : AngouriMath.Entity+Number+Integer
 AngouriMath.MathS+NumberTheory.Mobius(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+NumberTheory.ModularInverse(AngouriMath.Entity+Number+Integer, AngouriMath.Entity+Number+Integer) : AngouriMath.Entity+Number+Integer
 AngouriMath.MathS+NumberTheory.Phi(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+NumberTheory.Prime(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS+NumberTheory.PrimeFactors(AngouriMath.Entity) : AngouriMath.Entity+Set
 AngouriMath.MathS+NumberTheory.PrimeNu(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+NumberTheory.PrimeOmega(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS+NumberTheory.PrimePi(AngouriMath.Entity) : AngouriMath.Entity
@@ -3995,6 +4040,7 @@ class AngouriMath.Entity+Phif
 class AngouriMath.Entity+Piecewise
 class AngouriMath.Entity+Polygammaf
 class AngouriMath.Entity+Powf
+class AngouriMath.Entity+PrimeFactorizationf
 class AngouriMath.Entity+PrimeNuf
 class AngouriMath.Entity+PrimeOmegaf
 class AngouriMath.Entity+PrimePif
@@ -4017,6 +4063,7 @@ class AngouriMath.Entity+Set+Inf
 class AngouriMath.Entity+Set+Intersectionf
 class AngouriMath.Entity+Set+Interval
 class AngouriMath.Entity+Set+Powersetf
+class AngouriMath.Entity+Set+PrimeFactorsf
 class AngouriMath.Entity+Set+SetMinusf
 class AngouriMath.Entity+Set+SpecialSet
 class AngouriMath.Entity+Set+SpecialSet+Booleans

@@ -237,6 +237,7 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("x + integral(y, y)", "integral(y, y)")]
         [InlineData("x + limit(y, y, 0)", "limit(y, y, 0)")]
         [InlineData("sin(x > 0)", "x > 0")]
+        [InlineData("x + factorization(y)", "factorization(y)")]
         public void WhatCompileRefusesIsDeclinedWithItsMessage(string input, string at)
         {
             Entity expr = input;

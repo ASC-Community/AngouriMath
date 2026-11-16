@@ -105,6 +105,44 @@ namespace AngouriMath
             public static Entity Valuation(Entity argument, Entity prime) => new Valuationf(argument, prime);
 
             /// <summary>
+            /// The prime factorisation of a positive integer, <c>factorization(n)</c>: the map from
+            /// each prime to its exponent in <c>n</c>, mathlib's <c>Nat.factorization</c>. A node of
+            /// its own, which holds the map in <see cref="Entity.PrimeFactorizationf.Factors"/> and
+            /// is not the number <c>n</c>; <c>NaN</c> at any other number. For the list of pairs
+            /// alone, <see cref="Factorize(Integer)"/>.
+            /// https://github.com/asc-community/AngouriMath/issues/2449
+            /// </summary>
+            /// <example>
+            /// <code>
+            /// var factorization = (Entity.PrimeFactorizationf)MathS.NumberTheory.Factorization(360).Evaled;
+            /// Console.WriteLine(factorization);
+            /// Console.WriteLine(factorization.Latexize());
+            /// </code>
+            /// Prints
+            /// <code>
+            /// factorization(360)
+            /// 2^{3} \cdot 3^{2} \cdot 5
+            /// </code>
+            /// </example>
+            public static Entity Factorization(Entity integer) => new PrimeFactorizationf(integer);
+
+            /// <summary>
+            /// The set of the primes dividing a positive integer, <c>primefactors(n)</c>, the support
+            /// of <see cref="Factorization(Entity)"/>; <c>NaN</c> at any other number.
+            /// https://github.com/asc-community/AngouriMath/issues/2449
+            /// </summary>
+            /// <example>
+            /// <code>
+            /// Console.WriteLine(MathS.NumberTheory.PrimeFactors(360).Evaled);
+            /// </code>
+            /// Prints
+            /// <code>
+            /// { 2, 3, 5 }
+            /// </code>
+            /// </example>
+            public static Set PrimeFactors(Entity integer) => new Set.PrimeFactorsf(integer);
+
+            /// <summary>
             /// The statement that <paramref name="divisor"/> divides <paramref name="dividend"/>,
             /// written <c>a divides b</c>: for integers, that <c>b mod a = 0</c>.
             /// </summary>

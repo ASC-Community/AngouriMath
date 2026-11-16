@@ -96,7 +96,7 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("heaviside(x)", "iverson(x >= 0)")]
         [InlineData("fractionalpart(x)", "x mod 1")]
         [InlineData("pochhammer(x, k)", "risingfactorial")]
-        [InlineData("factorize(360)", "MathS.NumberTheory.Factorize")]
+        [InlineData("factorize(360)", "factorization(n)")]
         [InlineData("nextprime(10)", "prime(primepi(n) + 1)")]
         [InlineData("divisors(12)", "divisorsigma(0, n)")]
         [InlineData("φ(10)", "phi(n)")]

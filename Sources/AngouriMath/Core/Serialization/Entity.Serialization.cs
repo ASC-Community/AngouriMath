@@ -92,6 +92,7 @@ namespace AngouriMath
         [EntityJsonConverter] partial record PrimeNuf;
         [EntityJsonConverter] partial record PrimeOmegaf;
         [EntityJsonConverter] partial record PrimePif;
+        [EntityJsonConverter] partial record PrimeFactorizationf;
         [EntityJsonConverter] partial record Primef;
         [EntityJsonConverter] partial record Valuationf;
         [EntityJsonConverter] partial record Dividesf;
@@ -113,6 +114,7 @@ namespace AngouriMath
             [EntityJsonConverter] partial record FiniteSet;
             [EntityJsonConverter] partial record Inf;
             [EntityJsonConverter] partial record Subsetf;
+            [EntityJsonConverter] partial record PrimeFactorsf;
             [EntityJsonConverter] partial record Powersetf;
             [EntityJsonConverter] partial record IndexedSetOperation;
             [EntityJsonConverter] partial record IndexedUnionf;

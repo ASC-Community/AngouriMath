@@ -507,6 +507,7 @@ namespace AngouriMath.Core.Transformations.Matching
             [typeof(Entity.PrimeOmegaf)] = (1, static c => new Entity.PrimeOmegaf(c[0])),
             [typeof(Entity.PrimePif)] = (1, static c => new Entity.PrimePif(c[0])),
             [typeof(Entity.DivisorSigmaf)] = (2, static c => new Entity.DivisorSigmaf(c[0], c[1])),
+            [typeof(Entity.PrimeFactorizationf)] = (1, static c => new Entity.PrimeFactorizationf(c[0])),
             [typeof(Entity.Primef)] = (1, static c => new Entity.Primef(c[0])),
             [typeof(Entity.Valuationf)] = (2, static c => new Entity.Valuationf(c[0], c[1])),
             [typeof(Entity.Cardf)] = (1, static c => new Entity.Cardf(c[0])),

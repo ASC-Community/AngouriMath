@@ -610,6 +610,23 @@ namespace AngouriMath
                 => this == x ? value : New(Argument.Substitute(x, value));
         }
 
+        partial record PrimeFactorizationf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value));
+        }
+
+        partial record Set
+        {
+            partial record PrimeFactorsf
+            {
+                /// <inheritdoc/>
+                public override Entity Substitute(Entity x, Entity value)
+                    => x == this ? value : New(Argument.Substitute(x, value));
+            }
+        }
+
         partial record Primef
         {
             /// <inheritdoc/>

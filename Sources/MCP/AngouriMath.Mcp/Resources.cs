@@ -101,7 +101,9 @@ internal static class Resources
           `multinomial(k_1, ..., k_m)`, which is `(k_1 + ... + k_m)! / (k_1! ... k_m!)` once parsed,
           `catalannumber(n)`, the Catalan numbers, `harmonicnumber(n)` and `harmonicnumber(n, m)`,
           and `mobius divisorsigma primenu primeomega primepi` (`moebiusmu` is `mobius`):
-          `divisorsigma(k, n)` sums the `k`-th powers of the divisors of `n`
+          `divisorsigma(k, n)` sums the `k`-th powers of the divisors of `n`,
+          `factorization(n)`, the prime factorisation of `n` as a node that is not the number, and
+          `primefactors(n)`, the set of the primes dividing `n`
         - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, `lambertw(z)` and `lambertw(k, z)` (also `productlog`), and `gamma(a, z)`, the
           upper incomplete gamma function
         - sets: `card powerset union intersection complement image preimage domain aleph
@@ -126,7 +128,7 @@ internal static class Resources
         | `arcsinh(x)` | **refused.** The inverse hyperbolics are area functions: write `arsinh`, `asinh` or `arsh` |
         | `trunc`, `zeta` and other long names of functions to come | refused by name — not yet in the library |
         | `heaviside`, `unitstep`, `isprime`, `fractionalpart`, `quotient`, `pochhammer` | refused, with what to write: `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2`; `n in PP`; `x mod 1`; `floor(a / b)` |
-        | `factorize`, `nextprime`, `divisors`, `gradient`, `divergence`, `φ` | refused, with what to write: `MathS.NumberTheory.Factorize(n)` or `Factorize()` in C#; `prime(primepi(n) + 1)`; `divisorsigma(0, n)` and `divisorsigma(1, n)`; `jacobian([f], [x, y])`; `trace(jacobian(F, [x, y]))`; `phi(n)` |
+        | `factorize`, `nextprime`, `divisors`, `gradient`, `divergence`, `φ` | refused, with what to write: `factorization(n)`, or `Factorize()` in C# for an expression; `prime(primepi(n) + 1)`; `divisorsigma(0, n)` and `divisorsigma(1, n)`; `jacobian([f], [x, y])`; `trace(jacobian(F, [x, y]))`; `phi(n)` |
         | `elementin(x, A)`, `setsubtraction(A, B)`, `impl(a, b)` | **silently become products.** Use the infix `x in A`, `A \ B`, `a -> b` |
         | `union(A, B)`, `intersection(A, B)` | refused: both are indexed, `union(A_i, i in I)`. For two sets write `A \/ B` and `A /\ B` |
         | `7 mod 3` | `mod` is FLOORED: `-7 mod 3` is `2`, not `-1` |

@@ -94,6 +94,25 @@ are as they were. With `Simplify`, the case `y = 0` of:
 | `integral(1/(t^2+y^2), t, -oo, +oo)` | `0 provided (y = 0)` | `+oo provided (y = 0)` |
 | `integral(1/(t^2+y^2), t, 1, 2)` | `(1/2) provided (y = 0)` | unchanged |
 
+### `factorization(n)` and `primefactors(n)` are functions
+
+**Not silent: what was a product is now a node.** `factorization(n)` and `primefactors(n)` were read as the products
+`factorization * n` and `primefactors * n`. `factorization(n)` is now the prime factorisation of `n`, the map from each
+prime to its exponent (mathlib's `Nat.factorization`): a node that keeps the map, printed `factorization(360)` and
+`2^{3} \cdot 3^{2} \cdot 5` in LaTeX, and not the number, so `factorization(360) = 360` is left undecided.
+`primefactors(n)` is its support, the set of the primes dividing `n`. Both are defined on the positive integers and
+`NaN` at any other number, as `primenu` is: 0 has no factorisation and a negative integer is `-1` times one. With
+`valuation(n, p)` and the product over a set, `product(p ^ valuation(n, p), p in primefactors(n))` is `n`
+([#2449](https://github.com/asc-community/AngouriMath/issues/2449)). `factorize(360)` is still refused, and its message
+now names `factorization(n)`.
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"factorization(360)".ToEntity().Evaled` | `factorization * 360` | `factorization(360)`, holding `2 ↦ 3, 3 ↦ 2, 5 ↦ 1` |
+| `"factorization(0)".ToEntity().Evaled` | `0` | `NaN` |
+| `"primefactors(360)".ToEntity().Evaled` | `primefactors * 360` | `{ 2, 3, 5 }` |
+| `"product(p ^ valuation(360, p), p in primefactors(360))".ToEntity().Evaled` | throws `FunctionArgumentCountException` | `360` |
+
 ### `factorize`, `nextprime`, `divisors`, `gradient`, `divergence` and `φ` are refused by name
 
 **Not silent: these names followed by a bracket now throw `UnrecognizedFunctionParseException` where they were read as

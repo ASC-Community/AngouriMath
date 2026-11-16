@@ -7,6 +7,7 @@
 
 using System;
 using AngouriMath.Core.Exceptions;
+using HonkSharp.Laziness;
 
 namespace AngouriMath
 {
@@ -468,6 +469,115 @@ namespace AngouriMath
 
             /// <inheritdoc/>
             protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        /// <summary>
+        /// The prime factorisation of a positive integer, <c>factorization(n)</c>: the finitely
+        /// supported map from each prime <c>p</c> to its exponent <c>v_p(n)</c> in <c>n</c>, which
+        /// is mathlib's <c>Nat.factorization</c>. <c>factorization(360)</c> is
+        /// <c>2 ↦ 3, 3 ↦ 2, 5 ↦ 1</c>, and <c>factorization(1)</c> the empty map.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// By the fundamental theorem of arithmetic a positive integer is its exponent vector, and
+        /// multiplying integers adds the vectors; so the factorisation is that map, with
+        /// <c>primefactors(n)</c> its support and <c>valuation(n, p)</c> its value at <c>p</c>, and
+        /// <c>product(p ^ valuation(n, p), p in primefactors(n)) = n</c>.
+        /// </para>
+        /// <para>
+        /// A node of its own, and not the product <c>2^3 * 3^2 * 5</c>, which evaluates to the
+        /// number it was meant to explain; nor a number, so it does not equal <c>n</c>. Defined on
+        /// the positive integers, and <c>NaN</c> at any other number, as <c>primenu</c> is: 0 has no
+        /// factorisation, and a negative integer is <c>-1</c> times one, which the map cannot write.
+        /// Left as written for an expression, and for an integer with a factor neither proven prime
+        /// nor split, whose <see cref="Factors"/> is then <see langword="null"/>.
+        /// https://github.com/asc-community/AngouriMath/issues/2449
+        /// </para>
+        /// </remarks>
+        public sealed partial record PrimeFactorizationf(Entity Argument) : Function, IUnaryNode
+        {
+            /// <inheritdoc/>
+            public Entity NodeChild => Argument;
+
+            /// <summary>
+            /// The map, as the primes in increasing order each with its exponent; empty for
+            /// <c>factorization(1)</c>. <see langword="null"/> where <see cref="Argument"/> is not
+            /// a positive integer, or has a factor neither proven prime nor split. Computed once.
+            /// </summary>
+            public IReadOnlyList<(Number.Integer Prime, Number.Integer Power)>? Factors
+                => factors.GetValue(static @this => @this.Argument is Number.Integer { EInteger.Sign: > 0 } positive
+                    && positive.EInteger.TryFactorize() is { } found
+                    ? found.Select(factor => (Number.Integer.Create(factor.Prime), Number.Integer.Create(factor.Power))).ToList()
+                    : null, this);
+            private LazyPropertyA<IReadOnlyList<(Number.Integer Prime, Number.Integer Power)>?> factors;
+
+            internal PrimeFactorizationf New(Entity argument)
+                   => ReferenceEquals(argument, Argument) ? this : new(argument) { Codomain = Codomain };
+
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) => func(New(Argument.Replace(func)));
+
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Argument };
+        }
+
+        partial record Set
+        {
+            /// <summary>
+            /// The set of the primes dividing a positive integer, <c>primefactors(n)</c>: the support
+            /// of <c>factorization(n)</c>. <c>primefactors(360)</c> is <c>{ 2, 3, 5 }</c> and
+            /// <c>primefactors(1)</c> is empty; <c>NaN</c> at any number but a positive integer, as
+            /// <c>primenu(n)</c>, the number of its members, is.
+            /// https://github.com/asc-community/AngouriMath/issues/2449
+            /// </summary>
+            public sealed partial record PrimeFactorsf(Entity Argument) : Set, IUnaryNode
+            {
+                /// <inheritdoc/>
+                public Entity NodeChild => Argument;
+
+                internal PrimeFactorsf New(Entity argument)
+                    => ReferenceEquals(Argument, argument) ? this : new PrimeFactorsf(argument);
+
+                /// <inheritdoc/>
+                public override Entity Replace(Func<Entity, Entity> func)
+                    => func(New(Argument.Replace(func)));
+
+                /// <inheritdoc/>
+                // Decided for a positive integer argument: a member is a prime that divides it.
+                public override bool TryContains(Entity entity, out bool contains)
+                {
+                    contains = false;
+                    if (Argument is not Number.Integer { EInteger.Sign: > 0 } n)
+                        return false;
+                    if (entity is not Number.Integer candidate)
+                    {
+                        contains = false;
+                        return entity is Number or Boolean;
+                    }
+                    if (candidate.EInteger.Sign <= 0 || !n.EInteger.Remainder(candidate.EInteger).IsZero)
+                        return true;
+                    if (Functions.Primes.IsPrime(candidate.EInteger) is not { } isPrime)
+                        return false;
+                    contains = isPrime;
+                    return true;
+                }
+
+                internal override Priority Priority => Priority.Func;
+
+                /// <inheritdoc/>
+                protected override Entity[] InitDirectChildren() => new[] { Argument };
+
+                /// <inheritdoc/>
+                // A positive integer has finitely many prime factors.
+                public override bool IsSetFinite => true;
+
+                /// <inheritdoc/>
+                public override bool IsSetEmpty => Argument == Number.Integer.One;
+
+                /// <inheritdoc/>
+                public override Set Filter(Entity predicate, Variable over)
+                    => new ConditionalSet(over, over.In(this) & predicate);
+            }
         }
 
         /// <summary>

@@ -783,6 +783,47 @@ namespace AngouriMath
                     (@this, a) => ((Mobiusf)@this).New(a), isExact);
         }
 
+        partial record PrimeFactorizationf
+        {
+            // Defined on the positive integers, as are the other functions of a factorisation.
+            private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.PositiveIntegers);
+
+            /// <inheritdoc/>
+            // The node is its own value: at a positive integer it stays, holding the map, and it is
+            // not a number at any other.
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnOneArgument(Argument,
+                    a => a switch
+                    {
+                        Integer { EInteger.Sign: > 0 } => null,
+                        Number => MathS.NaN,
+                        _ => null
+                    },
+                    (@this, a) => ((PrimeFactorizationf)@this).New(a), isExact);
+        }
+
+        partial record Set
+        {
+            partial record PrimeFactorsf
+            {
+                private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.PositiveIntegers);
+
+                /// <inheritdoc/>
+                // Listed for a positive integer that factorises, and left as written for one that does not.
+                protected override Entity InnerSimplify(bool isExact)
+                    => ExpandOnOneArgument(Argument,
+                        a => a switch
+                        {
+                            Integer { EInteger.Sign: > 0 } positive => positive.EInteger.TryFactorize() is { } factors
+                                ? new FiniteSet(factors.Select(factor => (Entity)Integer.Create(factor.Prime)))
+                                : null,
+                            Number => MathS.NaN,
+                            _ => null
+                        },
+                        (@this, a) => ((PrimeFactorsf)@this).New(a), isExact);
+            }
+        }
+
         partial record PrimeNuf
         {
             private protected override Entity IntrinsicCondition => Argument.In(MathS.Sets.PositiveIntegers);

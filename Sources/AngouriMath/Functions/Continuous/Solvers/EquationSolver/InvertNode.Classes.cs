@@ -1030,6 +1030,25 @@ namespace AngouriMath
                 => null;
         }
 
+        partial record PrimeFactorizationf
+        {
+            // factorization(n) = F has the one solution n = product(p ^ F(p)), and the inverter has
+            // no map to read F from; declined.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
+        partial record Set
+        {
+            partial record PrimeFactorsf
+            {
+                // primefactors(f(x)) = S has every n with that support for a solution, which the
+                // inverter cannot hand back.
+                private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                    => null;
+            }
+        }
+
         partial record Primef
         {
             // prime(n) = p has the one solution n = pi(p) where p is prime and none otherwise,

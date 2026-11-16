@@ -165,7 +165,7 @@ namespace AngouriMath.Core.Transformations
         /// Whether <paramref name="operand"/> may denote something addition or multiplication
         /// does not commute over, or that is not a number at all: a matrix, a transpose (whose
         /// argument the library reads as possibly a matrix), a set, a truth value, a function,
-        /// or an application of one whose value nothing says is a number.
+        /// a prime factorisation, or an application of a function whose value nothing says is a number.
         /// </summary>
         /// <remarks>
         /// Any such node anywhere in the operand, not only at its root. Wider than it has to be
@@ -175,7 +175,7 @@ namespace AngouriMath.Core.Transformations
         private static bool MayNotCommute(Entity operand)
         {
             foreach (var node in operand.Nodes)
-                if (node is Matrix or Transposef or Set or Statement or Lambda or Application)
+                if (node is Matrix or Transposef or PrimeFactorizationf or Set or Statement or Lambda or Application)
                     return true;
             return false;
         }

@@ -26,11 +26,17 @@ namespace AngouriMath.Core.Compilation
                 throw new UncompilableNodeException(refusal.Message);
         }
 
-        /// <summary>The first binder in <paramref name="expression"/> and why it is refused, or null where there is none.</summary>
+        /// <summary>
+        /// The first node in <paramref name="expression"/> that has no compiled form -- a binder, or a node
+        /// whose value is not a number -- and why, or null where there is none.
+        /// </summary>
         internal static (Entity Node, string Message)? Refusal(Entity expression)
         {
             foreach (var node in expression.Nodes)
-                if (Kind(node) is { } kind)
+                if (NotANumber(node) is { } what)
+                    return (node,
+                        $"`{node.Stringize()}` is {what}, not a number, so it has no compiled form, and evaluating it does not give one.");
+                else if (Kind(node) is { } kind)
                     return (node,
                         $"`{node.Stringize()}` is {kind}, which has no compiled form. "
                         + (node is Lambda
@@ -38,6 +44,18 @@ namespace AngouriMath.Core.Compilation
                             : "Call .Evaled or Simplify() on the expression first, and compile the result."));
             return null;
         }
+
+        /// <summary>
+        /// A node whose value is not a number at all, so that evaluating first does not help: a prime
+        /// factorisation is a map from the primes to the exponents, and its support a set of primes.
+        /// https://github.com/asc-community/AngouriMath/issues/2449
+        /// </summary>
+        private static string? NotANumber(Entity node) => node switch
+        {
+            PrimeFactorizationf => "a prime factorisation, a map from the primes to their exponents",
+            Set.PrimeFactorsf => "the set of the prime factors of an integer",
+            _ => null
+        };
 
         private static string? Kind(Entity node) => node switch
         {

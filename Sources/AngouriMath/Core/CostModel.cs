@@ -177,6 +177,7 @@ namespace AngouriMath.Core
             Logf => TinyWeight + ChildrenCost(expr), // Number of logarithms
             Phif => ExtraHeavyWeight + ChildrenCost(expr), // Number of phi functions
             Mobiusf or DivisorSigmaf or PrimeNuf or PrimeOmegaf or PrimePif => ExtraHeavyWeight + ChildrenCost(expr),
+            PrimeFactorizationf or Set.PrimeFactorsf => ExtraHeavyWeight + ChildrenCost(expr),
             Primef => ExtraHeavyWeight + ChildrenCost(expr),
             Valuationf => ExtraHeavyWeight + ChildrenCost(expr),
             Real { IsNegative: true } => MajorWeight + ChildrenCost(expr), // Number of negative reals
