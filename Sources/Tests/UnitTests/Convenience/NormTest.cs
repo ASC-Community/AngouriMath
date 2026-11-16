@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -121,22 +121,37 @@ namespace AngouriMath.Tests.Convenience
         }
 
         /// <summary>
-        /// With one argument it is the product it was, <c>norm * v</c>, binding as it did: what a one-argument
-        /// <c>norm</c> should mean waits on <a href="https://github.com/asc-community/AngouriMath/issues/1019">#1019</a>.
+        /// The name alone is a variable, and with a space before the bracket a product, as the other names
+        /// refused by name are.
         /// </summary>
         [Theory]
         [InlineData("norm", "norm")]
-        [InlineData("norm([3, 4])", "norm * [3, 4]")]
-        [InlineData("norm(x)^2", "norm * x ^ 2")]
         [InlineData("norm (x)", "norm * x")]
-        [InlineData("norm({1, 2})", "norm * { 1, 2 }")]
-        [InlineData("norm([0; 1))", "norm * [0; 1)")]
-        public void TheNameWithoutTwoArgumentsIsWhatItWas(string written, string expected)
+        [InlineData("norm * [3, 4]", "norm * [3, 4]")]
+        public void TheNameWithoutACallIsWhatItWas(string written, string expected)
             => Assert.Equal(expected, written.ToEntity().Stringize());
 
+        /// <summary>
+        /// With one argument it is refused. It was the product <c>norm * v</c>, so <c>norm([3, 4])</c> simplified
+        /// to <c>[3 * norm, 4 * norm]</c> with no error, where the length is 5.
+        /// </summary>
+        [Theory]
+        [InlineData("norm([3, 4])")]
+        [InlineData("norm(x)^2")]
+        [InlineData("norm({1, 2})")]
+        [InlineData("norm([0; 1))")]
+        [InlineData("1 + norm(v)")]
+        [InlineData("norm(norm(v, 2))")]
+        public void OneArgumentIsRefused(string written)
+        {
+            var refused = Assert.Throws<FunctionArgumentCountException>(() => written.ToEntity());
+            Assert.Contains("norm(v, 2)", refused.Message);
+        }
+
+        // A second argument inside a bracket of the first is not the call's own.
         [Fact]
-        public void TheOneArgumentProductIsNotChanged()
-            => Assert.Equal("[3 * norm, 4 * norm]".ToEntity(), "norm([3, 4])".ToEntity().Simplify());
+        public void ACommaInsideTheFirstArgumentIsNotASecondArgument()
+            => Assert.Throws<FunctionArgumentCountException>(() => "norm([3, 4])".ToEntity());
 
         [Fact]
         public void ItTakesTwoArguments()

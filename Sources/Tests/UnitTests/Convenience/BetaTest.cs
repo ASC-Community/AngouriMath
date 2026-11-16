@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -202,18 +202,27 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("beta (a, b)", null)]
         [InlineData("beta (x)", "beta * x")]
         [InlineData("gamma (x)", "gamma * x")]
-        // With one argument it is the product it was before beta(a, b) was a function.
-        [InlineData("beta(x)", "beta * x")]
-        [InlineData("beta(x)^2", "beta * x ^ 2")]
-        [InlineData("2^beta(x)", "2 ^ beta * x")]
-        [InlineData("beta(log(2, x))", "beta * log(2, x)")]
-        [InlineData("beta([1, 2])", "beta * [1, 2]")]
         public void TheNameWithoutTwoArgumentsIsWhatItWas(string written, string? expected)
         {
             if (expected is null)
                 Assert.ThrowsAny<ParseException>(() => written.ToEntity());
             else
                 Assert.Equal(expected, written.ToEntity().Stringize());
+        }
+
+        /// <summary>
+        /// With one argument it is refused: it was the product <c>beta * x</c>, with no error.
+        /// </summary>
+        [Theory]
+        [InlineData("beta(x)")]
+        [InlineData("beta(x)^2")]
+        [InlineData("2^beta(x)")]
+        [InlineData("beta(log(2, x))")]
+        [InlineData("beta([1, 2])")]
+        public void OneArgumentIsRefused(string written)
+        {
+            var refused = Assert.Throws<FunctionArgumentCountException>(() => written.ToEntity());
+            Assert.Contains("beta(a, b)", refused.Message);
         }
 
         [Fact]

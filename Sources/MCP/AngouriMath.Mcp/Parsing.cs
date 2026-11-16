@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -69,9 +69,9 @@ internal static class Parsing
     private static readonly ConcurrentDictionary<string, bool> Calls = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Whether the grammar reads <c>name(x, y)</c> as a call. <c>beta</c> and <c>norm</c> are functions of two
-    /// arguments only, and with one are still the product they were, so <see cref="IsFunction"/> says no for them;
-    /// with a comma, a name that is no function does not parse at all, the bracket not being a factor.
+    /// Whether the grammar reads <c>name(x, y)</c> as a call: with a comma, a name that is no function does not
+    /// parse at all, the bracket not being a factor. <c>beta</c> and <c>norm</c> are functions of two arguments
+    /// only; with one each is refused, so <see cref="IsFunction"/> says yes for them as well.
     /// https://github.com/asc-community/AngouriMath/issues/2182
     /// </summary>
     internal static bool IsFunctionOfSeveralArguments(string name) => SeveralArgumentCalls.GetOrAdd(name, static candidate =>
