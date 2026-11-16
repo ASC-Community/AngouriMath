@@ -110,27 +110,27 @@ namespace AngouriMath.Core
         }
 
         /// <summary>
-        /// A call of <c>beta</c> or <c>norm</c> with one argument, handed back as the name and a bracket,
-        /// which is what it was read as before the two were functions: <c>beta(x)</c> is <c>beta * x</c>
-        /// and <c>norm([3, 4])</c> is <c>norm * [3, 4]</c>, the bracket binding as it did, so that
-        /// <c>norm(x)^2</c> is still <c>norm * x ^ 2</c>. The functions are the two-argument forms,
-        /// B(a, b) and the p-norm, which were parse errors; what the one-argument forms mean waits on
-        /// https://github.com/asc-community/AngouriMath/issues/1019.
+        /// A call of <c>beta</c> or <c>norm</c> with one argument, refused. Each was read as the product of
+        /// a variable named for it with its argument: <c>norm([3, 4])</c> was <c>norm * [3, 4]</c>, which
+        /// simplifies to <c>[3 * norm, 4 * norm]</c> with no error, and <c>beta(x)</c> was <c>beta * x</c>.
+        /// The functions are the two-argument forms, B(a, b) and the p-norm. Refused here, before the
+        /// grammar, which would otherwise report only a count; the name without a bracket, and with a
+        /// space before one, is still a variable, as the other names refused by name are.
         /// https://github.com/asc-community/AngouriMath/issues/2182
         /// </summary>
-        private static void SplitOneArgumentCalls(IList<IToken> tokenList)
+        private static void RefuseOneArgumentCalls(IList<IToken> tokenList)
         {
             for (var i = 0; i < tokenList.Count; i++)
             {
                 var call = tokenList[i];
                 if (call.Channel != 0 || DisplayName(call) is not ("'beta('" or "'norm('") || HasASecondArgument(tokenList, i))
                     continue;
-                var name = call.Text.Substring(0, call.Text.Length - 1);
-                tokenList[i] = new CommonToken(AngouriMathLexer.VARIABLE, name) { Line = call.Line, Column = call.Column };
-                var bracket = 0;
-                while (AngouriMathLexer.DefaultVocabulary.GetDisplayName(bracket) != "'('")
-                    bracket++;
-                tokenList.Insert(i + 1, new CommonToken(bracket, "(") { Line = call.Line, Column = call.Column + name.Length });
+                throw new FunctionArgumentCountException(DisplayName(call) == "'norm('"
+                    ? "norm(v, p) is the p-norm of a vector and takes two arguments: the length is norm(v, 2), which is abs(v). " +
+                      "A one-argument norm(...) is refused rather than read as the product of a variable named norm " +
+                      "with its argument; write norm * (...) for that"
+                    : "beta(a, b) is the beta function and takes two arguments. A one-argument beta(...) is refused " +
+                      "rather than read as the product of a variable named beta with its argument; write beta * (...) for that");
             }
 
             static string DisplayName(IToken token) => AngouriMathLexer.DefaultVocabulary.GetDisplayName(token.Type);
@@ -240,7 +240,7 @@ namespace AngouriMath.Core
                 );
             
             ExpandSuperscripts(tokenList, lexer);
-            SplitOneArgumentCalls(tokenList);
+            RefuseOneArgumentCalls(tokenList);
             if (InsertOmittedTokensOrProvideDiagnostic(tokenList, lexer).Is<ReasonWhyParsingFailed>(out var whyFailed))
                 return new Failure<ReasonWhyParsingFailed>(whyFailed);
 

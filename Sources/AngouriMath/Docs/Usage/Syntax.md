@@ -301,9 +301,9 @@ row, real or complex, is taken when simplified: `norm([3, 4], 1)` is `7`, `norm(
 `norm([3, 4], 3)` is `91^(1/3)`. The 2-norm is `abs(v)`, and `norm(v, 2)` is computed as that, so the two
 are the same expression. Below `p = 1` it is not a norm, the triangle inequality failing, so a `p` that is
 a number below `1`, or off the real line, is refused, as is a matrix written out that is not a vector,
-whose norms are other functions; a symbolic `p` stays as written, with the condition `p >= 1`. With one
-argument, `norm(v)` is still the product `norm * v`, as it was before the norm was a function: what it
-should mean waits on [#1019](https://github.com/asc-community/AngouriMath/issues/1019)
+whose norms are other functions; a symbolic `p` stays as written, with the condition `p >= 1`. A call
+with one argument, `norm(v)`, is refused: the length is `norm(v, 2)`. It was read as the product
+`norm * v`, so `norm([3, 4])` gave `[3 * norm, 4 * norm]` with no error. `beta(x)` is refused the same way
 ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
 ## Functions
@@ -507,8 +507,8 @@ of the rational function above, so `beta(2, -3)` is `1/6`, as mpmath's `beta` ta
 is one it is `0`. Anything else numeric, real or complex, is evaluated to the working precision. It is
 symmetric, `beta(b, a)` simplifying to the same node, and its derivative in `a` is
 `beta(a, b) * (digamma(a) - digamma(a + b))`. As `gamma` is, `beta` alone is a variable and `beta (x)`
-with a space a product; with one argument, `beta(x)` is still the product `beta * x`
-([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+with a space a product; a call with one argument, `beta(x)`, is refused, where it was the product
+`beta * x` ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
 **Polygamma functions** — `polygamma(n, z)` `digamma(z)`. The polygamma function `psi^(n)(z)`, the
 `(n + 1)`-th derivative of `ln Gamma(z)` for a whole `n >= 0`, and the digamma function

@@ -69,6 +69,22 @@ is now put back in, and kept where the equation is exactly zero. The roots Newto
 | `"sin(sqrt(x)) = x".ToEntity().Solve("x")` | `{ 0.76864885676094940… }` | `{ 0, 0.76864885676094940… }` |
 | `"cos(1 - sqrt(x)) - x = cos(1)".ToEntity().Solve("x")` | `{ 0.39003113021627860… }` | `{ 0, 0.39003113021627860… }` |
 
+### `norm(v)` and `beta(x)` with one argument are refused
+
+**Not silent: what parsed now throws.** A call of `norm` or `beta` with one argument was read as the product of a
+variable named `norm` or `beta` with its argument. So `norm([3, 4])` simplified to `[3 * norm, 4 * norm]` with no
+error, where the length is `5`. Each now throws `FunctionArgumentCountException`, saying what to write: `norm(v, 2)`
+for the length, which is `abs(v)`, and `beta(a, b)` for the beta function, or `norm * (…)` and `beta * (…)` for the
+product. The name alone is still a variable, and with a space before the bracket, `norm (x)`, still a product, as the
+other names refused by name are ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"norm([3, 4])".ToEntity()` | `norm * [3, 4]` | throws `FunctionArgumentCountException` |
+| `"norm([3, 4])".ToEntity().Simplify()` | `[3 * norm, 4 * norm]` | throws, as above |
+| `"beta(x)".ToEntity()` | `beta * x` | throws `FunctionArgumentCountException` |
+| `"norm (x)".ToEntity()` | `norm * x` | `norm * x`, unchanged |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**

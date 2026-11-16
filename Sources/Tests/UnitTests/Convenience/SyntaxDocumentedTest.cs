@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2022 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -327,11 +327,12 @@ namespace AngouriMath.Tests.Convenience
 
         /// <summary>
         /// Short enough to be somebody's variable, so read as a product and not refused. <c>re</c> and
-        /// <c>im</c> were the examples until they became the real and the imaginary part.
+        /// <c>im</c> were the examples until they became the real and the imaginary part, and <c>beta</c>
+        /// and <c>norm</c> until a one-argument call of either was refused.
         /// </summary>
         [Theory]
-        [InlineData("beta(x)")]
-        [InlineData("norm(x)")]
+        [InlineData("kappa(x)")]
+        [InlineData("w(x)")]
         public void ANameTheLibraryDoesNotRefuseIsAProduct(string written) =>
             Assert.IsType<Entity.Mulf>(written.ToEntity());
 
