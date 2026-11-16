@@ -41,6 +41,13 @@ namespace AngouriMath.Core.Sets
         /// expression, which is what decides it.
         /// https://github.com/asc-community/AngouriMath/issues/2319
         /// </para>
+        /// <para>
+        /// A member with a condition, as an equation with a denominator has, is read by its
+        /// expression, and the index is put into the whole member: <c>2 pi n provided not 2 pi n = 0</c>
+        /// has no member at <c>n = 0</c>, so <c>sin(x)/x = 0</c> on <c>[-10; 10]</c> is
+        /// <c>{ -3 pi, -2 pi, -pi, pi, 2 pi, 3 pi }</c>. A condition not decided at an index leaves
+        /// the intersection as written. https://github.com/asc-community/AngouriMath/issues/2502
+        /// </para>
         /// </remarks>
         internal static Set? RealMembers(IndexedUnionf family, Set real)
         {
@@ -61,7 +68,12 @@ namespace AngouriMath.Core.Sets
             var found = new FiniteSetBuilder();
             foreach (var member in body)
             {
-                if (Functions.Algebra.AnalyticalSolving.SolutionParameters.NumericLine(member, n) is not var (k, c))
+                // A member with a condition is read by its expression; the condition is decided
+                // below, when the index is put into the whole member.
+                var expression = member;
+                while (expression is Providedf(var inner, _))
+                    expression = inner;
+                if (Functions.Algebra.AnalyticalSolving.SolutionParameters.NumericLine(expression, n) is not var (k, c))
                     return null;
                 var indices = new List<EInteger>();
                 if (!k.ImaginaryPart.IsZero)
@@ -92,6 +104,12 @@ namespace AngouriMath.Core.Sets
                     if (!inOver)
                         continue;
                     var value = member.Substitute(n, Integer.Create(index)).InnerSimplified;
+                    // The member's condition fails at this index, so there is no member here.
+                    if (value.IsNaN)
+                        continue;
+                    // The condition is not decided at this index.
+                    if (value is Providedf)
+                        return null;
                     if (!real.TryContains(value, out var inReal))
                         return null;
                     if (inReal)

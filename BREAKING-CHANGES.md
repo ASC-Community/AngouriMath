@@ -100,6 +100,20 @@ other names refused by name are ([#2182](https://github.com/asc-community/Angour
 | `"beta(x)".ToEntity()` | `beta * x` | throws `FunctionArgumentCountException` |
 | `"norm (x)".ToEntity()` | `norm * x` | `norm * x`, unchanged |
 
+### A family of roots whose members carry a condition is listed inside a bounded interval
+
+**Silent.** Since 2.8.0 a family of roots met with a bounded interval is listed, but not where its members carry a
+condition, as an equation with a denominator has: the intersection was left as written. Each index between the ends is
+now put into the whole member, condition included, and a member whose condition fails is left out. A real number's
+membership in such a family is decided the same way
+([#2502](https://github.com/asc-community/AngouriMath/issues/2502)).
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sin(x)/x = 0 and x in [-10; 10]".ToEntity().Solve("x")` | `union({ 2 * pi * n provided not 2 * pi * n = 0, pi + 2 * pi * n provided not pi + 2 * pi * n = 0 }, n in ZZ) /\ [-10; 10]` | `{ 2 * pi * (-1), 2 * pi, pi + 2 * pi * (-2), pi + 2 * pi * (-1), pi, pi + 2 * pi }` |
+| `"tan(x)/x = 0 and x in [-4; 4]".ToEntity().Solve("x")` | `union({ pi * n provided not pi * n = 0 }, n in ZZ) /\ [-4; 4]` | `{ pi * (-1), pi }` |
+| `0` in `union({ 2 * pi * n provided not 2 * pi * n = 0 }, n in ZZ)` | not decided | `false` |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**

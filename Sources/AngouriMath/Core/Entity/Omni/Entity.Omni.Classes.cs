@@ -1108,6 +1108,16 @@ namespace AngouriMath
                         contains = verdict == Boolean.True;
                         return true;
                     }
+                    // A real number is in a family of roots where the family has a member in the
+                    // interval holding that number alone, which also decides a member's condition:
+                    // 0 is not in union({ 2 pi n provided not 2 pi n = 0 }, n in ZZ).
+                    // https://github.com/asc-community/AngouriMath/issues/2502
+                    if (this is IndexedUnionf family && entity.Evaled is Number.Real { IsFinite: true }
+                        && SetOperators.RealMembers(family, new Interval(entity, true, entity, true)) is FiniteSet members)
+                    {
+                        contains = members.Count > 0;
+                        return true;
+                    }
                     return false;
                 }
 
