@@ -213,8 +213,7 @@ namespace AngouriMath
                 foreach (var parameter in value.Vars.Distinct().ToList())
                 {
                     if (scope.SetOf(parameter) != MathS.Sets.Z
-                        || !TreeAnalyzer.TryGetPolyLinear(value, parameter, out var slope, out var constant)
-                        || slope.Evaled is not Complex { IsZero: false } a || constant.Evaled is not Complex b)
+                        || NumericLine(value, parameter) is not var (a, b))
                         continue;
                     Set? where = null;
                     if (positive)
@@ -235,6 +234,39 @@ namespace AngouriMath
                     value = value.Substitute(parameter, SolutionParameters.Mint(value, parameter.SplitIndex() is var (prefix, _) ? prefix : parameter.Name, where));
                 }
                 return value;
+            }
+
+            /// <summary>
+            /// The numbers <c>a</c> other than 0 and <c>b</c> where <paramref name="value"/> is written
+            /// <c>a n + b</c> in <paramref name="n"/>, read off its terms and their factors; otherwise
+            /// <see langword="null"/>. Not by gathering a polynomial, which expands: the value of a power
+            /// inverted inside a large equation is a large expression, and expanding it was most of what
+            /// solving such an equation cost.
+            /// </summary>
+            private static (Complex Slope, Complex Constant)? NumericLine(Entity value, Variable n)
+            {
+                Entity slope = Integer.Zero, constant = Integer.Zero;
+                foreach (var term in Sumf.LinearChildren(value))
+                {
+                    if (!term.ContainsNode(n))
+                    {
+                        constant += term;
+                        continue;
+                    }
+                    Entity coefficient = Integer.One;
+                    var occurrences = 0;
+                    foreach (var factor in Mulf.LinearChildren(term))
+                        if (factor == n)
+                            occurrences++;
+                        else if (factor.ContainsNode(n))
+                            return null;
+                        else
+                            coefficient *= factor;
+                    if (occurrences != 1)
+                        return null;
+                    slope += coefficient;
+                }
+                return slope.Evaled is Complex { IsZero: false } a && constant.Evaled is Complex b ? (a, b) : null;
             }
 
             /// <summary>
