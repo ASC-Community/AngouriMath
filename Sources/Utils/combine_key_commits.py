@@ -26,13 +26,13 @@ def read_list(path):
                 if line.strip() and not line.strip().startswith("#")]
 
 
-def read_results(directory, commit):
-    status_path = os.path.join(directory, commit + ".status")
+def read_results(directory, key):
+    status_path = os.path.join(directory, key + ".status")
     status = "not attempted"
     if os.path.exists(status_path):
         with open(status_path) as handle:
             status = handle.read().strip()
-    measured_path = os.path.join(directory, commit + ".json")
+    measured_path = os.path.join(directory, key + ".json")
     measured = None
     if os.path.exists(measured_path):
         with open(measured_path) as handle:
@@ -70,14 +70,26 @@ def column(measured, benchmark, field):
     return None if value is None else float(value)
 
 
-def table(handle, commits, results, benchmarks, field, unit, heading, note):
+def labels_of(commits):
+    """A column heading per entry. A commit named more than once is a column per occurrence,
+    marked `(2)`, `(3)`, so a control measured twice in one run reads as two measurements."""
+    total = {commit: commits.count(commit) for commit in commits}
+    seen = {}
+    labels = []
+    for commit in commits:
+        seen[commit] = seen.get(commit, 0) + 1
+        labels.append(commit if total[commit] == 1 else "%s (%d)" % (commit, seen[commit]))
+    return labels
+
+
+def table(handle, labels, results, benchmarks, field, unit, heading, note):
     handle.write("\n### %s\n\n%s\n\n" % (heading, note))
-    handle.write("| benchmark | " + " | ".join(commits) + " |\n")
-    handle.write("|---" * (len(commits) + 1) + "|\n")
+    handle.write("| benchmark | " + " | ".join(labels) + " |\n")
+    handle.write("|---" * (len(labels) + 1) + "|\n")
     for benchmark in benchmarks:
         cells = []
-        for commit in commits:
-            value = column(results[commit][1], benchmark, field)
+        for position in range(len(labels)):
+            value = column(results[position][1], benchmark, field)
             cells.append("—" if value is None else "{:,.0f}".format(value))
         handle.write("| `%s` | %s |\n" % (benchmark, " | ".join(cells)))
     handle.write("\nIn %s. A dash is a commit this benchmark has no figure for.\n" % unit)
@@ -91,11 +103,13 @@ def main():
     list_path, results_directory, output = sys.argv[1:4]
 
     commits = read_list(list_path)
-    results = {commit: read_results(results_directory, commit) for commit in commits}
+    labels = labels_of(commits)
+    # Keyed by position, as benchmark_key_commits.sh writes them: entry 1 is `1.json`.
+    results = [read_results(results_directory, str(position + 1))
+               for position in range(len(commits))]
 
     benchmarks = []
-    for commit in commits:
-        measured = results[commit][1]
+    for measured in (result[1] for result in results):
         if measured:
             for name in measured:
                 if name not in benchmarks:
@@ -109,19 +123,19 @@ def main():
                      "differs, which is what makes the columns comparable.\n\n")
 
         handle.write("| commit | outcome |\n|---|---|\n")
-        for commit in commits:
-            handle.write("| `%s` | %s |\n" % (commit, results[commit][0]))
+        for label, result in zip(labels, results):
+            handle.write("| `%s` | %s |\n" % (label, result[0]))
 
         if not benchmarks:
             handle.write("\nNothing was measured, so there is no table to draw.\n")
             return 0
 
-        table(handle, commits, results, benchmarks, "allocatedBytes", "bytes allocated",
+        table(handle, labels, results, benchmarks, "allocatedBytes", "bytes allocated",
               "Allocation",
               "**This is the one to read.** Allocation is deterministic — the same commit "
               "measured twice gives the same bytes — so a difference between two columns is a "
               "difference in the code rather than in the machine.")
-        table(handle, commits, results, benchmarks, "meanNanoseconds", "nanoseconds",
+        table(handle, labels, results, benchmarks, "meanNanoseconds", "nanoseconds",
               "Time",
               "Reported rather than relied on. On a shared runner this project has seen the "
               "same unchanged commit come back 30-57% apart, while its allocation over the same "
