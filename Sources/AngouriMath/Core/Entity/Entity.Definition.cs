@@ -186,7 +186,9 @@ namespace AngouriMath
         internal virtual IReadOnlyList<Entity> MatchableChildren => DirectChildren;
 
         /// <remarks>A depth-first enumeration is required by
-        /// <see cref="AngouriMath.Functions.TreeAnalyzer.GetMinimumSubtree"/></remarks>
+        /// <see cref="AngouriMath.Functions.TreeAnalyzer.GetMinimumSubtree"/>. Nothing is cached:
+        /// each enumeration walks the tree afresh, at the cost of one object and none per node
+        /// (see <see cref="NodeWalk"/>).</remarks>
         /// <summary>
         /// The list of all subnodes of the given expression, including its own. Traverses
         /// the tree the following order:
@@ -212,8 +214,7 @@ namespace AngouriMath
         /// 3
         /// </code>
         /// </example>
-        public IEnumerable<Entity> Nodes => nodes.GetValue(static @this => @this.DirectChildren.SelectMany(c => c.Nodes).Prepend(@this), this);
-        private LazyPropertyA<IEnumerable<Entity>> nodes;
+        public IEnumerable<Entity> Nodes => new NodeWalk(this);
 
         /// <summary>
         /// Applies the given function to every node starting from the leaves
