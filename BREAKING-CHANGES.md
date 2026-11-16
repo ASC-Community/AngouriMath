@@ -324,6 +324,32 @@ returned as all of them. `MathS.Equations("y^2 - 2", "x^2 + (P - Q y) * x - 3").
 
 ---
 
+### A rational guessed for a root is kept only where it is one at the working precision
+
+**Silent: wrong roots are now right.** Where a root came out within `1e-7` of a rational, the solver tried the
+rational, and checked it under that same `1e-7`, or under the `1e-16` of `PrecisionErrorZeroRange`, where a residual of
+`1e-24` counts as zero. A rational is now kept only where its residual is exactly zero, or, where the equation carries
+decimals, under the `1e-50` evaluation itself rounds to zero with at a hundred digits; otherwise the root the solver
+found is kept. A rational root of an exact number is taken the same way, so the square root of `9 + 4/10^24` is no
+longer `3` ([#2482](https://github.com/asc-community/AngouriMath/issues/2482)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"x^2 - 3x - 1e-24".SolveEquation("x")` | `{ 0, 3 }` | `{ (3 - sqrt(9 - 4 * -1E-24)) / 2, (3 + sqrt(9 - 4 * -1E-24)) / 2 }`, about `-3.3e-25` and `3 + 3.3e-25` |
+| `"x^2 - 3x - 1e-9".SolveEquation("x")` | `{ 0, 3 }` | `{ (3 - sqrt(9 - 4 * -1E-9)) / 2, (3 + sqrt(9 - 4 * -1E-9)) / 2 }` |
+| `"x^2 - 1e-30".SolveEquation("x")` | `{ 0 }` | `{ sqrt(1E-30), -sqrt(1E-30) }` |
+| `"x^3 - x - 1e-20".SolveEquation("x")` | `{ -1, 1, 0 }` | the three roots by Cardano's formula, about `-1 - 5e-21`, `-1e-20` and `1 + 5e-21` |
+| `"x^2 - 3x - 1/1000000000000000000000000".SolveEquation("x")` | `{ x : x ^ 2 - 3 * x = 1/1000000000000000000000000 }` | `{ (3 - sqrt(2250000000000000000000001/250000000000000000000000)) / 2, (3 + sqrt(2250000000000000000000001/250000000000000000000000)) / 2 }` |
+| `[[0.333333333333333333333333, 1], [1, 3]]`, `.Eigenvalues` | `{ 0, 10/3 }` | the two roots of its characteristic polynomial in radicals, about `-3.0e-25` and `3.333...` |
+| `[[1, 2], [3, 6.000000000001]]`, `.Eigenvalues` | `{ 0, 7 }` | about `1.43e-13` and `7 + 8.6e-13`, in radicals |
+| `"sqrt(9 + 4/10^24)".EvalNumerical()` | `3` | `3.000000000000000000000000666...` |
+
+Measured on the 2.7.0 package and a build of this change, each root against the true one worked out in mpmath at eighty
+digits. A guess that is right is still made: `6x^2 - 5x + 1` is `{ 1/2, 1/3 }`, `x^2 - 0.25` is `{ 1/2, -1/2 }` and
+`x^2 - 0.5x + 0.06` is `{ 1/5, 3/10 }`, as before. The guessing goes with downcasting in v3.
+
+---
+
 ### A set `MathS.Settings.Budget` caps a budget passed as an argument instead of replacing it
 
 **Silent: the same call stops sooner.** A set `MathS.Settings.Budget` replaced every budget in the library, including one
