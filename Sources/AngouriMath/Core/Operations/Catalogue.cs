@@ -229,7 +229,7 @@ namespace AngouriMath.Core.Operations
 
         /// <summary><see cref="MathS.NumberTheory.Factorize(Integer)"/>.</summary>
         public static Query<Func<Integer, IEnumerable<(Integer Prime, Integer Power)>>> PrimeFactorization { get; } = new(
-            "prime_factorization", "The primes that divide an integer, each with its power.",
+            "prime_factorization", "The primes that divide a positive integer, each with its power.",
             static n => MathS.NumberTheory.Factorize(n));
 
         /// <summary><see cref="MathS.NumberTheory.Phi(Entity)"/>, evaluated.</summary>

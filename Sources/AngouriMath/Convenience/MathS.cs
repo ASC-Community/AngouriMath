@@ -179,10 +179,13 @@ namespace AngouriMath
             public static Integer CountDivisors(Integer integer) => integer.CountDivisors();
 
             /// <summary>
-            /// Factorization of integer. Returns a sequence of unique primes
-            /// and their corresponding power. Sorted by value of prime (starting
-            /// from the smallest).
+            /// The prime factorisation of a positive integer: each prime that divides it with its
+            /// power, the smallest prime first. Empty for 1, the empty product.
             /// </summary>
+            /// <exception cref="InvalidNumberException">
+            /// Thrown where <paramref name="integer"/> is 0 or negative, which have no factorisation
+            /// into primes alone. https://github.com/asc-community/AngouriMath/issues/2466
+            /// </exception>
             /// <example>
             /// <code>
             /// var factors = MathS.NumberTheory.Factorize(1872);
