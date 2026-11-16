@@ -155,7 +155,7 @@ namespace CasBench
             var solutions = statement.Solve(x);
             var text = solutions.Stringize();
 
-            if (solutions is Entity.Set.FiniteSet fs)
+            if (Listed(solutions) is { } fs)
             {
                 if (fs.Count == 0)
                     return new Result(p, Verdict.Unsolved, text, "empty solution set", sw.ElapsedMilliseconds);
@@ -178,6 +178,35 @@ namespace CasBench
             return new Result(p, Verdict.Solved, text, "non-finite solution set (not verified)", sw.ElapsedMilliseconds);
         }
 
+
+        /// <summary>
+        /// The roots an answer lists: the members of a finite set, and of an indexed union each
+        /// member at the values of <see cref="ParameterBindings"/> its index set has, so that
+        /// <c>union({ ln(2) + 2 pi i n }, n in ZZ)</c> is checked at <c>n = 0, 1, -1, 2</c>
+        /// rather than counted unverified; <see langword="null"/> for any other set.
+        /// </summary>
+        private static List<Entity>? Listed(Entity solutions)
+        {
+            switch (solutions)
+            {
+                case Entity.Set.FiniteSet finite:
+                    return finite.ToList();
+                case Entity.Set.Unionf(var left, var right):
+                    return Listed(left) is { } first && Listed(right) is { } second ? first.Concat(second).ToList() : null;
+                case Entity.Set.IndexedUnionf family:
+                    var members = new List<Entity>();
+                    foreach (var value in ParameterBindings)
+                        if (value.In(family.Over).Simplify() == Entity.Boolean.True)
+                        {
+                            if (Listed(family.Body.Substitute(family.Var, value)) is not { } each)
+                                return null;
+                            members.AddRange(each);
+                        }
+                    return members;
+                default:
+                    return null;
+            }
+        }
 
         /// <summary>
         /// Since #1036 a search that settled nothing answers with the equation itself as a
