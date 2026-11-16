@@ -72,7 +72,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             Entity Root(Entity branch) => MathS.LambertW(branch, a) / gamma + shift;
 
             if (MathS.Settings.Codomain.Value != Core.Domain.Real)
-                return new FiniteSet(Root(Variable.CreateUnique(expr + a, "n")));
+                return new FiniteSet(Root(SolutionParameters.Mint(expr + a, "n", MathS.Sets.Z)));
 
             var aboveTheBranchPoint = (a + 1 / MathS.e).InnerSimplified;
             if (aboveTheBranchPoint.Evaled is Real { EDecimal: var distance } && a.Evaled is Real { EDecimal: var at })

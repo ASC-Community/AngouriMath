@@ -7,6 +7,7 @@
 
 using AngouriMath.Core.Exceptions;
 using AngouriMath.Functions.Algebra;
+using AngouriMath.Functions.Algebra.AnalyticalSolving;
 
 namespace AngouriMath
 {
@@ -127,7 +128,7 @@ namespace AngouriMath
                 if (!inRange)
                     return Enumerable.Empty<Entity>();
                 var step = period.IsNegative ? (-Divisor).InnerSimplified : Divisor;
-                return Dividend.Invert(value + step * Variable.CreateUnique(this + value, "n"), x);
+                return Dividend.Invert(value + step * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x);
             }
         }
 
@@ -266,9 +267,9 @@ namespace AngouriMath
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
                 // sin(x) = value => x = arcsin(value) + 2pi * n
-                Argument.Invert(MathS.Arcsin(value) + 2 * MathS.pi * Variable.CreateUnique(this + value, "n"), x) is { } first
+                Argument.Invert(MathS.Arcsin(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } first
                 // sin(x) = value => x = pi - arcsin(value) + 2pi * n
-                && Argument.Invert(MathS.pi - MathS.Arcsin(value) + 2 * MathS.pi * Variable.CreateUnique(this + value, "n"), x) is { } second
+                && Argument.Invert(MathS.pi - MathS.Arcsin(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } second
                 ? first.Concat(second) : null;
         }
 
@@ -276,9 +277,9 @@ namespace AngouriMath
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
                 // cos(x) = value => x = arccos(value) + 2pi * n
-                Argument.Invert(MathS.Arccos(value) + 2 * MathS.pi * Variable.CreateUnique(this + value, "n"), x) is { } first
+                Argument.Invert(MathS.Arccos(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } first
                 // cos(x) = value => x = -arccos(value) + 2pi * n
-                && Argument.Invert(-MathS.Arccos(value) + 2 * MathS.pi * Variable.CreateUnique(this + value, "n"), x) is { } second
+                && Argument.Invert(-MathS.Arccos(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } second
                 ? first.Concat(second) : null;
         }
 
@@ -304,14 +305,14 @@ namespace AngouriMath
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
                 // tan(x) = value => x = arctan(value) + pi * n
-                Argument.Invert(MathS.Arctan(value) + MathS.pi * Variable.CreateUnique(this + value, "n"), x);
+                Argument.Invert(MathS.Arctan(value) + MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x);
         }
 
         partial record Cotanf
         {
             // cotan(x) = value => x = arccotan(value) + pi * n
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
-                Argument.Invert(MathS.Arccotan(value) + MathS.pi * Variable.CreateUnique(this + value, "n"), x);
+                Argument.Invert(MathS.Arccotan(value) + MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x);
         }
 
         partial record Logf
@@ -651,7 +652,7 @@ namespace AngouriMath
             // x = f(x).InvertNode(value * pr, x)
             // TODO: we need to make a piecewise for the case when signum(x) = n and |n| != 1
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
-                => Argument.Invert(value * Variable.CreateUnique(Argument + value, "r"), x);
+                => Argument.Invert(value * SolutionParameters.Mint(Argument + value, "r", MathS.Sets.Interval(0, false, Real.PositiveInfinity, false)), x);
         }
 
         partial record Absf
@@ -667,7 +668,7 @@ namespace AngouriMath
             // https://github.com/asc-community/AngouriMath/issues/812
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
             {
-                var @var = Variable.CreateUnique(value + Argument, "r");
+                var @var = SolutionParameters.Mint(value + Argument, "r", MathS.Sets.R);
                 return Argument.Invert(value * MathS.e.Pow(MathS.i * @var), x)
                     ?.Select(c => c.Provided(@var.In(MathS.Sets.R) & new GreaterOrEqualf(value, 0)));
             }
@@ -682,7 +683,7 @@ namespace AngouriMath
             // their own many-to-one inverses.
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
             {
-                var t = Variable.CreateUnique(value + Argument, "t");
+                var t = SolutionParameters.Mint(value + Argument, "t", MathS.Sets.Interval(0, true, 1, false));
                 return Argument.Invert(value + t, x)
                     ?.Select(c => c.Provided(
                         value.In(MathS.Sets.Z)
@@ -699,7 +700,7 @@ namespace AngouriMath
             // is subtracted rather than added.
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
             {
-                var t = Variable.CreateUnique(value + Argument, "t");
+                var t = SolutionParameters.Mint(value + Argument, "t", MathS.Sets.Interval(0, true, 1, false));
                 return Argument.Invert(value - t, x)
                     ?.Select(c => c.Provided(
                         value.In(MathS.Sets.Z)
@@ -718,7 +719,7 @@ namespace AngouriMath
             // out: every point named is a solution, which is the direction that matters.
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
             {
-                var t = Variable.CreateUnique(value + Argument, "t");
+                var t = SolutionParameters.Mint(value + Argument, "t", MathS.Sets.Interval(Rational.Create(-1, 2), false, Rational.Create(1, 2), false));
                 return Argument.Invert(value + t, x)
                     ?.Select(c => c.Provided(
                         value.In(MathS.Sets.Z)

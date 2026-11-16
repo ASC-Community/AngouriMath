@@ -93,7 +93,8 @@ internal static class Tools
         ["am_limit"] = [Catalogue.Limit],
         ["am_evaluate"] = [Catalogue.EvaluateNumerically],
         ["am_truth_table"] = [Catalogue.TruthTable, Catalogue.SatisfyingAssignments],
-        ["am_solve_system"] = [Catalogue.SolveSystem, Catalogue.SolveConjunction],
+        ["am_solve_system"] = [Catalogue.SolveSystem, Catalogue.SolveConjunction,
+            Catalogue.SolveSystemWithParameters, Catalogue.SolveConjunctionWithParameters],
         ["am_represent"] = [Catalogue.ToBase, Catalogue.FromBase],
         ["am_matrix"] = [Catalogue.Determinant, Catalogue.Inverse, Catalogue.Transpose, Catalogue.Rank,
             Catalogue.ReducedRowEchelonForm, Catalogue.Trace, Catalogue.TensorProduct],
@@ -329,7 +330,8 @@ internal static class Tools
 
         Tool("am_solve_system",
             "Solve a system of simultaneous equations for several variables. Returns one row " +
-            "per solution. Give the system either as a list of equations or as one statement " +
+            "per solution, and each parameter the rows are written in with the set it ranges " +
+            "over, e.g. n_1 in ZZ, t_1 in CC. Give the system either as a list of equations or as one statement " +
             "joining them with 'and'. Note: nonlinear systems may return no solution even when one " +
             "exists (a known library limitation).",
             Schema(new JsonObject
@@ -1433,9 +1435,10 @@ internal static class Tools
         }
 
         return FromOutcome(Guard.Run(() => system is not null
-            ? Catalogue.SolveConjunction.Ask(system, [.. variables.Select(Var)])
-            : Catalogue.SolveSystem.Ask(parsed, [.. variables.Select(Var)])), matrix =>
+            ? Catalogue.SolveConjunctionWithParameters.Ask(system, [.. variables.Select(Var)])
+            : Catalogue.SolveSystemWithParameters.Ask(parsed, [.. variables.Select(Var)])), solved =>
         {
+            var matrix = solved?.Rows;
             var order = new JsonArray();
             foreach (var v in variables) order.Add(v);
 
@@ -1446,6 +1449,17 @@ internal static class Tools
                 ["solutions"] = matrix?.ToString(multilineFormat: true),
                 ["solution_count"] = matrix?.RowCount,
             };
+
+            // A row is a family of solutions, one for each value of its parameters, and a caller
+            // can only read it as one if it is told what the parameters are and what values they
+            // take: n_1 is a whole number, t_1 any number.
+            if (solved is not null)
+            {
+                var parameters = new JsonArray();
+                foreach (var (parameter, domain) in solved.Parameters)
+                    parameters.Add(new JsonObject { ["parameter"] = parameter.Stringize(), ["set"] = domain.Stringize() });
+                response["parameters"] = parameters;
+            }
 
             if (matrix is null)
                 response["note"] = "No solution was returned. A nonlinear system can come " +

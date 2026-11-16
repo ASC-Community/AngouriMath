@@ -108,6 +108,18 @@ namespace AngouriMath.Core.Operations
             static (system, variables) => MathS.SolveSystem(system, [.. variables]),
             new Parameter("variables", "The variables to solve for, in the order of the answer's columns."));
 
+        /// <summary><see cref="EquationSystem.SolveWithParameters(Variable[])"/>.</summary>
+        public static Query<Func<IEnumerable<Entity>, IReadOnlyList<Variable>, ParametrizedSolutions?>> SolveSystemWithParameters { get; } = new(
+            "solve_system_with_parameters", "Solves equations jointly for several variables, as solve_system does, and names each parameter of the answer with the set it ranges over.",
+            static (equations, variables) => MathS.Equations(equations).SolveWithParameters([.. variables]),
+            new Parameter("variables", "The variables to solve for, in the order of the answer's columns."));
+
+        /// <summary><see cref="MathS.SolveSystemWithParameters(Entity, Variable[])"/>.</summary>
+        public static Query<Func<Entity, IReadOnlyList<Variable>, ParametrizedSolutions?>> SolveConjunctionWithParameters { get; } = new(
+            "solve_conjunction_with_parameters", "Solves a conjunction of equations jointly for several variables, as solve_conjunction does, and names each parameter of the answer with the set it ranges over.",
+            static (system, variables) => MathS.SolveSystemWithParameters(system, [.. variables]),
+            new Parameter("variables", "The variables to solve for, in the order of the answer's columns."));
+
         /// <summary><see cref="Entity.Evaled"/>.</summary>
         public static Query<Func<Entity, Entity>> Evaluate { get; } = new(
             "evaluate", "Evaluates as far as it goes: to a number, a boolean or a set where it can, and as an expression where it cannot.",
@@ -275,7 +287,7 @@ namespace AngouriMath.Core.Operations
         public static IReadOnlyList<Operation> All { get; } =
         [
             Simplify, Normalize, Expand, Factorize, Differentiate, Integrate, Limit, Substitute,
-            Solve, SolveSystem, SolveConjunction, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, Hlsl, Glsl, TruthTable, SatisfyingAssignments, Series, AreEqual,
+            Solve, SolveSystem, SolveConjunction, SolveSystemWithParameters, SolveConjunctionWithParameters, Evaluate, EvaluateNumerically, Variables, Alternatives, Latex, Sympy, Hlsl, Glsl, TruthTable, SatisfyingAssignments, Series, AreEqual,
             ToBase, FromBase,
             Determinant, Inverse, Transpose, Rank, ReducedRowEchelonForm, Trace, TensorProduct,
             PrimeFactorization, Totient, GreatestCommonDivisor, DivisorCount, IsPrime,

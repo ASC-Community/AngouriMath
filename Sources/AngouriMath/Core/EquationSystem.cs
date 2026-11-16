@@ -144,6 +144,85 @@ namespace AngouriMath.Core
         /// </exception>
         public Matrix? Solve(params Variable[] vars) => EquationSolver.SolveSystem(equations, vars);
 
+        /// <summary>
+        /// Solves the system as <see cref="Solve(Variable[])"/> does, and says what each parameter
+        /// in the answer is and which set it ranges over.
+        /// </summary>
+        /// <param name="vars">The unknowns, as <see cref="Solve(Variable[])"/> takes them.</param>
+        /// <returns>
+        /// The rows <see cref="Solve(Variable[])"/> answers, in
+        /// <see cref="ParametrizedSolutions.Rows"/>, and in
+        /// <see cref="ParametrizedSolutions.Parameters"/> each symbol of theirs that is neither an
+        /// unknown nor a symbol of the equations, in the order it first appears, with the set it
+        /// ranges over: <c>t_1</c> over <c>CC</c> for an unknown nothing constrains (<c>RR</c>
+        /// where <see cref="MathS.Settings.Codomain"/> is <see cref="Domain.Real"/>), <c>n_1</c>
+        /// over <c>ZZ</c> for a whole number of periods or a branch of the Lambert W function,
+        /// <c>r_1</c> over <c>RR</c> for the argument of a number of given modulus, and the
+        /// <c>t_1</c> of <c>floor(x) = 1</c> over <c>[0, 1)</c>. The list is empty where the
+        /// answer has no parameter. <see langword="null"/> where <see cref="Solve(Variable[])"/>
+        /// is, and where a parameter is one this cannot name the set of.
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// Each row is a family of solutions, one for each value of the parameters it mentions,
+        /// taken from their sets; a row need not mention all of them. A name stands for one set
+        /// throughout the answer, and within a row two parameters are two names: in
+        /// <c>sin(x) = 1/2</c>, <c>sin(y) = 1/2</c> the rows read
+        /// <c>(pi/6 + 2 pi n_1, pi/6 + 2 pi n_2)</c>. Rows are separate families, so a
+        /// name in two rows is chosen independently in each.
+        /// </para>
+        /// <para>
+        /// A row may say where it holds, as <c>1 + t_1 provided t_1 in RR and t_1 &gt;= 0 and
+        /// t_1 &lt; 1</c> does; the set of its parameter is said here either way.
+        /// </para>
+        /// https://github.com/asc-community/AngouriMath/issues/212
+        /// </remarks>
+        /// <exception cref="Exceptions.NotSufficientlySupportedException">
+        /// As <see cref="Solve(Variable[])"/>.
+        /// </exception>
+        /// <example>
+        /// <code>
+        /// var solved = MathS.Equations("sin(x) - 1/2").SolveWithParameters("x", "y");
+        /// Console.WriteLine(solved!.Rows);
+        /// foreach (var (parameter, domain) in solved.Parameters)
+        ///     Console.WriteLine($"{parameter} in {domain}");
+        /// </code>
+        /// Prints
+        /// <code>
+        /// [[pi / 6 + 2 * pi * n_1, t_1], [pi - pi / 6 + 2 * pi * n_1, t_1]]
+        /// n_1 in ZZ
+        /// t_1 in CC
+        /// </code>
+        /// </example>
+        public ParametrizedSolutions? SolveWithParameters(params Variable[] vars)
+        {
+            var scope = AngouriMath.Functions.Algebra.AnalyticalSolving.SolutionParameters.Open(out var opened);
+            try
+            {
+                if (Solve(vars) is not { } rows)
+                    return null;
+                var known = new HashSet<Variable>(equations.SelectMany(equation => equation.Vars));
+                known.UnionWith(vars);
+                var parameters = new List<(Variable Parameter, Set Domain)>();
+                for (var row = 0; row < rows.RowCount; row++)
+                    for (var column = 0; column < rows.ColumnCount; column++)
+                        foreach (var symbol in rows[row, column].Vars)
+                        {
+                            if (!known.Add(symbol))
+                                continue;
+                            if (scope.SetOf(symbol) is not { } domain)
+                                return null;
+                            parameters.Add((symbol, domain));
+                        }
+                return new ParametrizedSolutions(rows, parameters);
+            }
+            finally
+            {
+                if (opened)
+                    scope.Close();
+            }
+        }
+
         /// <returns>
         /// Latexized version of the system. It adds
         /// zero equality to all the provided expressions
@@ -165,5 +244,33 @@ namespace AngouriMath.Core
 
         /// <inheritdoc/>
         public override string ToString() => string.Join("\n", equations.Select(c => c.Stringize() + " = 0"));
+    }
+
+    /// <summary>
+    /// The solutions of a system as families: the rows <see cref="EquationSystem.Solve"/>
+    /// answers, and the parameters they are written in, each with the set it ranges over.
+    /// See <see cref="EquationSystem.SolveWithParameters"/>.
+    /// https://github.com/asc-community/AngouriMath/issues/212
+    /// </summary>
+    /// <param name="Rows">
+    /// A row for each family of solutions and a column for each unknown, as
+    /// <see cref="EquationSystem.Solve"/> answers them.
+    /// </param>
+    /// <param name="Parameters">
+    /// Each parameter of <paramref name="Rows"/> and the set it ranges over, in the order the
+    /// parameters first appear: <c>(n_1, ZZ)</c>, <c>(t_1, CC)</c>. Empty where no row has one.
+    /// </param>
+    public sealed record ParametrizedSolutions(Matrix Rows, IReadOnlyList<(Variable Parameter, Set Domain)> Parameters)
+    {
+        /// <summary>
+        /// Whether the rows are equal and the parameters are the same, in the same order, with
+        /// the same sets: compared element by element, where a record compares a list by reference.
+        /// </summary>
+        public bool Equals(ParametrizedSolutions? other)
+            => other is not null && Rows == other.Rows && Parameters.SequenceEqual(other.Parameters);
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+            => Parameters.Aggregate(Rows.GetHashCode(), (hash, pair) => unchecked(hash * 31 + pair.GetHashCode()));
     }
 }

@@ -232,6 +232,23 @@ public sealed class ToolsTest
         Assert.Equal("2 1", string.Join(" ", answer.Field("solutions").Split('\n')[1].Split(' ', StringSplitOptions.RemoveEmptyEntries)));
     }
 
+    // https://github.com/asc-community/AngouriMath/issues/212
+    [Fact]
+    public void EachParameterOfASystemsAnswerComesWithItsSet()
+    {
+        var answer = Mcp.Call("am_solve_system", """{"equations":["sin(x) = 1/2"],"variables":["x","y"]}""");
+        var parameters = answer["parameters"]!.AsArray();
+        Assert.Equal(2, parameters.Count);
+        Assert.Equal("n_1", parameters[0]!["parameter"]!.GetValue<string>());
+        Assert.Equal("ZZ", parameters[0]!["set"]!.GetValue<string>());
+        Assert.Equal("t_1", parameters[1]!["parameter"]!.GetValue<string>());
+        Assert.Equal("CC", parameters[1]!["set"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void ASystemWithoutParametersListsNone() =>
+        Assert.Empty(Mcp.Call("am_solve_system", """{"statement":"x + y = 3 and x - y = 1","variables":["x","y"]}""")["parameters"]!.AsArray());
+
     [Fact]
     public void AConjunctThatIsNotAnEquationIsNamedAndDeclined()
     {
