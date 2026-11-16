@@ -32,6 +32,40 @@ namespace AngouriMath
         }
 
         /// <summary>
+        /// A partial derivative, <c>∂L/∂q</c>: the derivative of <see cref="CalculusOperator.Expression"/>
+        /// in the slot <see cref="CalculusOperator.Var"/>, with everything else held fixed.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Where <see cref="Derivativef"/> is the total derivative, which follows everything that
+        /// moves when its variable does, this holds fixed whatever is not its slot. The two agree
+        /// over a variable. Over an unknown function applied, <c>q = f(x)</c>, or a derivative of
+        /// one, <c>f'(x)</c>, they do not: <c>f'</c> and <c>x</c> are other slots, as in the
+        /// Euler–Lagrange equation, so the partial derivative of <c>f^2 + f'^2</c> in <c>f</c> is
+        /// <c>2f</c>, and the total derivative is <c>2f + 2f''</c> where <c>f' ≠ 0</c>.
+        /// </para>
+        /// <para>
+        /// A slot is a variable, an unknown function applied, or a derivative of one in a
+        /// variable. Over any other expression the node is left as written: <c>x^2</c> and
+        /// <c>x * x</c> are one value, and the slot <c>x^2</c> occurs in only one of them.
+        /// </para>
+        /// <para>It does not bind its slot: it is a function of it, as a derivative is.</para>
+        /// <para><a href="https://github.com/asc-community/AngouriMath/issues/230">#230</a></para>
+        /// </remarks>
+        public sealed partial record PartialDerivativef(Entity Expression, Entity Var, int Iterations) : CalculusOperator(Expression, Var)
+        {
+            /// <summary>Reuse the cache by returning the same object if possible</summary>
+            private PartialDerivativef New(Entity expression, Entity var) =>
+                ReferenceEquals(Expression, expression) && ReferenceEquals(Var, var)
+                ? this : new(expression, var, Iterations) { Codomain = Codomain };
+            /// <inheritdoc/>
+            public override Entity Replace(Func<Entity, Entity> func) =>
+                func(New(Expression.Replace(func), Var.Replace(func)));
+            /// <inheritdoc/>
+            protected override Entity[] InitDirectChildren() => new[] { Expression, Var, Iterations };
+        }
+
+        /// <summary>
         /// A node of integral
         /// </summary>
         public sealed partial record Integralf(Entity Expression, Entity Var, (Entity from, Entity to)? Range) : CalculusOperator(Expression, Var)

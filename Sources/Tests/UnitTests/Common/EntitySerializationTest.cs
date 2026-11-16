@@ -55,6 +55,7 @@ namespace AngouriMath.Tests.Common
             MathS.Apply(X, X),                                  // Application
             Entity.Boolean.True,                                // Boolean
             MathS.Derivative(X, X, 2),                          // Derivativef, with an iteration count
+            MathS.PartialDerivative(X, X, 2),                   // PartialDerivativef, with an iteration count
             MathS.Integral(X, X),                               // Integralf, indefinite
             MathS.Integral(X, X, 0, 1),                         // Integralf, over a range
             MathS.Lambda(X, X),                                 // Lambda
@@ -388,6 +389,7 @@ namespace AngouriMath.Tests.Common
         [InlineData("product(x, x, 1, 10)")]
         [InlineData("integral(sin(x), x, 0, pi)")]
         [InlineData("derivative(x ^ 3, x, 2)")]
+        [InlineData("partialderivative(x * apply(f, x) ^ 2, apply(f, x))")]
         [InlineData("limit(sin(x) / x, x, 0)")]
         [InlineData("limitleft(1 / x, x, 0)")]
         [InlineData("limitright(1 / x, x, 0)")]

@@ -24,6 +24,7 @@ namespace AngouriMath.Tests.Common
     {
         [Theory]
         [InlineData("derivative(x^2, x)", "derivative(x ^ 2, x)")]
+        [InlineData("partialderivative(x^2, x)", "partialderivative(x ^ 2, x)")]
         [InlineData("integral(x^2, x)", "integral(x ^ 2, x)")]
         [InlineData("integral(x t, t, 0, 1)", "integral(x * t, t, 0, 1)")]
         [InlineData("limit(sin(x t)/t, t, 0)", "limit(sin(x * t) / t, t, 0)")]
@@ -56,6 +57,7 @@ namespace AngouriMath.Tests.Common
         /// <summary>What the message advises compiles, and agrees with evaluation.</summary>
         [Theory]
         [InlineData("derivative(x^3, x)")]
+        [InlineData("partialderivative(x^3, x)")]
         [InlineData("integral(x t, t, 0, 1)")]
         [InlineData("limit(sin(x t)/t, t, 0)")]
         [InlineData("sum(x^k, k, 1, 3)")]

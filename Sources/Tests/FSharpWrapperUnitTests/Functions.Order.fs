@@ -11,6 +11,8 @@ let z = symbol "z"
 [<Fact>]
 let ``Derivative test`` () = Assert.Equal(parsed "derivative(x, y)", derivativeNode y x)
 [<Fact>]
+let ``Partial derivative test`` () = Assert.Equal(parsed "partialderivative(x, y)", partialDerivativeNode y x)
+[<Fact>]
 let ``Integral test`` () = Assert.Equal(parsed "integral(x, y)", integralNode y x)
 [<Fact>]
 let ``Limit test`` () = Assert.Equal(parsed "limit(x, y, z)", limitNode y z x)

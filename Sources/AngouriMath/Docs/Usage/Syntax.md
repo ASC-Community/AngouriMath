@@ -487,7 +487,7 @@ and `gamma(a, 0)` is `gamma(a)` where `Re a > 0`. Its derivative in `z` is `-z ^
 A whole `a >= 1` is elementary, `gamma(3, x)` being `2 * e ^ (-x) * (1 + x + x ^ 2 / 2)`, and
 `gamma(1/2, x)` is `sqrt(pi) * erfc(sqrt(x))`.
 
-**Calculus** — `derivative(expr, var, order)`, `integral(expr, var)`,
+**Calculus** — `derivative(expr, var, order)`, `partialderivative(expr, slot, order)`, `integral(expr, var)`,
 `integral(expr, var, from, to)`, `limit(expr, var, dest)`, `limitleft(...)`, `limitright(...)`;
 `sum(expr, var in set)` for a sum over a set and `product(expr, var in set)` for a product over one,
 each member counted once (`product(p, p in PP /\ [1; 30])` is `6469693230`, the empty product `1`);
@@ -507,6 +507,24 @@ derivative, while `integral`'s third and fourth arguments are the bounds of a de
 not a count. `integral(f, x, 2)` is therefore a parse error rather than the second antiderivative
 — three arguments name neither form. This is deliberate; the iteration count was replaced by the
 range in [#657](https://github.com/asc-community/AngouriMath/pull/657).
+
+There are two derivatives, and they agree over a variable
+([#230](https://github.com/asc-community/AngouriMath/issues/230)):
+
+- `derivative(expr, u)` is the **total** derivative. Over an expression `u` that varies in one
+  variable `x` it changes variables: `(d expr/dx) / (du/dx)`, defined where `du/dx ≠ 0`. So
+  `derivative(x * apply(f, x), apply(f, x))` is `(f + x f') / f'`, and
+  `derivative(apply(f, x)^2 + derivative(apply(f, x), x)^2, apply(f, x))` is `2f + 2f''` provided
+  `f' ≠ 0`. Other variables are held fixed, so `derivative(y sin(x), cos(x))` is
+  `-y csc(x) cos(x)`; over `x * y`, which varies in two, it is left as written.
+- `partialderivative(expr, q)` and `partialderivative(expr, q, order)` is the **partial**
+  derivative `∂expr/∂q`, which `Latexize` draws as `\frac{\partial}{\partial q}`. Its `q` is a slot — a variable,
+  an unknown function applied, `apply(f, x)`, or a derivative of one,
+  `derivative(apply(f, x), x)` — and every other slot is held fixed, as in the Euler–Lagrange
+  equation: `partialderivative(apply(f, x)^2 + derivative(apply(f, x), x)^2, apply(f, x))` is
+  `2f`, and `partialderivative(x * apply(f, x), apply(f, x))` is `x`. Over a variable it is
+  `derivative`. Over any other expression it is left as written, since `x^2` is a slot of
+  `x^2` and not of `x * x`.
 
 **Structural** — `piecewise(a provided p, b provided q)`, `lambda(param, body)`,
 `apply(f, arg, ...)`, `domain(expr, set)`.

@@ -212,6 +212,10 @@ let derivative x expr =
 let derivativeNode x expr =
     MathS.Derivative(parsed expr, parsed x)
 
+/// Returns a partial derivative node, the derivative in the slot q with every other slot held fixed
+let partialDerivativeNode q expr =
+    MathS.PartialDerivative(parsed expr, parsed q)
+
 /// Computes the integral of the given variable and expression
 let integral x expr = 
     (parsed expr).Integrate(symbol x).InnerSimplified

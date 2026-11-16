@@ -968,6 +968,37 @@ namespace AngouriMath
             }
         }
 
+        partial record PartialDerivativef
+        {
+            /// <inheritdoc/>
+            /// <remarks>
+            /// Over a variable, as <see cref="Derivativef"/>: a function of it, evaluated at a value
+            /// put in for it. A slot such as <c>f(x)</c> is a function of what it mentions, so a value
+            /// for <c>x</c> goes into the slot as well as the expression: in <c>x f(x)^2</c> the
+            /// slot at <c>x = 2</c> is <c>f(2)</c>. Where the slot would stop being one, as with a
+            /// value put in for the slot itself, the derivative is taken first and the value put
+            /// into its answer.
+            /// </remarks>
+            public override Entity Substitute(Entity x, Entity value)
+            {
+                if (this == x)
+                    return value;
+                if (Var is Variable)
+                {
+                    if (EvaluatedAtAPoint(this, Expression, Var, (body, variable) => New(body, variable), x, value) is { } atAPoint)
+                        return atAPoint;
+                    var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
+                    return New(postSubs, boundName);
+                }
+                var slot = Var.Substitute(x, value);
+                if (ReferenceEquals(slot, Var) || IsASlot(slot))
+                    return New(Expression.Substitute(x, value), slot);
+                return InnerSimplified is var taken && taken is not PartialDerivativef
+                    ? taken.Substitute(x, value)
+                    : New(Expression.Substitute(x, value), slot);
+            }
+        }
+
         partial record Limitf
         {
             /// <inheritdoc/>

@@ -576,6 +576,17 @@ namespace AngouriMath
                 : base.InnerDifferentiate(variable);
         }
 
+        partial record PartialDerivativef
+        {
+            // Over a variable it is the derivative, so once more over the same variable is one
+            // more iteration, as for Derivativef.
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable) =>
+                Var == variable
+                ? this with { Iterations = Iterations + 1 }
+                : base.InnerDifferentiate(variable);
+        }
+
         partial record Integralf
         {
             /// <inheritdoc/>

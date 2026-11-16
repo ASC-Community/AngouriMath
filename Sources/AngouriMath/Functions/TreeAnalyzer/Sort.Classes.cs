@@ -242,6 +242,11 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "derivativef_";
         }
 
+        public partial record PartialDerivativef
+        {
+            private protected override string SortHashName(SortLevel level) => "partialderivativef_";
+        }
+
         public partial record Integralf
         {
             private protected override string SortHashName(SortLevel level) => "integralf_";

@@ -44,6 +44,7 @@ namespace AngouriMath
         [EntityJsonConverter] partial record Cosf;
         [EntityJsonConverter] partial record Cotanf;
         [EntityJsonConverter] partial record Derivativef;
+        [EntityJsonConverter] partial record PartialDerivativef;
         [EntityJsonConverter] partial record Divf;
         [EntityJsonConverter] partial record Equalsf;
         [EntityJsonConverter] partial record Factorialf;

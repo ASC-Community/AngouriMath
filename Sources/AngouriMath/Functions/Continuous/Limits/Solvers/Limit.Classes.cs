@@ -840,6 +840,12 @@ namespace AngouriMath
                 ComputeLimitImpl(this, x, dist, side);
         }
 
+        partial record PartialDerivativef
+        {
+            internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>
+                ComputeLimitImpl(this, x, dist, side);
+        }
+
         partial record Integralf
         {
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side) =>

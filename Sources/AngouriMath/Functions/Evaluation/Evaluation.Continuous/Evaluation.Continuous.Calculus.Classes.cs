@@ -8,6 +8,8 @@
 using AngouriMath.Functions.Algebra;
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AngouriMath
 {
@@ -23,24 +25,63 @@ namespace AngouriMath
         /// variables <c>z = g(x)</c> without having to invert <c>g</c>. It needs no occurrence of
         /// <paramref name="over"/> in <paramref name="expr"/>: <c>d(x ^ 2)/d(x + 1)</c> is
         /// <c>2x</c>. <see langword="null"/> where the question has no answer this way — a
-        /// <paramref name="over"/> that does not vary in <c>x</c>, or a derivative the library
-        /// cannot take.
+        /// <paramref name="over"/> that does not vary in <paramref name="x"/>, or a derivative the
+        /// library cannot take.
+        /// <para>
+        /// The derivative of an unknown function, <c>derivative(apply(f, x), x)</c>, is taken: it
+        /// is the value <c>f'(x)</c>, not a refusal. So <c>x f(x)</c> over <c>f(x)</c> is
+        /// <c>(f + x f') / f'</c>, defined where <c>f' ≠ 0</c>, which is where <c>f(x)</c> can
+        /// stand for <c>x</c> at all.
+        /// https://github.com/asc-community/AngouriMath/issues/230
+        /// </para>
         /// </remarks>
-        private static Entity? ChangeOfVariable(Entity expr, Entity over, int times)
+        private static Entity? ChangeOfVariable(Entity expr, Entity over, Variable x, int times)
         {
-            var x = over.Vars[0];
             var dOver = over.Differentiate(x).InnerSimplified;
-            if (dOver is Derivativef || dOver == 0)
+            if (IsUntaken(dOver) || dOver == 0)
                 return null;
             var result = expr;
             for (var taken = 0; taken < times; taken++)
             {
                 var dResult = result.Differentiate(x);
-                if (dResult is Derivativef)
+                if (IsUntaken(dResult))
                     return null;
                 result = (dResult / dOver).InnerSimplified;
             }
             return result;
+        }
+
+        /// <summary>
+        /// A derivative the library could not take, as opposed to the derivative of an unknown
+        /// function, <c>derivative(apply(f, x), x)</c>, which is the answer <c>f'(x)</c>.
+        /// </summary>
+        private static bool IsUntaken(Entity derivative)
+            => derivative is Derivativef { Expression: not Application { Expression: Variable } };
+
+        /// <summary>
+        /// The one variable <paramref name="over"/> varies in, or <see langword="null"/> where it
+        /// varies in none or in more than one. The name of an unknown function is not a variable
+        /// it varies in: <c>apply(f, x)</c> varies in <c>x</c>, and <c>f</c> names what it is.
+        /// </summary>
+        private static Variable? TheVariableItVariesIn(Entity over)
+        {
+            Variable? found = null;
+            foreach (var variable in over.Vars)
+            {
+                if (!IsOnlyAFunctionName(over, variable))
+                {
+                    if (found is not null)
+                        return null;
+                    found = variable;
+                }
+            }
+            return found;
+
+            static bool IsOnlyAFunctionName(Entity expr, Variable name)
+                => expr == name ? false
+                : expr is Application(var head, var arguments)
+                    ? (head == name || IsOnlyAFunctionName(head, name)) && arguments.All(argument => IsOnlyAFunctionName(argument, name))
+                    : expr.DirectChildren.All(child => IsOnlyAFunctionName(child, name));
         }
 
         public partial record Derivativef
@@ -95,15 +136,106 @@ namespace AngouriMath
                         // (z - 1) ^ 2 and its derivative is 2(z - 1) = 2x. df/dg is
                         // (df/dx) / (dg/dx), which is that without having to invert g.
                         // https://github.com/asc-community/AngouriMath/pull/990
+                        //
+                        // One variable, which an unknown function applied to it, f(x), varies in as
+                        // x does; with two, as in x * y, the derivative depends on how they move
+                        // together and is not determined.
                         (var expr, Entity otherExpr, int asInt)
-                            when otherExpr.Vars.Count is 1
-                            && ChangeOfVariable(expr, otherExpr, asInt) is { } res
+                            when TheVariableItVariesIn(otherExpr) is { } x
+                            && ChangeOfVariable(expr, otherExpr, x, asInt) is { } res
                             => res.InnerSimplified(isExact),
                         _ => null
                     },
                     (@this, a, b, _) => ((Derivativef)@this).New(a, b), isExact);
         }
         
+        public partial record PartialDerivativef
+        {
+            // Defined symbolically, as the derivative is.
+            private protected override Entity IntrinsicCondition => Boolean.True;
+
+            /// <summary>
+            /// Whether <paramref name="node"/> is a slot of its own: an unknown function applied,
+            /// <c>f(x)</c>, or a derivative of one in a variable, <c>f'(x)</c>.
+            /// </summary>
+            internal static bool IsASlot(Entity node)
+                => node is Application { Expression: Variable }
+                || node is Derivativef { Expression: Application { Expression: Variable }, Var: Variable, Iterations: > 0 };
+
+            /// <summary>
+            /// The derivative of <paramref name="expr"/> in the slot <paramref name="slot"/>,
+            /// <paramref name="times"/> times, with the other slots held fixed; <see langword="null"/>
+            /// where that cannot be taken.
+            /// </summary>
+            /// <remarks>
+            /// Every slot is renamed to a fresh variable, the derivatives first, so that
+            /// <c>f'(x)</c> is not read as a function of <c>f(x)</c>: renaming <c>f(x)</c> inside it
+            /// would make it the derivative of a variable. An unknown function of the slot,
+            /// <c>g(f(x))</c>, is not another slot but a function of this one, and is not renamed.
+            /// The renaming is a substitution, which respects a binder, and what still mentions the
+            /// slot after it -- under a binder of its variable, or inside a derivative node over the
+            /// slot -- has no answer here, nor does a derivative of something built from it that the
+            /// library could not take.
+            /// </remarks>
+            private static Entity? InTheSlot(Entity expr, Entity slot, int times)
+            {
+                var taken = new HashSet<Variable>(expr.Vars.Concat(slot.Vars));
+                Variable Fresh()
+                {
+                    var fresh = Variable.CreateTemp(taken);
+                    taken.Add(fresh);
+                    return fresh;
+                }
+                var over = Fresh();
+                var others = new List<(Entity Slot, Variable Name)>();
+                var renamed = expr;
+                foreach (var derivativesFirst in new[] { true, false })
+                    foreach (var node in expr.Nodes.Where(node => IsASlot(node) && node is Derivativef == derivativesFirst
+                        && !(node is Application && node != slot && node.ContainsNode(slot))).Distinct().ToList())
+                    {
+                        if (node == slot)
+                            renamed = renamed.Substitute(node, over);
+                        else
+                        {
+                            var name = Fresh();
+                            others.Add((node, name));
+                            renamed = renamed.Substitute(node, name);
+                        }
+                    }
+                if (renamed.ContainsNode(slot))
+                    return null;
+                var result = renamed;
+                for (var i = 0; i < times; i++)
+                {
+                    result = result.Differentiate(over);
+                    if (result.Nodes.Any(node => node is Derivativef { Var: var v } derivative && v == over && !IsASlot(derivative)))
+                        return null;
+                }
+                result = result.Substitute(over, slot);
+                foreach (var (other, name) in others)
+                    result = result.Substitute(name, other);
+                return result;
+            }
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact) =>
+                ExpandOnTwoAndTArguments(Expression, Var, Iterations,
+                    (a, b, c) => (a, b, c) switch
+                    {
+                        (_, _, < 1) => null,
+                        // Over a variable it is the derivative: every other variable held fixed,
+                        // and what depends on the variable following it, as SymPy's diff over a
+                        // symbol does.
+                        (var expr, Variable var, int asInt)
+                            => new Derivativef(expr, var, asInt).InnerSimplified(isExact),
+                        (var expr, var slot, int asInt)
+                            when IsASlot(slot) && InTheSlot(expr, slot, asInt) is { } res
+                            => res.InnerSimplified(isExact),
+                        _ => null
+                    },
+                    (@this, a, b, _) => ((PartialDerivativef)@this).New(a, b), isExact);
+        }
+
         public partial record Integralf
         {
             // The integral operator is always defined symbolically, even though
