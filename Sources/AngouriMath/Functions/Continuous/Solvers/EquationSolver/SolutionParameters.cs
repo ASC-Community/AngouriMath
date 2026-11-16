@@ -168,16 +168,18 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     plain.Add(root);
                     continue;
                 }
-                var named = root;
                 var others = new HashSet<Variable>(root.Vars.Where(name => !parameters.Contains(name)));
                 var indices = new List<(Variable Name, Set Over)>();
+                // All at once: a root can be thousands of nodes, and each substitution copies it.
+                var renaming = new Dictionary<Variable, Entity>();
                 foreach (var parameter in parameters)
                 {
                     var name = IndexNames.Select(MathS.Var).FirstOrDefault(candidate => !others.Contains(candidate)) ?? parameter;
                     others.Add(name);
-                    named = named.Substitute(parameter, name);
+                    renaming[parameter] = name;
                     indices.Add((name, sets![parameter]));
                 }
+                var named = root.Substitute(renaming);
                 if (families.FindIndex(family => family.Indices.SequenceEqual(indices)) is var at and >= 0)
                     families[at].Roots.Add(named);
                 else
