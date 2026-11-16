@@ -124,7 +124,7 @@ internal static class Classify
         {
             switch (node)
             {
-                case Derivativef: features.Add("derivative"); break;
+                case Derivativef or PartialDerivativef: features.Add("derivative"); break;
                 case Integralf: features.Add("integral"); break;
                 case Limitf: features.Add("limit"); break;
                 case Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf:

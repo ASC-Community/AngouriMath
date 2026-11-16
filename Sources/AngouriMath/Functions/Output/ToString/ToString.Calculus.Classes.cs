@@ -25,6 +25,20 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        public partial record PartialDerivativef
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode()
+            {
+                if (Iterations == 1)
+                    return $"partialderivative({Expression.Stringize()}, {Var.Stringize()})";
+                else
+                    return $"partialderivative({Expression.Stringize()}, {Var.Stringize()}, {Iterations})";
+            }
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Integralf
         {
             /// <inheritdoc/>

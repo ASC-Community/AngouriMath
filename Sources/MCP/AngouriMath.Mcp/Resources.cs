@@ -110,6 +110,10 @@ internal static class Resources
           iverson`
         - `derivative integral limit limitleft limitright sum product argmax argmin piecewise
           apply lambda`
+        - `partialderivative(L, q)`, the partial derivative ∂L/∂q in a slot `q` -- a variable,
+          `apply(f, x)` or `derivative(apply(f, x), x)` -- holding every other slot fixed, as the
+          Euler-Lagrange equation does: in `f` it takes `f^2 + f'^2` to `2f`, where
+          `derivative` over `apply(f, x)` is the total derivative, `2f + 2f''` provided `f' <> 0`
         - matrices and vectors: `det transpose trace dot cross resultant`, computed from a
           matrix or a vector written out, `[1, 2]` being a column and `[[1, 2], [3, 4]]` a
           matrix. `det(A)`, `transpose(A)`, `trace(A)`, the entry `A[k, l]` (counted from 1),

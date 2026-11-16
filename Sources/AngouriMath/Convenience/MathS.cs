@@ -7765,6 +7765,35 @@ namespace AngouriMath
         public static Entity Derivative(Entity expr, Entity var, int power) => new Derivativef(expr, var, power);
 
         /// <summary>
+        /// Hangs your <see cref="Entity"/> to a partial derivative node, <c>∂expr/∂slot</c>:
+        /// the derivative in <paramref name="slot"/> with everything else held fixed.
+        /// </summary>
+        /// <param name="expr">Expression to be hung</param>
+        /// <param name="slot">
+        /// What the derivative is taken in: a variable, an unknown function applied,
+        /// <c>apply(f, x)</c>, or a derivative of one, <c>derivative(apply(f, x), x)</c>
+        /// </param>
+        /// <remarks>
+        /// <see cref="Derivative(Entity, Entity)"/> is the total derivative. The two agree over a
+        /// variable, and differ over <c>f(x)</c>: the partial derivative of <c>f^2 + f'^2</c> in
+        /// <c>f</c> is <c>2f</c>, holding <c>f'</c> fixed as the Euler–Lagrange equation does,
+        /// and the total derivative is <c>2f + 2f''</c> where <c>f' ≠ 0</c>.
+        /// </remarks>
+        public static Entity PartialDerivative(Entity expr, Entity slot) => new PartialDerivativef(expr, slot, 1);
+
+        /// <summary>
+        /// Hangs your <see cref="Entity"/> to a partial derivative node taken
+        /// <paramref name="power"/> times; see <see cref="PartialDerivative(Entity, Entity)"/>.
+        /// </summary>
+        /// <param name="expr">Expression to be hung</param>
+        /// <param name="slot">What the derivative is taken in</param>
+        /// <param name="power">Number of times it is taken, at least 1</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="power"/> is less than 1.</exception>
+        public static Entity PartialDerivative(Entity expr, Entity slot, int power)
+            => power >= 1 ? new PartialDerivativef(expr, slot, power)
+            : throw new ArgumentOutOfRangeException(nameof(power), power, "A partial derivative is taken at least once.");
+
+        /// <summary>
         /// Hangs your entity to an integral node
         /// (to evaluate instead use <see cref="Entity.Integrate(Entity.Variable)"/>)
         /// </summary>

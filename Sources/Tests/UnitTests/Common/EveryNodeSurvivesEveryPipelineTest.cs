@@ -77,6 +77,7 @@ namespace AngouriMath.Tests.Common
             MathS.Apply(X, X),                                  // Application
             Entity.Boolean.True,                                // Boolean
             MathS.Derivative(X, X, 2),                          // Derivativef, with an iteration count
+            MathS.PartialDerivative(X, X, 2),                   // PartialDerivativef, with an iteration count
             MathS.Integral(X, X),                               // Integralf, indefinite
             MathS.Integral(X, X, 0, 1),                         // Integralf, over a range
             MathS.Lambda(X, X),                                 // Lambda

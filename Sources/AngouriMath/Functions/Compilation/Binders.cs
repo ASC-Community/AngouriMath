@@ -60,6 +60,7 @@ namespace AngouriMath.Core.Compilation
         private static string? Kind(Entity node) => node switch
         {
             Derivativef => "a derivative",
+            PartialDerivativef => "a partial derivative",
             Integralf { Range: null } => "an integral",
             Integralf => "a definite integral",
             Limitf => "a limit",

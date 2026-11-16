@@ -44,6 +44,17 @@ namespace AngouriMath
             }
         }
 
+        public partial record PartialDerivativef
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+            {
+                var powerIfNeeded = Iterations == 1 ? "" : "^{" + Iterations + "}";
+                return $$"""\frac{\partial{{powerIfNeeded}}}{\partial {{Var.Latexize(Var is not Variable { IsLatexUprightFormatted: false })
+                    }}{{powerIfNeeded}}}{{Expression.Latexize(Expression.LatexPriority < Priority.LatexCalculusOperation)}}""";
+            }
+        }
+
         public partial record Integralf
         {
             /// <inheritdoc/>

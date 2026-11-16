@@ -559,6 +559,15 @@ namespace AngouriMath
                 : Enumerable.Empty<Entity>();
         }
 
+        partial record PartialDerivativef
+        {
+            // Inverting would need an antiderivative in a slot, holding the others fixed, which
+            // nothing here takes; declining leaves the equation unsolved rather than claiming it
+            // has no roots.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
+                null;
+        }
+
         partial record Integralf
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>

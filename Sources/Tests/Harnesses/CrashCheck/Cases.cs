@@ -159,6 +159,8 @@ static class Cases
         "derivative(x!, x, 2)", "derivative(x!, x, 3)", "derivative(sin(x!) + x, x, 2)",
         "derivative(apply(f, x), x, -1)", "derivative(apply(f, x), x, -2)",
         "derivative(abs(x), x, 2)", "derivative(sgn(x), x, 2)",
+        "partialderivative(x!, x, 2)", "partialderivative(apply(f, x) ^ 2 + derivative(apply(f, x), x) ^ 2, apply(f, x))",
+        "partialderivative(derivative(sin(apply(f, x)), apply(f, x)), apply(f, x))",
         // The degenerate arithmetic that a rule's assumption is usually about.
         "0 ^ 0", "1 ^ (+oo)", "(+oo) - (+oo)", "0 * (+oo)", "log(1, 1)", "x / x", "x - x",
         "0 / 0", "(-8) ^ (1/3)", "(-1) ^ (1/2)", "abs(sgn(x))",

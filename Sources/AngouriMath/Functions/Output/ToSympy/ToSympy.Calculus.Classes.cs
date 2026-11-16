@@ -16,6 +16,13 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.diff({Expression.ToSymPy()}, {Var.ToSymPy()}, {Iterations})";
         }
 
+        public partial record PartialDerivativef
+        {
+            // SymPy's diff over f(x) or Derivative(f(x), x) treats it as a symbol, holding the rest
+            // fixed, which is this node; over a variable it is the derivative, as this node is.
+            internal override string ToSymPy() => $"sympy.diff({Expression.ToSymPy()}, {Var.ToSymPy()}, {Iterations})";
+        }
+
         public partial record Integralf
         {
             internal override string ToSymPy() => $"sympy.integrate({Expression.ToSymPy()}, {(Range is var (from, to) ? $"({Var.ToSymPy()}, {from.ToSymPy()}, {to.ToSymPy()})" : Var.ToSymPy())})";

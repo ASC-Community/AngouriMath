@@ -42,6 +42,39 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.7.0
 
+### The total derivative in an unknown function of a variable is answered
+
+**Not silent: what was left unevaluated is answered.** `derivative(expr, u)` over an expression `u` that varies in
+one variable `x` is the total derivative, `(d expr/dx) / (du/dx)`, and it declined where `u` was an unknown function
+applied, `apply(f, x)`, or the derivative of one, and `expr` was not written in `u` alone. It is answered now, defined
+where `du/dx ≠ 0`; an answer from before does not change, and over two variables, `derivative(x + y, x * y)`, it is
+still left as written ([#230](https://github.com/asc-community/AngouriMath/issues/230)). With `Simplify`, `f` standing
+for `apply(f, x)`:
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `derivative(x * f, f)` | `derivative(x * apply(f, x), apply(f, x))` | `apply(f, x) / derivative(apply(f, x), x) + x` |
+| `derivative(f^2 + derivative(f, x)^2, f)` | left as written | `2 * (apply(f, x) + derivative(apply(f, x), x, 2)) provided not derivative(apply(f, x), x) = 0` |
+| `derivative(f^2 * derivative(f, x), f)` | left as written | `apply(f, x) ^ 2 * derivative(apply(f, x), x, 2) / derivative(apply(f, x), x) + 2 * apply(f, x) * derivative(apply(f, x), x)` |
+| `derivative(x * f, derivative(f, x))` | left as written | `(apply(f, x) + x * derivative(apply(f, x), x)) / derivative(apply(f, x), x, 2)` |
+
+### A partial derivative: `partialderivative(expr, q)`
+
+**Not silent: what was refused now parses.** `partialderivative(L, q)` and `partialderivative(L, q, n)` threw
+`UnhandledParseException`, and `partialderivative(x)`, with one argument, was the product `partialderivative * x`. It
+is now the node `PartialDerivativef`, the partial derivative `∂L/∂q`, built by `MathS.PartialDerivative(L, q)` and drawn
+`\frac{\partial}{\partial q}`, and one argument throws `FunctionArgumentCountException`. Its `q` is a slot — a variable,
+an unknown function applied, or a derivative of one — and the other slots are held fixed, as in the Euler–Lagrange
+equation, where `derivative` is the total derivative; over a variable the two agree. Over anything else it is left as
+written ([#230](https://github.com/asc-community/AngouriMath/issues/230)). With `Simplify`, `f` standing for
+`apply(f, x)`:
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `partialderivative(f^2 + derivative(f, x)^2, f)` | throws `UnhandledParseException` | `2 * apply(f, x)` |
+| `partialderivative(x * f, f)` | throws `UnhandledParseException` | `x` |
+| `"partialderivative(x)".ToEntity()` | `partialderivative * x` | throws `FunctionArgumentCountException` |
+
 ### `gcd` and `lcm` compile at whole arguments
 
 **Not silent: what was refused is compiled.** `gcd` and `lcm` were refused by both compilers with

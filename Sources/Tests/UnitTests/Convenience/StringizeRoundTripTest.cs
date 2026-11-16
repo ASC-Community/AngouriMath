@@ -125,6 +125,8 @@ namespace AngouriMath.Tests.Common
         [InlineData("phi(x)")]
         [InlineData("gamma(x)")]
         [InlineData("derivative(x ^ 2, x, 1)")]
+        [InlineData("partialderivative(x ^ 2, x)")]
+        [InlineData("partialderivative(x * apply(f, x) ^ 2, apply(f, x), 2)")]
         [InlineData("limit(x, x, 0)")]
         [InlineData("limitleft(x, x, 0)")]
         [InlineData("limitright(x, x, 0)")]

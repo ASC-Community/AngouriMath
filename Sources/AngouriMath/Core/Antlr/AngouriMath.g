@@ -809,6 +809,20 @@ atom returns[Entity value]
             }
             $value = body;
         }
+    /* The partial derivative, beside derivative's total one.
+       https://github.com/asc-community/AngouriMath/issues/230 */
+    | 'partialderivative(' args = function_arguments ')'
+        {
+            if (Assert("partialderivative", (3, 2), $args.list.Count))
+            {
+                if ($args.list[2] is Integer { EInteger: var asEInt } && asEInt.Sign > 0)
+                    $value = MathS.PartialDerivative($args.list[0], $args.list[1], asEInt.ToInt32Checked());
+                else
+                    throw new InvalidArgumentParseException("Expected a positive integer for the third argument of partialderivative");
+            }
+            else
+                $value = MathS.PartialDerivative($args.list[0], $args.list[1]);
+        }
     ;
 
 statement: expression EOF { Result = $expression.value; } ;

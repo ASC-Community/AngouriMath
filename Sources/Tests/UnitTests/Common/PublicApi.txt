@@ -2293,6 +2293,25 @@ AngouriMath.Entity+Orf.ToString() : System.String
 AngouriMath.Entity+Orf.ctor(AngouriMath.Entity, AngouriMath.Entity)
 AngouriMath.Entity+Orf.op_Equality(AngouriMath.Entity+Orf, AngouriMath.Entity+Orf) : System.Boolean
 AngouriMath.Entity+Orf.op_Inequality(AngouriMath.Entity+Orf, AngouriMath.Entity+Orf) : System.Boolean
+AngouriMath.Entity+PartialDerivativef.<Clone>$() : AngouriMath.Entity+PartialDerivativef
+AngouriMath.Entity+PartialDerivativef.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+PartialDerivativef.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&, System.Int32&) : System.Void
+AngouriMath.Entity+PartialDerivativef.EqualityContract { } : System.Type
+AngouriMath.Entity+PartialDerivativef.Equals(AngouriMath.Entity+CalculusOperator) : System.Boolean
+AngouriMath.Entity+PartialDerivativef.Equals(AngouriMath.Entity+PartialDerivativef) : System.Boolean
+AngouriMath.Entity+PartialDerivativef.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+PartialDerivativef.GetHashCode() : System.Int32
+AngouriMath.Entity+PartialDerivativef.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+PartialDerivativef.InnerDifferentiate(AngouriMath.Entity+Variable) : AngouriMath.Entity
+AngouriMath.Entity+PartialDerivativef.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+PartialDerivativef.Iterations { } : System.Int32
+AngouriMath.Entity+PartialDerivativef.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+PartialDerivativef.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+PartialDerivativef.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+PartialDerivativef.ToString() : System.String
+AngouriMath.Entity+PartialDerivativef.ctor(AngouriMath.Entity, AngouriMath.Entity, System.Int32)
+AngouriMath.Entity+PartialDerivativef.op_Equality(AngouriMath.Entity+PartialDerivativef, AngouriMath.Entity+PartialDerivativef) : System.Boolean
+AngouriMath.Entity+PartialDerivativef.op_Inequality(AngouriMath.Entity+PartialDerivativef, AngouriMath.Entity+PartialDerivativef) : System.Boolean
 AngouriMath.Entity+Phif.<Clone>$() : AngouriMath.Entity+Phif
 AngouriMath.Entity+Phif.Argument { } : AngouriMath.Entity
 AngouriMath.Entity+Phif.Codomain { } : AngouriMath.Core.Domain
@@ -3839,6 +3858,8 @@ AngouriMath.MathS.O_2 : AngouriMath.Entity+Matrix
 AngouriMath.MathS.O_3 : AngouriMath.Entity+Matrix
 AngouriMath.MathS.O_4 : AngouriMath.Entity+Matrix
 AngouriMath.MathS.Parse(System.String) : HonkSharp.Functional.Either<AngouriMath.Entity,HonkSharp.Functional.Failure<HonkSharp.Functional.Either<AngouriMath.Core.ReasonOfFailureWhileParsing+Unknown,AngouriMath.Core.ReasonOfFailureWhileParsing+MissingOperator,AngouriMath.Core.ReasonOfFailureWhileParsing+InternalError>>>
+AngouriMath.MathS.PartialDerivative(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.PartialDerivative(AngouriMath.Entity, AngouriMath.Entity, System.Int32) : AngouriMath.Entity
 AngouriMath.MathS.Piecewise(System.Collections.Generic.IEnumerable<AngouriMath.Entity+Providedf>, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Piecewise(System.ValueTuple<AngouriMath.Entity,AngouriMath.Entity>[]) : AngouriMath.Entity
 AngouriMath.MathS.Polygamma(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
@@ -4036,6 +4057,7 @@ class AngouriMath.Entity+Number+Integer
 class AngouriMath.Entity+Number+Rational
 class AngouriMath.Entity+Number+Real
 class AngouriMath.Entity+Orf
+class AngouriMath.Entity+PartialDerivativef
 class AngouriMath.Entity+Phif
 class AngouriMath.Entity+Piecewise
 class AngouriMath.Entity+Polygammaf
