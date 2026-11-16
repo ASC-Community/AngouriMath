@@ -40,6 +40,23 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
+## Unreleased — since 2.8.0
+
+### An equation is not raised to clear a radical the rest of it still holds
+
+**Silent.** `Solve` raised an equation to clear a radical even where the rest of it held one too, inside a function:
+`sqrt(x) + x = cos(sqrt(x)) - 1` was squared into `(x - cos(sqrt(x)) + 1)^2 = x`, which still has `sqrt(x)`. Newton's
+method answered the square with `0.4557…`, which is no root of the equation, and once that was dropped the answer was
+the empty set, a claim that there is no root, where `x = 0` is one. Such an equation is now left to the routes after
+raising, and is unsolved where none of them answers. An equation one of them does answer can come back by another
+route, with a decimal root that differs in its last digits
+([#2495](https://github.com/asc-community/AngouriMath/issues/2495)).
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sqrt(x) + x = cos(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ }` | `{ x : sqrt(x) + x = cos(sqrt(x)) - 1 }` |
+| `"x + sqrt(x) = e^(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ 0, 3.21586080818110353… }`, 8.7e-16 from the root | `{ 0, 3.21586080818110264… }`, 1.7e-17 from it |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**
