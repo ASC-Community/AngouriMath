@@ -20,12 +20,24 @@ namespace AngouriMath.Tests.Common
     /// since a wrong reading is still a valid expression.
     /// </summary>
     [Trait("Area", "Convenience")]
-    public sealed class StringizeRoundTripTest
+    public class StringizeRoundTripTest
     {
-        private static void AssertRoundTrip(string source)
+        /// <summary>
+        /// Whether to print under <see cref="MathS.Settings.UnicodeOutput"/>, which
+        /// <see cref="UnicodeStringizeRoundTripTest"/> turns on to run every case here again.
+        /// </summary>
+        protected virtual bool Unicode => false;
+
+        private protected string Print(Entity expression)
+        {
+            using var _ = MathS.Settings.UnicodeOutput.Set(Unicode);
+            return expression.Stringize();
+        }
+
+        private void AssertRoundTrip(string source)
         {
             var original = source.ToEntity();
-            var printed = original.Stringize();
+            var printed = Print(original);
             Assert.Equal(original, printed.ToEntity());
         }
 
@@ -51,7 +63,7 @@ namespace AngouriMath.Tests.Common
         public void ANestedPowerKeepsItsValue()
         {
             var original = "(2 ^ 3) ^ 2".ToEntity();
-            Assert.Equal(original.Evaled, original.Stringize().ToEntity().Evaled);
+            Assert.Equal(original.Evaled, Print(original).ToEntity().Evaled);
         }
 
         /// <summary>
@@ -200,7 +212,7 @@ namespace AngouriMath.Tests.Common
         public void AMisreadGroupingWouldChangeTheValue(string source)
         {
             var original = source.ToEntity();
-            Assert.Equal(original.Evaled, original.Stringize().ToEntity().Evaled);
+            Assert.Equal(original.Evaled, Print(original).ToEntity().Evaled);
         }
 
         /// <summary>
@@ -224,7 +236,7 @@ namespace AngouriMath.Tests.Common
         {
             var original = source.ToEntity();
             Assert.Equal(expectedFlat, original.Stringize());
-            Assert.Equal(original.Evaled, original.Stringize().ToEntity().Evaled);
+            Assert.Equal(original.Evaled, Print(original).ToEntity().Evaled);
         }
 
         [Theory]
@@ -285,7 +297,7 @@ namespace AngouriMath.Tests.Common
         public void AnEvaluatedComplexNumberRoundTrips(string source)
         {
             var value = source.ToEntity().Evaled;
-            Assert.Equal(value, value.Stringize().ToEntity().Evaled);
+            Assert.Equal(value, Print(value).ToEntity().Evaled);
         }
 
         /// <summary>
@@ -324,7 +336,7 @@ namespace AngouriMath.Tests.Common
         public void ANamedConstantRoundTrips(string name)
         {
             var constant = ConstantsByName[name];
-            var printed = constant.Stringize();
+            var printed = Print(constant);
             Assert.Equal(constant, printed.ToEntity());
         }
 
@@ -338,7 +350,7 @@ namespace AngouriMath.Tests.Common
         public void AnEvaluatedNamedConstantRoundTrips(string name)
         {
             var value = ConstantsByName[name].Evaled;
-            Assert.Equal(value, value.Stringize().ToEntity().Evaled);
+            Assert.Equal(value, Print(value).ToEntity().Evaled);
         }
 
         /// <summary>
@@ -358,7 +370,7 @@ namespace AngouriMath.Tests.Common
         public void ANonFiniteValueRoundTrips(string source)
         {
             var value = source.ToEntity().Evaled;
-            Assert.Equal(value, value.Stringize().ToEntity().Evaled);
+            Assert.Equal(value, Print(value).ToEntity().Evaled);
         }
 
         /// <summary>
@@ -410,7 +422,7 @@ namespace AngouriMath.Tests.Common
             Entity.Number.Complex number;
             using (MathS.Settings.DowncastingEnabled.Set(false))
                 number = Entity.Number.Complex.Create(PeterO.Numbers.EDecimal.FromString(real), PeterO.Numbers.EDecimal.FromString(imaginary));
-            var printed = number.Stringize();
+            var printed = Print(number);
             var latex = number.Latexize();
             using (MathS.Settings.DowncastingEnabled.Set(false))
             {
@@ -420,6 +432,170 @@ namespace AngouriMath.Tests.Common
                     $"{printed} reads back as {read}");
             }
             Assert.Contains(PeterO.Numbers.EDecimal.FromString(imaginary).Negate() + @"\mathrm{i}", latex);
+        }
+
+        /// <summary>
+        /// The shapes <see cref="MathS.Settings.UnicodeOutput"/> respells: an integer exponent,
+        /// which it writes in superscript, beside the exponents it must not -- another power, a
+        /// factorial, a non-integer -- and every operator it gives a glyph.
+        /// https://github.com/asc-community/AngouriMath/issues/1242
+        /// </summary>
+        [Theory]
+        [InlineData("x ^ 2")]
+        [InlineData("x ^ (-1)")]
+        [InlineData("x ^ 23")]
+        [InlineData("x ^ (-10)")]
+        [InlineData("2 * x ^ 2")]
+        [InlineData("2 ^ 3")]
+        [InlineData("(x + 1) ^ 2")]
+        [InlineData("(x ^ 2) ^ 3")]
+        [InlineData("x ^ 2 ^ 3")]
+        [InlineData("x ^ 3!")]
+        [InlineData("x ^ (-3)!")]
+        [InlineData("x ^ (1/2)")]
+        [InlineData("x ^ 2.5")]
+        [InlineData("x ^ (2i)")]
+        [InlineData("-x ^ 2")]
+        [InlineData("(-x) ^ 2")]
+        [InlineData("(-2) ^ 2")]
+        [InlineData("x ^ 2 * y ^ 3")]
+        [InlineData("domain(x, ZZ) ^ 2")]
+        [InlineData("a - b")]
+        [InlineData("-a")]
+        [InlineData("2 - -3")]
+        [InlineData("-(-2/3)")]
+        [InlineData("1 - 2i")]
+        [InlineData("-i")]
+        [InlineData("1E-20")]
+        [InlineData("+oo")]
+        [InlineData("-oo")]
+        [InlineData("x + +oo")]
+        [InlineData("x - -oo")]
+        [InlineData("oo")]
+        [InlineData("pi + e")]
+        [InlineData("e ^ x")]
+        [InlineData("x <= 1")]
+        [InlineData("x >= 1")]
+        [InlineData("x < y <= z")]
+        [InlineData("not x = 1")]
+        [InlineData("not (a = b) = c")]
+        [InlineData("a = (not b = c)")]
+        [InlineData("not domain(a = b, BB)")]
+        [InlineData("a = b (mod 3)")]
+        [InlineData("a = b and c = d (mod 3)")]
+        [InlineData("x in RR")]
+        [InlineData("x subset y")]
+        [InlineData(@"{ 1 } \/ { 2 } /\ { 3 }")]
+        [InlineData(@"({ 1 } \/ { 2 }) /\ { 3 }")]
+        [InlineData("not a and b or c")]
+        [InlineData("not (a and b)")]
+        [InlineData("forall x in RR : x ^ 2 >= 0")]
+        [InlineData("exists x in ZZ : x = 0")]
+        [InlineData("exists! x in ZZ : x = 0")]
+        [InlineData("sum(x ^ 2, x in ZZ)")]
+        [InlineData("{ x in RR : x ^ 2 <= 1 }")]
+        [InlineData("notable + inner + order + pie")]
+        public void TheUnicodeSpelledShapesRoundTrip(string source) => AssertRoundTrip(source);
+    }
+
+    /// <summary>
+    /// Every case of <see cref="StringizeRoundTripTest"/> again, printed under
+    /// <see cref="MathS.Settings.UnicodeOutput"/>: the Unicode form is held to the same contract,
+    /// that parsing it gives back the expression it printed.
+    /// https://github.com/asc-community/AngouriMath/issues/1242
+    /// </summary>
+    [Trait("Area", "Convenience")]
+    public sealed class UnicodeStringizeRoundTripTest : StringizeRoundTripTest
+    {
+        /// <inheritdoc/>
+        protected override bool Unicode => true;
+
+        [Theory]
+        [InlineData("x ^ 2 - 1 <= pi", "x² − 1 ≤ π")]
+        [InlineData("x ^ (-1) + e", "x⁻¹ + ℯ")]
+        [InlineData("x ^ 23 * 2 ^ 10", "x²³ * 2¹⁰")]
+        [InlineData("(x + 1) ^ 2", "(x + 1)²")]
+        [InlineData("x ^ 2 ^ 3", "x ^ 2³")]
+        [InlineData("x ^ 3!", "x ^ 3!")]
+        [InlineData("x ^ (1/2) + x ^ 2.5", "sqrt(x) + x ^ (5/2)")]
+        [InlineData("2 - -3", "2 − (−3)")]
+        [InlineData("x + +oo", "x + +∞")]
+        [InlineData("-oo", "−∞")]
+        [InlineData("x >= 1 and not x = 2", "x ≥ 1 ∧ x ≠ 2")]
+        [InlineData("not a or b", "¬a ∨ b")]
+        [InlineData("a = b (mod 3)", "a ≡ b (mod 3)")]
+        [InlineData(@"x in A \/ B /\ C", "x ∈ A ∪ B ∩ C")]
+        [InlineData("x subset y", "x ⊆ y")]
+        [InlineData("forall x in RR : exists y in RR : y > x", "∀ x ∈ RR : ∃ y ∈ RR : y > x")]
+        [InlineData("exists! x in ZZ : x = 0", "∃! x ∈ ZZ : x = 0")]
+        [InlineData("notable + inner + pie", "notable + inner + pie")]
+        public void PrintsTheGlyphs(string source, string expected) => Assert.Equal(expected, Print(source.ToEntity()));
+
+        /// <summary>
+        /// Each glyph is read as the ASCII token it stands for, so the two spellings are the same
+        /// expression. A bare ∞ is not read, as a bare oo is not an infinity.
+        /// </summary>
+        [Theory]
+        [InlineData("x ≤ 1", "x <= 1")]
+        [InlineData("x ≥ 1", "x >= 1")]
+        [InlineData("x ≠ 1", "x <> 1")]
+        [InlineData("x ∈ RR", "x in RR")]
+        [InlineData("A ∪ B", @"A \/ B")]
+        [InlineData("A ∩ B", @"A /\ B")]
+        [InlineData("¬a", "not a")]
+        [InlineData("a ∧ b", "a and b")]
+        [InlineData("a ∨ b", "a or b")]
+        [InlineData("a − b", "a - b")]
+        [InlineData("−x", "-x")]
+        [InlineData("2 − −3", "2 - -3")]
+        [InlineData("+∞", "+oo")]
+        [InlineData("−∞", "-oo")]
+        [InlineData("-∞", "-oo")]
+        [InlineData("x²", "x ^ 2")]
+        [InlineData("2x²", "2 * x ^ 2")]
+        [InlineData("x²³", "x ^ 23")]
+        [InlineData("x²y", "x ^ 2 * y")]
+        [InlineData("x⁻¹", "x ^ (-1)")]
+        [InlineData("−x²", "-(x ^ 2)")]
+        [InlineData("(x + 1)²", "(x + 1) ^ 2")]
+        [InlineData("x ^ 2³", "x ^ (2 ^ 3)")]
+        [InlineData("(x²)³", "(x ^ 2) ^ 3")]
+        [InlineData("x⁰ + x¹ + x⁴⁵⁶⁷⁸⁹", "x ^ 0 + x ^ 1 + x ^ 456789")]
+        public void TheGlyphsParseAsTheirAsciiTokens(string unicode, string ascii)
+            => Assert.Equal(ascii.ToEntity(), MathS.FromString(unicode, useCache: false));
+
+        [Fact]
+        public void ASuperscriptIsAWrittenOperatorUnderExplicitParsing()
+        {
+            using var _ = MathS.Settings.ExplicitParsingOnly.Set(true);
+            Assert.Equal("x ^ 2".ToEntity(), MathS.FromString("x²", useCache: false));
+        }
+
+        [Theory]
+        [InlineData("∞")]
+        [InlineData("x⁻")]
+        [InlineData("√2")]
+        public void WhatIsNotAGlyphStaysAParseError(string source)
+            => Assert.ThrowsAny<AngouriMath.Core.Exceptions.ParseException>(() => MathS.FromString(source, useCache: false));
+
+        /// <summary>
+        /// The setting changes what is shown and nothing else: the default stays ASCII, LaTeX does
+        /// not change, and an ordering the library takes by printed form -- which decides the
+        /// order of an answer's terms -- is the same with it on.
+        /// </summary>
+        [Fact]
+        public void OnlyWhatIsShownChanges()
+        {
+            var expression = "x ^ 2 - pi <= -oo or not a = b".ToEntity();
+            Assert.Equal("x ^ 2 - pi <= -oo or not a = b", expression.Stringize());
+            var latex = expression.Latexize();
+            var sympy = MathS.ToSympyCode("x ^ (-2) - 3".ToEntity());
+            var simplified = "(b - 3) * (-2 + a) + x * pi - e".ToEntity().Simplify();
+            using var _ = MathS.Settings.UnicodeOutput.Set(true);
+            Assert.Equal(latex, expression.Latexize());
+            Assert.Equal(sympy, MathS.ToSympyCode("x ^ (-2) - 3".ToEntity()));
+            Assert.Equal(simplified, "(b - 3) * (-2 + a) + x * pi - e".ToEntity().Simplify());
+            Assert.Equal("x² − π ≤ −∞ ∨ a ≠ b", expression.ToString());
         }
     }
 }

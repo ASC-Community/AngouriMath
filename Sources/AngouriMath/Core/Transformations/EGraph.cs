@@ -386,7 +386,7 @@ namespace AngouriMath.Core.Transformations
         /// </summary>
         private static string Key(Entity expr)
             => ReferenceEquals(expr, Entity.Constant.EulerIntrinsic) ? EulerIntrinsicKey
-             : expr.DirectChildren.Count == 0 ? expr.Stringize() : expr.GetType().Name;
+             : expr.DirectChildren.Count == 0 ? expr.StringizeAscii() : expr.GetType().Name;
 
         /// <summary>Adds <paramref name="expr"/> and every one of its subexpressions, bottom-up.</summary>
         internal int AddEntity(Entity expr)

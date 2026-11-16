@@ -36,6 +36,26 @@ options
     // So these are instance fields
     public readonly CommonToken Multiply = new(Array.IndexOf(_LiteralNames, "'*'"), "*");
     public readonly CommonToken Power = new(Array.IndexOf(_LiteralNames, "'^'"), "^");
+    public readonly CommonToken Minus = new(Array.IndexOf(_LiteralNames, "'-'"), "-");
+
+    // The token a Unicode spelling stands for. Each is a synonym of an ASCII token the parser
+    // already has, so the parser itself does not change and the two spellings cannot differ in
+    // anything but the glyph. https://github.com/asc-community/AngouriMath/issues/1242
+    int UnicodeSynonym(string glyph) => Array.IndexOf(_LiteralNames, glyph switch
+    {
+        "\u2264" => "'<='",
+        "\u2265" => "'>='",
+        "\u2260" => "'<>'",
+        "\u2208" => "'in'",
+        "\u222A" => "'\\/'",
+        "\u2229" => "'/\\'",
+        "\u00AC" => "'not'",
+        "\u2227" => "'and'",
+        "\u2228" => "'or'",
+        "\u2212" => "'-'",
+        "+\u221E" => "'+oo'",
+        _ => "'-oo'",
+    });
 }
 @parser::members
 {
@@ -808,6 +828,19 @@ BOOLEAN: ('true' | 'True' | 'false' | 'False') ;
 // Declared above VARIABLE, since equal-length matches go to the earlier rule and this word would
 // otherwise be an identifier. https://github.com/asc-community/AngouriMath/issues/906
 NAN: 'NaN' ;
+
+/* The Unicode spellings MathS.Settings.UnicodeOutput prints: ≤ ≥ ≠ ∈ ∪ ∩ ¬ ∧ ∨, the minus sign
+   U+2212, and +∞ and −∞ (or -∞) for the two infinities. Each is lexed as the ASCII token it
+   stands for, so that it parses exactly as that token does. A bare ∞ is not among them, as a
+   bare oo is not: either infinity is written with its sign.
+   https://github.com/asc-community/AngouriMath/issues/1242 */
+UNICODE_SYNONYM: ('\u2264' | '\u2265' | '\u2260' | '\u2208' | '\u222A' | '\u2229' | '\u00AC' | '\u2227' | '\u2228' | '\u2212' | ('+' | '-' | '\u2212') '\u221E')
+    { Type = UnicodeSynonym(Text); } ;
+
+/* An integer exponent written in superscript digits, x² or x⁻¹, which Parser.cs replaces by the
+   tokens ^ 2 or ^ - 1 before parsing, so that it binds exactly as the power written out does.
+   https://github.com/asc-community/AngouriMath/issues/1242 */
+SUPERSCRIPT: '\u207B'? ('\u2070' | '\u00B9' | '\u00B2' | '\u00B3' | '\u2074'..'\u2079')+ ;
 
 /* A subscript may have a subscript of its own: X_a_beta is X with the subscript a_beta, and prints as X_{a_{\beta}}.
    https://github.com/asc-community/AngouriMath/issues/524 */

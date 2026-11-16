@@ -706,7 +706,7 @@ namespace AngouriMath
                         continue;
                     }
                     var (@base, exponent) = reduced is Powf(var b, var e) ? (b, e) : (reduced, (Entity)1);
-                    var key = @base.Stringize();
+                    var key = @base.StringizeAscii();
                     bases[key] = @base;
                     exponents[key] = exponents.TryGetValue(key, out var already)
                         ? (already + exponent).InnerSimplified
@@ -714,7 +714,7 @@ namespace AngouriMath
                 }
 
                 var monomialKey = string.Join(" ", (IEnumerable<string>)exponents.Keys.OrderBy(k => k, System.StringComparer.Ordinal)
-                    .Select(k => k + "^" + exponents[k].Stringize()));
+                    .Select(k => k + "^" + exponents[k].StringizeAscii()));
 
                 if (coefficients.TryGetValue(monomialKey, out var running))
                     coefficients[monomialKey] = (running + coefficient).InnerSimplified;

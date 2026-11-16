@@ -83,7 +83,8 @@ internal partial class AngouriMathParser : Parser {
 		T__221=222, T__222=223, T__223=224, T__224=225, T__225=226, T__226=227, 
 		T__227=228, T__228=229, T__229=230, T__230=231, T__231=232, T__232=233, 
 		T__233=234, T__234=235, T__235=236, T__236=237, NEWLINE=238, NUMBER=239, 
-		SPECIALSET=240, BOOLEAN=241, NAN=242, VARIABLE=243, COMMENT=244, WS=245;
+		SPECIALSET=240, BOOLEAN=241, NAN=242, UNICODE_SYNONYM=243, SUPERSCRIPT=244, 
+		VARIABLE=245, COMMENT=246, WS=247;
 	public const int
 		RULE_factorial_expression = 0, RULE_power_list = 1, RULE_power_expression = 2, 
 		RULE_unary_expression = 3, RULE_mult_expression = 4, RULE_sum_expression = 5, 
@@ -165,7 +166,8 @@ internal partial class AngouriMathParser : Parser {
 		null, null, null, null, null, null, null, null, null, null, null, null, 
 		null, null, null, null, null, null, null, null, null, null, null, null, 
 		null, null, null, null, null, null, null, null, null, null, "NEWLINE", 
-		"NUMBER", "SPECIALSET", "BOOLEAN", "NAN", "VARIABLE", "COMMENT", "WS"
+		"NUMBER", "SPECIALSET", "BOOLEAN", "NAN", "UNICODE_SYNONYM", "SUPERSCRIPT", 
+		"VARIABLE", "COMMENT", "WS"
 	};
 	public static readonly IVocabulary DefaultVocabulary = new Vocabulary(_LiteralNames, _SymbolicNames);
 
@@ -2912,7 +2914,7 @@ internal partial class AngouriMathParser : Parser {
 			State = 421;
 			ErrorHandler.Sync(this);
 			_la = TokenStream.LA(1);
-			if ((((_la) & ~0x3f) == 0 && ((1L << _la) & -3040000031319916158L) != 0) || ((((_la - 64)) & ~0x3f) == 0 && ((1L << (_la - 64)) & -1L) != 0) || ((((_la - 128)) & ~0x3f) == 0 && ((1L << (_la - 128)) & -1L) != 0) || ((((_la - 192)) & ~0x3f) == 0 && ((1L << (_la - 192)) & 4433230883192831L) != 0)) {
+			if ((((_la) & ~0x3f) == 0 && ((1L << _la) & -3040000031319916158L) != 0) || ((((_la - 64)) & ~0x3f) == 0 && ((1L << (_la - 64)) & -1L) != 0) || ((((_la - 128)) & ~0x3f) == 0 && ((1L << (_la - 128)) & -1L) != 0) || ((((_la - 192)) & ~0x3f) == 0 && ((1L << (_la - 192)) & 11188630324248575L) != 0)) {
 				{
 				State = 410;
 				_localctx.e = expression();
@@ -2988,7 +2990,7 @@ internal partial class AngouriMathParser : Parser {
 			State = 443;
 			ErrorHandler.Sync(this);
 			_la = TokenStream.LA(1);
-			if ((((_la) & ~0x3f) == 0 && ((1L << _la) & -3040000031319913086L) != 0) || ((((_la - 64)) & ~0x3f) == 0 && ((1L << (_la - 64)) & -1L) != 0) || ((((_la - 128)) & ~0x3f) == 0 && ((1L << (_la - 128)) & -1L) != 0) || ((((_la - 192)) & ~0x3f) == 0 && ((1L << (_la - 192)) & 4433230883192831L) != 0)) {
+			if ((((_la) & ~0x3f) == 0 && ((1L << _la) & -3040000031319913086L) != 0) || ((((_la - 64)) & ~0x3f) == 0 && ((1L << (_la - 64)) & -1L) != 0) || ((((_la - 128)) & ~0x3f) == 0 && ((1L << (_la - 128)) & -1L) != 0) || ((((_la - 192)) & ~0x3f) == 0 && ((1L << (_la - 192)) & 11188630324248575L) != 0)) {
 				{
 				State = 428;
 				ErrorHandler.Sync(this);
@@ -6077,7 +6079,7 @@ internal partial class AngouriMathParser : Parser {
 	}
 
 	private static int[] _serializedATN = {
-		4,1,245,1412,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
+		4,1,247,1412,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
 		7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,
 		2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,
 		2,22,7,22,2,23,7,23,2,24,7,24,2,25,7,25,1,0,1,0,1,0,1,0,1,0,1,0,1,0,5,
@@ -6296,7 +6298,7 @@ internal partial class AngouriMathParser : Parser {
 		457,458,5,54,0,0,458,1406,6,24,-1,0,459,460,5,55,0,0,460,1406,6,24,-1,
 		0,461,462,5,242,0,0,462,1406,6,24,-1,0,463,464,5,239,0,0,464,1406,6,24,
 		-1,0,465,466,5,241,0,0,466,1406,6,24,-1,0,467,468,5,240,0,0,468,1406,6,
-		24,-1,0,469,470,5,243,0,0,470,1406,6,24,-1,0,471,472,5,56,0,0,472,473,
+		24,-1,0,469,470,5,245,0,0,470,1406,6,24,-1,0,471,472,5,56,0,0,472,473,
 		3,32,16,0,473,474,5,57,0,0,474,475,6,24,-1,0,475,1406,1,0,0,0,476,477,
 		5,58,0,0,477,478,3,48,24,0,478,479,6,24,-1,0,479,1406,1,0,0,0,480,481,
 		5,1,0,0,481,482,3,40,20,0,482,483,5,59,0,0,483,484,6,24,-1,0,484,1406,

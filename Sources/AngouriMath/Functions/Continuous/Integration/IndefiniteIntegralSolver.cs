@@ -1946,7 +1946,7 @@ namespace AngouriMath.Functions.Algebra
             // there: `(1 - x^2)^(1/4) sqrt(1 + -x^2)` gathered to `(1 - x^2)^(3/4)` sent
             // Timofeev's 314 down a path whose answer could not be checked, where the two
             // roots apart are split over `(1 - x)(1 + x)` and answered.
-            string Spelling(Entity radicand) => string.Join(" + ", Sumf.LinearChildren(radicand).Select(term => term.ToString()).OrderBy(term => term, System.StringComparer.Ordinal));
+            string Spelling(Entity radicand) => string.Join(" + ", Sumf.LinearChildren(radicand).Select(term => term.StringizeAscii()).OrderBy(term => term, System.StringComparer.Ordinal));
             // Where the radicand stands in two places that differ in the sign of the power as
             // written or in the side of the bar -- `q^(-1/2)` above beside `sqrt(q)` below,
             // which the joining below reads as one atom, or `sqrt(A)` above beside `sqrt(A)`

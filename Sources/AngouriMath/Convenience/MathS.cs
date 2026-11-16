@@ -6183,7 +6183,55 @@ namespace AngouriMath
             /// </code>
             /// </example>
             public static Setting<bool> ExplicitParsingOnly { get; } = false;
-            
+
+            /// <summary>
+            /// Makes <see cref="Entity.Stringize()"/> and <see cref="Entity.ToString()"/> print
+            /// mathematical symbols in place of their ASCII spellings. Off by default.
+            /// </summary>
+            /// <remarks>
+            /// <para>
+            /// With it on, <c>pi</c> prints as <c>π</c>, <c>e</c> as <c>ℯ</c>, <c>+oo</c> and
+            /// <c>-oo</c> as <c>+∞</c> and <c>−∞</c>, <c>&lt;=</c> <c>&gt;=</c> as <c>≤</c> <c>≥</c>,
+            /// <c>not a = b</c> as <c>a ≠ b</c>, <c>in</c> <c>subset</c> as <c>∈</c> <c>⊆</c>,
+            /// a congruence <c>a = b (mod n)</c> as <c>a ≡ b (mod n)</c>, <c>forall</c>
+            /// <c>exists</c> <c>exists!</c> as <c>∀</c> <c>∃</c> <c>∃!</c>, <c>\/</c> <c>/\</c> as
+            /// <c>∪</c> <c>∩</c>, <c>not</c> <c>and</c> <c>or</c> as <c>¬</c> <c>∧</c> <c>∨</c>, the
+            /// minus sign as <c>−</c> (U+2212), and an integer exponent in superscript digits:
+            /// <c>x ^ 2</c> as <c>x²</c>, <c>x ^ (-1)</c> as <c>x⁻¹</c>.
+            /// </para>
+            /// <para>
+            /// The parser reads every one of these back, so what is printed parses to the
+            /// expression that was printed, as the ASCII form does. Names, numbers and function
+            /// calls are printed as they are either way, and so is anything an exponent's
+            /// superscript would misplace: <c>x ^ 2 ^ 3</c> prints as <c>x ^ 2³</c>, and an
+            /// exponent followed by <c>!</c> keeps its <c>^</c>.
+            /// </para>
+            /// <para>
+            /// Only what is shown changes. <see cref="Entity.Latexize()"/>, the SymPy code, the
+            /// JSON form and every ordering the library takes by printed form stay as they are,
+            /// so that no answer depends on this setting.
+            /// <a href="https://github.com/asc-community/AngouriMath/issues/1242">#1242</a>
+            /// </para>
+            /// </remarks>
+            /// <example>
+            /// <code>
+            /// using System;
+            /// using AngouriMath;
+            /// using static AngouriMath.MathS;
+            ///
+            /// Entity expr = "x ^ 2 - 1 &lt;= pi";
+            /// using (Settings.UnicodeOutput.Set(true))
+            ///     Console.WriteLine(expr);
+            /// Console.WriteLine(expr);
+            /// </code>
+            /// Prints
+            /// <code>
+            /// x² − 1 ≤ π
+            /// x ^ 2 - 1 &lt;= pi
+            /// </code>
+            /// </example>
+            public static Setting<bool> UnicodeOutput { get; } = false;
+
             /// <summary>
             /// That is how we perform newton solving when no analytical solution was found
             /// in <see cref="Entity.Solve(Variable)"/> and <see cref="Entity.SolveEquation(Variable)"/>

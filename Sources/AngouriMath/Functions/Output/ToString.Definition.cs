@@ -21,6 +21,49 @@ namespace AngouriMath
         /// <a href="https://github.com/asc-community/AngouriMath/issues/1022">#1022</a>
         /// </remarks>
         public string Stringize()
+        {
+            if (spelling != Spelling.Unchosen || !MathS.Settings.UnicodeOutput)
+                return StringizeAsWritten();
+            spelling = Spelling.ForUnicode;
+            string ascii;
+            try { ascii = StringizeAsWritten(); }
+            finally { spelling = Spelling.Unchosen; }
+            return UnicodeSpelling.Respell(ascii);
+        }
+
+        /// <summary>
+        /// The ASCII form whatever <see cref="MathS.Settings.UnicodeOutput"/> says: what the
+        /// library reads for itself -- an ordering by printed form, a key, the SymPy code, the
+        /// JSON form -- so that no answer depends on how the caller wants output shown.
+        /// https://github.com/asc-community/AngouriMath/issues/1242
+        /// </summary>
+        internal string StringizeAscii()
+        {
+            if (spelling == Spelling.Unchosen && !MathS.Settings.UnicodeOutput)
+                return StringizeAsWritten();
+            var was = spelling;
+            spelling = Spelling.Ascii;
+            try { return StringizeAsWritten(); }
+            finally { spelling = was; }
+        }
+
+        private enum Spelling { Unchosen, ForUnicode, Ascii }
+
+        /// <summary>
+        /// Chosen by the outermost <see cref="Stringize()"/> of a print, and read by the nodes
+        /// inside it, so that a child printed on its way to a parent is not respelled on its own.
+        /// </summary>
+        [System.ThreadStatic] private static Spelling spelling;
+
+        /// <summary>
+        /// Whether this print is the ASCII text a Unicode one is respelled from, in which case
+        /// the two nodes the respelling cannot see the extent of print the ASCII token standing
+        /// for their glyph: <c>a &lt;&gt; b</c> for <c>not a = b</c>, and <c>≡</c> for a
+        /// congruence's <c>=</c>.
+        /// </summary>
+        private protected static bool SpelledForUnicode => spelling == Spelling.ForUnicode;
+
+        private string StringizeAsWritten()
             => PrintsItsCodomain
                 // `Any` is a keyword in that position rather than a set, since there is no node
                 // for "no restriction" to ask for a name. #1048

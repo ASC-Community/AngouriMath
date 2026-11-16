@@ -72,7 +72,7 @@ namespace AngouriMath.Core.Transformations
                 // by text is safe where comparing a node by text is not: a leaf has no structure
                 // for the text to lose.
                 var byName = leftChildren.Count == 0
-                    ? string.CompareOrdinal(left.Stringize(), right.Stringize())
+                    ? string.CompareOrdinal(left.StringizeAscii(), right.StringizeAscii())
                     : string.CompareOrdinal(left.GetType().Name, right.GetType().Name);
                 if (byName != 0) return byName;
 

@@ -123,7 +123,7 @@ namespace AngouriMath
         public partial record Alephf
         {
             internal override string ToSymPy()
-                => $"sympy.Symbol(\"aleph_{Index.Stringize()}\")";
+                => $"sympy.Symbol(\"aleph_{Index.StringizeAscii()}\")";
         }
 
         public partial record Erfcf
