@@ -42,6 +42,21 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.8.0
 
+### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
+
+**Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the
+`IParsable` one that says yes or no. Both threw where the grammar refuses a call, a name refused by name or a function
+given the wrong number of arguments. Each now answers the failure, the refusal's message its reason. `FromString` and
+the conversion from a string still throw it, with its own type
+([#2498](https://github.com/asc-community/AngouriMath/issues/2498)).
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `MathS.Parse("factorize(360)")` | throws `UnrecognizedFunctionParseException` | a failure, `Unknown` with that message |
+| `MathS.Parse("norm(v, p, q)")` | throws `FunctionArgumentCountException` | a failure, `Unknown` with that message |
+| `Entity.TryParse("factorize(360)", null, out _)` | throws `UnrecognizedFunctionParseException` | `false` |
+| `"factorize(360)".ToEntity()` | throws `UnrecognizedFunctionParseException` | the same |
+
 ### An equation is not raised to clear a radical the rest of it still holds
 
 **Silent.** `Solve` raised an equation to clear a radical even where the rest of it held one too, inside a function:

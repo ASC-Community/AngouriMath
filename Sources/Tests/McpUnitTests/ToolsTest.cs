@@ -59,6 +59,18 @@ public sealed class ToolsTest
         Assert.Contains(answer.Warnings(), w => w.StartsWith(UnknownFunction));
     }
 
+    // A call the grammar refuses is a failed parse with the refusal's reason, not a tool that threw.
+    // https://github.com/asc-community/AngouriMath/issues/2498
+    [Theory]
+    [InlineData("factorize(360)", "factorize")]
+    [InlineData("norm(v, p, q)", "norm")]
+    public void ARefusedCallIsAFailedParse(string expression, string named)
+    {
+        var answer = Mcp.Call("am_parse", $$"""{"expression":"{{expression}}"}""");
+        Assert.Equal("failed", answer.Field("status"));
+        Assert.Contains(named, answer.Field("error"));
+    }
+
     [Fact]
     public void StrictParsingRefusesAnImplicitProduct() =>
         Assert.Equal("failed", Mcp.Call("am_parse", """{"expression":"2x + 1","strict":true}""").Field("status"));

@@ -34,7 +34,8 @@ namespace AngouriMath.Core
     {
         /// <summary>
         /// The error is an unclassified error returned by the
-        /// ANTLR's parser.
+        /// ANTLR's parser, or a call the grammar refuses: a name refused
+        /// by name, or a function given the wrong number of arguments.
         /// </summary>
         public sealed record Unknown(string Reason);
 
@@ -218,7 +219,31 @@ namespace AngouriMath.Core
                 && AngouriMathLexer.DefaultVocabulary.GetDisplayName(tokens[after].Type) == "'mod'";
         }
         
+        /// <summary>
+        /// The parse <see cref="MathS.Parse"/> answers, which does not throw: a refusal the grammar makes by
+        /// throwing, a name refused by name or a call with the wrong number of arguments, is the failure it
+        /// describes, its message the reason. <c>factorize(360)</c> threw
+        /// <see cref="UnrecognizedFunctionParseException"/> out of the parser that says it does not, and the MCP
+        /// server's <c>am_parse</c> reported it as a tool that threw. Only a <see cref="ParseException"/> is
+        /// taken, so a defect still surfaces. https://github.com/asc-community/AngouriMath/issues/2498
+        /// </summary>
         internal static Either<Entity, Failure<ReasonWhyParsingFailed>> ParseSilent(string source)
+        {
+            try
+            {
+                return ParseThrowingRefusals(source);
+            }
+            catch (ParseException refused)
+            {
+                return new Failure<ReasonWhyParsingFailed>(new Unknown(refused.Message));
+            }
+        }
+
+        /// <summary>
+        /// The parse, with a refusal the grammar makes thrown as its own exception, which is what
+        /// <see cref="Parse"/> and so <see cref="MathS.FromString(string)"/> throw.
+        /// </summary>
+        private static Either<Entity, Failure<ReasonWhyParsingFailed>> ParseThrowingRefusals(string source)
         {
             var writer = new AngouriMathTextWriter();
 
@@ -329,7 +354,7 @@ namespace AngouriMath.Core
             => parsed.Replace(static node => Antlr.ParsingHelpers.RationalLiteral(node));
 
         internal static Entity Parse(string source)
-            => ParseSilent(source)
+            => ParseThrowingRefusals(source)
                 .Switch(
                     valid => valid,
                     // ANTLR's diagnostic is a line and a column and nothing else, which names
