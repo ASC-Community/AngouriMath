@@ -441,9 +441,9 @@ namespace AngouriMath.Core.Transformations
         /// <param name="budget">
         /// What this call may spend before it settles for the best it has found so far.
         /// <see cref="WorkBudget.Steps"/> is charged once per e-node the graph actually creates;
-        /// <see cref="WorkBudget.Time"/> is the wall-clock backstop. A caller who sets
-        /// <see cref="MathS.Settings.Budget"/> overrides this, the same as every other bounded
-        /// computation in the library.
+        /// <see cref="WorkBudget.Time"/> is the wall-clock backstop. A set
+        /// <see cref="MathS.Settings.Budget"/> caps this, the smaller limit on each axis
+        /// applying, and does not replace it.
         /// </param>
         /// <param name="costModel">Which candidate counts as cheapest once exploration stops.</param>
         /// <remarks>
@@ -770,7 +770,9 @@ namespace AngouriMath.Core.Transformations
                 var root = graph.AddEntity(input);
                 graph.Rebuild();
 
-                var ledger = BudgetLedger.For(Name, budget);
+                // The caller passed this budget, so it is theirs to spend and a set
+                // MathS.Settings.Budget, the outer scope, caps it.
+                var ledger = BudgetLedger.For(Name, budget, BudgetRole.Argument);
                 // Stop once the answer has: after two passes in which the cheapest member of the
                 // root's class did not change, further merging can only add members this
                 // extraction would not choose. That is the fixed point a caller who extracts
@@ -829,7 +831,8 @@ namespace AngouriMath.Core.Transformations
                 var root = graph.AddEntity(input);
                 graph.Rebuild();
 
-                var ledger = BudgetLedger.For(Name, budget);
+                // An argument, as in EqualitySaturationTransformation.
+                var ledger = BudgetLedger.For(Name, budget, BudgetRole.Argument);
                 // The same stop as EqualitySaturationTransformation's, on the least member
                 // rather than the cheapest, since that is what this extracts.
                 Entity? last = null;

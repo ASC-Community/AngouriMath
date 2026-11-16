@@ -270,7 +270,9 @@ namespace AngouriMath.Core.Transformations
             var b = graph.AddEntity(right);
             graph.Rebuild();
 
-            var ledger = BudgetLedger.For(nameof(ProvesEqual), budget);
+            // A lid: the one caller passes a guard against stalls, not an allowance a user
+            // chose, so a set MathS.Settings.Budget can only tighten it.
+            var ledger = BudgetLedger.For(nameof(ProvesEqual), budget, BudgetRole.Lid);
             Run(graph, rules, ledger, CostModel.Default.Cost);
             ledger.Report();
             return graph.Find(a) == graph.Find(b);

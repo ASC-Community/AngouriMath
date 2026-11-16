@@ -252,6 +252,32 @@ returned as all of them. `MathS.Equations("y^2 - 2", "x^2 + (P - Q y) * x - 3").
 
 ---
 
+### A set `MathS.Settings.Budget` caps a budget passed as an argument instead of replacing it
+
+**Silent: the same call stops sooner.** A set `MathS.Settings.Budget` replaced every budget in the library, including one
+a caller passed by hand, so `EqualitySaturation(budget, ...)` and `CanonicalizationOverGraph(budget)` inside a scope set
+to `WorkBudget.Unlimited` ran unlimited. Now what a set budget does depends on what the budget it meets is for
+([#2454](https://github.com/asc-community/AngouriMath/issues/2454)): a budget passed as an argument runs under the smaller
+limit on each axis of it and the setting, so `Unlimited` leaves it as passed; the perfect-square proof that `Factorize`
+runs and `Simplify` offers keeps its own lid of 2,000 steps and 50 ms under the same rule, so a set budget only tightens
+it; and the system solver and its Gröbner path are replaced by the setting as before, so raising it still allows more.
+With `budget = new WorkBudget { Steps = 5, Time = TimeSpan.FromSeconds(30) }`, inside
+`MathS.Settings.Budget.Set(WorkBudget.Unlimited)`:
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `Transformation.EqualitySaturation(budget, CostModel.Default).ApplyOrKeep("x * 2 * 3 + x")` | `x * 7` | `x * 2 * 3 + x` |
+| `Transformation.EqualitySaturation(budget, CostModel.Default).ApplyOrKeep("2 * sqrt(2) * sqrt(3)")` | `2 * sqrt(6)` | `2 * sqrt(2) * sqrt(3)` |
+| `Transformation.CanonicalizationOverGraph(budget).ApplyOrKeep("a * b + b * a")` | `2 * a * b` | `a * b + a * b` |
+| `Transformation.CanonicalizationOverGraph(budget).ApplyOrKeep("x + 0 + 2 * x")` | `3 * x` | `2 * x + x` |
+
+Unset, nothing moves. `Factorize` and `Simplify` give the same answers on 2.7.0 and now under an unset,
+an `Unlimited`, a `{ Steps = 1 }` and a `{ Steps = 1_000_000 }` budget, measured on `2 + 2 * sqrt(2) * sqrt(3) + 3`,
+`a + 2 * sqrt(a) * sqrt(b) + b` and `2 + 2 * sqrt(6) + 3`: a proof the lid stops is "not proved", and the symbolic test
+behind it still answers.
+
+---
+
 ### An indexed union or intersection binds its index
 
 **Silent: a bound name is no longer reported free.** `FreeVariables` of `union(A_k, k in I)` and `intersection(A_k, k in I)`

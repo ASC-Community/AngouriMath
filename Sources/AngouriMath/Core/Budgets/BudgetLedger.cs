@@ -69,11 +69,48 @@ namespace AngouriMath.Core.Budgets
 
         /// <summary>
         /// A ledger for one computation. <paramref name="ownDefault"/> is what the algorithm
-        /// bounds itself by when nobody has said otherwise; a caller who sets
-        /// <see cref="MathS.Settings.Budget"/> replaces it.
+        /// bounds itself by when nobody has set <see cref="MathS.Settings.Budget"/>;
+        /// <paramref name="role"/> says what a set one does to it.
+        /// https://github.com/asc-community/AngouriMath/issues/2454
         /// </summary>
-        internal static BudgetLedger For(string where, WorkBudget ownDefault)
-            => new(where, MathS.Settings.Budget.IsOverriden ? MathS.Settings.Budget.Value : ownDefault);
+        internal static BudgetLedger For(string where, WorkBudget ownDefault, BudgetRole role)
+            => new(where, Limits(ownDefault, role));
+
+        /// <summary>The limits a computation of <paramref name="role"/> runs under.</summary>
+        internal static WorkBudget Limits(WorkBudget ownDefault, BudgetRole role)
+        {
+            var setting = MathS.Settings.Budget;
+            if (!setting.IsOverriden)
+                return ownDefault;
+            var set = setting.Value;
+            // A lid is tightened on both axes, not on the clock alone, although a step means
+            // something different to each algorithm. The incomparability is a reason not to
+            // *raise* one algorithm's ceiling by a number chosen for another, and a lid is never
+            // raised. Taking only the clock would ignore a caller who set steps -- the
+            // reproducible axis -- at exactly the sites where they asked for less. And it is
+            // cheap: the one lid, the perfect-square proof, completes in 15 to 1,203 steps over
+            // the unit suite (median 212), and a proof stopped short is "not proved", which falls
+            // back to the symbolic test -- so a budget below that costs time, and no answer of
+            // Factorize or Simplify was measured to move under one.
+            return role switch
+            {
+                BudgetRole.Allowance => set,
+                BudgetRole.Lid or BudgetRole.Argument => Tighter(ownDefault, set),
+                _ => throw new ArgumentOutOfRangeException(nameof(role), role, null),
+            };
+        }
+
+        /// <summary>
+        /// The smaller limit on each axis: what both <paramref name="a"/> and
+        /// <paramref name="b"/> allow. A missing <see cref="WorkBudget.Time"/> is no ceiling,
+        /// so it yields to any clock.
+        /// </summary>
+        private static WorkBudget Tighter(WorkBudget a, WorkBudget b)
+            => new()
+            {
+                Steps = Math.Min(a.Steps, b.Steps),
+                Time = a.Time is { } x && b.Time is { } y ? (x < y ? x : y) : a.Time ?? b.Time,
+            };
 
         /// <summary>
         /// Charges <paramref name="units"/> of work and answers whether the computation may

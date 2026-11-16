@@ -62,8 +62,8 @@ namespace AngouriMath.Core.Budgets
         /// <summary>
         /// No ceiling on either axis. This is what <see cref="MathS.Settings.Budget"/>
         /// reads as its default — but see that property: leaving it alone means each
-        /// algorithm keeps its own default, and it is only a caller who sets it who gets
-        /// this.
+        /// algorithm keeps its own default, and setting it to this lifts only the working
+        /// allowances, never a lid.
         /// </summary>
         public static WorkBudget Unlimited { get; } = new();
     }

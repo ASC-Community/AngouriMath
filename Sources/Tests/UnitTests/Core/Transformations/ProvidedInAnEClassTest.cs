@@ -30,7 +30,7 @@ namespace AngouriMath.Tests.Core.Transformations
             var graph = new EGraph();
             var root = graph.AddEntity(source.ToEntity());
             var ledger = BudgetLedger.For(nameof(ProvidedInAnEClassTest),
-                new WorkBudget { Steps = 200_000, Time = TimeSpan.FromSeconds(20) });
+                new WorkBudget { Steps = 200_000, Time = TimeSpan.FromSeconds(20) }, BudgetRole.Argument);
             Saturation.Run(graph, Saturation.RulesUpTo(ceiling), ledger,
                 node => node.Complexity);
             return graph.Extract(root, node => node.Complexity);

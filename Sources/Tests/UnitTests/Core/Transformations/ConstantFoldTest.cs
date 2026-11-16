@@ -68,7 +68,7 @@ namespace AngouriMath.Tests.Core.Transformations
         {
             var graph = new EGraph();
             var root = graph.AddEntity(source.ToEntity());
-            var ledger = BudgetLedger.For(nameof(ConstantFoldTest), budget);
+            var ledger = BudgetLedger.For(nameof(ConstantFoldTest), budget, BudgetRole.Argument);
             var saturated = Saturation.Run(graph, Saturation.RulesUpTo(RewriteRuleGrowth.Rearranges), ledger, n => n.Complexity);
             return (saturated, graph.NodeCount, graph.Extract(root, n => n.Complexity));
         }
