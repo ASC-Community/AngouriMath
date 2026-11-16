@@ -301,6 +301,26 @@ namespace AngouriMath.Core.Antlr
         }
 
         /// <summary>
+        /// <c>norm(v, p)</c>: the p-norm of a vector. An order that is a number must be at least 1 or <c>+oo</c>,
+        /// below which there is no norm, and a matrix written out must be a vector, whose norms these are; both are
+        /// refused here rather than left a node with no value. A symbolic <c>p</c> stays, its condition <c>p &gt;= 1</c>
+        /// on the node. https://github.com/asc-community/AngouriMath/issues/2182
+        /// </summary>
+        internal static Entity Norm(List<Entity> arguments)
+        {
+            FunctionArgumentCountException.Assert("norm", 2, arguments.Count);
+            var (v, p) = (arguments[0], arguments[1]);
+            if (p.Vars.Count == 0 && p.Evaled is Number order
+                && (order is not Real { EDecimal: var d } || d.IsNaN() || !d.IsPositiveInfinity() && d.CompareTo(PeterO.Numbers.EDecimal.One) < 0))
+                throw new InvalidArgumentParseException(
+                    $"norm(v, p) is the p-norm for a real p >= 1 or p = +oo, and below 1 there is none, the triangle inequality failing; p is {p}");
+            if ((v is Matrix ? v : v.Nodes.Any(node => node is Matrix) ? v.InnerSimplified : null) is Matrix { IsVector: false, IsRowVector: false } matrix)
+                throw new InvalidArgumentParseException(
+                    $"norm(v, p) is the p-norm of a vector, and {matrix} is a matrix, whose norms AngouriMath does not have yet");
+            return MathS.Norm(v, p);
+        }
+
+        /// <summary>
         /// <c>hessian(f, [x, y])</c>: the matrix of the second derivatives of a scalar <c>f</c>, the
         /// entry in row <c>i</c> and column <c>j</c> being <c>∂²f/∂x_i∂x_j</c>, the derivative in
         /// <c>x_i</c> of the derivative in <c>x_j</c>.

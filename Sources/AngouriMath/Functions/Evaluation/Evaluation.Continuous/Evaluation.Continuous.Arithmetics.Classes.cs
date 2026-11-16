@@ -993,6 +993,84 @@ namespace AngouriMath
                     (@this, s, a) => ((Zetaf)@this).New(s, a), isExact);
         }
 
+        public partial record Betaf
+        {
+            // A value where neither argument is 0, -1, -2, ..., and where one is and a + b is as well, the other being
+            // whole there; see Betaf. https://github.com/asc-community/AngouriMath/issues/2182
+            private protected override Entity IntrinsicCondition
+            {
+                get
+                {
+                    static Entity NotAPole(Entity x) => !x.In(MathS.Sets.Z) | x > 0;
+                    return NotAPole(First) & NotAPole(Second) | !NotAPole(First + Second) & (NotAPole(First) | NotAPole(Second));
+                }
+            }
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnTwoArguments(First, Second,
+                    (a, b) => (a, b) switch
+                    {
+                        (Rational x, Rational y) when Number.ExactBeta(x, y) is { } exact => isExact ? exact : exact.Evaled,
+                        (Complex x, Complex y) when !isExact => Number.Beta(x, y),
+                        // B(1, b) = Gamma(b)/Gamma(b + 1) = 1/b, wherever either side has a value.
+                        (Integer one, var y) when one == Integer.One && IsAScalar(y) => (Integer.One / y).InnerSimplified(isExact),
+                        (var x, Integer one) when one == Integer.One && IsAScalar(x) => (Integer.One / x).InnerSimplified(isExact),
+                        _ => null
+                    },
+                    // B(a, b) = B(b, a), so the arguments are put in one order and the two writings are one node.
+                    (@this, a, b) => Core.Transformations.EntityOrder.Canonical.Compare(b, a) < 0
+                        ? ((Betaf)@this).New(b, a) : ((Betaf)@this).New(a, b), isExact);
+
+            private static bool IsAScalar(Entity x) => x is not (Matrix or Set or Piecewise or Providedf or Boolean);
+        }
+
+        public partial record Normf
+        {
+            // A norm for p >= 1, p = +oo among them. Below 1 the triangle inequality fails, and there is none.
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            private protected override Entity IntrinsicCondition => Order >= 1;
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnTwoArguments(Argument, Order,
+                    (v, p) => (v, p) switch
+                    {
+                        (_, Number order) when order is not Real { EDecimal: var d } || d.IsNaN() || !d.IsPositiveInfinity() && d.CompareTo(PeterO.Numbers.EDecimal.One) < 0
+                            => MathS.NaN,
+                        (Matrix m, Real order) when m.IsVector || m.IsRowVector => OfAVector(m, order, isExact),
+                        // A number is a vector of one component, whose every norm is its modulus.
+                        (Number n, Real) => new Absf(n).InnerSimplified(isExact),
+                        // A matrix's norms are other functions, and a matrix of orders is not an order.
+                        (Matrix, _) or (_, Matrix) => ((Normf)this).New(v, p),
+                        _ => null
+                    },
+                    (@this, v, p) => ((Normf)@this).New(v, p), isExact, propagateSet: false);
+
+            /// <summary>
+            /// <c>(|v_1|^p + ... + |v_n|^p)^(1/p)</c>, the largest <c>|v_i|</c> at <c>p = +oo</c>, and at <c>p = 2</c> the
+            /// absolute value of the vector, so that the two agree exactly.
+            /// </summary>
+            private static Entity OfAVector(Matrix vector, Real p, bool isExact)
+            {
+                if (p == Integer.Create(2))
+                    return new Absf(vector).InnerSimplified(isExact);
+                var entries = (vector.IsVector ? vector : vector.T).ToArray();
+                Entity norm = p.EDecimal.IsPositiveInfinity()
+                    ? entries.Select(entry => (Entity)new Absf(entry)).Aggregate((max, modulus) => MathS.Max(max, modulus))
+                    : p == Integer.One
+                        ? Sumf.Sum(entries.Select(entry => (Entity)new Absf(entry)))
+                        : Sumf.Sum(entries.Select(entry => ModulusToThe(entry, p))).Pow(Integer.One / p);
+                return isExact ? norm.InnerSimplified : norm.Evaled;
+            }
+
+            // |z|^p, as (re^2 + im^2)^(p/2) for a number off the real line, so that an exact one stays exact.
+            private static Entity ModulusToThe(Entity component, Real p)
+                => component is Complex number and not Real
+                    ? (number.RealPart * number.RealPart + number.ImaginaryPart * number.ImaginaryPart).Pow(p / 2)
+                    : new Absf(component).Pow(p);
+        }
+
         public partial record Ref
         {
             // Defined everywhere on the complex plane.

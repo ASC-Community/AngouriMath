@@ -124,6 +124,35 @@ namespace AngouriMath.Numerics
         public static double RisingFactorial(double x, double n) => Real(RisingFactorial(new NumericsComplex(x, 0), new NumericsComplex(n, 0)));
 
         /// <summary>
+        /// The beta function <c>Γ(a) Γ(b)/Γ(a + b)</c>, on the interpreter's terms: <c>NaN</c> where <c>a</c> or
+        /// <c>b</c> is a whole number not above 0, except where <c>a + b</c> is one too and the other argument is a whole
+        /// <c>n &gt;= 1</c>, where it is <c>(n - 1)!/(b (b + 1) ... (b + n - 1))</c>; and <c>0</c> where only
+        /// <c>a + b</c> is one. https://github.com/asc-community/AngouriMath/issues/2182
+        /// </summary>
+        public static NumericsComplex Beta(NumericsComplex a, NumericsComplex b)
+        {
+            var poleA = IsWhole(a, out var wholeA) && wholeA <= 0;
+            var poleB = IsWhole(b, out var wholeB) && wholeB <= 0;
+            var poleSum = IsWhole(a + b, out var wholeSum) && wholeSum <= 0;
+            if (poleA && poleB || (poleA || poleB) && !poleSum)
+                return NaN;
+            // (n - 1)!/(b (b + 1) ... (b + n - 1)) is 1/(n binomial(b + n - 1, n)), a ratio of whole numbers.
+            if (poleA || poleB)
+            {
+                var (n, other) = poleA ? (wholeB, wholeA) : (wholeA, wholeB);
+                return 1 / (n * Binomial(new NumericsComplex(other + n - 1, 0), new NumericsComplex(n, 0)));
+            }
+            if (poleSum)
+                return 0;
+            var ratio = SpecialFunctions.Factorial(a - 1) * SpecialFunctions.Factorial(b - 1) / SpecialFunctions.Factorial(a + b - 1);
+            return InTheDoubles(ratio) ? ratio : FromLogarithm(
+                SpecialFunctions.LogFactorial(a - 1) + SpecialFunctions.LogFactorial(b - 1) - SpecialFunctions.LogFactorial(a + b - 1),
+                a.Imaginary == 0 && b.Imaginary == 0);
+        }
+
+        public static double Beta(double a, double b) => Real(Beta(new NumericsComplex(a, 0), new NumericsComplex(b, 0)));
+
+        /// <summary>
         /// The double factorial: <c>n (n - 2) ...</c> down to 1 or 2 for a whole <c>n &gt;= 0</c>,
         /// <c>(n + 2)!!/(n + 2)</c> for a negative odd one, and no value for a negative even one or for
         /// any number that is not whole.

@@ -275,6 +275,22 @@ namespace AngouriMath
                     : $@"\operatorname{{\zeta}}\left({Argument.Latexize()}, {Parameter.Latexize()}\right)";
         }
 
+        partial record Betaf
+        {
+            // \operatorname, since B\left(a, b\right) is how a variable named B before a pair draws.
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => $@"\operatorname{{B}}\left({First.Latexize()}, {Second.Latexize()}\right)";
+        }
+
+        partial record Normf
+        {
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => $@"\left\| {Argument.Latexize()} \right\|_{{{Order.Latexize()}}}";
+        }
+
         partial record Polygammaf
         {
             /// <inheritdoc/>

@@ -21,8 +21,8 @@ namespace AngouriMath.Mcp;
 ///   * a trailing number is an EXPONENT, not a factor: `x2` is x², `2(g+e)3` is 2(g+e)³.
 ///     A model that names a variable `x2`, `v1` or `a0` — completely ordinary naming —
 ///     gets it silently squared. (MathS.cs documents this on ExplicitParsingOnly.)
-///   * an unknown identifier becomes implicit multiplication: `beta(z)` is the product
-///     `beta * z`, not the beta function. The library refuses some such names by name —
+///   * an unknown identifier becomes implicit multiplication: `beta(z)`, with one argument,
+///     is the product `beta * z`, not the beta function, which takes two. The library refuses some such names by name —
 ///     `trunc`, names such as `isprime` that are not functions here, and the arc- spellings of
 ///     the inverse hyperbolics — so those fail loudly; the rest degrade with nothing said,
 ///     because refusing every unknown name is refusing `a(b + c)`.

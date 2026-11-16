@@ -81,6 +81,9 @@ namespace AngouriMath.Core.Compilation
             CalculusOperator => "a binder",
             Application => "an application of a function",
             Lambda => "a function rather than a number",
+            // Taken when simplified, of a vector written out; the node is left only where the vector or p is not known.
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            Normf => "the p-norm of a vector not written out",
             _ => null
         };
     }

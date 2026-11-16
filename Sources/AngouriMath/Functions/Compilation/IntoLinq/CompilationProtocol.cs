@@ -311,6 +311,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     => Expression.Call(GetDef("FallingFactorial", 2, newLeft.Type), newLeft, newRight),
                 RisingFactorialf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
                     => Expression.Call(GetDef("RisingFactorial", 2, newLeft.Type), newLeft, newRight),
+                Betaf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
+                    => Expression.Call(GetDef("Beta", 2, newLeft.Type), newLeft, newRight),
                 LambertWf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight
                     => Expression.Call(GetDef("LambertW", 2, newLeft.Type), newLeft, newRight),
                 Polygammaf when ShouldBeAtLeastDouble(left) is var newLeft && ShouldBeAtLeastDouble(right) is var newRight

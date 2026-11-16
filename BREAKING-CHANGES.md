@@ -462,6 +462,47 @@ even numbers and the negative whole numbers, and at a whole `s >= 2` with a whol
 | `"hurwitzzeta(s, a)".ToEntity()` | throws `UnrecognizedFunctionParseException` | `zeta(s, a)` |
 | `"zeta (s)".ToEntity()` | `zeta * s` | unchanged |
 
+### The beta function
+
+**Not silent: what was a parse error now parses.** `beta(a, b)` threw `UnhandledParseException`. It is now
+`Entity.Betaf`, built by `MathS.Beta`: `Gamma(a) Gamma(b)/Gamma(a + b)` ([DLMF 5.12.1](https://dlmf.nist.gov/5.12.E1)),
+exact at a whole argument, `(n - 1)!/(b (b + 1) ... (b + n - 1))`, and at two half-whole ones, a rational times `pi`,
+and evaluated to the working precision elsewhere, real or complex. It has no value where `a` or `b` is `0, -1, -2, ...`,
+unless `a + b` is one too, where the other argument is whole and the value is that of the rational function, as
+mpmath's `beta` takes it. With one argument, `beta(x)` is still the product `beta * x`, and `beta` alone and
+`beta (x)` with a space are as they were ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"beta(2, 3)".ToEntity().Simplify()` | throws `UnhandledParseException` | `1/12` |
+| `"beta(1/2, 1/2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `pi` |
+| `"beta(2.5, 1.3)".ToEntity().Evaled` | throws `UnhandledParseException` | `0.2541541901764604945390…` |
+| `"beta(1, b)".ToEntity().Simplify()` | throws `UnhandledParseException` | `1 / b` |
+| `"beta(2, -3)".ToEntity().Simplify()` | throws `UnhandledParseException` | `1/6` |
+| `"beta(0, 1/2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `NaN`, a pole |
+| `"beta(x)".ToEntity()` | `beta * x` | unchanged |
+
+### The p-norm of a vector
+
+**Not silent: what was a parse error now parses, or is refused saying why.** `norm(v, p)` threw
+`UnhandledParseException`. It is now `Entity.Normf`, built by `MathS.Norm`: `(|v_1|^p + ... + |v_n|^p)^(1/p)` for a
+real `p >= 1`, the largest modulus at `p = +oo`, taken when simplified of a vector written out, a column or a row,
+whose entries may be complex. `norm(v, 2)` is `abs(v)`, the same expression. A `p` that is a number below `1`, where
+there is no norm, and a matrix written out that is not a vector throw `InvalidArgumentParseException`; a symbolic `p`
+stays as written, with the condition `p >= 1`. With one argument, `norm(v)` is still the product `norm * v`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"norm([3, 4], 1)".ToEntity().Simplify()` | throws `UnhandledParseException` | `7` |
+| `"norm([3, 4], 3)".ToEntity().Simplify()` | throws `UnhandledParseException` | `91 ^ (1/3)` |
+| `"norm([3, 4], +oo)".ToEntity().Simplify()` | throws `UnhandledParseException` | `4` |
+| `"norm([3, 4], 2)".ToEntity().Simplify()` | throws `UnhandledParseException` | `5`, as `abs([3, 4])` |
+| `"norm([x, y], p)".ToEntity().Simplify()` | throws `UnhandledParseException` | `norm([x, y], p)` |
+| `"norm(v, 1/2)".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: `p >= 1` |
+| `"norm([[1, 2], [3, 4]], 2)".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: not a vector |
+| `"norm([3, 4])".ToEntity().Simplify()` | `[3 * norm, 4 * norm]` | unchanged |
+
 ### The gradient, the divergence and the curl
 
 **Not silent: what was refused or a product now parses or is refused differently.** `gradient(f, x)`,

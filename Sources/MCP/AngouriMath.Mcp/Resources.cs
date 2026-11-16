@@ -78,8 +78,8 @@ internal static class Resources
 
         **2. An unknown function name becomes a multiplication.**
 
-        `beta(z)` is not a function here — it is the product `beta * z`. The parse succeeds and
-        produces a different expression. Some names are refused outright, but not every
+        `beta(z)`, with one argument, is not a function here — it is the product `beta * z`; the
+        beta function takes two, `beta(a, b)`. The parse succeeds and produces a different expression. Some names are refused outright, but not every
         unknown name can be: refusing them all would refuse `a(b + c)`.
 
         Functions:
@@ -105,8 +105,9 @@ internal static class Resources
           `factorization(n)`, the prime factorisation of `n` as a node that is not the number, and
           `primefactors(n)`, the set of the primes dividing `n`
         - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, `lambertw(z)` and `lambertw(k, z)` (also `productlog`),
-          `zeta(s)` and `zeta(s, a)`, Riemann's and Hurwitz's (also `riemannzeta`, `hurwitzzeta`), and `gamma(a, z)`, the
-          upper incomplete gamma function
+          `zeta(s)` and `zeta(s, a)`, Riemann's and Hurwitz's (also `riemannzeta`, `hurwitzzeta`), `beta(a, b)`, the beta
+          function (one argument, `beta(x)`, is still the product `beta * x`), and `gamma(a, z)`, the upper incomplete
+          gamma function
         - sets: `card powerset union intersection complement image preimage domain aleph
           iverson`
         - `derivative integral limit limitleft limitright sum product argmax argmin piecewise
@@ -121,7 +122,9 @@ internal static class Resources
           `dot(a, b)` and `cross(a, b)` of a name are nodes, carried out once the name is
           substituted by a matrix or a vector. `cross(a, b)` is the vector product in space,
           its operands kept in their order, and `cross([x, y])` of a vector written out is `[-y, x]`;
-          `resultant(p, q, x)` eliminates `x`
+          `resultant(p, q, x)` eliminates `x`; `norm(v, p)` is the p-norm of a vector for `p >= 1`, the
+          largest modulus at `p = +oo`, and `abs(v)` is the 2-norm. One argument, `norm(v)`, is still the
+          product `norm * v`
         - `forwarddifference(f, k)`, which is `f(k + 1) - f(k)` once parsed
         - `laplacian(f, [x, y])`, `jacobian(F, [x, y])`, `hessian(f, [x, y])`, `gradient(f, [x, y])`,
           `divergence(F, [x, y])` and `curl(F, [x, y, z])`, made of `derivative` nodes when parsed;
