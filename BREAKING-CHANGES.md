@@ -54,8 +54,20 @@ route, with a decimal root that differs in its last digits
 
 | Input | Was (2.8.0) | Now |
 |---|---|---|
-| `"sqrt(x) + x = cos(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ }` | `{ x : sqrt(x) + x = cos(sqrt(x)) - 1 }` |
+| `"sqrt(x) + x = cos(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ }` | `{ 0 }`, by the next entry; unsolved by this one alone |
 | `"x + sqrt(x) = e^(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ 0, 3.21586080818110353… }`, 8.7e-16 from the root | `{ 0, 3.21586080818110264… }`, 1.7e-17 from it |
+
+### A root where a radicand is zero is found beside Newton's
+
+**Silent.** Newton's method does not converge to a root where a radicand is zero, since a radical's derivative is
+infinite there, and an equation it answered left such a root out. Each point where a radicand in the equation is zero
+is now put back in, and kept where the equation is exactly zero. The roots Newton's method finds are unchanged
+([#2495](https://github.com/asc-community/AngouriMath/issues/2495)).
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sin(sqrt(x)) = x".ToEntity().Solve("x")` | `{ 0.76864885676094940… }` | `{ 0, 0.76864885676094940… }` |
+| `"cos(1 - sqrt(x)) - x = cos(1)".ToEntity().Solve("x")` | `{ 0.39003113021627860… }` | `{ 0, 0.39003113021627860… }` |
 
 ## 2.8.0 — since 2.7.0
 
