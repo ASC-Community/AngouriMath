@@ -8,6 +8,7 @@
 using System;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Set;
+using static AngouriMath.Entity.Number;
 
 namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 {
@@ -35,7 +36,12 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
     {
         [ThreadStatic] private static SolutionParameters? current;
 
-        private readonly Dictionary<Variable, Set> sets = new();
+        // Made at the first parameter minted, since most solves mint none and a scope is opened
+        // for every one.
+        private Dictionary<Variable, Set>? sets;
+
+        /// <summary>The parameters minted in this scope, in the order they were.</summary>
+        private List<Variable>? minted;
 
         private SolutionParameters() { }
 
@@ -59,7 +65,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// The set <paramref name="parameter"/> was minted for in this scope, or
         /// <see langword="null"/> where it was not minted here.
         /// </summary>
-        internal Set? SetOf(Variable parameter) => sets.TryGetValue(parameter, out var set) ? set : null;
+        internal Set? SetOf(Variable parameter) => sets is not null && sets.TryGetValue(parameter, out var set) ? set : null;
 
         /// <summary>
         /// The set an unknown that nothing constrains ranges over: the reals where the solve
@@ -76,13 +82,169 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var parameter = Variable.CreateUnique(taken, prefix);
             if (current is not { } scope)
                 return parameter;
-            while (scope.sets.TryGetValue(parameter, out var other) && other != over)
+            var sets = scope.sets ??= new();
+            while (sets.TryGetValue(parameter, out var other) && other != over)
             {
                 taken += parameter;
                 parameter = Variable.CreateUnique(taken, prefix);
             }
-            scope.sets[parameter] = over;
+            if (!sets.ContainsKey(parameter))
+                (scope.minted ??= new()).Add(parameter);
+            sets[parameter] = over;
             return parameter;
+        }
+
+        /// <summary>
+        /// The answer <paramref name="solve"/> gives to one equation, with each parameter it brings
+        /// for a whole number bound by an indexed union, where no scope is open; as it is given
+        /// inside a scope, where it is a step of a system's solve.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A family of roots is every value of its expression over the whole numbers, which is the
+        /// indexed union <c>union({ pi/6 + 2 pi n, 5 pi/6 + 2 pi n }, n in ZZ)</c>. Written with a
+        /// free <c>n_1</c> it was a finite set, which claims to be every root and lists an
+        /// expression that is none of them, and nothing said what <c>n_1</c> ranges over: the
+        /// union binds its name and decides membership, <c>4 pi in union({ 2 pi n }, n in ZZ)</c>
+        /// being True. A system's rows are a matrix, whose entries cannot bind a name, so inside a
+        /// system's scope the parameters stay free and are named with their sets there.
+        /// https://github.com/asc-community/AngouriMath/issues/2319
+        /// </para>
+        /// <para>
+        /// A parameter over a continuum, the <c>r_1</c> of <c>abs(x) = 2</c> or the <c>t_1</c> of
+        /// <c>floor(x) = 1</c>, carries the set it ranges over as a condition on the root already,
+        /// and is left as it is.
+        /// </para>
+        /// </remarks>
+        internal static Set Bound<TQuestion>(TQuestion question, Func<TQuestion, Set> solve)
+        {
+            var scope = Open(out var opened);
+            try
+            {
+                var answer = solve(question);
+                return opened && scope.minted is { Count: > 0 } ? scope.BindWholeParameters(answer) : answer;
+            }
+            finally
+            {
+                if (opened)
+                    scope.Close();
+            }
+        }
+
+        /// <summary>Whether <paramref name="set"/> is the whole numbers or a part of them this class writes.</summary>
+        private static bool IsWhole(Set set)
+            => set == MathS.Sets.Z || set is SetMinusf(var from, _) && from == MathS.Sets.Z || set is Intersectionf(var of, _) && of == MathS.Sets.Z;
+
+        /// <summary>
+        /// The whole-number parameters minted in this scope, in the order they were, that
+        /// <paramref name="root"/> mentions.
+        /// </summary>
+        private List<Variable> WholeParametersOf(Entity root)
+        {
+            var vars = root.Vars;
+            return minted is null ? new() : minted.Where(parameter => IsWhole(sets![parameter]) && vars.Contains(parameter)).ToList();
+        }
+
+        /// <summary><paramref name="answer"/> with each listed root that has whole parameters in it bound.</summary>
+        private Set BindWholeParameters(Set answer)
+            => (Set)answer.Replace(node => node is FiniteSet listed && listed.Any(root => WholeParametersOf(root).Count > 0) ? Bind(listed) : node);
+
+        /// <summary>
+        /// <paramref name="listed"/> as the roots with no whole parameter, united with one indexed
+        /// union for the roots that bind the same names over the same sets: one level for each
+        /// parameter, the first minted outermost, since the ones after it were minted for a value
+        /// that it is already in. Each parameter is renamed to the first of <c>n</c>, <c>m</c>,
+        /// <c>k</c>, <c>j</c> that the root has no other use for.
+        /// </summary>
+        private Set Bind(FiniteSet listed)
+        {
+            var plain = new List<Entity>();
+            var families = new List<(List<(Variable Name, Set Over)> Indices, List<Entity> Roots)>();
+            foreach (var root in listed)
+            {
+                var parameters = WholeParametersOf(root);
+                if (parameters.Count == 0)
+                {
+                    plain.Add(root);
+                    continue;
+                }
+                var named = root;
+                var others = new HashSet<Variable>(root.Vars.Where(name => !parameters.Contains(name)));
+                var indices = new List<(Variable Name, Set Over)>();
+                foreach (var parameter in parameters)
+                {
+                    var name = IndexNames.Select(MathS.Var).FirstOrDefault(candidate => !others.Contains(candidate)) ?? parameter;
+                    others.Add(name);
+                    named = named.Substitute(parameter, name);
+                    indices.Add((name, sets![parameter]));
+                }
+                if (families.FindIndex(family => family.Indices.SequenceEqual(indices)) is var at and >= 0)
+                    families[at].Roots.Add(named);
+                else
+                    families.Add((indices, new List<Entity> { named }));
+            }
+            Set? answer = plain.Count > 0 ? new FiniteSet(plain) : null;
+            foreach (var (indices, roots) in families)
+            {
+                Set family = new FiniteSet(roots);
+                for (var level = indices.Count - 1; level >= 0; level--)
+                    family = new IndexedUnionf(indices[level].Name, indices[level].Over, family);
+                answer = answer is null ? family : new Unionf(answer, family);
+            }
+            return answer ?? listed;
+        }
+
+        [ConstantField] private static readonly string[] IndexNames = { "n", "m", "k", "j" };
+
+        /// <summary>
+        /// <paramref name="root"/> at one member of its family: each symbol in it a whole
+        /// parameter minted in the scope open, put at the whole number nearest 0 in its set; or
+        /// <see langword="null"/> where a symbol is anything else.
+        /// </summary>
+        internal static Entity? AtAMember(Entity root)
+        {
+            if (current is not { } scope)
+                return null;
+            foreach (var parameter in root.Vars.Distinct().ToList())
+            {
+                if (scope.SetOf(parameter) is not { } set || !IsWhole(set))
+                    return null;
+                Entity? value = null;
+                foreach (var candidate in Nearest)
+                    if (set.TryContains(candidate, out var contains) && contains)
+                    {
+                        value = candidate;
+                        break;
+                    }
+                if (value is null)
+                    return null;
+                root = root.Substitute(parameter, value);
+            }
+            return root;
+        }
+
+        [ConstantField] private static readonly Integer[] Nearest = { 0, 1, -1, 2, -2 };
+
+        /// <summary>
+        /// Each root in <paramref name="roots"/>, with an index of an indexed union in it minted as
+        /// a parameter over the union's index set, or <see langword="null"/> where
+        /// <paramref name="roots"/> is not a finite set of roots or such unions of them. This is how
+        /// a system takes apart the answer of one of its equations, whose rows cannot bind a name.
+        /// </summary>
+        internal static List<Entity>? Each(Entity roots, Entity taken)
+        {
+            switch (roots)
+            {
+                case FiniteSet listed:
+                    return listed.ToList();
+                case Unionf(var left, var right):
+                    return Each(left, taken) is { } first && Each(right, taken) is { } second ? first.Concat(second).ToList() : null;
+                case IndexedUnionf { Var: Variable index, Over: Set over, Body: var body }:
+                    var parameter = Mint(taken + roots, index.SplitIndex() is var (prefix, _) ? prefix : index.Name, over);
+                    return Each(body.Substitute(index, parameter), taken + parameter);
+                default:
+                    return null;
+            }
         }
 
         /// <summary>

@@ -31,14 +31,10 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("x mod 2 = 1/2")]
         public void EverySolutionSatisfiesIt(string equation)
         {
-            var solutions = Assert.IsType<Set.FiniteSet>(equation.ToEntity().Solve("x"));
-            Assert.NotEmpty(solutions.Elements);
-            foreach (var solution in solutions.Elements)
-            {
-                var parameter = Assert.Single(solution.Vars);
-                for (var n = -2; n <= 2; n++)
-                    Assert.Equal(Boolean.True, equation.ToEntity().Substitute("x", solution.Substitute(parameter, n)).Evaled);
-            }
+            var solutions = equation.ToEntity().Solve("x").Members(-2, -1, 0, 1, 2);
+            Assert.NotEmpty(solutions);
+            foreach (var solution in solutions)
+                Assert.Equal(Boolean.True, equation.ToEntity().Substitute("x", solution).Evaled);
         }
 
         /// <summary>
@@ -48,25 +44,28 @@ namespace AngouriMath.Tests.Algebra
         [Fact]
         public void TheFamilyIsEverySolution()
         {
-            var solution = Assert.Single(Assert.IsType<Set.FiniteSet>("(x mod 4) + 1 = 3".ToEntity().Solve("x")).Elements);
-            var parameter = Assert.Single(solution.Vars);
+            var family = Assert.IsType<Set.IndexedUnionf>("(x mod 4) + 1 = 3".ToEntity().Solve("x"));
+            Assert.Equal(MathS.Sets.Z, family.Over);
             Assert.Equal(new Entity[] { -6, -2, 2, 6, 10 },
-                Enumerable.Range(-2, 5).Select(n => solution.Substitute(parameter, n).Evaled).ToArray());
+                family.Members(-2, -1, 0, 1, 2).Select(member => member.Evaled).ToArray());
         }
 
         /// <summary>
         /// A value solves it exactly when the family reaches it at a whole parameter: for
-        /// <c>x mod 3 = 1</c>, 4 is reached at <c>n = 1</c>, and 3 only at <c>n = 2/3</c>.
+        /// <c>x mod 3 = 1</c>, 4 is reached at <c>n = 1</c>, and 3 only at <c>n = 2/3</c>. The
+        /// family is a union over the whole numbers, so membership in it says yes for the first;
+        /// for the second it is not decided, and must not be claimed.
         /// </summary>
         [Theory]
         [InlineData("4", true)]
         [InlineData("3", false)]
         public void AValueSolvesItWhenTheFamilyReachesItAtAWholeParameter(string value, bool solves)
         {
-            var solution = Assert.Single(Assert.IsType<Set.FiniteSet>("x mod 3 = 1".ToEntity().Solve("x")).Elements);
-            var parameter = Assert.Single(solution.Vars);
-            var at = Assert.Single(Assert.IsType<Set.FiniteSet>(solution.Equalizes(value.ToEntity()).Solve(parameter)).Elements);
-            Assert.Equal(solves, at.Evaled is Number.Integer);
+            var member = value.ToEntity().In("x mod 3 = 1".ToEntity().Solve("x")).Simplify();
+            if (solves)
+                Assert.Equal(Boolean.True, member);
+            else
+                Assert.NotEqual(Boolean.True, member);
         }
 
         /// <summary>

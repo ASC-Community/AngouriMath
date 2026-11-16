@@ -5,6 +5,7 @@
 // Website: https://am.angouri.org.
 //
 
+using System.Collections.Generic;
 using System.Linq;
 using AngouriMath;
 using AngouriMath.Extensions;
@@ -24,8 +25,19 @@ namespace AngouriMath.Tests.Algebra
     [Trait("Area", "Algebra")]
     public sealed class RepeatedVariableSolveTest
     {
-        private static Entity.Set.FiniteSet Roots(string equation) =>
-            (Entity.Set.FiniteSet)equation.ToEntity().Solve("x");
+        /// <summary>
+        /// The roots as written: a family's body with its index in it, which is <c>2 pi n</c>
+        /// for <c>union({ 2 pi n }, n in ZZ)</c>. https://github.com/asc-community/AngouriMath/issues/2319
+        /// </summary>
+        private static List<Entity> Roots(string equation) => Written(equation.ToEntity().Solve("x"));
+
+        private static List<Entity> Written(Entity roots) => roots switch
+        {
+            Entity.Set.FiniteSet finite => finite.ToList(),
+            Entity.Set.Unionf(var left, var right) => Written(left).Concat(Written(right)).ToList(),
+            Entity.Set.IndexedUnionf family => Written(family.Body),
+            _ => throw new Xunit.Sdk.XunitException($"{roots.Stringize()} lists no roots"),
+        };
 
         private static bool IsNear(Entity root, double re, double im)
         {
@@ -164,10 +176,10 @@ namespace AngouriMath.Tests.Algebra
         // What must not change: an equation whose variable occurs once is still inverted, and
         // is still answered the way it always was.
         [Theory]
-        [InlineData("sin(x) = 0", "2 * pi * n_1")]
+        [InlineData("sin(x) = 0", "2 * pi * n")]
         [InlineData("ln(x) = 0", "1")]
         [InlineData("x ^ 2 - 2 = 0", "sqrt(2)")]
-        [InlineData("sin(x ^ 2 - 2) = 0", "sqrt(2 * pi * n_1 + 2)")]
+        [InlineData("sin(x ^ 2 - 2) = 0", "sqrt(2 * pi * n + 2)")]
         public void AVariableThatOccursOnceIsStillInverted(string equation, string expected) =>
             Assert.Contains(expected.ToEntity().InnerSimplified, Roots(equation));
     }

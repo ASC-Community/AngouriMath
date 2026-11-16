@@ -43,11 +43,15 @@ namespace AngouriMath.Tests.Algebra
             Assert.Equal(target, roots.Count);
         }
 
+        /// <remarks>
+        /// A family of roots is an indexed union over the whole numbers, and counts once, by its
+        /// member at 0; its members at -1 and 1 are checked as well.
+        /// https://github.com/asc-community/AngouriMath/issues/2319
+        /// </remarks>
         void VerifySetOfRoots(Entity expr, Set roots, int rootCount, Integer? toSub)
         {
-            var finiteSet = Assert.IsType<FiniteSet>(roots);
-            AssertRootCount(finiteSet, rootCount);
-            foreach (var root in finiteSet)
+            AssertRootCount(new FiniteSet(roots.Members(0)), rootCount);
+            foreach (var root in roots.Members(-1, 0, 1))
                 AssertRoots(expr, x, root, toSub);
         }
 
@@ -57,7 +61,7 @@ namespace AngouriMath.Tests.Algebra
             var rootsRaw = expr.SolveEquation(x);
             var roots = (Set)rootsRaw.InnerSimplified;
             VerifySetOfRoots(expr, roots, rootCount, toSub);
-            if (verifyRoots is not null) Assert.Equal(verifyRoots, roots.Stringize());
+            if (verifyRoots is not null) Assert.Equal(verifyRoots, roots.Principal().Stringize());
 
             if (!testNewton) return;
             // TODO: Increase Newton precision
@@ -149,10 +153,9 @@ namespace AngouriMath.Tests.Algebra
             Entity expr = MathS.Sqr(toRepl) + 0.3 * toRepl - 0.1 * MathS.Var("a");
             var roots = expr.SolveEquation(x);
             roots = (Set)roots.InnerSimplified;
-            var finite = Assert.IsType<FiniteSet>(roots);
-            AssertRootCount(finite, rootAmount);
-            foreach (var root in finite)
-                AssertRoots(expr.Substitute("a", 5), x, root.Substitute("n_1", 3).Substitute("a", 5));
+            AssertRootCount(new FiniteSet(roots.Members(0)), rootAmount);
+            foreach (var root in roots.Members(3))
+                AssertRoots(expr.Substitute("a", 5), x, root.Substitute("a", 5));
         }
 
         [Theory]
@@ -231,11 +234,24 @@ namespace AngouriMath.Tests.Algebra
 
         [Theory]
         [InlineData("4^x - a", 1, "{ log(4, a) }")]
-        [InlineData("a^x + (a^2)^x - c", 2)]
         [InlineData("e^x + (e2)^x - 1", 2)]
         [InlineData("2^x - 4^x", 1, "{ 0 }")]
         public void TestExponentialSolver(string equation, int rootCount, string? verifyRoots = null)
             => TestSolver(equation, rootCount, verifyRoots: verifyRoots);
+
+        /// <summary>
+        /// A symbolic base: over the reals a polynomial in <c>a^x</c>. Over the complex numbers
+        /// <c>(a^2)^x</c> is <c>(a^x)^2</c> only where <c>ln(a^2) = 2 ln(a)</c>, which depends on
+        /// <c>a</c>, so it is left unsolved there.
+        /// https://github.com/asc-community/AngouriMath/issues/2319
+        /// </summary>
+        [Fact]
+        public void APolynomialInAPowerOfASymbolicBase()
+        {
+            using (MathS.Settings.Codomain.Set(AngouriMath.Core.Domain.Real))
+                TestSolver("a^x + (a^2)^x - c", 2);
+            Assert.IsType<ConditionalSet>(((Entity)"a^x + (a^2)^x - c").SolveEquation(x));
+        }
 
         [Theory(Skip = "Exponentiation works unexpectedly")]
         [InlineData("4^x + 2^x - a", 2, 3)]

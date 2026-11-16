@@ -397,6 +397,24 @@ namespace AngouriMath.Functions
         /// </summary>
         private static bool AddTheFamily(Entity family, Variable parameter, Interval interior, Real left, Real right, List<Entity> candidates)
         {
+            // A family with an imaginary step, ln(2) / ln(2) + 2 pi i n / ln(2) for a zero of
+            // 2^x ln(2) - 1 over the complex numbers, is real at one member at most: where the
+            // imaginary parts cancel. https://github.com/asc-community/AngouriMath/issues/2319
+            if (AtComplex(0) is { } c0 && AtComplex(1) is { } c01 && (c01 - c0) is var step
+                && Math.Abs(step.Imaginary) > 1e-9 && Math.Abs(step.Real) < 1e-12 * Math.Max(1, Math.Abs(step.Imaginary)))
+            {
+                var at = Math.Round(-c0.Imaginary / step.Imaginary);
+                if (Math.Abs(c0.Imaginary + at * step.Imaginary) > 1e-9 * Math.Max(1, Math.Abs(step.Imaginary)) || Math.Abs(at) > MaxFamilyMembers)
+                    return true;
+                var real = family.Substitute(parameter, Integer.Create((long)at)).InnerSimplified;
+                if (Inside(real, interior))
+                    candidates.Add(real);
+                return true;
+            }
+            System.Numerics.Complex? AtComplex(int n)
+                => family.Substitute(parameter, Integer.Create(n)).Evaled is Complex { IsFinite: true } value
+                    ? new System.Numerics.Complex(value.RealPart.EDecimal.ToDouble(), value.ImaginaryPart.EDecimal.ToDouble())
+                    : null;
             // Read numerically at 0, 1 and 2: the family is c + p n exactly when the steps agree,
             // whatever shape the solver wrote it in.
             if (At(0) is not { } c || At(1) is not { } c1 || At(2) is not { } c2)

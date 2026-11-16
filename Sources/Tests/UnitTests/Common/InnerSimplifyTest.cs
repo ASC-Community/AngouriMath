@@ -493,7 +493,7 @@ namespace AngouriMath.Tests.Common
         {
             var roots = "(sin(x)^2 - sin(x) + a)(b - x)((-3) * x + 2 + 3 * x ^ 2 + (x + (-3)) * x ^ 3)".SolveEquation("x");
             Assert.DoesNotContain("-1)", roots.Stringize());
-            Assert.Contains(MathS.Var("b"), ((Entity.Set.FiniteSet)roots).Elements);
+            Assert.Contains(MathS.Var("b"), roots.Members(0));
         }
     }
 }

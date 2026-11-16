@@ -58,10 +58,16 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("2 ^ x = 8", "3")]
         public void AnExponentialEquationIsSolved(string equation, string root)
         {
-            var roots = Assert.IsType<Entity.Set.FiniteSet>(equation.ToEntity().Solve("x").InnerSimplified);
-            Assert.Contains(root.ToEntity(), roots);
-            foreach (var found in roots)
+            // Each root is a family over the complex numbers, and the proposal's is its principal
+            // member. https://github.com/asc-community/AngouriMath/issues/2319
+            var solved = equation.ToEntity().Solve("x");
+            Assert.Contains(root.ToEntity(), solved.Principal());
+            foreach (var found in solved.Members(0))
                 AssertSatisfies(equation, found);
+            var difference = equation.ToEntity() is Entity.Equalsf(var lhs, var rhs) ? lhs - rhs : equation.ToEntity();
+            foreach (var found in solved.Members(-1, 1))
+                Assert.True(((Entity.Number.Complex)difference.Substitute("x", found).EvalNumerical()).Abs().EDecimal.ToDouble() < 1e-10,
+                    $"{found.Stringize()} is no root of {equation}");
         }
 
         /// <summary>

@@ -75,10 +75,12 @@ namespace AngouriMath.Tests.Algebra.SolveTest
         [InlineData("(2 x - 1) e^(3 x + 1) = 4")]
         public void OverTheComplexNumbersEveryBranchIsARoot(string equation)
         {
-            var root = Assert.Single(Assert.IsType<Set.FiniteSet>(equation.ToEntity().Solve("x")));
-            var n = Assert.Single(root.Vars.Where(v => v.Name.StartsWith("n")));
-            foreach (var branch in new[] { -2, 0, 1, 3 })
-                Satisfies(equation, root.Substitute(n, branch));
+            // The branches are a union over the whole numbers.
+            // https://github.com/asc-community/AngouriMath/issues/2319
+            var family = Assert.IsType<Set.IndexedUnionf>(equation.ToEntity().Solve("x"));
+            Assert.Equal(MathS.Sets.Z, family.Over);
+            foreach (var root in family.Members(-2, 0, 1, 3))
+                Satisfies(equation, root);
         }
     }
 }

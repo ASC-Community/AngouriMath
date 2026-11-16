@@ -341,9 +341,9 @@ namespace AngouriMath
         /// </code>
         /// Prints
         /// { 1, -1 }
-        /// { ln(-sqrt(-2) / (-1 - i)) / i / a, ln(sqrt(-2) / (-1 - i)) / i / a }
+        /// union({ (ln(sqrt(i)) / i + 2 * pi * n) / a, (ln(-sqrt(i)) / i + 2 * pi * n) / a }, n in ZZ)
         /// </example>
-        public static Set SolveEquation(Entity equation, Variable var) => EquationSolver.Solve(equation, var);
+        public static Set SolveEquation(Entity equation, Variable var) => EquationSolver.SolveBound(equation, var);
 
         /// <summary>
         /// Solves a system of equations written as one statement, a conjunction of equations,

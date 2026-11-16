@@ -41,8 +41,10 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("2^(3*x) - 5^(x+1)")]
         public void ARootOfTwoNumericPowersSatisfiesItsEquation(string equation)
         {
-            var roots = equation.ToEntity().SolveEquation("x");
-            var finite = Assert.IsType<Set.FiniteSet>(roots);
+            // Over the complex numbers each root is a family, e^u = e^v being u = v + 2 pi i n,
+            // and the members either side of the real one are roots too.
+            // https://github.com/asc-community/AngouriMath/issues/2319
+            var finite = equation.ToEntity().SolveEquation("x").Members(-2, -1, 0, 1, 2);
             Assert.NotEmpty(finite);
             foreach (var root in finite)
             {
@@ -76,6 +78,7 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("ln(x)^2 - 3*ln(x) + 2", "{ e, e ^ 2 }")]
         [InlineData("6^x - 2", "{ log(6, 2) }")]
         public void WhatWasExactStaysExact(string equation, string expected)
-            => Assert.Equal(expected, equation.ToEntity().SolveEquation("x").Stringize());
+            // The principal member of each family, n = 0.
+            => Assert.Equal(expected, equation.ToEntity().SolveEquation("x").Principal().Stringize());
     }
 }

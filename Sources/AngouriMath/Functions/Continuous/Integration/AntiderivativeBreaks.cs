@@ -119,8 +119,13 @@ namespace AngouriMath.Functions.Algebra
         /// <summary>The real zeros the solver lists for <paramref name="expression"/>, strictly inside the range.</summary>
         private static bool SolvedZeros(Entity expression, Variable x, Real lower, Real upper, List<(Entity At, Real Value)> breaks)
         {
-            if (expression.SolveEquation(x) is not FiniteSet roots)
+            // With a family's parameter free, so that its real members can be read off it below.
+            if (EquationSolver.Solve(expression, x) is not FiniteSet families)
                 return false;
+            var roots = new List<Entity>();
+            foreach (var family in families)
+                if (!RealMembers(family, expression, x, lower, upper, roots))
+                    return false;
             foreach (var root in roots)
             {
                 if (root.ContainsNode(x) || root.Vars.Any())
@@ -131,6 +136,12 @@ namespace AngouriMath.Functions.Algebra
                         if (value > lower && value < upper)
                             breaks.Add((root, value));
                         break;
+                    // A real root written through i, ln(r) / i + 2 pi n, evaluates with an imaginary
+                    // part that is rounding alone.
+                    case Complex { RealPart.EDecimal.IsFinite: true } nearlyReal when IsRounding(nearlyReal.ImaginaryPart):
+                        if (nearlyReal.RealPart > lower && nearlyReal.RealPart < upper)
+                            breaks.Add((root, nearlyReal.RealPart));
+                        break;
                     case Complex { ImaginaryPart.IsZero: false }:
                         break;
                     default:
@@ -139,6 +150,58 @@ namespace AngouriMath.Functions.Algebra
             }
             return true;
         }
+
+        /// <summary>
+        /// The members of a root family <c>p + q n</c>, one for each whole <c>n</c>, that can lie
+        /// strictly inside the range, added to <paramref name="roots"/>; a root with no parameter
+        /// is added as it is. False where the family is not linear in one parameter with numeric
+        /// <c>p</c> and <c>q</c>, or has more members in the range than <see cref="MostBreaks"/>.
+        /// </summary>
+        /// <remarks>
+        /// Over the complex numbers <c>e ^ x = 2</c> is <c>ln(2) + 2 pi i n</c>, real at <c>n = 0</c>
+        /// alone, and a trigonometric equation solved through <c>e ^ (i x)</c> is a family with a
+        /// real step. Read as a root with a symbol in it, either declined the breaks, and the
+        /// integral was taken across a pole: 1/(e^x - 2) over [0, 1] came back finite.
+        /// https://github.com/asc-community/AngouriMath/issues/2319
+        /// </remarks>
+        private static bool RealMembers(Entity family, Entity expression, Variable x, Real lower, Real upper, List<Entity> roots)
+        {
+            var parameters = family.Vars.Where(v => v != x && !expression.Vars.Contains(v)).Distinct().ToList();
+            if (parameters.Count == 0)
+            {
+                roots.Add(family);
+                return true;
+            }
+            if (parameters.Count > 1 || !lower.EDecimal.IsFinite || !upper.EDecimal.IsFinite
+                || !TreeAnalyzer.TryGetPolyLinear(family, parameters[0], out var step, out var start)
+                || step.Evaled is not Complex { IsFinite: true, IsZero: false } q
+                || start.Evaled is not Complex { IsFinite: true } p)
+                return false;
+            Entity Member(EInteger n) => family.Substitute(parameters[0], Integer.Create(n)).InnerSimplified;
+            if (!q.ImaginaryPart.IsZero)
+            {
+                // Real at most where the imaginary parts cancel, n = -Im(p) / Im(q).
+                var at = (-p.ImaginaryPart / q.ImaginaryPart).EDecimal;
+                var whole = at.RoundToIntegerNoRoundedFlag(EContext.CliDecimal.WithRounding(ERounding.HalfEven));
+                if (at.Subtract(whole).Abs().CompareTo(EDecimal.Create(1, -30)) < 0)
+                    roots.Add(Member(whole.ToEInteger()));
+                return true;
+            }
+            if (!IsRounding(p.ImaginaryPart))
+                return true;
+            // A real step: n runs over the whole numbers between the ends mapped back.
+            var (atLower, atUpper) = ((lower - p.RealPart) / q.RealPart, (upper - p.RealPart) / q.RealPart);
+            var (from, to) = atLower < atUpper ? (atLower, atUpper) : (atUpper, atLower);
+            var first = from.EDecimal.RoundToIntegerNoRoundedFlag(EContext.CliDecimal.WithRounding(ERounding.Floor)).ToEInteger();
+            var last = to.EDecimal.RoundToIntegerNoRoundedFlag(EContext.CliDecimal.WithRounding(ERounding.Ceiling)).ToEInteger();
+            if ((last - first).CompareTo(EInteger.FromInt32(MostBreaks)) > 0)
+                return false;
+            for (var n = first; n.CompareTo(last) <= 0; n += EInteger.One)
+                roots.Add(Member(n));
+            return true;
+        }
+
+        private static bool IsRounding(Real part) => part.EDecimal.Abs().CompareTo(EDecimal.Create(1, -30)) < 0;
 
         /// <summary>
         /// Adds the zeros of the cosine (<paramref name="halfPeriodShift"/>) or the sine of a

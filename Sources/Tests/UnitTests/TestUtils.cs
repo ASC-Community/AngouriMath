@@ -21,6 +21,38 @@ namespace AngouriMath.Tests
 {
     public static class TestExtensions
     {
+        /// <summary>
+        /// The roots a solution set lists at the given indices: each member of a finite set, and
+        /// each member of an indexed union at those of <paramref name="indices"/> its index set has,
+        /// so that <c>union({ 2 pi n }, n in ZZ)</c> at 0 and 1 is 0 and 2 pi. A set of any other
+        /// kind fails the test. https://github.com/asc-community/AngouriMath/issues/2319
+        /// </summary>
+        public static List<Entity> Members(this Entity roots, params int[] indices)
+        {
+            switch (roots)
+            {
+                case Entity.Set.FiniteSet finite:
+                    return finite.ToList();
+                case Entity.Set.Unionf(var left, var right):
+                    return left.Members(indices).Concat(right.Members(indices)).ToList();
+                case Entity.Set.IndexedUnionf family:
+                    var members = new List<Entity>();
+                    foreach (var index in indices)
+                        if (((Entity)index).In(family.Over).Simplify() == Entity.Boolean.True)
+                            members.AddRange(family.Body.Substitute(family.Var, index).Members(indices));
+                    return members;
+                default:
+                    throw new Xunit.Sdk.XunitException($"{roots.Stringize()} lists no roots");
+            }
+        }
+
+        /// <summary>
+        /// The principal roots of a solution set, the members of each family at index 0, as a set:
+        /// <c>{ ln(2) }</c> for <c>union({ ln(2) + 2 pi i n }, n in ZZ)</c>.
+        /// </summary>
+        public static Entity.Set.FiniteSet Principal(this Entity roots)
+            => new Entity.Set.FiniteSet(roots.Members(0).Select(root => root.InnerSimplified));
+
         public static (T, T) Into2<T>(this IEnumerable<T> seq)
         {
             using var enumerator = seq.GetEnumerator();
