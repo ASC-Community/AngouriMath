@@ -132,6 +132,28 @@ namespace AngouriMath
         /// <summary>The same for the hash: the node's kind, with each node's parts combined in by its own record.</summary>
         public override int GetHashCode() => EqualityContract.GetHashCode();
 
+        /// <summary>Makes a node, with every cache empty.</summary>
+        protected Entity() { }
+
+        /// <summary>
+        /// The copy a <c>with</c> makes -- <see cref="WithCodomain"/>, and a derivative taken once
+        /// more -- which is another node: it keeps the caches of what it shares with
+        /// <paramref name="original"/>, the children and what is counted from them, and not the
+        /// values, which a codomain or an order of differentiation changes.
+        /// https://github.com/asc-community/AngouriMath/issues/2479
+        /// </summary>
+        protected Entity(Entity original)
+        {
+            directChildren = original.directChildren;
+            isFinite = original.isFinite;
+            complexity = original.complexity;
+            vars = original.vars;
+            varsAndConsts = original.varsAndConsts;
+            freeVariables = original.freeVariables;
+            simplifiedRate = original.simplifiedRate;
+            sortHashes = original.sortHashes;
+        }
+
         /// <summary>
         /// Returns the array of the direct children. Will be
         /// only called once, so no need to cache anything.

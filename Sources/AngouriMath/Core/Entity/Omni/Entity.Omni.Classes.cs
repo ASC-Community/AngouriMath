@@ -241,10 +241,11 @@ namespace AngouriMath
                 /// </summary>
                 public bool IsNumeric => !LeftReal.IsNaN && !RightReal.IsNaN;
 
+                // Each end's value is an evaluation, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
                 private Real LeftReal => fLeft.GetValue(static @this => @this.Left.EvaluableNumerical && @this.Left.Evaled is Real re ? re : Real.NaN, this);
-                private LazyPropertyA<Real> fLeft;
+                private Convenience.SettingsDependent<Real> fLeft;
                 private Real RightReal => fRight.GetValue(static @this => @this.Right.EvaluableNumerical && @this.Right.Evaled is Real re ? re : Real.NaN, this);
-                private LazyPropertyA<Real> fRight;
+                private Convenience.SettingsDependent<Real> fRight;
 
                 private static bool IsALessThanB(Real A, Real B, bool closed)
                     => A < B || closed && A == B;

@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2022 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -24,8 +24,9 @@ namespace AngouriMath.Convenience
     }
 
     /// <summary>
-    /// What every setting reads as, taken together, so that something holding a result computed
-    /// under the settings of a moment can tell whether those settings still hold.
+    /// What every setting reads as, taken together, as one object, so that something holding a
+    /// result computed under the settings of a moment can tell whether those settings still hold
+    /// with one async-local read and one reference comparison.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -38,26 +39,30 @@ namespace AngouriMath.Convenience
     /// the counter was built first and threw away the whole benefit.
     /// </para>
     /// <para>
-    /// The state of one setting is the <i>reference</i> to the frame on top of its stack, which
-    /// is exact rather than a hash — releasing a scope restores the very frame object that was
-    /// there before it, since the chain below a pushed frame is never rebuilt. So comparing
-    /// snapshots is a handful of reference comparisons with no chance of collision, and a
-    /// balanced open-and-close compares equal, which is the whole point.
+    /// A <see cref="State"/> is reached from the defaults by the scopes opened to reach it,
+    /// setting by setting and value by value, and is made once for each path: opening a scope of
+    /// a setting at a value from a state gives the state it gave before. So the scopes the
+    /// library opens on every call — <c>Solve</c> opens two — reach the same state on every
+    /// call, and a value cached under them is found again. A scope closed in order puts back
+    /// the very state it replaced, so a balanced open and close compares equal, and one closed out
+    /// of order reaches the state the scopes left open reach. Values compare by
+    /// <see cref="object.Equals(object)"/>, so a value compared by reference only is conservative:
+    /// it reaches a state of its own, and a value cached under it is not found again.
+    /// https://github.com/asc-community/AngouriMath/issues/2479
     /// </para>
     /// </remarks>
     internal static class SettingsState
     {
         /// <summary>
-        /// Every setting there is. Replaced rather than appended to, so that a reader can walk it
-        /// without a lock: registering happens as the settings are constructed and a reader is on
-        /// the integrator's hot path, where taking a lock per call would be contention bought for
-        /// a list that stops changing before any real work starts.
+        /// Every setting there is, at the index it reads its value from in a <see cref="State"/>.
+        /// Replaced rather than appended to, so that a reader can walk it without a lock.
         /// </summary>
         [ConcurrentField] private static ISettingState[] registered = System.Array.Empty<ISettingState>();
 
         [ConcurrentField] private static readonly object registering = new();
 
-        internal static void Register(ISettingState setting)
+        /// <summary>Registers a setting, and answers its index.</summary>
+        internal static int Register(ISettingState setting)
         {
             lock (registering)
             {
@@ -65,59 +70,328 @@ namespace AngouriMath.Convenience
                 System.Array.Copy(registered, grown, registered.Length);
                 grown[^1] = setting;
                 System.Threading.Volatile.Write(ref registered, grown);
+                return grown.Length - 1;
             }
         }
 
+        /// <summary>One value a scope put on a setting, with the one it covers. Never mutated once built.</summary>
+        internal sealed class Entry
+        {
+            internal readonly object Setting;
+            internal readonly object Value;
+            internal readonly Entry? Below;
+            internal Entry(object setting, object value, Entry? below) => (Setting, Value, Below) = (setting, value, below);
+        }
+
+        /// <summary>
+        /// What every setting reads as: the top of each setting's stack, by its index. Never mutated
+        /// once built, but for the table of the states one scope away, which only grows, and only
+        /// by an atomic exchange.
+        /// </summary>
+        internal sealed class State
+        {
+            private readonly Entry?[] tops;
+
+            /// <summary>
+            /// The state this one was reached from, held so that a state kept alive keeps the path
+            /// to it alive: a value cached under it is found again by a flow that opens the same
+            /// scopes from the defaults, which it would not be if a state on the way had been
+            /// collected and made again as another object.
+            /// </summary>
+            private readonly State? parent;
+
+            /// <summary>
+            /// The states one scope away, with the setting and the value that reach each, held
+            /// weakly: a state is kept by the scopes open in it and by the values cached under it,
+            /// and once neither is left it is collected and its entry dropped the next time one is
+            /// added. So a program that scopes a value that differs on every call -- a precision
+            /// computed from its data -- keeps no more states than it has scopes open and values
+            /// cached. And at most <see cref="Bound"/> of the entries are of one setting, so that
+            /// those values, while they are alive, do not crowd out the scopes of the others, which
+            /// the library opens on every call; past it a scope of that setting reaches a state of
+            /// its own, which only costs its values a cache miss.
+            /// </summary>
+            /// <remarks>
+            /// Two flows opening the same scope at once both read the table; the one whose exchange
+            /// fails reads it again, finds the state the other added and answers that one, so both
+            /// get the same object. Where they do not -- past the bound, or a state collected and
+            /// made again -- two states with the same values are only a cache miss: a value is
+            /// answered under the state object it was computed under, never under another with the
+            /// same contents, and a state object is never changed once made.
+            /// </remarks>
+            private (object Setting, object Value, WeakReference<State> Reached)[] next = System.Array.Empty<(object, object, WeakReference<State>)>();
+            internal const int Bound = 32;
+
+            internal State(Entry?[] tops, State? parent) => (this.tops, this.parent) = (tops, parent);
+
+            internal Entry? Top(int index) => index < tops.Length ? tops[index] : null;
+
+            /// <summary>The state with <paramref name="value"/> on <paramref name="setting"/>; compared as <typeparamref name="T"/>, so that a value type is not boxed to look it up.</summary>
+            internal State After<T>(Setting<T> setting, int index, T value) where T : notnull
+            {
+                var known = System.Threading.Volatile.Read(ref next);
+                while (true)
+                {
+                    foreach (var (s, v, reached) in known)
+                        if (ReferenceEquals(s, setting) && v is T seen && System.Collections.Generic.EqualityComparer<T>.Default.Equals(seen, value)
+                            && reached.TryGetTarget(out var state))
+                            return state;
+                    if (Added(setting, index, value, ref known) is { } made)
+                        return made;
+                }
+            }
+
+            /// <summary>The same for a value already boxed, as a scope closed out of order replays the ones above it.</summary>
+            internal State After(object setting, int index, object value)
+            {
+                var known = System.Threading.Volatile.Read(ref next);
+                while (true)
+                {
+                    foreach (var (s, v, reached) in known)
+                        if (ReferenceEquals(s, setting) && Equals(v, value) && reached.TryGetTarget(out var state))
+                            return state;
+                    if (Added(setting, index, value, ref known) is { } made)
+                        return made;
+                }
+            }
+
+            // The state reached, added to the table, with the entries of collected states dropped,
+            // where there is room for one more of its setting; null where another flow changed the
+            // table first, with known set to what it changed it to, to be read again.
+            private State? Added(object setting, int index, object value, ref (object, object, WeakReference<State>)[] known)
+            {
+                var pushed = new Entry?[System.Math.Max(tops.Length, index + 1)];
+                System.Array.Copy(tops, pushed, tops.Length);
+                pushed[index] = new Entry(setting, value, Top(index));
+                var made = new State(pushed, this);
+                var kept = new System.Collections.Generic.List<(object, object, WeakReference<State>)>(known.Length + 1);
+                var ofThisSetting = 0;
+                foreach (var entry in known)
+                    if (entry.Item3.TryGetTarget(out _))
+                    {
+                        kept.Add(entry);
+                        if (ReferenceEquals(entry.Item1, setting))
+                            ofThisSetting++;
+                    }
+                if (ofThisSetting >= Bound)
+                    return made;
+                kept.Add((setting, value, new WeakReference<State>(made)));
+                var was = System.Threading.Interlocked.CompareExchange(ref next, kept.ToArray(), known);
+                if (ReferenceEquals(was, known))
+                    return made;
+                known = was;
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// One scope open in a flow: its id, which is what releases it, the setting it is on, the
+        /// state with it open, and the scope that was innermost when it opened. Made for each scope
+        /// opened, so that a scope is released by its own id and by nothing
+        /// else: a copy of the disposal struct disposed twice, or after the same scope was opened
+        /// again, finds no scope with its id and does nothing.
+        /// </summary>
+        internal sealed class Scope
+        {
+            internal readonly long Id;
+            internal readonly int Index;
+            internal readonly State State;
+            internal readonly Scope? Below;
+            internal Scope(long id, int index, State state, Scope? below) => (Id, Index, State, Below) = (id, index, state, below);
+        }
+
+        /// <summary>The defaults, from which the states are reached; a flow at them reads <see langword="null"/>.</summary>
+        [ConstantField] private static readonly State defaults = new(System.Array.Empty<Entry?>(), parent: null);
+
+        [ConcurrentField] private static readonly AsyncLocal<Scope?> scopes = new();
+
+        [ConcurrentField] private static long lastId;
+
+        /// <summary>Whether any setting has been scoped, in any flow, since the process started.</summary>
         [ConcurrentField] private static bool anyEverScoped;
 
-        /// <summary>Called by every <see cref="Setting{T}.Set"/>, before its frame is pushed.</summary>
-        internal static void NoteScoped()
+        /// <summary>
+        /// What every setting reads as in this flow: <see langword="null"/> where every setting
+        /// reads its default, which costs one read of a flag until a scope has been opened.
+        /// </summary>
+        internal static State? Current => System.Threading.Volatile.Read(ref anyEverScoped) ? scopes.Value?.State : null;
+
+        /// <summary>Whether any setting reads, in this flow, from a scope rather than from its default.</summary>
+        internal static bool AnyScopeOpen() => Current is not null;
+
+        /// <summary>Opens a scope of <paramref name="setting"/> at <paramref name="value"/>, and answers the id that releases it.</summary>
+        internal static long Open<T>(Setting<T> setting, int index, T value) where T : notnull
         {
             if (!anyEverScoped)
                 System.Threading.Volatile.Write(ref anyEverScoped, true);
+            var id = Interlocked.Increment(ref lastId);
+            var below = scopes.Value;
+            scopes.Value = new Scope(id, index, (below?.State ?? defaults).After(setting, index, value), below);
+            return id;
         }
 
         /// <summary>
-        /// Whether any setting reads, in this flow, from a scope rather than from its default.
-        /// Until a scope of any setting has been opened somewhere this is one read of a flag; after
-        /// that, one async-local read for each setting that has ever been scoped.
+        /// Releases the scope numbered <paramref name="id"/>, wherever in this flow's scopes it sits.
+        /// Released in order, which is the cheap case, the scope below it is back; out of order, the
+        /// scopes above it are opened again over the one below it, so the flow reaches the state it
+        /// would have reached without it. An id that is not in this flow's scopes -- opened in another
+        /// flow, or released already -- is not an error and undoes nothing.
         /// </summary>
-        internal static bool AnyScopeOpen()
+        internal static void Close(long id)
         {
-            if (!System.Threading.Volatile.Read(ref anyEverScoped))
-                return false;
-            var settings = System.Threading.Volatile.Read(ref registered);
-            for (var i = 0; i < settings.Length; i++)
-                if (settings[i].EverScoped && settings[i].CurrentState is not null)
-                    return true;
-            return false;
+            var top = scopes.Value;
+            if (top is null)
+                return;
+            if (top.Id == id)
+            {
+                scopes.Value = top.Below;
+                return;
+            }
+            var above = new System.Collections.Generic.List<Scope>();
+            var current = top;
+            while (current is not null && current.Id != id)
+            {
+                above.Add(current);
+                current = current.Below;
+            }
+            if (current is null)
+                return;
+            var rebuilt = current.Below;
+            for (var i = above.Count - 1; i >= 0; i--)
+            {
+                var scope = above[i];
+                var entry = scope.State.Top(scope.Index)!;
+                rebuilt = new Scope(scope.Id, scope.Index, (rebuilt?.State ?? defaults).After(entry.Setting, scope.Index, entry.Value), rebuilt);
+            }
+            scopes.Value = rebuilt;
         }
 
         /// <summary>What every setting reads as right now, in this flow.</summary>
-        internal static object?[] Snapshot()
-        {
-            var settings = System.Threading.Volatile.Read(ref registered);
-            var snapshot = new object?[settings.Length];
-            for (var i = 0; i < snapshot.Length; i++)
-                snapshot[i] = settings[i].CurrentState;
-            return snapshot;
-        }
+        internal static object?[] Snapshot() => new object?[] { Current };
+
+        /// <summary>Whether <paramref name="snapshot"/> is still what every setting reads as.</summary>
+        internal static bool StillHolds(object?[] snapshot)
+            => snapshot.Length == 1 && ReferenceEquals(snapshot[0], Current);
+    }
+
+    /// <summary>
+    /// A value of a <see cref="SettingsDependent{T}"/> with the state it was computed under,
+    /// <see langword="null"/> for the defaults, and the one value before it computed under another
+    /// state, if any. Two are kept because the library's own scopes ask a node under two states in
+    /// turn -- <c>Solve</c>'s, and its analytical solver's inside it, with the zero range at 1e-7 --
+    /// and one slot recomputed the value at every turn: 46% more allocation on solving a quadratic.
+    /// Not generic, so that the type test on every read needs no lookup of the type in the code
+    /// shared between the instantiations over reference types.
+    /// </summary>
+    internal sealed class SettingsStamped
+    {
+        internal readonly object? Value;
+        internal readonly SettingsState.State? State;
+        internal readonly SettingsStamped? Previous;
+        internal SettingsStamped(object? value, SettingsState.State? state, SettingsStamped? previous)
+            => (Value, State, Previous) = (value, state, previous);
+
+        /// <summary>Stands for a value of <see langword="null"/> computed at the defaults, which an empty slot cannot.</summary>
+        [ConstantField] internal static readonly object NullAtDefaults = new();
+    }
+
+    /// <summary>
+    /// A cached value that depends on the settings it was computed under -- an evaluation, whose
+    /// numbers are rounded by the precision and the zero range, and anything computed from one.
+    /// Answered only under the settings it was computed under: <see cref="SettingsState.Current"/>
+    /// is the stamp, and a value computed with every setting at its default is held as it is, so
+    /// that the common case costs no more than <see cref="HonkSharp.Laziness.LazyPropertyA{T}"/>.
+    /// Equal to every other, as a cache on a record has to be, so that it takes no part in the
+    /// record's equality.
+    /// https://github.com/asc-community/AngouriMath/issues/2479
+    /// </summary>
+    internal struct SettingsDependent<T> : IEquatable<SettingsDependent<T>>
+    {
+        // Null, nothing yet; a SettingsStamped, the values of up to two states; anything else, the
+        // value computed at the defaults alone, or NullAtDefaults. One field, written in one store,
+        // so that no flow reads one flow's value under another's stamp.
+        private object? slot;
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public T GetValue<TOwner>(Func<TOwner, T> compute, TOwner owner)
+            => TryGetValue(out var value) ? value : Computed(compute, owner);
 
         /// <summary>
-        /// Whether <paramref name="snapshot"/> is still what every setting reads as. One taken
-        /// before a setting existed has a different length and is reported stale, which is what
-        /// should happen — that setting's value was not part of it.
+        /// The value computed under the settings in force, where there is one. Apart from
+        /// <see cref="GetValue"/> so that a reader on a hot path pays for the delegate only on a miss.
         /// </summary>
-        internal static bool StillHolds(object?[] snapshot)
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool TryGetValue(out T value)
         {
-            var settings = System.Threading.Volatile.Read(ref registered);
-            if (snapshot.Length != settings.Length)
+            var seen = Volatile.Read(ref slot);
+            if (seen is null)
+            {
+                value = default!;
                 return false;
-            for (var i = 0; i < snapshot.Length; i++)
-                if (!ReferenceEquals(snapshot[i], settings[i].CurrentState))
-                    return false;
-            return true;
+            }
+            var current = SettingsState.Current;
+            if (seen is SettingsStamped stamped)
+            {
+                if (ReferenceEquals(stamped.State, current))
+                {
+                    value = Read(stamped.Value);
+                    return true;
+                }
+                if (stamped.Previous is { } previous && ReferenceEquals(previous.State, current))
+                {
+                    value = Read(previous.Value);
+                    return true;
+                }
+            }
+            else if (current is null)
+            {
+                value = Read(seen);
+                return true;
+            }
+            value = default!;
+            return false;
         }
+
+        // Only a T, or NullAtDefaults for a null, is ever stored, so a reference is read without
+        // the type check a cast to a type that is not sealed costs on every read.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        private static T Read(object? stored)
+        {
+            if (ReferenceEquals(stored, SettingsStamped.NullAtDefaults) || stored is null)
+                return default!;
+#if NET
+            return typeof(T).IsValueType ? (T)stored : System.Runtime.CompilerServices.Unsafe.As<object, T>(ref stored);
+#else
+            return (T)stored;
+#endif
+        }
+
+        /// <summary>Computes the value under the settings in force and keeps it, with the one kept before under other settings.</summary>
+        public T Computed<TOwner>(Func<TOwner, T> compute, TOwner owner)
+        {
+            // The state is taken before the computation, so a scope opened and closed inside it
+            // leaves the value stamped with the state it was asked in.
+            var current = SettingsState.Current;
+            var computed = compute(owner);
+            var seen = Volatile.Read(ref slot);
+            object stored = (object?)computed ?? SettingsStamped.NullAtDefaults;
+            SettingsStamped? kept = seen switch
+            {
+                null => null,
+                // Another flow got there first under the same settings: keep what it kept.
+                SettingsStamped stamped when ReferenceEquals(stamped.State, current) => stamped.Previous,
+                SettingsStamped { Previous: null } stamped => stamped,
+                SettingsStamped stamped => new SettingsStamped(stamped.Value, stamped.State, previous: null),
+                _ when current is null => null,
+                _ => new SettingsStamped(seen, state: null, previous: null),
+            };
+            Volatile.Write(ref slot, current is null && kept is null ? stored : new SettingsStamped(stored, current, kept));
+            return computed;
+        }
+
+        public bool Equals(SettingsDependent<T> other) => true;
+        public override bool Equals(object? obj) => obj is SettingsDependent<T>;
+        public override int GetHashCode() => 0;
     }
 
     /// <summary>
@@ -129,7 +403,8 @@ namespace AngouriMath.Convenience
     /// <remarks>
     /// <para>
     /// A setting is one object for the whole process, and what it holds is per *flow*, not
-    /// per thread: the stack of values lives in an <see cref="AsyncLocal{T}"/>. A scope
+    /// per thread: the stacks of values of every setting live in one
+    /// <see cref="AsyncLocal{T}"/>, as a <see cref="SettingsState.State"/>. A scope
     /// opened before an <see langword="await"/> is therefore still in force after it, and a
     /// scope opened inside a task is invisible to that task's siblings and to whatever
     /// started it. Backing the field with <c>[ThreadStatic]</c> gave neither: a continuation
@@ -137,62 +412,42 @@ namespace AngouriMath.Convenience
     /// whatever scope was left on it into the next caller.
     /// </para>
     /// <para>
-    /// The frames are immutable, which is what makes the reference safe to share. An
+    /// The states are immutable, which is what makes the reference safe to share. An
     /// <see cref="AsyncLocal{T}"/> copies on assignment to <see cref="AsyncLocal{T}.Value"/>
-    /// and on nothing else, so if a frame could be mutated in place, two flows holding the
-    /// same chain would write over each other. Pushing and popping therefore build a new
-    /// chain and assign it, rather than editing one.
+    /// and on nothing else, so if a state could be mutated in place, two flows holding it
+    /// would write over each other. Opening and closing a scope therefore assign another
+    /// state, rather than editing one.
     /// </para>
     /// </remarks>
     public sealed class Setting<T> : ISettingState where T : notnull
     {
-        /// <summary>
-        /// One pushed value, and the chain below it. Never mutated once built.
-        /// </summary>
-        /// <remarks>
-        /// <see cref="Id"/> is what a scope is released by, rather than the frame's own
-        /// reference. Releasing a scope that is not on top rebuilds everything above it, and
-        /// a rebuilt frame is a different object — so identifying a scope by its frame would
-        /// leave the ones above it impossible to release afterwards. The id is a counter and
-        /// not a <see cref="Guid"/>: generating a guid per scope cost more than everything
-        /// else <see cref="Set"/> does put together.
-        /// </remarks>
-        private sealed class Frame
-        {
-            internal readonly long Id;
-            internal readonly T Value;
-            internal readonly Frame? Next;
-            internal Frame(long id, T value, Frame? next) => (Id, Value, Next) = (id, value, next);
-        }
-
-        private readonly AsyncLocal<Frame?> frames = new();
-        private long lastId;
+        private readonly int index;
         private bool everScoped;
 
         internal Setting(T defaultValue)
         {
             Default = defaultValue;
-            SettingsState.Register(this);
+            index = SettingsState.Register(this);
         }
 
         /// <summary>
-        /// The frame this setting currently reads from, as the identity of its state. Released
-        /// in order — which <c>using</c> guarantees — a scope restores the very frame that was
-        /// on top before it, so this compares equal across a balanced open and close. Out of
-        /// order the chain above is rebuilt and this reads as a change, which is conservative
-        /// and not wrong.
+        /// The value this setting currently reads from, as the identity of its state. A scope
+        /// released in order puts back the very state that was there before it, so this
+        /// compares equal across a balanced open and close.
         /// </summary>
-        object? ISettingState.CurrentState => frames.Value;
+        object? ISettingState.CurrentState => Top;
 
         bool ISettingState.EverScoped => EverScoped;
 
         /// <summary>
         /// Whether a scope of this setting has been opened, in any flow, since the process
-        /// started, so that a reader can skip asking for the flow's frame while none can exist.
+        /// started, so that a reader can skip asking for the flow's state while none can hold it.
         /// It never goes back: a child flow that captured a scope keeps it after its parent
         /// disposes it, so a count of open scopes returning to zero would not mean there are none.
         /// </summary>
         internal bool EverScoped => Volatile.Read(ref everScoped);
+
+        private SettingsState.Entry? Top => EverScoped ? SettingsState.Current?.Top(index) : null;
 
         /// <summary>
         /// Sets the new value for the setting
@@ -211,46 +466,10 @@ namespace AngouriMath.Convenience
         /// </returns>
         public AutoBackRollableTemporarySettingUnit Set(T value)
         {
-            var id = Interlocked.Increment(ref lastId);
-            // Before the frame, so that no flow can see the frame without the flag.
+            // Before the state, so that no flow can see the state without the flag.
             if (!everScoped)
                 Volatile.Write(ref everScoped, true);
-            SettingsState.NoteScoped();
-            frames.Value = new Frame(id, value, frames.Value);
-            return new AutoBackRollableTemporarySettingUnit(this, id);
-        }
-
-        /// <summary>
-        /// Takes the scope numbered <paramref name="id"/> back out of this flow's chain,
-        /// wherever in it it sits. Disposal is normally in the reverse order of
-        /// <see cref="Set"/>, which is the cheap case of popping the head; out-of-order
-        /// disposal rebuilds what was above it. An id that is not in this flow's chain —
-        /// because the scope was opened in another one, or is already released — is not an
-        /// error and undoes nothing.
-        /// </summary>
-        private void Remove(long id)
-        {
-            var top = frames.Value;
-            if (top is null)
-                return;
-            if (top.Id == id)
-            {
-                frames.Value = top.Next;
-                    return;
-            }
-            var above = new System.Collections.Generic.List<Frame>();
-            var current = top;
-            while (current is not null && current.Id != id)
-            {
-                above.Add(current);
-                current = current.Next;
-            }
-            if (current is null)
-                return;
-            var rebuilt = current.Next;
-            for (var i = above.Count - 1; i >= 0; i--)
-                rebuilt = new Frame(above[i].Id, above[i].Value, rebuilt);
-            frames.Value = rebuilt;
+            return new AutoBackRollableTemporarySettingUnit(SettingsState.Open(this, index, value));
         }
 
         /// <summary>
@@ -303,7 +522,7 @@ namespace AngouriMath.Convenience
         /// <summary>
         /// The current value of the setting
         /// </summary>
-        public T Value => frames.Value is { } frame ? frame.Value : Default;
+        public T Value => Top is { } top ? (T)top.Value : Default;
 
         /// <summary>
         /// The default value of the setting
@@ -316,7 +535,7 @@ namespace AngouriMath.Convenience
         /// Lets a default be treated as "nobody expressed an opinion" rather than as a
         /// deliberate choice.
         /// </summary>
-        internal bool IsOverriden => frames.Value is not null;
+        internal bool IsOverriden => Top is not null;
 
         /// <summary>
         /// This tiny struct is needed to be under `using` operator, so that your settings
@@ -328,18 +547,16 @@ namespace AngouriMath.Convenience
         /// </summary>
         public struct AutoBackRollableTemporarySettingUnit : IDisposable
         {
-            private readonly Setting<T> setting;
-            private bool disposed;
             private readonly long id;
-            internal AutoBackRollableTemporarySettingUnit(Setting<T> settingToRollBack, long id)
-                => (setting, disposed, this.id) = (settingToRollBack, false, id);
+            private bool disposed;
+            internal AutoBackRollableTemporarySettingUnit(long id) => (this.id, disposed) = (id, false);
 
             /// <inheritdoc/>
             public void Dispose()
             {
                 if (disposed)
                     return;
-                setting.Remove(id);
+                SettingsState.Close(id);
                 disposed = true;
             }
         }

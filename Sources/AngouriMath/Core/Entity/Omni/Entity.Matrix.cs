@@ -318,7 +318,8 @@ namespace AngouriMath
                 },
                 this
                 );
-            private LazyPropertyA<Entity?> determinant;
+            // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
+            private Convenience.SettingsDependent<Entity?> determinant;
 
             /// <summary>
             /// The determinant of the rows from <paramref name="row"/> down and the given
@@ -440,7 +441,8 @@ namespace AngouriMath
                 var lambda = Variable.CreateUnique(@this, "lambda");
                 return @this.CharacteristicPolynomial(lambda) is { } polynomial ? polynomial.SolveEquation(lambda) : null;
             }, this);
-            private LazyPropertyA<Set?> eigenvalues;
+            // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
+            private Convenience.SettingsDependent<Set?> eigenvalues;
 
             /// <summary>Returns an inverse matrix if it exists</summary>
             /// <remarks>
@@ -463,7 +465,8 @@ namespace AngouriMath
                 return OfTheShapeOf(@this, MathS.Matrix(@this.RowCount, @this.ColumnCount,
                     (row, column) => adjugate[row, column] / determinant).InnerSimplified);
             }, this);
-            private LazyPropertyA<Matrix?> inverse;
+            // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
+            private Convenience.SettingsDependent<Matrix?> inverse;
 
 
             /// <summary>
@@ -600,7 +603,8 @@ namespace AngouriMath
                 @ref.GetValue(static @this =>
                     OfTheShapeOf(@this, MathS.Matrix(Eliminate(@this, reduced: false).Entries).InnerSimplified),
                     this);
-            private LazyPropertyA<Matrix> @ref;
+            // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
+            private Convenience.SettingsDependent<Matrix> @ref;
 
             /// <summary>
             /// Reduced row echelon form via Gaussian elimination.
@@ -613,7 +617,8 @@ namespace AngouriMath
                 rref.GetValue(static @this =>
                     OfTheShapeOf(@this, MathS.Matrix(Eliminate(@this, reduced: true).Entries).InnerSimplified),
                     this);
-            private LazyPropertyA<Matrix> rref;
+            // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
+            private Convenience.SettingsDependent<Matrix> rref;
 
             /// <summary>
             /// The number of linearly independent rows: of the elimination's pivots. For a symbolic matrix it is the
@@ -622,7 +627,8 @@ namespace AngouriMath
             /// </summary>
             public int Rank =>
                 rank.GetValue(static @this => Eliminate(@this, reduced: false).Pivots, this);
-            private LazyPropertyA<int> rank;
+            // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
+            private Convenience.SettingsDependent<int> rank;
 
             /// <summary>
             /// Gaussian elimination over the entries, to the row echelon form, or with <paramref name="reduced"/> to the
@@ -723,7 +729,8 @@ namespace AngouriMath
                         return ToMatrix(Functions.GenTensorGuard.Adjoint(@this.InnerMatrix));
                     },
                     this);
-            private LazyPropertyA<Matrix?> adjugate;
+            // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
+            private Convenience.SettingsDependent<Matrix?> adjugate;
 
             /// <summary>
             /// Returns a vector, where the i-th element
