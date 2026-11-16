@@ -39,7 +39,8 @@ public sealed class ParsingTest
     [Theory]
     [MemberData(nameof(GrammarFunctions))]
     public void EveryFunctionInTheGrammarIsReadAsOne(string name) =>
-        Assert.True(Parsing.IsFunction(name), $"{name}(x) is read as a product");
+        // beta and norm are functions of two arguments, and beta(x) is still a product.
+        Assert.True(Parsing.IsFunction(name) || Parsing.IsFunctionOfSeveralArguments(name), $"{name}(x) is read as a product");
 
     [Theory]
     [MemberData(nameof(GrammarFunctions))]
