@@ -326,7 +326,12 @@ one argument is base 10, so `log(100)` is 2; `log10` and `log2` say it in the na
 for the `n`-th prime (`prime(25)` is `97`, `NaN` off the positive whole numbers, left as written
 for a symbol or an index past a million); `valuation(n, p)` for the `p`-adic valuation, the
 exponent of the prime `p` in `n` (`valuation(12, 2)` is `2`, `valuation(12, 5)` is `0`, `+oo` at
-`n = 0`, `NaN` where `p` is not prime; `v_p(n)` in LaTeX); `mobius(n)` for the Möbius function
+`n = 0`, `NaN` where `p` is not prime; `v_p(n)` in LaTeX); `factorization(n)` for the prime factorisation of
+`n`, the map from each prime to its exponent, which stays as written holding the map and is not
+the number (`2^{3} \cdot 3^{2} \cdot 5` in LaTeX for `factorization(360)`, `NaN` at a number that is not a
+positive whole number), and `primefactors(n)` for its support, the set of the primes dividing `n`
+(`primefactors(360)` is `{ 2, 3, 5 }`, so `product(p ^ valuation(n, p), p in primefactors(n))` is
+`n`); `mobius(n)` for the Möbius function
 `μ(n)`, 0 where the square of a prime divides `n` and `(-1)^k` for a product of `k` distinct primes
 (`mobius(30)` is `-1`, `mobius(12)` is `0`; `moebiusmu` is the same); `divisorsigma(k, n)` for the
 sum of the `k`-th powers of the divisors of `n` (`divisorsigma(1, 12)` is `28`, `divisorsigma(0, 12)`
@@ -612,8 +617,8 @@ falling one to others. Short names that could be somebody's variable, such as `b
 not refused.
 
 Some names other systems call functions have no node here yet and are refused with what to write
-today. `factorize(360)` was `factorize * 360`: in C#, `MathS.NumberTheory.Factorize(n)` gives the
-prime factors of an integer and `Factorize()` factors an expression. `nextprime(n)` is
+today. `factorize(360)` was `factorize * 360`: the prime factorisation of an integer is
+`factorization(n)`, and `Factorize()` factors an expression in C#. `nextprime(n)` is
 `prime(primepi(n) + 1)`, and `divisors(n)` is counted by `divisorsigma(0, n)` and summed by
 `divisorsigma(1, n)` ([#2449](https://github.com/asc-community/AngouriMath/issues/2449)). The
 gradient of `f` is the row `jacobian([f], [x, y])` and the divergence of `F` is

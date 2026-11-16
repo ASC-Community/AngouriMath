@@ -625,6 +625,8 @@ atom returns[Entity value]
     | 'phi(' args = function_arguments ')' { Assert("phi", 1, $args.list.Count); $value = MathS.NumberTheory.Phi($args.list[0]); }
     | 'prime(' args = function_arguments ')' { Assert("prime", 1, $args.list.Count); $value = MathS.NumberTheory.Prime($args.list[0]); }
     | 'valuation(' args = function_arguments ')' { Assert("valuation", 2, $args.list.Count); $value = MathS.NumberTheory.Valuation($args.list[0], $args.list[1]); }
+    | 'factorization(' args = function_arguments ')' { Assert("factorization", 1, $args.list.Count); $value = MathS.NumberTheory.Factorization($args.list[0]); }
+    | 'primefactors(' args = function_arguments ')' { Assert("primefactors", 1, $args.list.Count); $value = MathS.NumberTheory.PrimeFactors($args.list[0]); }
     | 'mobius(' args = function_arguments ')' { Assert("mobius", 1, $args.list.Count); $value = MathS.NumberTheory.Mobius($args.list[0]); }
     | 'moebiusmu(' args = function_arguments ')' { Assert("moebiusmu", 1, $args.list.Count); $value = MathS.NumberTheory.Mobius($args.list[0]); }
     | 'divisorsigma(' args = function_arguments ')' { Assert("divisorsigma", 2, $args.list.Count); $value = MathS.NumberTheory.DivisorSigma($args.list[0], $args.list[1]); }
@@ -743,7 +745,7 @@ atom returns[Entity value]
        with what can be written today: factorize(360) was factorize * 360, and φ(10) was φ * 10.
        factorize, nextprime and divisors: https://github.com/asc-community/AngouriMath/issues/2449.
        gradient and divergence: https://github.com/asc-community/AngouriMath/issues/2182 */
-    | 'factorize(' args = function_arguments ')' { $value = NotImplementedFunction("factorize", "factorization node yet; in C#, MathS.NumberTheory.Factorize(n) gives the prime factors of an integer and Factorize() factors an expression"); }
+    | 'factorize(' args = function_arguments ')' { $value = NotAFunctionHere("factorize", "the prime factorisation of an integer is factorization(n), and in C# Factorize() factors an expression"); }
     | 'nextprime(' args = function_arguments ')' { $value = NotImplementedFunction("nextprime", "nextprime yet; prime(primepi(n) + 1) is the least prime greater than n"); }
     | 'divisors(' args = function_arguments ')' { $value = NotImplementedFunction("divisors", "set of divisors yet; divisorsigma(0, n) counts them and divisorsigma(1, n) is their sum"); }
     | 'gradient(' args = function_arguments ')' { $value = NotImplementedFunction("gradient", "gradient yet; jacobian([f], [x, y]) is the row of partial derivatives of f"); }

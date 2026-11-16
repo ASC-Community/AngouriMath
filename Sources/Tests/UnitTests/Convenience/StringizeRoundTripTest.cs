@@ -133,6 +133,9 @@ namespace AngouriMath.Tests.Common
         [InlineData("sum(x ^ 2, x in S)")]
         [InlineData("product(x ^ 2, x in S)")]
         [InlineData("product(1 - 1 / p ^ 2, p in { 2, 3, 5 })")]
+        [InlineData("factorization(n)")]
+        [InlineData("primefactors(n)")]
+        [InlineData("product(p ^ valuation(n, p), p in primefactors(n))")]
         public void FunctionsRoundTrip(string source) => AssertRoundTrip(source);
 
         [Theory]

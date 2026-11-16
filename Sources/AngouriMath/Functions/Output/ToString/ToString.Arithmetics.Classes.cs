@@ -120,6 +120,25 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        partial record PrimeFactorizationf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $@"factorization({Argument.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record Set
+        {
+            partial record PrimeFactorsf
+            {
+                /// <inheritdoc/>
+                private protected override string StringizeNode() => $@"primefactors({Argument.Stringize()})";
+                /// <inheritdoc/>
+                public override string ToString() => Stringize();
+            }
+        }
+
         partial record Primef
         {
             /// <inheritdoc/>

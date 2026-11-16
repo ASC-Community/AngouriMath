@@ -294,6 +294,28 @@ namespace AngouriMath
             internal override string ToSymPy() => $"sympy.totient({Argument.ToSymPy()})";
         }
 
+        // SymPy has the map for an integer, as the dict factorint returns, and no object for the
+        // factorisation of a symbol: factorint(n) raises there, so the export refuses it.
+        // https://github.com/asc-community/AngouriMath/issues/2449
+        public partial record PrimeFactorizationf
+        {
+            internal override string ToSymPy()
+                => Argument.Vars.Any()
+                    ? throw new Core.Exceptions.NotSufficientlySupportedException("SymPy factorises an integer and has no factorisation of an expression with a variable in it")
+                    : $"sympy.factorint({Argument.ToSymPy()})";
+        }
+
+        partial record Set
+        {
+            partial record PrimeFactorsf
+            {
+                internal override string ToSymPy()
+                    => Argument.Vars.Any()
+                        ? throw new Core.Exceptions.NotSufficientlySupportedException("SymPy lists the prime factors of an integer and has none for an expression with a variable in it")
+                        : $"sympy.FiniteSet(*sympy.primefactors({Argument.ToSymPy()}))";
+            }
+        }
+
         public partial record Primef
         {
             internal override string ToSymPy() => $"sympy.prime({Argument.ToSymPy()})";

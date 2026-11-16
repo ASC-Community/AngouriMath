@@ -782,6 +782,14 @@ namespace AngouriMath
                 internal override Domain DefaultCodomain => Domain.Boolean;
             }
 
+            partial record PrimeFactorsf
+            {
+                /// <inheritdoc/>
+                public override Domain Codomain { get; protected init; } = Domain.Any;
+                /// <inheritdoc/>
+                internal override Domain DefaultCodomain => Domain.Any;
+            }
+
             partial record Powersetf
             {
                 /// <inheritdoc/>
@@ -839,6 +847,17 @@ namespace AngouriMath
             public override Domain Codomain { get; protected init; } = Domain.Real;
             /// <inheritdoc/>
             internal override Domain DefaultCodomain => Domain.Real;
+        }
+
+        // A map from the primes to the exponents, and a set of primes: neither is a number, so
+        // neither has a domain of numbers, as a matrix and a set have none.
+        // https://github.com/asc-community/AngouriMath/issues/2449
+        partial record PrimeFactorizationf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Any;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Any;
         }
 
         partial record Primef
