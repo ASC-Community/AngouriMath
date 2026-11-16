@@ -258,10 +258,10 @@ namespace ModenovCorpus
 
             var solutions = statement.Solve(x);
             var text = solutions.Stringize();
-            if (solutions is not Entity.Set.FiniteSet found)
-                return new Result(row, Verdict.Unsolved, text, "not a finite set; not verified", sw.ElapsedMilliseconds);
+            if (Written(solutions) is not { } found)
+                return new Result(row, Verdict.Unsolved, text, "not a finite set or a family; not verified", sw.ElapsedMilliseconds);
 
-            var foundConcrete = Concrete(found, parameters, x, 4);
+            var foundConcrete = Members(solutions, parameters, x, 4)!;
             foreach (var root in foundConcrete)
             {
                 var fails = Vanishes(residual.Substitute(x, root), samples);
@@ -279,6 +279,46 @@ namespace ModenovCorpus
             return size <= target
                 ? new Result(row, Verdict.Solved, text, $"{found.Count} root(s) verified, complete", sw.ElapsedMilliseconds)
                 : new Result(row, Verdict.Unsolved, text, $"roots verified and complete, not reduced to {row.Expected}", sw.ElapsedMilliseconds);
+        }
+
+        /// <summary>
+        /// The roots an answer writes: a finite set's members, and a family's members with its index
+        /// in them, <c>2 pi n</c> for <c>union({ 2 pi n }, n in ZZ)</c>; <see langword="null"/> for any
+        /// other set. https://github.com/asc-community/AngouriMath/issues/2319
+        /// </summary>
+        private static List<Entity>? Written(Entity solutions) => solutions switch
+        {
+            Entity.Set.FiniteSet finite => finite.ToList(),
+            Entity.Set.Unionf(var left, var right) => Written(left) is { } first && Written(right) is { } second ? first.Concat(second).ToList() : null,
+            Entity.Set.IndexedUnionf family => Written(family.Body),
+            _ => null,
+        };
+
+        /// <summary>
+        /// The members of an answer: a finite set's roots as <see cref="Concrete"/> reads them, and a
+        /// family's at each index from -reach to reach its index set has.
+        /// </summary>
+        private static List<Entity>? Members(Entity solutions, Entity.Variable[] parameters, Entity.Variable x, int reach)
+        {
+            switch (solutions)
+            {
+                case Entity.Set.FiniteSet finite:
+                    return Concrete(finite, parameters, x, reach);
+                case Entity.Set.Unionf(var left, var right):
+                    return Members(left, parameters, x, reach) is { } first && Members(right, parameters, x, reach) is { } second ? first.Concat(second).ToList() : null;
+                case Entity.Set.IndexedUnionf family:
+                    var members = new List<Entity>();
+                    for (var n = -reach; n <= reach; n++)
+                        if (((Entity)n).In(family.Over).Simplify() == MathS.Boolean.True)
+                        {
+                            if (Members(family.Body.Substitute(family.Var, n), parameters, x, reach) is not { } each)
+                                return null;
+                            members.AddRange(each);
+                        }
+                    return members;
+                default:
+                    return null;
+            }
         }
 
         /// <summary>
