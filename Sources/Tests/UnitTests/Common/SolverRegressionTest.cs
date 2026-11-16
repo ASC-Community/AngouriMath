@@ -380,6 +380,21 @@ namespace AngouriMath.Tests.Common
             }
         }
 
+        // A family met with a set of reals is its real members: an exponential's family over the complex
+        // numbers, c + k n with c real and k imaginary, is real at n = 0 alone, and a trigonometric one has
+        // the members between the interval's ends. The first two were answered so before the families
+        // were unions. https://github.com/asc-community/AngouriMath/issues/2319
+        [Theory]
+        [InlineData("e^x = 2 and x in RR", "{ ln(2) }")]
+        [InlineData("2^x = 5 and x in RR", "{ log(2, 5) }")]
+        [InlineData("e^x = 2 and x > 0", "{ ln(2) }")]
+        [InlineData("e^(2x) - 3e^x + 2 = 0 and x in RR", "{ 0, ln(2) }")]
+        [InlineData("sin(x) = 1/2 and x in [0; 2pi]", "{ pi / 6, 5/6 * pi }")]
+        [InlineData("tan(x) = 1 and x in (0; 4)", "{ pi / 4, 5/4 * pi }")]
+        [InlineData("e^x = -1 and x in RR", "{ }")]
+        public void Issue2319_AFamilyMetWithTheRealsIsItsRealMembers(string statement, string expected)
+            => Assert.Equal(expected.ToEntity().InnerSimplified, statement.ToEntity().Solve("x").InnerSimplified);
+
         // Two powers of numbers with no common rate, a^p = -b^q, are p ln(a) = ln(-1) + q ln(b) + 2 pi i n,
         // a family written exactly: (-2)^x + 4^x = 0 is i pi (2 n + 1) / (i pi - ln(2)), where Newton's method
         // answered nine members in decimals as though they were every root.
