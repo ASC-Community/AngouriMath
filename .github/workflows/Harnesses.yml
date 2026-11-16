@@ -48,6 +48,7 @@ jobs:
         dotnet build -c Release Sources/Tests/Harnesses/RuleCheck
         dotnet build -c Release Sources/Tests/Harnesses/CanonCheck
         dotnet build -c Release Sources/Tests/Harnesses/Confluence
+        dotnet build -c Release Sources/Tests/Harnesses/ModenovCorpus
 
     # One step each, every one run whatever the one before did, so a red run names the harness.
     - name: BoundCheck
@@ -81,6 +82,12 @@ jobs:
     - name: Confluence
       if: success() || failure()
       run: dotnet Sources/Tests/Harnesses/Confluence/bin/Release/net10.0/confluence.dll
+
+    # Modenov's computations, each row's verdict committed in modenov-baseline.tsv: fails on a
+    # wrong answer, an erratum confirmed, or a verdict that moves either way.
+    - name: ModenovCorpus
+      if: success() || failure()
+      run: dotnet Sources/Tests/Harnesses/ModenovCorpus/bin/Release/net10.0/modenovcorpus.dll
 
     - name: Reports
       if: always()

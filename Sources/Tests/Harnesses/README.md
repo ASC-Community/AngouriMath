@@ -16,16 +16,18 @@ Each exits non-zero when it finds a defect, or when a list of findings it keeps 
 | `PropCheck` | does each transformation satisfy a property it must: `Simplify`, `Expand` and `Factorize` keep the value, `Differentiate` agrees with a difference quotient, `Integrate` differentiates back | any property that does not hold |
 | `CanonCheck` | is there a **canonical form**: idempotence, order independence over commutative operators, and agreement between writings, for `InnerSimplified` and `Simplify` alike | a change to its findings, listed in `canoncheck-baseline.tsv` |
 | `Confluence` | where two arms of one rule set both fire at a node, do they agree, or is the order of the arms load-bearing | a change to its conflicting pairs, listed in `confluence-baseline.tsv` |
+| `ModenovCorpus` | do the computations of Modenov's *Problems in Geometry* still come out — identities, reductions, equations, each verified by value — and are the book's own errors refused rather than confirmed | a wrong answer, an erratum confirmed, a row whose claim does not hold, or a change to its verdicts, listed in `modenov-baseline.tsv` |
 | `DocSamples` | does every code sample in the wiki, and every annotated one on the website, compile, run, and print what its page says | a sample that does not compile, throws, or prints something else |
 
 A timeout fails none of them: a shared runner is slower than the machine a budget was set on.
 
-`CanonCheck` and `Confluence` report findings by design. `InnerSimplified` is a normalisation, and
-does not reorder operands. Some rule sets depend on the order of their arms. So each commits its
-list of findings beside it, and the run fails when the list changes in either direction: a finding
-that appears, or one that goes away. To record an intended change, run the harness with
+`CanonCheck`, `Confluence` and `ModenovCorpus` report findings by design. `InnerSimplified` is a
+normalisation, and does not reorder operands. Some rule sets depend on the order of their arms. A
+row of the Modenov corpus the library does not yet reduce is unsolved, not failed. So each commits
+its list of findings beside it, and the run fails when the list changes in either direction: a
+finding that appears, or one that goes away. To record an intended change, run the harness with
 `HARNESS_UPDATE_BASELINE=1` and commit the list with the change. A finding whose case timed out
-counts as unmeasured, not gone.
+counts as unmeasured, not gone. A wrong answer is never a finding: it fails the run on its own.
 
 Run one by hand with `dotnet run -c Release --project Sources/Tests/Harnesses/BoundCheck`. Its
 report goes to this folder, where it is ignored by git, or to the directory `HARNESS_REPORTS`
