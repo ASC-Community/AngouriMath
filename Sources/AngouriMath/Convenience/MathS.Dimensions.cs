@@ -35,6 +35,10 @@ namespace AngouriMath
         /// <b>Undetermined is not a verdict.</b> An undeclared variable, or a node the check does
         /// not read, gives <see cref="DimensionStatus.Undetermined"/>, never a guess.
         /// </para>
+        /// <para>
+        /// The page <c>Docs/Usage/Dimensions.md</c> lists the rule for each kind of node and
+        /// works the water-wave example through.
+        /// </para>
         /// </remarks>
         public static class Dimensions
         {

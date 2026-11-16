@@ -579,6 +579,25 @@ both, and `curl` alone, are still variables ([#2182](https://github.com/asc-comm
 
 ---
 
+### Dimensional analysis: `MathS.Dimensions.Of` and `DimensionlessGroups`
+
+**Not silent: a new entry point.** `MathS.Dimensions.Of(expr, dimensions)` reads a formula against the physical
+dimension of each variable, a `Dimension` over the seven SI base dimensions passed in a map, and returns a
+`DimensionCheck`: `Consistent` with the dimension of the result, `Inconsistent` with the subexpression where two
+dimensions are added or compared or a quantity is passed to a function that takes a pure number, or `Undetermined`
+where a variable has no dimension or a node is not read. Nothing is simplified first. `MathS.Dimensions.DimensionlessGroups`
+gives the Buckingham π groups of a list of variables. The catalogue has them as `dimension` and `dimensionless_groups`,
+not yet offered by the MCP server or the terminal ([#2298](https://github.com/asc-community/AngouriMath/issues/2298)).
+Nothing that existed changes. See [`Docs/Usage/Dimensions.md`](Sources/AngouriMath/Docs/Usage/Dimensions.md)
+([#2292](https://github.com/asc-community/AngouriMath/issues/2292)).
+
+| Input, with `g` an acceleration, `h` a length, `t` a time | Was (2.7.0) | Now |
+|---|---|---|
+| `MathS.Dimensions.Of("sqrt(2 g h)", dims).ToString()` | no such member | `Consistent: L T^-1` |
+| `MathS.Dimensions.Of("h + g t", dims).ToString()` | no such member | `Inconsistent at h + g * t: h has dimension L and g * t has dimension L T^-1, so they cannot be added` |
+| `MathS.Dimensions.DimensionlessGroups(["h", "g", "t"], dims)` | no such member | `[g * t ^ 2 / h]` |
+
+---
 
 ### A system row that is not a solution declines the system
 
