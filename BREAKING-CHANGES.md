@@ -378,6 +378,30 @@ unchanged ([#2450](https://github.com/asc-community/AngouriMath/issues/2450)).
 
 ---
 
+### Two parameters of a system's answer that are independent have two names
+
+**Silent: a part of the solutions becomes all of them.** Solving a system, each equation's roots bring their own
+parameters, and a second equation minted the same name as the first where the two do not reach each other. So
+`sin(x) = 1/2` and `sin(y) = 1/2` came back as `(pi/6 + 2 pi n_1, pi/6 + 2 pi n_1)` and its three siblings, which says
+`x - y` is a whole number of periods and leaves out `(pi/6, 13 pi/6)`. Each independent parameter now has a name of its
+own, and one that reaches a later equation is still shared, as in `tan(x) = 1`, `y = x`. A name also stands for one set
+throughout an answer, so the `t` of a `floor` and the `t` of a free unknown are never the same name
+([#212](https://github.com/asc-community/AngouriMath/issues/212)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `MathS.Equations("sin(x) - 1/2", "sin(y) - 1/2").Solve("x", "y")` | `[[pi / 6 + 2 * pi * n_1, pi / 6 + 2 * pi * n_1], …]`, four rows | `[[pi / 6 + 2 * pi * n_1, pi / 6 + 2 * pi * n_2], …]`, four rows |
+| `MathS.Equations("sin(x) - 1/2", "cos(y)").Solve("x", "y")` | `[[pi / 6 + 2 * pi * n_1, pi / 2 + 2 * pi * n_1], …]` | `[[pi / 6 + 2 * pi * n_1, pi / 2 + 2 * pi * n_2], …]` |
+| `MathS.Equations("tan(x) - 1", "tan(y) - 1", "tan(z) - 1").Solve("x", "y", "z")` | `[[pi / 4 + pi * n_1, pi / 4 + pi * n_1, pi / 4 + pi * n_1]]` | `[[pi / 4 + pi * n_1, pi / 4 + pi * n_2, pi / 4 + pi * n_3]]` |
+| `MathS.Equations("floor(x) - 1", "floor(y) - 2").Solve("x", "y")` | `[[1 + t_1 provided …, 2 + t_1 provided …]]` | `[[1 + t_1 provided …, 2 + t_2 provided …]]` |
+| `MathS.Equations("abs(x) - 1", "abs(y) - 2").Solve("x", "y")` | `[[e ^ (i * r_1) provided r_1 in RR, 2 * e ^ (i * r_1) provided r_1 in RR]]` | `[[e ^ (i * r_1) provided r_1 in RR, 2 * e ^ (i * r_2) provided r_2 in RR]]` |
+| `MathS.Equations("tan(x) - 1", "y - x").Solve("x", "y")` | `[[pi / 4 + pi * n_1, pi / 4 + pi * n_1]]` | unchanged |
+
+`EquationSystem.SolveWithParameters` and `MathS.SolveSystemWithParameters` are new, and say what each parameter is:
+`(n_1, ZZ)`, `(n_2, ZZ)` for the first row of the table.
+
+---
+
 ## 2.7.0 — since 2.6.0
 
 **Read these first: names that read differently.** Each of these was read as something else on 2.6.0. Code that used

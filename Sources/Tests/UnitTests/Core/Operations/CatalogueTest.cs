@@ -214,6 +214,11 @@ namespace AngouriMath.Tests.Core.Operations
             Assert.Equal(MathS.SolveSystem("x + y = 3 and x - y = 1", x, y), Catalogue.SolveConjunction.Ask("x + y = 3 and x - y = 1", [x, y]));
             Assert.NotNull(Catalogue.SolveConjunction.Ask("x + y = 3 and x - y = 1", [x, y]));
             Assert.Null(Catalogue.SolveConjunction.Ask("x + y = 3 and x > 0", [x, y]));
+            Entity[] periodic = ["sin(x) - 1/2"];
+            Assert.Equal(MathS.Equations(periodic).SolveWithParameters(x, y)!.Parameters, Catalogue.SolveSystemWithParameters.Ask(periodic, [x, y])!.Parameters);
+            Assert.Equal(MathS.Equations(periodic).Solve(x, y), Catalogue.SolveSystemWithParameters.Ask(periodic, [x, y])!.Rows);
+            Assert.Equal(MathS.SolveSystemWithParameters("sin(x) = 1/2", x, y)!.Parameters, Catalogue.SolveConjunctionWithParameters.Ask("sin(x) = 1/2", [x, y])!.Parameters);
+            Assert.Null(Catalogue.SolveConjunctionWithParameters.Ask("x + y = 3 and x > 0", [x, y]));
             Assert.Equal(MathS.FromString("sqrt(2) + 1").Evaled, Catalogue.Evaluate.Ask("sqrt(2) + 1"));
             Assert.Equal(MathS.FromString("sqrt(2) + 1").EvalNumerical(), Catalogue.EvaluateNumerically.Ask("sqrt(2) + 1"));
             Assert.Equal(MathS.FromString("x + y").Vars, Catalogue.Variables.Ask("x + y"));

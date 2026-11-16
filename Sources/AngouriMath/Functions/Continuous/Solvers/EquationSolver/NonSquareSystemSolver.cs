@@ -60,7 +60,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             {
                 if (parameters[index] is { } minted)
                     return minted;
-                var parameter = Variable.CreateUnique(nameSource, "t");
+                var parameter = SolutionParameters.Mint(nameSource, "t", SolutionParameters.Free);
                 nameSource += parameter;
                 return parameters[index] = parameter;
             }
@@ -79,8 +79,9 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     var substituted = equation;
                     for (var index = 0; index < variables.Length; index++)
                         substituted = substituted.Substitute(variables[index], (condition is null ? family : bare)[index]);
-                    // An n_1 a family brings from a periodic root stands for every whole number.
-                    var whole = substituted.Vars.Where(name => !own.Contains(name) && name.Name.StartsWith("n_")).Distinct().ToList();
+                    // An n_1 a family brings from a periodic root stands for every whole number,
+                    // as it was minted to.
+                    var whole = substituted.Vars.Where(name => !own.Contains(name) && SolutionParameters.Current?.SetOf(name) == MathS.Sets.Z).Distinct().ToList();
                     if (!Vanishes(substituted, whole) && (condition is null || !VanishesWhere(substituted, condition, whole)))
                         return null;
                 }
@@ -176,7 +177,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     return null;
                 foreach (var family in families)
                 {
-                    var value = root;
+                    var value = SolutionParameters.Apart(root, family, substituted, variable);
                     for (var index = 0; index < count - 1; index++)
                         value = value.Substitute(variables[index], family[index]);
                     family.Add(value.InnerSimplified);

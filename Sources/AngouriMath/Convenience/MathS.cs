@@ -395,6 +395,44 @@ namespace AngouriMath
             => EquationSystem.EquationsOf(system, out _) is { } equations ? new EquationSystem(equations).Solve(variables) : null;
 
         /// <summary>
+        /// Solves a system of equations written as one statement, as
+        /// <see cref="SolveSystem(Entity, Variable[])"/> does, and says what each parameter in the
+        /// answer is and which set it ranges over, as
+        /// <see cref="EquationSystem.SolveWithParameters(Variable[])"/> does for a system written
+        /// as a list.
+        /// </summary>
+        /// <param name="system">
+        /// Equations joined by <c>and</c>, as <see cref="SolveSystem(Entity, Variable[])"/> takes them.
+        /// </param>
+        /// <param name="variables">The unknowns, in the order of the answer's columns.</param>
+        /// <returns>
+        /// The rows <see cref="SolveSystem(Entity, Variable[])"/> answers and each parameter in
+        /// them with its set: <c>(t_1, CC)</c> for an unknown nothing constrains, <c>(n_1, ZZ)</c>
+        /// for a whole number of periods. <see langword="null"/> where
+        /// <see cref="SolveSystem(Entity, Variable[])"/> is, and where a parameter is one whose
+        /// set cannot be named.
+        /// </returns>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/212</remarks>
+        /// <exception cref="NotSufficientlySupportedException">
+        /// As <see cref="SolveSystem(Entity, Variable[])"/>.
+        /// </exception>
+        /// <example>
+        /// <code>
+        /// var solved = MathS.SolveSystemWithParameters("2x - 4y = 12", "x", "y");
+        /// Console.WriteLine(solved!.Rows);
+        /// foreach (var (parameter, domain) in solved.Parameters)
+        ///     Console.WriteLine($"{parameter} in {domain}");
+        /// </code>
+        /// Prints
+        /// <code>
+        /// [[6 + 2 * t_1, t_1]]
+        /// t_1 in CC
+        /// </code>
+        /// </example>
+        public static ParametrizedSolutions? SolveSystemWithParameters(Entity system, params Variable[] variables)
+            => EquationSystem.EquationsOf(system, out _) is { } equations ? new EquationSystem(equations).SolveWithParameters(variables) : null;
+
+        /// <summary>
         /// Solves a first-order linear ordinary differential equation
         /// <a href="https://en.wikipedia.org/wiki/Linear_differential_equation"/> by its
         /// integrating factor, or returns <see langword="null"/> where it cannot.

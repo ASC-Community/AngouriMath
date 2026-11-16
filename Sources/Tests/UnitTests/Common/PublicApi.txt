@@ -191,6 +191,7 @@ AngouriMath.Core.Domain.Real : AngouriMath.Core.Domain
 AngouriMath.Core.Domain.value__ : System.Int32
 AngouriMath.Core.EquationSystem.Latexize() : System.String
 AngouriMath.Core.EquationSystem.Solve(AngouriMath.Entity+Variable[]) : AngouriMath.Entity+Matrix
+AngouriMath.Core.EquationSystem.SolveWithParameters(AngouriMath.Entity+Variable[]) : AngouriMath.Core.ParametrizedSolutions
 AngouriMath.Core.EquationSystem.ToString() : System.String
 AngouriMath.Core.EquationSystem.ctor(AngouriMath.Entity[])
 AngouriMath.Core.EquationSystem.ctor(System.Collections.Generic.IEnumerable<AngouriMath.Entity>)
@@ -226,6 +227,17 @@ AngouriMath.Core.MatrixBuilder.Add(System.Collections.Generic.List<AngouriMath.E
 AngouriMath.Core.MatrixBuilder.ToMatrix() : AngouriMath.Entity+Matrix
 AngouriMath.Core.MatrixBuilder.ctor(System.Collections.Generic.List<System.Collections.Generic.List<AngouriMath.Entity>>, System.Int32)
 AngouriMath.Core.MatrixBuilder.ctor(System.Int32)
+AngouriMath.Core.ParametrizedSolutions.<Clone>$() : AngouriMath.Core.ParametrizedSolutions
+AngouriMath.Core.ParametrizedSolutions.Deconstruct(AngouriMath.Entity+Matrix&, System.Collections.Generic.IReadOnlyList<System.ValueTuple<AngouriMath.Entity+Variable,AngouriMath.Entity+Set>>&) : System.Void
+AngouriMath.Core.ParametrizedSolutions.Equals(AngouriMath.Core.ParametrizedSolutions) : System.Boolean
+AngouriMath.Core.ParametrizedSolutions.Equals(System.Object) : System.Boolean
+AngouriMath.Core.ParametrizedSolutions.GetHashCode() : System.Int32
+AngouriMath.Core.ParametrizedSolutions.Parameters { } : System.Collections.Generic.IReadOnlyList<System.ValueTuple<AngouriMath.Entity+Variable,AngouriMath.Entity+Set>>
+AngouriMath.Core.ParametrizedSolutions.Rows { } : AngouriMath.Entity+Matrix
+AngouriMath.Core.ParametrizedSolutions.ToString() : System.String
+AngouriMath.Core.ParametrizedSolutions.ctor(AngouriMath.Entity+Matrix, System.Collections.Generic.IReadOnlyList<System.ValueTuple<AngouriMath.Entity+Variable,AngouriMath.Entity+Set>>)
+AngouriMath.Core.ParametrizedSolutions.op_Equality(AngouriMath.Core.ParametrizedSolutions, AngouriMath.Core.ParametrizedSolutions) : System.Boolean
+AngouriMath.Core.ParametrizedSolutions.op_Inequality(AngouriMath.Core.ParametrizedSolutions, AngouriMath.Core.ParametrizedSolutions) : System.Boolean
 AngouriMath.Core.ReasonOfFailureWhileParsing+InternalError.<Clone>$() : AngouriMath.Core.ReasonOfFailureWhileParsing+InternalError
 AngouriMath.Core.ReasonOfFailureWhileParsing+InternalError.Deconstruct(System.String&) : System.Void
 AngouriMath.Core.ReasonOfFailureWhileParsing+InternalError.Details { } : System.String
@@ -3861,6 +3873,7 @@ AngouriMath.MathS.SolveBooleanTable(AngouriMath.Entity, AngouriMath.Entity+Varia
 AngouriMath.MathS.SolveEquation(AngouriMath.Entity, AngouriMath.Entity+Variable) : AngouriMath.Entity+Set
 AngouriMath.MathS.SolveOde(AngouriMath.Entity, AngouriMath.Entity+Variable, AngouriMath.Entity+Variable) : AngouriMath.Entity
 AngouriMath.MathS.SolveSystem(AngouriMath.Entity, AngouriMath.Entity+Variable[]) : AngouriMath.Entity+Matrix
+AngouriMath.MathS.SolveSystemWithParameters(AngouriMath.Entity, AngouriMath.Entity+Variable[]) : AngouriMath.Core.ParametrizedSolutions
 AngouriMath.MathS.Sqr(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Sqrt(AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.Sum(AngouriMath.Entity, AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
@@ -3940,6 +3953,7 @@ class AngouriMath.Core.FastExpression
 class AngouriMath.Core.FiniteSetBuilder
 class AngouriMath.Core.GeneratedSource
 class AngouriMath.Core.MatrixBuilder
+class AngouriMath.Core.ParametrizedSolutions
 class AngouriMath.Core.ReasonOfFailureWhileParsing
 class AngouriMath.Core.ReasonOfFailureWhileParsing+InternalError
 class AngouriMath.Core.ReasonOfFailureWhileParsing+MissingOperator

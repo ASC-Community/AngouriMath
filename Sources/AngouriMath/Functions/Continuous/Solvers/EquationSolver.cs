@@ -123,6 +123,8 @@ namespace AngouriMath.Functions.Algebra
             // An allowance: a set MathS.Settings.Budget replaces SystemSolveBudget, which is
             // what the exceptions below mean by "raise MathS.Settings.Budget to allow more".
             var ledger = BudgetLedger.For("SolveSystem", SystemSolveBudget, BudgetRole.Allowance);
+            // One name stands for one set in the answer, which the scope keeps while it is open.
+            var parameters = SolutionParameters.Open(out var opened);
             try
             {
                 var variables = new Variable[vars.Length];
@@ -192,6 +194,8 @@ namespace AngouriMath.Functions.Algebra
             }
             finally
             {
+                if (opened)
+                    parameters.Close();
                 ledger.Report();
             }
         }
@@ -449,7 +453,7 @@ namespace AngouriMath.Functions.Algebra
                 // https://github.com/asc-community/AngouriMath/issues/550. A free parameter says
                 // what the answer is in the same way the trigonometric solvers say it with n_1.
                 if (solutions == MathS.Sets.C)
-                    return new() { new List<Entity> { Variable.CreateUnique(nameSource, "t") } };
+                    return new() { new List<Entity> { SolutionParameters.Mint(nameSource + equations[0], "t", MathS.Sets.C) } };
                 // An equation left unsolved has roots that were not found, and no rows here would
                 // say it has none: the rows of the other branches would read as every solution.
                 // y^2 - 2, x^2 + (P - Q y) x - 3, with (1 + sqrt(2))^70 = P + Q sqrt(2), declines
@@ -482,14 +486,15 @@ namespace AngouriMath.Functions.Algebra
 
                     foreach (var sol in sols)
                     {
-                        if (InSolveSystem(rest.Select(eq => eq.Substitute(var, sol)).ToList(), remainingVars, nameSource, ledger) is not { } rows)
+                        var below = rest.Select(eq => eq.Substitute(var, sol)).ToList();
+                        if (InSolveSystem(below, remainingVars, nameSource, ledger) is not { } rows)
                             return null;
                         foreach (var j in rows)
                         {
                             replacements.Clear();
                             for (int varid = 0; varid < remainingVars.Length; varid++)
                                 replacements.Add(remainingVars[varid], j[varid]);
-                            j.Add(sol.Substitute(replacements).InnerSimplified);
+                            j.Add(SolutionParameters.Apart(sol, j, below, nameSource).Substitute(replacements).InnerSimplified);
                             result.Add(j);
                         }
                     }

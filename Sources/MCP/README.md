@@ -62,7 +62,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | amcli mcp
 | `am_are_equal` | `equal` only with a proof, `not_equal` only with a witness point, else `unknown`; never decided by sampling alone. Bounded in steps |
 | `am_check_steps` | checks a chain of working and names the step that broke |
 | `am_truth_table` | the table and the satisfying assignments |
-| `am_solve_system` | takes `x + y = 3` as well as `x + y - 3`, and the system as a list or as one statement, `x + y = 3 and x - y = 1`; a conjunct that is not an equation is declined and named |
+| `am_solve_system` | takes `x + y = 3` as well as `x + y - 3`, and the system as a list or as one statement, `x + y = 3 and x - y = 1`; a conjunct that is not an equation is declined and named. Each parameter of the rows comes back in `parameters` with the set it ranges over, `n_1` in `ZZ`, `t_1` in `CC` |
 | `am_domain_check` | domain conditions, structural hazards, and where it stops being real |
 | `am_represent` | encodings: bases 2–36, Q-format fixed point, IEEE 754 bits, polar form |
 | `am_matrix` | determinant, inverse, transpose, rank, RREF, trace, multiply, tensor product, power |

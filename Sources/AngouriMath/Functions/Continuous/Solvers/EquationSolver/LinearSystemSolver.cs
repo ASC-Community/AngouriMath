@@ -112,7 +112,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             for (var column = 0; column < width; column++)
                 if (!isPivot[column])
                 {
-                    var parameter = Variable.CreateUnique(nameSource, "t");
+                    var parameter = SolutionParameters.Mint(nameSource, "t", SolutionParameters.Free);
                     values[column] = parameter;
                     nameSource += parameter;
                 }
