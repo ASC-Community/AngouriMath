@@ -17,6 +17,13 @@ and the link. Add a work here when it is first cited.
   binomial identities, and induction — its examples and exercises are the rows of
   `QuantifierTest`, `SubsetTest`, `IndexedSetOperationTest`, `ImageAndPreImageTest`,
   `BinomialIdentityTest`, `InductionTest` and `ThresholdSetTest`.
+- **Modenov, P. S.** *Problems in Geometry.* Translated from the Russian by George Yankovsky.
+  Mir, Moscow, 1981. <https://archive.org/details/ModenovProblemsInGeometryMir1981>.
+  Read for [#2131](https://github.com/asc-community/AngouriMath/issues/2131): vector algebra,
+  analytic geometry, complex numbers in plane geometry, inversion. Its computations, and the
+  errors found in it by computing, are the rows of the `ModenovCorpus` harness
+  ([#2153](https://github.com/asc-community/AngouriMath/issues/2153)), cited by chapter, section
+  and problem.
 - **Bronstein, Manuel.** *Symbolic Integration I: Transcendental Functions.* 2nd ed., Springer,
   2005. The Hermite reduction, the rational and logarithmic parts, and the Risch structure the
   integrator follows.
