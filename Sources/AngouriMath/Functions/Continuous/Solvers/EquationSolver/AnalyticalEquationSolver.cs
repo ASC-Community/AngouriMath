@@ -485,7 +485,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // `Solve`. https://github.com/asc-community/AngouriMath/issues/1603
             if (MathS.Settings.AllowNewton && expr.Vars.Count == 1)
                 return NumericalSolving.NewtonSolver.TrySolveNt(expr, x, MathS.Settings.NewtonSolver) is { } roots
-                       && roots.Select(ent => TryDowncast(expr, x, ent)).ToSet() is FiniteSet { IsSetEmpty: false } found
+                       && WithRootsAtRadicandZeros(expr, x, roots.Select(ent => TryDowncast(expr, x, ent)).ToList()).ToSet() is FiniteSet { IsSetEmpty: false } found
                     ? found : Unsolved(expr, x);
 
             return Unsolved(expr, x);
@@ -511,6 +511,44 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             foreach (var alt in expr.Alternate(4))
                 if (alt != expr)
                     yield return alt;
+        }
+
+        /// <summary>
+        /// <paramref name="found"/>, with each point where a radicand in <paramref name="expr"/> is zero
+        /// and <paramref name="expr"/> is exactly zero, and without the decimals that are near copies of one.
+        /// </summary>
+        /// <remarks>
+        /// A radical's derivative is infinite where its radicand is zero, and Newton's method does not
+        /// converge to a root there: sin(sqrt(x)) = x was answered { 0.7686… } without its root 0, and
+        /// cos(1 - sqrt(x)) - x = cos(1) { 0.3900… } without 0. Those points are finitely many and exact,
+        /// so each is put into the equation, and kept only where it simplifies to 0.
+        /// https://github.com/asc-community/AngouriMath/issues/2495
+        /// </remarks>
+        private static IEnumerable<Entity> WithRootsAtRadicandZeros(Entity expr, Variable x, List<Entity> found)
+        {
+            var atZeros = new List<Entity>();
+            foreach (var radicand in expr.Nodes
+                         .OfType<Powf>()
+                         .Where(power => power.Base.ContainsNode(x) && power.Exponent.InnerSimplified is Rational and not Integer)
+                         .Select(power => power.Base)
+                         .Distinct())
+            {
+                if (!TreeAnalyzer.TryGetPolynomial(radicand, x, out _)
+                    || PolynomialSolver.SolveAsPolynomial(radicand, x, out _) is not { } zeros)
+                    continue;
+                foreach (var zero in zeros)
+                    if (!zero.Vars.Any()
+                        && !atZeros.Contains(zero)
+                        && expr.Substitute(x, zero).Simplify() is Integer { IsZero: true })
+                        atZeros.Add(zero);
+            }
+            if (atZeros.Count == 0)
+                return found;
+            bool IsACopyOfOneAtAZero(Entity root)
+                => root.Evaled is Complex value
+                   && atZeros.Any(zero => zero.Evaled is Complex exact
+                       && (value - exact).Abs().EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromString("1e-10")) < 0);
+            return atZeros.Concat(found.Where(root => !IsACopyOfOneAtAZero(root)));
         }
 
         /// <summary>

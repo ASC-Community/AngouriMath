@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -26,7 +26,8 @@ namespace AngouriMath.Tests.Algebra
         {
             var answer = "sqrt(x) + x = cos(sqrt(x)) - 1".ToEntity().Solve("x");
             Assert.False(answer is Entity.Set.FiniteSet { Count: 0 }, $"{answer} claims no roots, and 0 is one");
-            Assert.IsType<Entity.Set.ConditionalSet>(answer);
+            // 0 is found where the radicand is zero, beside Newton's method; see ARootWhereARadicandIsZeroTest.
+            Assert.Contains((Entity)0, Assert.IsType<Entity.Set.FiniteSet>(answer));
         }
 
         [Fact]
