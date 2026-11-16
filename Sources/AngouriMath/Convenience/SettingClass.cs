@@ -18,6 +18,9 @@ namespace AngouriMath.Convenience
         /// <see langword="null"/> where nothing is set and the default applies.
         /// </summary>
         object? CurrentState { get; }
+
+        /// <summary>Whether a scope of this setting has been opened, in any flow, since the process started.</summary>
+        bool EverScoped { get; }
     }
 
     /// <summary>
@@ -63,6 +66,31 @@ namespace AngouriMath.Convenience
                 grown[^1] = setting;
                 System.Threading.Volatile.Write(ref registered, grown);
             }
+        }
+
+        [ConcurrentField] private static bool anyEverScoped;
+
+        /// <summary>Called by every <see cref="Setting{T}.Set"/>, before its frame is pushed.</summary>
+        internal static void NoteScoped()
+        {
+            if (!anyEverScoped)
+                System.Threading.Volatile.Write(ref anyEverScoped, true);
+        }
+
+        /// <summary>
+        /// Whether any setting reads, in this flow, from a scope rather than from its default.
+        /// Until a scope of any setting has been opened somewhere this is one read of a flag; after
+        /// that, one async-local read for each setting that has ever been scoped.
+        /// </summary>
+        internal static bool AnyScopeOpen()
+        {
+            if (!System.Threading.Volatile.Read(ref anyEverScoped))
+                return false;
+            var settings = System.Threading.Volatile.Read(ref registered);
+            for (var i = 0; i < settings.Length; i++)
+                if (settings[i].EverScoped && settings[i].CurrentState is not null)
+                    return true;
+            return false;
         }
 
         /// <summary>What every setting reads as right now, in this flow.</summary>
@@ -156,6 +184,8 @@ namespace AngouriMath.Convenience
         /// </summary>
         object? ISettingState.CurrentState => frames.Value;
 
+        bool ISettingState.EverScoped => EverScoped;
+
         /// <summary>
         /// Whether a scope of this setting has been opened, in any flow, since the process
         /// started, so that a reader can skip asking for the flow's frame while none can exist.
@@ -185,6 +215,7 @@ namespace AngouriMath.Convenience
             // Before the frame, so that no flow can see the frame without the flag.
             if (!everScoped)
                 Volatile.Write(ref everScoped, true);
+            SettingsState.NoteScoped();
             frames.Value = new Frame(id, value, frames.Value);
             return new AutoBackRollableTemporarySettingUnit(this, id);
         }

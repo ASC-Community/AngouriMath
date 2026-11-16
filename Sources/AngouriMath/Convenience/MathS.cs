@@ -4591,6 +4591,14 @@ namespace AngouriMath
         /// First occurance will be parsed, others will be replaced with the cached entity
         /// </param>
         /// <returns>The parsed expression</returns>
+        /// <remarks>
+        /// The cache holds parses made with every setting at its default, and is neither read nor
+        /// written while a scope of any setting is open in the calling flow: a literal is rounded
+        /// as it is parsed, by <see cref="Settings.PrecisionErrorZeroRange"/>,
+        /// <see cref="Settings.DecimalPrecisionContext"/> and the other numeric settings, so
+        /// <c>1e-20</c> is a number under the defaults and <c>0</c> with the zero range at
+        /// <c>1e-10</c>. Inside such a scope every call parses afresh.
+        /// </remarks>
         /// <example>
         /// Multiple ways to parse an expression.
         /// <code>
@@ -4612,7 +4620,16 @@ namespace AngouriMath
         public static Entity FromString(string expr, bool useCache)
             => expr
                 .LetLazy(out var parsed, Parser.Parse)
-                .ReplaceWith(useCache)
+                // Only a parse made under the defaults is cached. The parse reads the settings, and
+                // not a fixed few of them: a literal is rounded by PrecisionErrorZeroRange,
+                // DecimalPrecisionContext, MaxAbsNumeratorOrDenominatorValue, FloatToRationalIterCount
+                // and DowncastingEnabled, ExplicitParsingOnly decides what juxtaposition means, and
+                // det, trace, dot, cross, an entry and resultant are computed while parsing, by
+                // whatever those computations read. A cache keyed by a list of them is wrong the day
+                // the parse reads one more, so an open scope of any setting bypasses it: the scope's
+                // parse is neither answered from it nor written to it.
+                // https://github.com/asc-community/AngouriMath/issues/2478
+                .ReplaceWith(useCache && !Convenience.SettingsState.AnyScopeOpen())
                     switch
                     {
                         false => parsed.Value,
@@ -4624,23 +4641,10 @@ namespace AngouriMath
                                 "-1" => Integer.Create(-1),
                                 "+oo" => Real.PositiveInfinity,
                                 "-oo" => Real.NegativeInfinity,
-                                // One cache per pair of the settings the parse reads: with the
-                                // downcasting off a whole number parses as a decimal, so a string
-                                // parsed under one setting is not the other's parse.
-                                // https://github.com/asc-community/AngouriMath/issues/1513
-                                _ => (Settings.ExplicitParsingOnly.Value, Settings.DowncastingEnabled.Value) switch
-                                    {
-                                        (false, true) => stringToEntityCache.GetValue(expr, _ => parsed.Value),
-                                        (true, true) => stringToEntityCacheExplicitOnly.GetValue(expr, _ => parsed.Value),
-                                        (false, false) => stringToEntityCacheNotDowncasting.GetValue(expr, _ => parsed.Value),
-                                        (true, false) => stringToEntityCacheExplicitOnlyNotDowncasting.GetValue(expr, _ => parsed.Value)
-                                    }
+                                _ => stringToEntityCache.GetValue(expr, _ => parsed.Value)
                             }
                     };
-        private static ConditionalWeakTable<string, Entity> stringToEntityCacheExplicitOnly = new();
         private static ConditionalWeakTable<string, Entity> stringToEntityCache = new();
-        private static ConditionalWeakTable<string, Entity> stringToEntityCacheNotDowncasting = new();
-        private static ConditionalWeakTable<string, Entity> stringToEntityCacheExplicitOnlyNotDowncasting = new();
 
         /// <summary>Converts a <see cref="string"/> to an expression</summary>
         /// <param name="expr"><see cref="string"/> expression, for example, <code>"2 * x + 3 + sqrt(x)"</code></param>
@@ -6226,6 +6230,10 @@ namespace AngouriMath
         /// // here you write your code normally
         /// </code>
         /// </summary>
+        /// <remarks>
+        /// While any setting is scoped, <see cref="FromString(string, bool)"/> does not use its cache,
+        /// and parsing the same string repeatedly inside the scope costs a parse each time.
+        /// </remarks>
         public static partial class Settings
         {
             /// <summary>
