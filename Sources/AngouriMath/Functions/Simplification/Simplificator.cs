@@ -51,7 +51,7 @@ namespace AngouriMath.Functions
                 // one has no runs before it. See simplifications. Not while a limit reads an
                 // approach, on which logarithms gather that do not gather on their own account:
                 // the same tree simplified on two approaches, or on one and on none, is two answers.
-                if (simplifying == 1 || RewriteRecording.Current is not null || !expr.Nodes.All(IsElementary)
+                if (simplifying == 1 || RewriteRecording.Current is not null || !expr.AllNodes(IsElementary)
                     || Algebra.LimitFunctional.IsReadingAnApproach)
                     return SimplifyAtDepth(expr, level);
                 var kept = simplifications ??= new();
@@ -140,7 +140,7 @@ namespace AngouriMath.Functions
         /// </summary>
         internal static Entity Expanded(Entity expr)
         {
-            if (simplifying == 0 || RewriteRecording.Current is not null || !expr.Nodes.All(IsElementary))
+            if (simplifying == 0 || RewriteRecording.Current is not null || !expr.AllNodes(IsElementary))
                 return expr.Expand();
             var kept = expansions ??= new();
             if (kept.TryGetValue(expr, out var known) && Convenience.SettingsState.StillHolds(known.Under))
@@ -447,11 +447,11 @@ namespace AngouriMath.Functions
                 // the same -- and a tie is settled by whichever candidate came first, which
                 // is an accident rather than a preference.
                 // https://github.com/asc-community/AngouriMath/issues/205
-                if (res.Nodes.Any(child => child is Divf))
+                if (res.AnyNode(child => child is Divf))
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.RationalizeDenominator)));
 
                 res = Simplified(recording, res.Rewrite(RewriteRules.CanonicalOrderAt(sortLevel)));
-                if (res.Nodes.Any(child => child is Powf))
+                if (res.AnyNode(child => child is Powf))
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.Power)));
 
                 AddHistory(res = SimplifyChildren(res));
@@ -464,7 +464,7 @@ namespace AngouriMath.Functions
                 // 3x^2 (u + 2)^2 / (3x^2) is (u + 2)^2, which the rules below reach as it
                 // stands, and u^2 + 4u + 4 only once this has expanded it. The complexity
                 // metric is what should decide between them.
-                if (res.Nodes.Any(child => child is Divf))
+                if (res.AnyNode(child => child is Divf))
                     AddHistory(Simplified(recording, res.Rewrite(RewriteRules.PolynomialGcdCancellation)));
 
                 AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.PolynomialLongDivision)));
@@ -478,7 +478,7 @@ namespace AngouriMath.Functions
                 AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.Trigonometric)));
                 AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.CollapseTrigonometricFunctions)));
 
-                if (res.Nodes.Any(child => child is TrigonometricFunction))
+                if (res.AnyNode(child => child is TrigonometricFunction))
                 {
                     // The Pythagorean pair found anywhere in a sum -- the binary rule above sees
                     // it only where the sort has made it a node. Inside this block, since the
@@ -509,30 +509,30 @@ namespace AngouriMath.Functions
                 }
 
 
-                if (res.Nodes.Any(child => child is Statement))
+                if (res.AnyNode(child => child is Statement))
                 {
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.Boolean)));
                 }
 
 
-                if (res.Nodes.Any(child => child is ComparisonSign))
+                if (res.AnyNode(child => child is ComparisonSign))
                 {
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.InequalityEquality)));
                 }
 
                 // A binomial coefficient is three factorials, and its identities live in the
                 // gathering set. https://github.com/asc-community/AngouriMath/issues/1409
-                if (res.Nodes.Any(child => child is Factorialf or Binomialf))
+                if (res.AnyNode(child => child is Factorialf or Binomialf))
                 {
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.ExpandFactorialDivisions)));
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.FactorizeFactorialMultiplications)));
                 }
 
 
-                if (res.Nodes.Any(child => child is Powf or Logf))
+                if (res.AnyNode(child => child is Powf or Logf))
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.Power)));
 
-                if (res.Nodes.Any(child => child is Set))
+                if (res.AnyNode(child => child is Set))
                 {
                     var replaced = res.Rewrite(RewriteRules.SetOperator);
 
@@ -540,7 +540,7 @@ namespace AngouriMath.Functions
                 }
 
 
-                if (res.Nodes.Any(child => child is Phif))
+                if (res.AnyNode(child => child is Phif))
                     AddHistory(res = Simplified(recording, res.Rewrite(RewriteRules.PhiFunction)));
 
                 Entity? possiblePoly = null;

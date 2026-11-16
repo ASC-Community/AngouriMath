@@ -61,12 +61,12 @@ namespace AngouriMath.Functions
             // The idea is the following:
             // We must get a subtree that has more occurances than 1,
             // But at the same time it should cover all references to `ent`
-            var xs = expr.Nodes.Count(child => child == x);
+            var xs = expr.CountNode(x);
             return
                 expr.Nodes
                 .TakeWhile(e => e != x) // Requires Entity enumeration to be depth-first!!
                 .Where(e => e.ContainsNode(x)) // e.g. when expr is sin((x+1)^2)+3, this step results in [sin((x+1)^2)+3, sin((x+1)^2), (x+1)^2, x+1]
-                .LastOrDefault(sub => expr.Nodes.Count(child => child == sub) * sub.Nodes.Count(child => child == x) == xs)
+                .LastOrDefault(sub => expr.CountNode(sub) * sub.CountNode(x) == xs)
                 // if `expr` contains 2 `sub`s and `sub` contains 3 `x`s, then there should be 6 `x`s in `expr` (6 == `xs`)
                 ?? x;
         }

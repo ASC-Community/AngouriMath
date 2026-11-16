@@ -776,7 +776,7 @@ namespace AngouriMath
         /// True
         /// </code>
         /// </example>
-        public bool ContainsNode(Entity x) => x is Variable v ? VarsAndConsts.Contains(v) : Nodes.Contains(x);
+        public bool ContainsNode(Entity x) => x is Variable v ? VarsAndConsts.Contains(v) : WalkFinds(x);
 
         /// <summary>
         /// Implicit conversation from string to Entity. See <see cref="MathS.FromString(string,bool)"/>

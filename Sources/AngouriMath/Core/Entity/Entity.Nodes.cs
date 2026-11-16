@@ -9,96 +9,135 @@ using System;
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace AngouriMath
 {
     partial record Entity
     {
+        /// <summary>Whether any node, this one included, satisfies <paramref name="predicate"/>,
+        /// asked in the order of <see cref="Nodes"/> and stopping at the first; what
+        /// <c>Nodes.Any(predicate)</c> answers, without allocating.</summary>
+        internal bool AnyNode(Func<Entity, bool> predicate)
+        {
+            var walk = new NodeStack(this);
+            try
+            {
+                while (walk.MoveNext())
+                    if (predicate(walk.Current))
+                        return true;
+                return false;
+            }
+            finally { walk.Release(); }
+        }
+
+        /// <summary>What <c>Nodes.All(predicate)</c> answers, without allocating.</summary>
+        internal bool AllNodes(Func<Entity, bool> predicate)
+        {
+            var walk = new NodeStack(this);
+            try
+            {
+                while (walk.MoveNext())
+                    if (!predicate(walk.Current))
+                        return false;
+                return true;
+            }
+            finally { walk.Release(); }
+        }
+
+        /// <summary>What <c>Nodes.Contains(node)</c> answers, without allocating.</summary>
+        private bool WalkFinds(Entity node)
+        {
+            var walk = new NodeStack(this);
+            try
+            {
+                while (walk.MoveNext())
+                    if (walk.Current == node)
+                        return true;
+                return false;
+            }
+            finally { walk.Release(); }
+        }
+
+        /// <summary>How many nodes, this one included, are equal to <paramref name="node"/>.</summary>
+        internal int CountNode(Entity node)
+        {
+            var walk = new NodeStack(this);
+            try
+            {
+                var count = 0;
+                while (walk.MoveNext())
+                    if (walk.Current == node)
+                        count++;
+                return count;
+            }
+            finally { walk.Release(); }
+        }
+
         /// <summary>
         /// The pre-order walk behind <see cref="Nodes"/>: the node, then each child's walk in
         /// order, kept on an explicit stack rented from <see cref="ArrayPool{T}.Shared"/>.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// It costs one object per enumeration and nothing per node, and keeps nothing on the
-        /// tree. A chain of LINQ iterators costs an iterator per node per enumeration, and caching
-        /// it on every node keeps that chain alive as long as the node; caching the walk's result
-        /// instead is quadratic in memory, since every node would hold its whole subtree (31 MB on
-        /// a sum of 2000 terms).
+        /// It allocates nothing, per node or per walk, and keeps nothing on the tree. A chain of
+        /// LINQ iterators costs an iterator per node per enumeration, and caching it on every
+        /// node keeps that chain alive as long as the node; caching the walk's result instead is
+        /// quadratic in memory, since every node would hold its whole subtree (31 MB on a sum of
+        /// 2000 terms).
         /// <a href="https://github.com/asc-community/AngouriMath/issues/534">#534</a>
         /// </para>
         /// <para>
-        /// Every enumeration has its own stack, so a predicate that walks another tree while this
-        /// one is being walked, on this thread or another, shares nothing with it. A walk that is
-        /// abandoned without being disposed only fails to give its array back to the pool.
+        /// Every walk has its own stack, so a predicate that walks another tree while this one
+        /// is being walked, on this thread or another, shares nothing with it. A walk that is
+        /// abandoned without <see cref="Release"/> only fails to give its array back to the
+        /// pool. It is a mutable struct: copying one mid-walk would share the array, so it is
+        /// only ever held in a local or in <see cref="NodeWalk"/>.
         /// </para>
         /// </remarks>
-        private sealed class NodeWalk : IEnumerable<Entity>, IEnumerator<Entity>
+        private struct NodeStack
         {
-            private const int NotStarted = 0, Walking = 1, Finished = 2;
-
-            private readonly Entity root;
-            private readonly int ownerThread;
-            private bool handedOut;
-            private int state;
+            private Entity? next;
             private Entity? current;
             private Entity[]? stack;
             private int count;
 
-            internal NodeWalk(Entity root)
+            internal NodeStack(Entity root)
             {
-                this.root = root;
-                ownerThread = Environment.CurrentManagedThreadId;
+                next = root;
+                current = null;
+                stack = null;
+                count = 0;
             }
 
-            // The first enumeration on the thread that asked for Nodes is this object itself, as
-            // LINQ's own iterators do, so the common Nodes.Any(...) costs one object, not two.
-            public IEnumerator<Entity> GetEnumerator()
+            internal readonly Entity Current => current!;
+
+            internal bool MoveNext()
             {
-                if (!handedOut && ownerThread == Environment.CurrentManagedThreadId)
+                if (next is not null)
                 {
-                    handedOut = true;
-                    return this;
+                    current = next;
+                    next = null;
+                    return true;
                 }
-                return new NodeWalk(root) { handedOut = true };
-            }
-
-            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-            public Entity Current => current!;
-
-            object IEnumerator.Current => Current;
-
-            public bool MoveNext()
-            {
-                switch (state)
+                if (current is null)
+                    return false;
+                // The children of the node just yielded are pushed only now, so a walk stopped
+                // at a node never asks for its children.
+                var children = current.DirectChildren;
+                if (children.Count > 0)
                 {
-                    case NotStarted:
-                        current = root;
-                        state = Walking;
-                        return true;
-                    case Walking:
-                        // The children of the node just yielded are pushed only now, so a walk
-                        // stopped at a node never asks for its children.
-                        var children = current!.DirectChildren;
-                        if (children.Count > 0)
-                        {
-                            Reserve(children.Count);
-                            for (var i = children.Count - 1; i >= 0; i--)
-                                stack![count++] = children[i];
-                        }
-                        if (count == 0)
-                        {
-                            Dispose();
-                            return false;
-                        }
-                        current = stack![--count];
-                        stack[count] = null!;
-                        return true;
-                    default:
-                        return false;
+                    Reserve(children.Count);
+                    for (var i = children.Count - 1; i >= 0; i--)
+                        stack![count++] = children[i];
                 }
+                if (count == 0)
+                {
+                    Release();
+                    return false;
+                }
+                current = stack![--count];
+                stack[count] = null!;
+                return true;
             }
 
             private void Reserve(int more)
@@ -115,7 +154,7 @@ namespace AngouriMath
                 }
             }
 
-            public void Dispose()
+            internal void Release()
             {
                 if (stack is not null)
                 {
@@ -126,9 +165,50 @@ namespace AngouriMath
                     stack = null;
                 }
                 count = 0;
+                next = null;
                 current = null;
-                state = Finished;
             }
+        }
+
+        /// <summary>
+        /// <see cref="NodeStack"/> as the <see cref="IEnumerable{T}"/> that <see cref="Nodes"/>
+        /// publishes, at one object per enumeration.
+        /// </summary>
+        private sealed class NodeWalk : IEnumerable<Entity>, IEnumerator<Entity>
+        {
+            private readonly Entity root;
+            private readonly int ownerThread;
+            private bool handedOut;
+            private NodeStack walk;
+
+            internal NodeWalk(Entity root)
+            {
+                this.root = root;
+                ownerThread = Environment.CurrentManagedThreadId;
+                walk = new NodeStack(root);
+            }
+
+            // The first enumeration on the thread that asked for Nodes is this object itself, as
+            // LINQ's own iterators do, so the common Nodes.Any(...) costs one object, not two.
+            public IEnumerator<Entity> GetEnumerator()
+            {
+                if (!handedOut && ownerThread == Environment.CurrentManagedThreadId)
+                {
+                    handedOut = true;
+                    return this;
+                }
+                return new NodeWalk(root) { handedOut = true };
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+            public Entity Current => walk.Current;
+
+            object IEnumerator.Current => Current;
+
+            public bool MoveNext() => walk.MoveNext();
+
+            public void Dispose() => walk.Release();
 
             public void Reset() => throw new NotSupportedException();
         }
