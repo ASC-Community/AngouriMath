@@ -973,6 +973,26 @@ namespace AngouriMath
                 };
         }
 
+        public partial record Zetaf
+        {
+            // Every s but the pole at 1, and every a but 0, -1, -2, ... (DLMF 25.11.1).
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            private protected override Entity IntrinsicCondition =>
+                !Argument.EqualTo(Integer.One) & (!Parameter.In(MathS.Sets.Z) | Parameter > 0);
+
+            /// <inheritdoc/>
+            protected override Entity InnerSimplify(bool isExact)
+                => ExpandOnTwoArguments(Argument, Parameter,
+                    (s, a) => (s, a) switch
+                    {
+                        (Integer { EInteger: var n }, Rational q) when Number.ExactZeta(n, q.ERational) is { } exact
+                            => isExact ? exact : exact.Evaled,
+                        (Complex z, Complex w) when !isExact => Number.HurwitzZeta(z, w),
+                        _ => null
+                    },
+                    (@this, s, a) => ((Zetaf)@this).New(s, a), isExact);
+        }
+
         public partial record Ref
         {
             // Defined everywhere on the complex plane.

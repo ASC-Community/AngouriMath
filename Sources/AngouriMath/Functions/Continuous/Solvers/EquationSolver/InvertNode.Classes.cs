@@ -497,6 +497,13 @@ namespace AngouriMath
                 => null;
         }
 
+        partial record Zetaf
+        {
+            // The zeta function has no inverse among the library's nodes, so an equation in it is left unsolved.
+            private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x)
+                => null;
+        }
+
         partial record Polygammaf
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>

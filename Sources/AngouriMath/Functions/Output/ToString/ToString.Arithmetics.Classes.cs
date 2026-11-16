@@ -311,6 +311,15 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        partial record Zetaf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode()
+                => IsRiemann ? $"zeta({Argument.Stringize()})" : $"zeta({Argument.Stringize()}, {Parameter.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Polygammaf
         {
             /// <inheritdoc/>

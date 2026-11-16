@@ -119,6 +119,8 @@ namespace AngouriMath.AotSmokeTest
             // https://github.com/asc-community/AngouriMath/issues/2182
             var laplacian = MathS.FromString("laplacian(x^2 y + y^3, [x, y])").InnerSimplified;
             CheckClose("laplacian at y = 2", At(laplacian, "y", 2), 16);
+            var divergence = MathS.FromString("divergence(curl([x y z, x^2, y sin(z)], [x, y, z]), [x, y, z]) + divergence([x y, y z, z x], [x, y, z])").InnerSimplified;
+            CheckClose("divergence at x = 1, y = 2, z = 3", At(divergence.Substitute("x", 1).Substitute("y", 2), "z", 3), 6);
             var jacobian = MathS.FromString("det(jacobian([r cos(t), r sin(t)], [r, t]))").InnerSimplified;
             CheckClose("polar Jacobian determinant at r = 3, t = 1", At(jacobian.Substitute("t", 1), "r", 3), 3);
 
@@ -142,6 +144,10 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("catalannumber at x = 5", At(catalan, "x", 5), 42);
             var lambertW = MathS.FromString("lambertw(x)");
             CheckClose("lambertw at x = 1", At(lambertW, "x", 1), 0.56714329040978387);
+            var zeta = MathS.FromString("zeta(x)");
+            CheckClose("zeta at x = 3", At(zeta, "x", 3), 1.2020569031595942854);
+            var hurwitz = MathS.FromString("zeta(2.5, x)");
+            CheckClose("zeta(2.5, x) at x = 0.5", At(hurwitz, "x", 0.5), 6.2471106345688114853);
             var harmonic = MathS.FromString("harmonicnumber(x, 2)");
             CheckClose("harmonicnumber(x, 2) at x = 4", At(harmonic, "x", 4), 205.0 / 144);
             var difference = MathS.FromString("forwarddifference(x^3, x)");

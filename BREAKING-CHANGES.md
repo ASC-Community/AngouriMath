@@ -171,9 +171,8 @@ products.** `factorize(360)` was `factorize * 360` and simplified to `360 * fact
 of them, so each is refused with what to write today: in C#, `MathS.NumberTheory.Factorize(n)` for the prime factors of
 an integer and `Factorize()` to factor an expression; `prime(primepi(n) + 1)` for the least prime above `n`;
 `divisorsigma(0, n)` and `divisorsigma(1, n)` for the count and the sum of the divisors
-([#2449](https://github.com/asc-community/AngouriMath/issues/2449)); `jacobian([f], [x, y])` for a gradient and
-`trace(jacobian(F, [x, y]))` for a divergence ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
-Euler's totient is `phi(n)`, and `φ(n)` and `ϕ(n)` are refused. Each name without a bracket is still a variable.
+([#2449](https://github.com/asc-community/AngouriMath/issues/2449)). `gradient` and `divergence` were refused too,
+until they were implemented; see below. Euler's totient is `phi(n)`, and `φ(n)` and `ϕ(n)` are refused. Each name without a bracket is still a variable.
 
 | Input | Was (2.7.0) | Now |
 |---|---|---|
@@ -182,9 +181,6 @@ Euler's totient is `phi(n)`, and `φ(n)` and `ϕ(n)` are refused. Each name with
 | `"divisors(12)".ToEntity()` | `divisors * 12` | throws `UnrecognizedFunctionParseException`: write `divisorsigma(0, n)` or `divisorsigma(1, n)` |
 | `"φ(10)".ToEntity()` | `φ * 10` | throws `UnrecognizedFunctionParseException`: write `phi(n)` |
 | `"ϕ(10)".ToEntity()` | `ϕ * 10` | throws `UnrecognizedFunctionParseException`: write `phi(n)` |
-| `"gradient(x^2)".ToEntity()` | `gradient * x ^ 2` | throws `UnrecognizedFunctionParseException` |
-| `"divergence(x)".ToEntity()` | `divergence * x` | throws `UnrecognizedFunctionParseException` |
-| `"gradient(x^2*y, [x, y])".ToEntity()` | throws `UnhandledParseException` | throws `UnrecognizedFunctionParseException` |
 
 ### A definite integral with a parameter takes the limit at an infinite bound
 
@@ -418,6 +414,54 @@ changes. See [`Docs/Usage/Shaders.md`](Sources/AngouriMath/Docs/Usage/Shaders.md
 | `MathS.Shaders.Hlsl([new("r", "x!")]).ToString()` | no such member | ``Declined at x!: `x!` has no intrinsic in HLSL or GLSL and no straight-line form`` |
 
 ---
+
+### The Riemann and the Hurwitz zeta functions
+
+**Not silent: what was refused now parses.** `zeta(s)` and `zeta(s, a)`, also `riemannzeta(s)` and `hurwitzzeta(s, a)`,
+threw `UnrecognizedFunctionParseException`, the names being reserved. They are now `Entity.Zetaf`, built by `MathS.Zeta`:
+the Riemann zeta function, and the Hurwitz one of [DLMF 25.11](https://dlmf.nist.gov/25.11), `sum_(n >= 0) 1/(n + a)^s`
+continued to every `s` but its pole at `1`, with no value where `a` is `0, -1, -2, ...`. It is exact at `0`, at the
+even numbers and the negative whole numbers, and at a whole `s >= 2` with a whole or half-whole `a` it is written in
+`zeta(s)`; elsewhere it is evaluated to the working precision, real or complex. `zeta` alone is still a variable, and
+`zeta (s)` with a space still the product `zeta * s`, as `gamma (s)` is. `Zeta(s)` is still `Zeta * s`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"zeta(2)".ToEntity().Simplify()` | throws `UnrecognizedFunctionParseException` | `pi ^ 2 / 6` |
+| `"zeta(-1)".ToEntity().Simplify()` | throws `UnrecognizedFunctionParseException` | `-1/12` |
+| `"zeta(3)".ToEntity().Evaled` | throws `UnrecognizedFunctionParseException` | `1.2020569031595942853997…` |
+| `"zeta(3, 1/2)".ToEntity().Simplify()` | throws `UnrecognizedFunctionParseException` | `7 * zeta(3)` |
+| `"zeta(1)".ToEntity().Simplify()` | throws `UnrecognizedFunctionParseException` | `NaN`, the pole |
+| `"riemannzeta(s)".ToEntity()` | throws `UnrecognizedFunctionParseException` | `zeta(s)` |
+| `"hurwitzzeta(s, a)".ToEntity()` | throws `UnrecognizedFunctionParseException` | `zeta(s, a)` |
+| `"zeta (s)".ToEntity()` | `zeta * s` | unchanged |
+
+### The gradient, the divergence and the curl
+
+**Not silent: what was refused or a product now parses or is refused differently.** `gradient(f, x)`,
+`divergence(F, x)` and `curl(F, x)` are computed into derivatives when parsed, as `jacobian` is: the gradient is the
+column of the first derivatives of a scalar `f`, the divergence the sum of each component's derivative in its variable,
+and the curl the column `[dF_3/dy - dF_2/dz, dF_1/dz - dF_3/dx, dF_2/dx - dF_1/dy]`, in three variables only. The
+variables are a vector, `[x, y, z]`, or one name, and the field of a divergence or a curl a vector written out with a
+component for each. With one argument each throws `FunctionArgumentCountException` saying to give the variables:
+`gradient(x^2)` and `divergence(x)` were refused by name in 2.8 already, while in 2.7.0 they and `curl(x)` were products.
+With two, `gradient` and `divergence` were refused by name and `curl` was a parse error. There is no `grad` or `div`:
+both, and `curl` alone, are still variables ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `"gradient(x^2 y + z, [x, y, z])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[2 * x * y, x ^ 2, 1]` |
+| `"divergence([x y, y z, z x], [x, y, z])".ToEntity().Simplify()` | throws `UnhandledParseException` | `x + y + z` |
+| `"curl([-y, x, 0], [x, y, z])".ToEntity().Simplify()` | throws `UnhandledParseException` | `[0, 0, 2]` |
+| `"curl([x, y], [x, y])".ToEntity()` | throws `UnhandledParseException` | throws `InvalidArgumentParseException`: three variables only |
+| `"gradient(x^2)".ToEntity()` | `gradient * x ^ 2` | throws `FunctionArgumentCountException`: give the variables |
+| `"divergence(x)".ToEntity()` | `divergence * x` | throws `FunctionArgumentCountException`: give the variables |
+| `"curl(x)".ToEntity()` | `curl * x` | throws `FunctionArgumentCountException`: give the variables |
+| `"grad(f, x)".ToEntity()` | throws `UnhandledParseException` | unchanged |
+
+---
+
 
 ### A system row that is not a solution declines the system
 

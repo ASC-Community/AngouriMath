@@ -1767,6 +1767,22 @@ namespace AngouriMath
         /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
         public static Entity LambertW(Entity k, Entity z) => new LambertWf(k, z);
 
+        /// <summary>The Riemann zeta function, <c>zeta(s) = sum_(n >= 1) 1/n^s</c> continued to every <c>s</c> but its pole at <c>1</c></summary>
+        /// <param name="s">The argument, any complex number but <c>1</c></param>
+        /// <returns>The <see cref="Entity.Zetaf"/> node, with the parameter <c>1</c></returns>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity Zeta(Entity s) => new Zetaf(s, Integer.One);
+
+        /// <summary>
+        /// The Hurwitz zeta function, <c>zeta(s, a) = sum_(n >= 0) 1/(n + a)^s</c> continued to every <c>s</c> but its pole at
+        /// <c>1</c> (DLMF 25.11.1); <c>zeta(s, 1)</c> is the Riemann zeta function
+        /// </summary>
+        /// <param name="s">The argument, any complex number but <c>1</c></param>
+        /// <param name="a">The parameter, any complex number but <c>0, -1, -2, ...</c></param>
+        /// <returns>The <see cref="Entity.Zetaf"/> node</returns>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity Zeta(Entity s, Entity a) => new Zetaf(s, a);
+
         /// <summary>The upper incomplete gamma function, <c>Gamma(a, z) = int_z^oo t^(a - 1) e^(-t) dt</c></summary>
         /// <param name="parameter">The parameter <c>a</c>, any complex number</param>
         /// <param name="lowerLimit">The lower limit <c>z</c>, any complex number; <c>0</c> only where <c>Re a > 0</c></param>

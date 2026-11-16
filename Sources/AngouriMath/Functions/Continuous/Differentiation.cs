@@ -399,6 +399,17 @@ namespace AngouriMath
                 : MathS.Pow(MathS.e, -this) / (1 + this) * Argument.DerivativeOver(variable);
         }
 
+        partial record Zetaf
+        {
+            // d/da zeta(s, a) = -s zeta(s + 1, a) (DLMF 25.11.17). The derivative in s has no closed form, and is
+            // left a derivative. https://github.com/asc-community/AngouriMath/issues/2182
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable) =>
+                Argument.ContainsNode(variable) || !Parameter.ContainsNode(variable)
+                ? base.InnerDifferentiate(variable)
+                : -Argument * New(Argument + 1, Parameter) * Parameter.DerivativeOver(variable);
+        }
+
         partial record Polygammaf
         {
             // psi^(n)(a)' = psi^(n + 1)(a) a'. The order is whole, so an order that varies has no derivative

@@ -27,8 +27,9 @@ namespace AngouriMath.Core.Compilation
         }
 
         /// <summary>
-        /// The first node in <paramref name="expression"/> that has no compiled form -- a binder, or a node
-        /// whose value is not a number -- and why, or null where there is none.
+        /// The first node in <paramref name="expression"/> that has no compiled form -- a binder, a node
+        /// whose value is not a number, or the zeta function, which is evaluated only at the working
+        /// precision (https://github.com/asc-community/AngouriMath/issues/2182) -- and why, or null where there is none.
         /// </summary>
         internal static (Entity Node, string Message)? Refusal(Entity expression)
         {
@@ -36,6 +37,11 @@ namespace AngouriMath.Core.Compilation
                 if (NotANumber(node) is { } what)
                     return (node,
                         $"`{node.Stringize()}` is {what}, not a number, so it has no compiled form, and evaluating it does not give one.");
+                else if (node is Zetaf)
+                    return (node,
+                        $"`{node.Stringize()}` is the zeta function, which has no compiled form: there is no double-precision "
+                        + "algorithm for it here. Substitute numbers for its arguments and call .Evaled, which evaluates it to the "
+                        + "working precision.");
                 else if (Kind(node) is { } kind)
                     return (node,
                         $"`{node.Stringize()}` is {kind}, which has no compiled form. "

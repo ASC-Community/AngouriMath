@@ -234,6 +234,72 @@ namespace AngouriMath.Core.Antlr
             return MathS.Matrix(components.Length, x.Length, (i, j) => MathS.Derivative(components[i], x[j]));
         }
 
+        // gradient, divergence and curl are taken in the variables listed, as laplacian is; without them
+        // there is no telling which derivatives are meant, and a name alone before a bracket would be
+        // a product, so one argument is refused. https://github.com/asc-community/AngouriMath/issues/2182
+        private static void AssertVariablesGiven(string function, List<Entity> arguments, string example)
+        {
+            if (arguments.Count == 1)
+                throw new FunctionArgumentCountException(
+                    $"{function} is taken in the variables listed as a vector, as in {example}: give them as the second argument");
+            FunctionArgumentCountException.Assert(function, 2, arguments.Count);
+        }
+
+        /// <summary>The components of a vector field written out, as many as the variables it is taken in.</summary>
+        private static Entity[] VectorField(string function, Entity argument, int dimension, string example)
+        {
+            var components = argument is Matrix || argument.InnerSimplified is Matrix
+                ? Components(function, argument)
+                : throw new InvalidArgumentParseException(
+                    $"{function} is taken of a vector field written out, as in {example}, and {argument} is not one");
+            return components.Length == dimension ? components
+                : throw new InvalidArgumentParseException(
+                    $"{function} is taken of a vector field with a component for each variable, and {argument} has {components.Length} for {dimension} variables");
+        }
+
+        /// <summary>
+        /// <c>gradient(f, [x, y, z])</c>: the column of the first derivatives of a scalar <c>f</c>, <c>∇f</c>.
+        /// </summary>
+        internal static Entity Gradient(List<Entity> arguments)
+        {
+            const string example = "gradient(x^2 y, [x, y])";
+            AssertVariablesGiven("gradient", arguments, example);
+            var f = ScalarFunction("gradient", arguments[0], example);
+            return MathS.Vector(Variables("gradient", arguments[1], example).Select(x => MathS.Derivative(f, x)).ToArray());
+        }
+
+        /// <summary>
+        /// <c>divergence(F, [x, y, z])</c>: the sum of the derivative of each component of <c>F</c> in its
+        /// variable, <c>∇ · F</c>.
+        /// </summary>
+        internal static Entity Divergence(List<Entity> arguments)
+        {
+            const string example = "divergence([x y, y z, z x], [x, y, z])";
+            AssertVariablesGiven("divergence", arguments, example);
+            var x = Variables("divergence", arguments[1], example);
+            var components = VectorField("divergence", arguments[0], x.Length, example);
+            return components.Select((component, i) => MathS.Derivative(component, x[i])).Aggregate((sum, term) => sum + term);
+        }
+
+        /// <summary>
+        /// <c>curl(F, [x, y, z])</c>: <c>∇ × F</c>, the column <c>[∂F_3/∂y - ∂F_2/∂z, ∂F_1/∂z - ∂F_3/∂x,
+        /// ∂F_2/∂x - ∂F_1/∂y]</c>, for a field in three variables only, as the vector product is.
+        /// </summary>
+        internal static Entity Curl(List<Entity> arguments)
+        {
+            const string example = "curl([-y, x, 0], [x, y, z])";
+            AssertVariablesGiven("curl", arguments, example);
+            var x = Variables("curl", arguments[1], example);
+            if (x.Length != 3)
+                throw new InvalidArgumentParseException(
+                    $"curl is taken in three variables, as the vector product is, as in {example}, and {x.Length} are given");
+            var f = VectorField("curl", arguments[0], 3, example);
+            return MathS.Vector(
+                MathS.Derivative(f[2], x[1]) - MathS.Derivative(f[1], x[2]),
+                MathS.Derivative(f[0], x[2]) - MathS.Derivative(f[2], x[0]),
+                MathS.Derivative(f[1], x[0]) - MathS.Derivative(f[0], x[1]));
+        }
+
         /// <summary>
         /// <c>hessian(f, [x, y])</c>: the matrix of the second derivatives of a scalar <c>f</c>, the
         /// entry in row <c>i</c> and column <c>j</c> being <c>∂²f/∂x_i∂x_j</c>, the derivative in

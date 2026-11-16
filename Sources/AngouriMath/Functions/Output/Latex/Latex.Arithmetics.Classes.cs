@@ -264,6 +264,17 @@ namespace AngouriMath
                     : $@"\operatorname{{W}}_{{{Branch.Latexize()}}}\left({Argument.Latexize()}\right)";
         }
 
+        partial record Zetaf
+        {
+            // \operatorname, since \zeta\left(s\right) is how a variable named zeta times s draws.
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            /// <inheritdoc/>
+            private protected override string LatexizeNode()
+                => IsRiemann
+                    ? $@"\operatorname{{\zeta}}\left({Argument.Latexize()}\right)"
+                    : $@"\operatorname{{\zeta}}\left({Argument.Latexize()}, {Parameter.Latexize()}\right)";
+        }
+
         partial record Polygammaf
         {
             /// <inheritdoc/>

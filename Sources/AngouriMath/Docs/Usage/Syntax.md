@@ -284,6 +284,15 @@ vector, since a set has no order to give the columns, or written alone for one v
 are computed when parsed, into `derivative` nodes, so `det(jacobian([r cos(t), r sin(t)], [r, t]))`
 simplifies to `r` ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
+`gradient(f, [x, y, z])` is the column of the first derivatives of a scalar `f`, `divergence(F, [x, y, z])`
+the sum of the derivative of each component of `F` in its variable, and `curl(F, [x, y, z])` the column
+`[dF_3/dy - dF_2/dz, dF_1/dz - dF_3/dx, dF_2/dx - dF_1/dy]`, in three variables only, as the vector
+product is. The variables are listed as for the Jacobian, and the field of a divergence or a curl is a
+vector written out with a component for each. Without the variables, `gradient(f)` is refused, saying to
+give them. They too are made of `derivative` nodes when parsed, so `divergence(curl(F, x), x)` and
+`curl(gradient(f, x), x)` simplify to `0`. There is no `grad` or `div`: each is still a variable, and
+`curl` alone is too ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 `(|x|)` is the absolute value of `x`, and prints back as `abs(x)`.
 
 ## Functions
@@ -465,6 +474,19 @@ are those of Corless et al. (1996), as Mathematica's `ProductLog` and mpmath's `
 anything else numeric is evaluated: `lambertw(1)` is `0.5671432904…`, the omega constant
 ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
+**Zeta functions** — `zeta(s)` and `zeta(s, a)`, also `riemannzeta(s)` and `hurwitzzeta(s, a)`, drawn
+`\operatorname{\zeta}`. `zeta(s)` is the Riemann zeta function and `zeta(s, a)` the Hurwitz one,
+`sum_(n >= 0) 1/(n + a)^s` continued to every `s` but its pole at `1`, with `a` anything but
+`0, -1, -2, ...`, where it has no value, as [DLMF 25.11](https://dlmf.nist.gov/25.11) has it; `zeta(s, 1)`
+is `zeta(s)`. It is exact where the value is known: `zeta(0)` is `-1/2`, `zeta(2m)` a rational times
+`pi^(2m)`, so `zeta(2)` is `pi^2/6`, `zeta(-n)` is `-B_(n + 1)(a)/(n + 1)` at every rational `a`, so
+`zeta(-1)` is `-1/12`, and at a whole `s >= 2` and a whole or half-whole `a` it is written in `zeta(s)`:
+`zeta(3, 1/2)` is `7 * zeta(3)` and `zeta(2, 3)` is `pi^2/6 - 5/4`. Anything else numeric, real or
+complex, is evaluated to the working precision. Its derivative in `a` is `-s * zeta(s + 1, a)`; its
+derivative in `s` has no closed form and stays a `derivative`. `Zeta(s)` is still the product
+`Zeta * s`: Mathematica's two-argument `Zeta[s, a]` is another function than Hurwitz's where `Re a < 0`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 **Polygamma functions** — `polygamma(n, z)` `digamma(z)`. The polygamma function `psi^(n)(z)`, the
 `(n + 1)`-th derivative of `ln Gamma(z)` for a whole `n >= 0`, and the digamma function
 `psi(z) = Gamma'(z)/Gamma(z)`, which is `polygamma(0, z)` and prints as `digamma(z)`. Each is evaluated
@@ -477,7 +499,7 @@ argument is exact, a rational times a power of `pi` plus a rational: `polygamma(
 `1/6 * pi ^ 2` and `polygamma(1, 3)` is `1/6 * pi ^ 2 - 5/4`. So is the digamma function there,
 through Euler's constant: `digamma(1)` is `-eulergamma`, `digamma(3)` is `3/2 - eulergamma` and
 `digamma(1/2)` is `(-2) * ln(2) - eulergamma`. An even order from `2` stays as written, since it wants
-`zeta` at an odd number.
+the zeta function at an odd number.
 
 **Incomplete gamma function** — `gamma(a, z)`. With a second argument, `gamma` is the upper incomplete
 gamma function `Gamma(a, z) = int_z^oo t^(a - 1) e^(-t) dt`, as Mathematica's `Gamma[a, z]` and
@@ -619,11 +641,10 @@ of them: `ZZ unite QQ` is `QQ`, `BB intersect ZZ` is `{}`, `ZZ* \ ZZ+` is `{ 0 }
 `{ x in ZZ : x < 0 }`, `ZZ+ \ PP` is `{ x in ZZ+ : not x in PP }` and `QQ \ ZZ` is
 `{ x in QQ : not x in ZZ }`. The tokens take the sign: `ZZ*2` no longer reads as `ZZ * 2`.
 
-**Refused by name** — `trunc`, and the long names of functions to come: `zeta` `riemannzeta`
-`hurwitzzeta`. Each is what some other
+**Refused by name** — `trunc`. It is what some other
 system calls a function, so a caller reaches for it, and left alone it would be read as a product
-under the rule above and answer silently and wrongly, `zeta(2)` as `2 * zeta`; it raises a parse
-error naming the function instead. What each will mean is fixed in
+under the rule above and answer silently and wrongly, `trunc(2.5)` as `2.5 * trunc`; it raises a parse
+error naming the function instead. The names of the functions to come are fixed in
 [#2182](https://github.com/asc-community/AngouriMath/issues/2182).
 
 Some names will not be functions, because what they mean differs between sources or is already
@@ -638,10 +659,7 @@ Some names other systems call functions have no node here yet and are refused wi
 today. `factorize(360)` was `factorize * 360`: the prime factorisation of an integer is
 `factorization(n)`, and `Factorize()` factors an expression in C#. `nextprime(n)` is
 `prime(primepi(n) + 1)`, and `divisors(n)` is counted by `divisorsigma(0, n)` and summed by
-`divisorsigma(1, n)` ([#2449](https://github.com/asc-community/AngouriMath/issues/2449)). The
-gradient of `f` is the row `jacobian([f], [x, y])` and the divergence of `F` is
-`trace(jacobian(F, [x, y]))`, so `gradient(...)` and `divergence(...)` are refused until each is a
-function ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)). Euler's totient is
+`divisorsigma(1, n)` ([#2449](https://github.com/asc-community/AngouriMath/issues/2449)). Euler's totient is
 `phi(n)`; `φ(n)` and `ϕ(n)` are refused, and `φ` alone is still a variable.
 
 ## `sum` and `product`, which declare a name
