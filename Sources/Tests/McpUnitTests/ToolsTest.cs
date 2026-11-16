@@ -41,6 +41,7 @@ public sealed class ToolsTest
     [InlineData("1.5e3 + 2", "1500 + 2")]
     [InlineData("erf(x) + Si(x)", "erf(x) + Si(x)")]
     [InlineData("t_0 + x", "t_0 + x")]
+    [InlineData("beta(a, b) + norm(v, 3)", "beta(a, b) + norm(v, 3)")]
     public void ACorrectSpellingIsNotWarnedAbout(string expression, string parsed)
     {
         var answer = Mcp.Call("am_parse", $$"""{"expression":"{{expression}}"}""");

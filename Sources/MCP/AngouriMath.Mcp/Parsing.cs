@@ -68,6 +68,47 @@ internal static class Parsing
 
     private static readonly ConcurrentDictionary<string, bool> Calls = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Whether the grammar reads <c>name(x, y)</c> as a call. <c>beta</c> and <c>norm</c> are functions of two
+    /// arguments only, and with one are still the product they were, so <see cref="IsFunction"/> says no for them;
+    /// with a comma, a name that is no function does not parse at all, the bracket not being a factor.
+    /// https://github.com/asc-community/AngouriMath/issues/2182
+    /// </summary>
+    internal static bool IsFunctionOfSeveralArguments(string name) => SeveralArgumentCalls.GetOrAdd(name, static candidate =>
+    {
+        using var _ = MathS.Settings.ExplicitParsingOnly.Set(false);
+        try
+        {
+            return MathS.Parse(candidate + "(x, y)").Switch(_ => true, _ => false);
+        }
+        catch (Exception)
+        {
+            return true;
+        }
+    });
+
+    private static readonly ConcurrentDictionary<string, bool> SeveralArgumentCalls = new(StringComparer.Ordinal);
+
+    // Whether the bracket opening at `open` has a comma at its own depth before it closes.
+    private static bool HasACommaAtItsDepth(string source, int open)
+    {
+        var depth = 0;
+        for (var i = open + 1; i < source.Length; i++)
+            switch (source[i])
+            {
+                case ',' when depth == 0:
+                    return true;
+                case '(' or '[' or '{':
+                    depth++;
+                    break;
+                case ')' or ']' or '}':
+                    if (depth-- == 0)
+                        return false;
+                    break;
+            }
+        return false;
+    }
+
     /// <summary>Names people reach for that this grammar spells differently, and that parse
     /// as something else rather than failing. A name the library refuses outright is not
     /// here: its own exception says more than this table could.</summary>
@@ -147,6 +188,8 @@ internal static class Parsing
         {
             var name = m.Groups[1].Value;
             if (IsFunction(name)) continue;
+            // beta(a, b) is the function, where beta(z) is the product.
+            if (HasACommaAtItsDepth(source, m.Index + m.Length - 1) && IsFunctionOfSeveralArguments(name)) continue;
 
             var hint = Misspellings.TryGetValue(name, out var spelling)
                 ? $" Use {spelling}."
