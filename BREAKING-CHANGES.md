@@ -495,8 +495,11 @@ and on this branch, which agree with master before it for every row:
 To read the roots, take the family's `Body` at values of its `Var` in its `Over`, or ask membership. The `n = 0`
 member of each family is the root the finite set held. Every family above was checked by value: its members for indices
 from -8 to 8 are roots to 1e-10, and every root a search from a grid of starts finds in `|Re x| <= 20`, `|Im x| <= 40` (for
-`sin(e^x)`, `|Re x| <= 2.5`) is one of them. A statement that intersects a family with the reals, `e^x = 2 and x in RR`,
-is left as `union({ ln(2) + 2 * pi * i * n }, n in ZZ) /\ RR`, where it was `{ ln(2) }`; solving over the reals answers it.
+`sin(e^x)`, `|Re x| <= 2.5`) is one of them. A family met with the reals or an interval is its real members: `e^x = 2 and
+x in RR` is `{ ln(2) }` as before, and a trigonometric family met with a bounded interval is listed where it was left as
+an intersection, `sin(x) = 1/2 and x in [0; 2pi]` being `{ pi / 6, pi - pi / 6 }` where it was
+`{ pi / 6 + 2 * pi * n_1, pi - pi / 6 + 2 * pi * n_1 } /\ [0; 2 * pi]`, and `cos(x) = 3 sin(x) and x in [0; 2pi]` both of its
+roots where it was one. A family met with an unbounded interval, `sin(x) = 0 and x > 0`, stays an intersection.
 And a sum of powers of a symbolic base, `a^x + (a^2)^x = c`, is left unsolved over the complex numbers, where it was a
 principal root that is not one for every `a`: `(a^2)^x` is `(a^x)^2` only where `ln(a^2) = 2 ln(a)`.
 
