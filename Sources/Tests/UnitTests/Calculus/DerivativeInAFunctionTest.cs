@@ -215,6 +215,40 @@ namespace AngouriMath.Tests.Calculus
             Assert.Equal((Entity)12, "partialderivative(x^3, x)".ToEntity().Substitute("x", 2).Simplify());
         }
 
+        /// <summary>
+        /// A value put in for the variable a total derivative is taken by letting move is put into
+        /// its answer, not into the expression alone: <c>x f^2</c> over <c>f</c> is
+        /// <c>f^2/f' + 2 x f</c>, and at <c>x = p</c> it is that at <c>p</c>. Put into the
+        /// expression alone it was <c>derivative(p f(p)^2, f(x))</c>, which is 0.
+        /// </summary>
+        [Theory]
+        [MemberData(nameof(Functions))]
+        public void AValueForTheVariableGoesIntoTheAnswer(string function)
+        {
+            var node = MathS.Derivative($"x * {F}^2", F);
+            foreach (var point in Points)
+            {
+                var expected = At(WithF($"{F}^2 / {DF} + 2 x {F}", function), point);
+                var actual = WithF(node.Substitute("x", point), function).EvalNumerical().ToNumerics();
+                Assert.True((expected - actual).Magnitude < 1e-9 * (1 + expected.Magnitude), $"at x = {point}: expected {expected}, got {actual}");
+            }
+        }
+
+        /// <summary>
+        /// The same over an expression of the variable: <c>d(x^3)/d(x^2) = 3x/2</c> is 3 at 2, and
+        /// <c>∫ x d(x^2) = 2x^3/3 + C</c>. Where it cannot be taken it is held outside as a lambda
+        /// applied to the value. Over a variable nothing changes: the value goes into the expression.
+        /// </summary>
+        [Fact]
+        public void AValueForWhatItIsTakenOverIsPutIntoTheAnswer()
+        {
+            Assert.Equal((Entity)3, "derivative(x^3, x^2)".ToEntity().Substitute("x", 2).Simplify());
+            Assert.Equal((Entity)Entity.Number.Rational.Create(16, 3), "integral(x, x^2)".ToEntity().Substitute("x", 2).Simplify().Substitute("C", 0).Simplify());
+            Assert.Contains("derivative(x + y, x * y)".ToEntity().Substitute("x", 2).Simplify().Nodes, n => n is Derivativef);
+            Assert.Equal(MathS.Derivative("2 * y", "y"), "derivative(x * y, y)".ToEntity().Substitute("x", 2));
+            Assert.Equal((Entity)2, "derivative(x * y, y)".ToEntity().Substitute("x", 2).Simplify());
+        }
+
         [Fact]
         public void ItIsNotCompiled()
             => Assert.Throws<UncompilableNodeException>(() => MathS.PartialDerivative("x^2", "x").Compile("x"));

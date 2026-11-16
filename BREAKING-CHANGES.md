@@ -42,6 +42,24 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.7.0
 
+### A value for a variable a derivative is taken over goes into its answer
+
+**Silent: a wrong value is corrected.** A derivative or an indefinite integral over an expression `u` of `x`, such as
+`derivative(x^3, x^2)`, is taken by letting `x` move. `Substitute("x", 2)` put the value into the expression alone, which
+asked another question: `derivative(8, x^2)`, which is 0. It now takes the derivative first and puts the value into the
+answer, and where it cannot be taken holds the value outside, as `apply(lambda(x, ...), 2)`. Over a variable nothing
+changes: `derivative(x * y, y)` at `x = 2` is `derivative(2 * y, y)`, as before
+([#230](https://github.com/asc-community/AngouriMath/issues/230)). Substituted, then with `Simplify`:
+
+| Input, at `x = 2` | Was (2.7.0) | Now |
+|---|---|---|
+| `derivative(x^3, x^2)` | `0` | `3` |
+| `derivative(y * sin(x), cos(x))` | `0` | `-y * csc(2) * cos(2)` |
+| `derivative(sin(x!), x^2)` | `0` | `cos(2) * (3/2 - eulergamma) / 2` |
+| `integral(x, x^2)` | `C + 2 * x ^ 2` | `16/3 + C` |
+| `derivative(x^2 + y, x + y)` | `derivative(4 + y, x + y)` | `apply(lambda(x, derivative(x ^ 2 + y, x + y)), 2)` |
+| `derivative(x * apply(f, x)^2, apply(f, x))` | `derivative(2 * apply(f, 2) ^ 2, apply(f, x))` | `4 * apply(f, 2) + apply(f, 2) ^ 2 / apply(lambda(x, derivative(apply(f, x), x)), 2)` |
+
 ### The total derivative in an unknown function of a variable is answered
 
 **Not silent: what was left unevaluated is answered.** `derivative(expr, u)` over an expression `u` that varies in

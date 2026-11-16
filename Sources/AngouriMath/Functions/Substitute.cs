@@ -804,6 +804,8 @@ namespace AngouriMath
                     return value;
                 // An indefinite integral is a function of its variable, as a derivative is; a definite
                 // one binds it.
+                if (Range is null && TakenThenSubstituted(this, Var, x, value) is { } taken)
+                    return taken;
                 if (Range is null && EvaluatedAtAPoint(this, Expression, Var, (body, variable) => New(body, variable, null), x, value) is { } atAPoint)
                     return atAPoint;
                 var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
@@ -953,6 +955,29 @@ namespace AngouriMath
             return null;
         }
 
+        /// <summary>
+        /// A derivative or an indefinite integral, <paramref name="operation"/>, taken over an
+        /// expression <paramref name="over"/> rather than a variable, with a value put in for a
+        /// variable <paramref name="over"/> mentions; <see langword="null"/> where it mentions none.
+        /// </summary>
+        /// <remarks>
+        /// <c>derivative(x^3, x^2)</c> is <c>3x/2</c>, taken by letting <c>x</c> move, so at
+        /// <c>x = 2</c> it is <c>3</c>. Put into the expression alone, the value made
+        /// <c>derivative(8, x^2)</c>, which is 0: the question changed rather than its answer
+        /// being evaluated. So it is taken first and the value put into the answer, or, where it
+        /// cannot be taken, held outside it as <c>apply(lambda(x, derivative(x^3, x^2)), 2)</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/230
+        /// </remarks>
+        private static Entity? TakenThenSubstituted<TOperation>(TOperation operation, Entity over, Entity x, Entity value)
+            where TOperation : Entity
+        {
+            if (over is Variable || x is not Variable variable || !over.ContainsNode(variable))
+                return null;
+            return operation.InnerSimplified is var taken && taken is not TOperation
+                ? taken.Substitute(variable, value)
+                : new Lambda(variable, operation).Apply(value);
+        }
+
         partial record Derivativef
         {
             /// <inheritdoc/>
@@ -960,6 +985,8 @@ namespace AngouriMath
             {
                 if (this == x)
                     return value;
+                if (TakenThenSubstituted(this, Var, x, value) is { } taken)
+                    return taken;
                 if (EvaluatedAtAPoint(this, Expression, Var, (body, variable) => New(body, variable), x, value) is { } atAPoint)
                     return atAPoint;
                 var (postSubs, boundName) = SubstituteUnderABinder(Expression, Var, x, value);
@@ -977,7 +1004,8 @@ namespace AngouriMath
             /// for <c>x</c> goes into the slot as well as the expression: in <c>x f(x)^2</c> the
             /// slot at <c>x = 2</c> is <c>f(2)</c>. Where the slot would stop being one, as with a
             /// value put in for the slot itself, the derivative is taken first and the value put
-            /// into its answer.
+            /// into its answer, or, where it cannot be taken, held outside it, as for
+            /// <see cref="Derivativef"/>.
             /// </remarks>
             public override Entity Substitute(Entity x, Entity value)
             {
@@ -995,6 +1023,7 @@ namespace AngouriMath
                     return New(Expression.Substitute(x, value), slot);
                 return InnerSimplified is var taken && taken is not PartialDerivativef
                     ? taken.Substitute(x, value)
+                    : x is Variable variable ? new Lambda(variable, this).Apply(value)
                     : New(Expression.Substitute(x, value), slot);
             }
         }

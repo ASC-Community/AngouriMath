@@ -757,9 +757,9 @@ namespace AngouriMath
             // taken in. One that cannot be taken is kept, applied, rather than answered wrongly.
             // https://github.com/asc-community/AngouriMath/issues/2189
             private static bool IsAFunctionOf(Entity body, Variable parameter)
-                => body is Derivativef { Var: var variable } && variable == parameter
+                => body is Derivativef { Var: var variable } && variable.ContainsNode(parameter)
                    || body is PartialDerivativef { Var: var slot } && slot.ContainsNode(parameter)
-                   || body is Integralf { Var: var integrated, Range: null } && integrated == parameter;
+                   || body is Integralf { Var: var integrated, Range: null } && integrated.ContainsNode(parameter);
 
             private Entity TakenThenApplied(Variable parameter, Entity body, Entity first, LList<Entity> rest, bool isExact)
             {
