@@ -81,6 +81,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (fractioned.Count == 0)
                 return false; // means that one can either be solved polynomially or unsolvable at all
 
+            // Raising clears a radical only where nothing else in the equation holds one. In
+            // sqrt(x) + x - cos(sqrt(x)) + 1 = 0 the rest has sqrt(x) inside the cosine, so the
+            // square (x - cos(sqrt(x)) + 1)^2 = x still holds it. Newton's method then answered the
+            // square with 0.4557, which is no root of the equation, and the empty set left after it
+            // was dropped claimed there is none -- where x = 0 is one. Left to the routes below.
+            if (HasARadicalOf(normalPolynom, x) || fractioned.Any(term => HasARadicalOf(term.multiplier, x)))
+                return false;
+
             // starting from i = 1 check if all are equal to [0]
             static bool BasesAreEqual(List<(Entity main, Integer pow)> f1,
                 List<(Entity main, Integer pow)> f2)
@@ -139,6 +147,11 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 dst = new Set.FiniteSet(candidates.Select(root => (Entity)root.Provided(expr.Substitute(x, root).EqualTo(Integer.Zero))));
             return true;
         }
+
+        /// <summary>Whether <paramref name="expr"/> has a power of something in <paramref name="x"/> to an exponent that is not whole.</summary>
+        private static bool HasARadicalOf(Entity expr, Variable x)
+            => expr.Nodes.Any(node => node is Powf(var @base, var exponent)
+                && @base.ContainsNode(x) && exponent.InnerSimplified is not Integer);
 
         /// <summary>
         /// <c>m_1 sqrt(A) + m_2 sqrt(B) + P = 0</c>, two different square roots and nothing else
