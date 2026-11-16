@@ -455,6 +455,53 @@ unchanged ([#2450](https://github.com/asc-community/AngouriMath/issues/2450)).
 
 ---
 
+### A family of roots is an indexed union, and an exponential equation has all of its roots
+
+**Not silent: the answer is no longer a `FiniteSet`.** Over the complex numbers `a^f = c` is `f ln(a) = ln(c) + 2 pi i n`
+for every whole `n`, and the solver answered the `n = 0` root alone: `e^x = 2` was `{ ln(2) }`, a finite set, which claims
+to be every root. The roots are a family, and a family of roots is now written as the indexed union of its members over
+the whole numbers, which binds its index and decides membership: `4 * pi in union({ 2 * pi * n }, n in ZZ)` is `True`.
+The trigonometric, remainder and Lambert W families, which were finite sets with a free `n_1` that nothing said ranged over
+the whole numbers, are written the same way, in either codomain. Over the reals an exponential equation keeps its one root.
+A system's rows are a matrix, whose entries cannot bind a name, so a system's answer keeps a free `n_1`, named with its set
+by `SolveWithParameters`. Where the inner value of a composite is zero for one index, that index is left out: `sin(e^x) = 0`
+was `{ ln(2 * pi * n_1), ln(pi + 2 * pi * n_1) }`, which has `ln(0)` at `n_1 = 0`, and over the reals has no real root for
+a negative `n_1` ([#2319](https://github.com/asc-community/AngouriMath/issues/2319)). Measured with `Solve("x")` on 2.7.0
+and on this branch, which agree with master before it for every row:
+
+| Input | Was (2.7.0) | Now |
+|---|---|---|
+| `e^x = 2` | `{ ln(2) }` | `union({ ln(2) + 2 * pi * i * n }, n in ZZ)` |
+| `e^x = -1` | `{ ln(-1) }` | `union({ ln(-1) + 2 * pi * i * n }, n in ZZ)` |
+| `2^x = 5` | `{ log(2, 5) }` | `union({ log(2, 5) + 2 * pi * i * n / ln(2) }, n in ZZ)` |
+| `e^(2x) - 3e^x + 2 = 0` | `{ 0, ln(2) }` | `union({ 2 * pi * i * n, ln(2) + 2 * pi * i * n }, n in ZZ)` |
+| `4^x - 3*2^x + 2 = 0` | `{ 0, 1 }` | `union({ 2 * pi * i * n / ln(2), 1 + 2 * pi * i * n / ln(2) }, n in ZZ)` |
+| `3^(x+1) = 2^(x-1)` | `{ -(ln(3) + ln(2)) / (ln(3) + -ln(2)) }` | `union({ -(ln(3) + ln(2) + -2 * pi * i * n) / (ln(3) + -ln(2)) }, n in ZZ)` |
+| `(-2)^x + 4^x = 0` | nine roots `ln(-0.0000594409382914630742369456462004251307007507421076297760009765625 + 0.00017773270224432657113204647725268614522065035998821258544921875i)`, ..., each a member to double precision ([#2424](https://github.com/asc-community/AngouriMath/issues/2424)) | `union({ -(-ln(-1) + -2 * pi * i * n) / (ln(-2) + -ln(4)) }, n in ZZ)`, which is `i pi (2 n + 1) / (i pi - ln(2))` |
+| `2*3^x = 5*7^x` | `{ ln(0.339111288997514914722586354400846175849437713623046875) }` | `union({ -(-ln(5/2) + -2 * pi * i * n) / (ln(3) + -ln(7)) }, n in ZZ)` |
+| `sinh(x) = 1` | `{ ln((2 - 2 * sqrt(2)) / 2), ln((2 + 2 * sqrt(2)) / 2) }` | `union({ ln((2 - 2 * sqrt(2)) / 2) + 2 * pi * i * n, ln((2 + 2 * sqrt(2)) / 2) + 2 * pi * i * n }, n in ZZ)` |
+| `x e^x = 2` | `{ lambertw(n_1, 2) }` | `union({ lambertw(n, 2) }, n in ZZ)` |
+| `sin(x) = 1/2`, either codomain | `{ pi / 6 + 2 * pi * n_1, pi - pi / 6 + 2 * pi * n_1 }` | `union({ pi / 6 + 2 * pi * n, pi - pi / 6 + 2 * pi * n }, n in ZZ)` |
+| `tan(x) = 1`, either codomain | `{ pi / 4 + pi * n_1 }` | `union({ pi / 4 + pi * n }, n in ZZ)` |
+| `x mod 4 = 1`, either codomain | `{ 1 + 4 * n_1 }` | `union({ 1 + 4 * n }, n in ZZ)` |
+| `cos(x) = 3 sin(x)`, either codomain | `{ ln(sqrt(4/5 + 3/5 * i)) / i, ln(-sqrt(4/5 + 3/5 * i)) / i }` | `union({ ln(sqrt(4/5 + 3/5 * i)) / i + 2 * pi * n, ln(-sqrt(4/5 + 3/5 * i)) / i + 2 * pi * n }, n in ZZ)` |
+| `e^(i x) = 1`, either codomain | `{ 0 }` | `union({ 2 * pi * i * n / i }, n in ZZ)` |
+| `e^(sin(x)) = 1` | `{ 2 * pi * n_1, pi + 2 * pi * n_1 }` | `union(union({ arcsin(2 * pi * i * n) + 2 * pi * m, pi - arcsin(2 * pi * i * n) + 2 * pi * m }, m in ZZ), n in ZZ)` |
+| `sin(e^x) = 0` | `{ ln(2 * pi * n_1), ln(pi + 2 * pi * n_1) }` | `union(union({ ln(2 * pi * m) + 2 * pi * i * n }, m in ZZ \ { 0 }), n in ZZ) \/ union(union({ ln(pi + 2 * pi * n) + 2 * pi * i * m }, m in ZZ), n in ZZ)` |
+| `sin(e^x) = 0` over the reals | `{ ln(2 * pi * n_1), ln(pi + 2 * pi * n_1) }` | `union({ ln(2 * pi * n) }, n in ZZ /\ [1; +oo)) \/ union({ ln(pi + 2 * pi * n) }, n in ZZ /\ [0; +oo))` |
+| `e^x = 2`, `2^x = 5`, `sinh(x) = 1` over the reals | `{ ln(2) }`, `{ log(2, 5) }`, `{ ln((2 + 2 * sqrt(2)) / 2) }` | unchanged |
+| `MathS.Equations("e^x - 2", "y - 2x").Solve("x", "y")` | `[[ln(2), 2 * ln(2)]]` | `[[ln(2) + 2 * pi * i * n_1, 2 * (ln(2) + 2 * pi * i * n_1)]]`, with `(n_1, ZZ)` from `SolveWithParameters` |
+
+To read the roots, take the family's `Body` at values of its `Var` in its `Over`, or ask membership. The `n = 0`
+member of each family is the root the finite set held. Every family above was checked by value: its members for indices
+from -8 to 8 are roots to 1e-10, and every root a search from a grid of starts finds in `|Re x| <= 20`, `|Im x| <= 40` (for
+`sin(e^x)`, `|Re x| <= 2.5`) is one of them. A statement that intersects a family with the reals, `e^x = 2 and x in RR`,
+is left as `union({ ln(2) + 2 * pi * i * n }, n in ZZ) /\ RR`, where it was `{ ln(2) }`; solving over the reals answers it.
+And a sum of powers of a symbolic base, `a^x + (a^2)^x = c`, is left unsolved over the complex numbers, where it was a
+principal root that is not one for every `a`: `(a^2)^x` is `(a^x)^2` only where `ln(a^2) = 2 ln(a)`.
+
+---
+
 ### Two parameters of a system's answer that are independent have two names
 
 **Silent: a part of the solutions becomes all of them.** Solving a system, each equation's roots bring their own
