@@ -175,12 +175,19 @@ static class Extractor
         @"<!--\s*amcheck:(?<lang>cs|fs)(?<rest>[^>]*?)-->\s*<pre><code>(?<body>.*?)</code></pre>",
         RegexOptions.Compiled | RegexOptions.Singleline);
     static readonly Regex AnyHtmlBlock = new(@"<pre><code>", RegexOptions.Compiled);
+    /// What a site page says a sample prints: the `pre code` block straight after it, introduced
+    /// by a paragraph that is only `Prints:` (or `Output:`, as on the wiki). The block may carry a
+    /// class, which the site uses to stop highlighting it as code.
+    static readonly Regex HtmlOutput = new(
+        @"\G\s*<p>\s*(?<lead>[^<]*?)\s*</p>\s*<pre><code(?:\s[^>]*)?>(?<body>.*?)</code></pre>",
+        RegexOptions.Compiled | RegexOptions.Singleline);
 
     /// <summary>
     /// The website's pages are HTML, and a `pre code` block there could be C#, F#, shell or
     /// CMake with nothing to say which. So a block is checked only where the page says to,
     /// with a preceding `&lt;!-- amcheck:cs --&gt;` or `&lt;!-- amcheck:fs --&gt;`, and the count of
-    /// unannotated blocks is reported rather than passed over.
+    /// unannotated blocks is reported rather than passed over. What the sample prints is the block
+    /// after it, when a paragraph saying `Prints:` introduces that block.
     /// </summary>
     public static List<Snippet> FromHtmlDirectory(string dir, out int unannotated)
     {
@@ -206,11 +213,19 @@ static class Extractor
                     Mode = m.Groups["rest"].Value.Contains("compile") ? Mode.CompileOnly : Mode.Run,
                     Reason = m.Groups["rest"].Value.Trim(),
                     Body = Decode(m.Groups["body"].Value).Split('\n').Select(l => l.TrimEnd()).ToList(),
+                    Expected = FollowingHtmlOutput(text, m.Index + m.Length),
                 });
             }
         }
         unannotated = total - annotated;
         return all;
+    }
+
+    static string FollowingHtmlOutput(string text, int afterSample)
+    {
+        var m = HtmlOutput.Match(text, afterSample);
+        if (!m.Success || !OutputLead.IsMatch(m.Groups["lead"].Value)) return null;
+        return string.Join("\n", Decode(m.Groups["body"].Value).Split('\n').Select(l => l.TrimEnd())).Trim('\n');
     }
 
     /// The page as a reader reaches it: `quickstart/index.html` is `quickstart`.

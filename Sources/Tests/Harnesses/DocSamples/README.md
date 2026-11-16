@@ -45,7 +45,9 @@ must say**, which is how the missing `using System.Numerics;` and
 
 **What a page claims it prints** is the next bare (untagged) fence, and only when the line
 before that fence is `Output:` — or `Prints:`, `Should print:`, `Will print:`, `Returns:`.
-A bare fence used for anything else is never mistaken for an expectation. A sample that
+A bare fence used for anything else is never mistaken for an expectation. On a website page
+the same rule reads HTML: the `pre code` block straight after an annotated sample, when a
+paragraph that is only `Prints:` (or one of the others) introduces it. A sample that
 documents its output in trailing comments on its `Console.WriteLine` lines is read the same
 way, as long as *every* printing line carries one; a partly annotated sample is reported as
 unchecked rather than checked against half of its output.
