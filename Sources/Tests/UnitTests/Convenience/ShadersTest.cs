@@ -236,6 +236,7 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("sum(x, x in {1, 2}) + y", "sum(x, x in { 1, 2 })")]
         [InlineData("x + integral(y, y)", "integral(y, y)")]
         [InlineData("x + limit(y, y, 0)", "limit(y, y, 0)")]
+        [InlineData("partialderivative(x^2, x) + y", "partialderivative(x ^ 2, x)")]
         [InlineData("sin(x > 0)", "x > 0")]
         [InlineData("x + factorization(y)", "factorization(y)")]
         public void WhatCompileRefusesIsDeclinedWithItsMessage(string input, string at)
