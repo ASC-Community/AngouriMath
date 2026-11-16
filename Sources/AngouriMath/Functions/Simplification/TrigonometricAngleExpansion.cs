@@ -12,7 +12,10 @@ namespace AngouriMath.Functions
 {
     internal static class TrigonometricAngleExpansion
     {
-        [ConstantField] internal static readonly Rational OneHalf = 0.5.ToNumber().Downcast<Rational>();
+        // Exact, not 0.5 rounded to a rational: that rounding reads MathS.Settings.FloatToRationalIterCount,
+        // which a solve sets to 0, and a first use inside one left 0.5 a decimal and failed the cast, so that
+        // this type could not be initialized for the rest of the process.
+        [ConstantField] internal static readonly Rational OneHalf = Rational.Create(1, 2);
         
         /// <summary>
         /// We are given angle thetaRat and sin(theta)
