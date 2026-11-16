@@ -156,6 +156,24 @@ namespace AngouriMath.Tests.Convenience
             }
         }
 
+        // MathS.Settings.UnicodeOutput (#2469) respells printed expressions with glyphs; shader
+        // source is code, and must be the same text whatever the display setting says.
+        [Theory]
+        [InlineData("sqrt(x^2 + y^2) - 1")]
+        [InlineData("x^2 * y^(-3) - pi * e^(-x)")]
+        [InlineData("iverson(x <= y) * (x - y)^2")]
+        [InlineData("x mod 3 - y^(1/3)")]
+        public void UnicodeOutputDoesNotReachShaderSource(string input)
+        {
+            var outputs = new[] { new KeyValuePair<string, Entity>("r", input) };
+            var hlsl = MathS.Shaders.Hlsl(outputs);
+            var glsl = MathS.Shaders.Glsl(outputs);
+            Assert.True(hlsl.Succeeded && glsl.Succeeded, hlsl.ToString() + glsl.ToString());
+            using var _ = MathS.Settings.UnicodeOutput.Set(true);
+            Assert.Equal(hlsl.Code, MathS.Shaders.Hlsl(outputs).Code);
+            Assert.Equal(glsl.Code, MathS.Shaders.Glsl(outputs).Code);
+        }
+
         [Fact]
         public void ARepeatedSubexpressionIsComputedOnce()
         {
