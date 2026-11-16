@@ -104,7 +104,8 @@ internal static class Resources
           `divisorsigma(k, n)` sums the `k`-th powers of the divisors of `n`,
           `factorization(n)`, the prime factorisation of `n` as a node that is not the number, and
           `primefactors(n)`, the set of the primes dividing `n`
-        - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, `lambertw(z)` and `lambertw(k, z)` (also `productlog`), and `gamma(a, z)`, the
+        - special functions: `erf erfc erfi Ei li Si Ci Shi Chi`, `digamma(z)` and `polygamma(n, z)`, `lambertw(z)` and `lambertw(k, z)` (also `productlog`),
+          `zeta(s)` and `zeta(s, a)`, Riemann's and Hurwitz's (also `riemannzeta`, `hurwitzzeta`), and `gamma(a, z)`, the
           upper incomplete gamma function
         - sets: `card powerset union intersection complement image preimage domain aleph
           iverson`
@@ -122,17 +123,18 @@ internal static class Resources
           its operands kept in their order, and `cross([x, y])` of a vector written out is `[-y, x]`;
           `resultant(p, q, x)` eliminates `x`
         - `forwarddifference(f, k)`, which is `f(k + 1) - f(k)` once parsed
-        - `laplacian(f, [x, y])`, `jacobian(F, [x, y])` and `hessian(f, [x, y])`, made of
-          `derivative` nodes when parsed; the variables are a vector, or one name
+        - `laplacian(f, [x, y])`, `jacobian(F, [x, y])`, `hessian(f, [x, y])`, `gradient(f, [x, y])`,
+          `divergence(F, [x, y])` and `curl(F, [x, y, z])`, made of `derivative` nodes when parsed;
+          the variables are a vector, or one name. No `grad` or `div`: those are variables
 
         ## Spellings worth knowing (verified against the grammar, not guessed)
 
         | You might write | Reality |
         |---|---|
         | `arcsinh(x)` | **refused.** The inverse hyperbolics are area functions: write `arsinh`, `asinh` or `arsh` |
-        | `trunc`, `zeta` and other long names of functions to come | refused by name — not yet in the library |
+        | `trunc` | refused by name — not yet in the library |
         | `heaviside`, `unitstep`, `isprime`, `fractionalpart`, `quotient`, `pochhammer` | refused, with what to write: `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2`; `n in PP`; `x mod 1`; `floor(a / b)` |
-        | `factorize`, `nextprime`, `divisors`, `gradient`, `divergence`, `φ` | refused, with what to write: `factorization(n)`, or `Factorize()` in C# for an expression; `prime(primepi(n) + 1)`; `divisorsigma(0, n)` and `divisorsigma(1, n)`; `jacobian([f], [x, y])`; `trace(jacobian(F, [x, y]))`; `phi(n)` |
+        | `factorize`, `nextprime`, `divisors`, `φ` | refused, with what to write: `factorization(n)`, or `Factorize()` in C# for an expression; `prime(primepi(n) + 1)`; `divisorsigma(0, n)` and `divisorsigma(1, n)`; `phi(n)` |
         | `elementin(x, A)`, `setsubtraction(A, B)`, `impl(a, b)` | **silently become products.** Use the infix `x in A`, `A \ B`, `a -> b` |
         | `union(A, B)`, `intersection(A, B)` | refused: both are indexed, `union(A_i, i in I)`. For two sets write `A \/ B` and `A /\ B` |
         | `7 mod 3` | `mod` is FLOORED: `-7 mod 3` is `2`, not `-1` |

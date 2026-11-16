@@ -151,6 +151,7 @@ namespace AngouriMath
         [EntityJsonConverter] partial record Lif;
         [EntityJsonConverter] partial record Polygammaf;
         [EntityJsonConverter] partial record LambertWf;
+        [EntityJsonConverter] partial record Zetaf;
         [EntityJsonConverter] partial record IncompleteGammaf;
         [EntityJsonConverter] partial record Sif;
         [EntityJsonConverter] partial record Cif;

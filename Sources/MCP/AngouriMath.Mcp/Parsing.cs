@@ -23,7 +23,7 @@ namespace AngouriMath.Mcp;
 ///     gets it silently squared. (MathS.cs documents this on ExplicitParsingOnly.)
 ///   * an unknown identifier becomes implicit multiplication: `beta(z)` is the product
 ///     `beta * z`, not the beta function. The library refuses some such names by name —
-///     `trunc`, the long names of functions to come such as `zeta`, and the arc- spellings of
+///     `trunc`, names such as `isprime` that are not functions here, and the arc- spellings of
 ///     the inverse hyperbolics — so those fail loudly; the rest degrade with nothing said,
 ///     because refusing every unknown name is refusing `a(b + c)`.
 ///

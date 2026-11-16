@@ -239,6 +239,8 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("partialderivative(x^2, x) + y", "partialderivative(x ^ 2, x)")]
         [InlineData("sin(x > 0)", "x > 0")]
         [InlineData("x + factorization(y)", "factorization(y)")]
+        [InlineData("x + zeta(x)", "zeta(x)")]
+        [InlineData("zeta(5/2, x) * y", "zeta(5/2, x)")]
         public void WhatCompileRefusesIsDeclinedWithItsMessage(string input, string at)
         {
             Entity expr = input;

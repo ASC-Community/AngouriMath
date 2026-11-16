@@ -157,6 +157,13 @@ namespace AngouriMath
                 => Branch == Integer.Zero ? $"sympy.LambertW({Argument.ToSymPy()})" : $"sympy.LambertW({Argument.ToSymPy()}, {Branch.ToSymPy()})";
         }
 
+        public partial record Zetaf
+        {
+            // SymPy's zeta(s, a) is the Hurwitz zeta function, and zeta(s) the Riemann one.
+            internal override string ToSymPy()
+                => IsRiemann ? $"sympy.zeta({Argument.ToSymPy()})" : $"sympy.zeta({Argument.ToSymPy()}, {Parameter.ToSymPy()})";
+        }
+
         public partial record Polygammaf
         {
             internal override string ToSymPy()

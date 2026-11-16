@@ -680,6 +680,11 @@ atom returns[Entity value]
     | 'productlog(' args = function_arguments ')' { if (Assert("productlog", (2, 1), $args.list.Count)) $value = MathS.LambertW($args.list[0], $args.list[1]); else $value = MathS.LambertW($args.list[0]); }
     | 'polygamma(' args = function_arguments ')' { Assert("polygamma", 2, $args.list.Count); $value = MathS.Polygamma($args.list[0], $args.list[1]); }
     | 'digamma(' args = function_arguments ')' { Assert("digamma", 1, $args.list.Count); $value = MathS.Digamma($args.list[0]); }
+    /* The Riemann zeta function zeta(s), and the Hurwitz one zeta(s, a), also by their long names.
+       https://github.com/asc-community/AngouriMath/issues/2182 */
+    | 'zeta(' args = function_arguments ')' { if (Assert("zeta", (1, 2), $args.list.Count)) $value = MathS.Zeta($args.list[0]); else $value = MathS.Zeta($args.list[0], $args.list[1]); }
+    | 'riemannzeta(' args = function_arguments ')' { Assert("riemannzeta", 1, $args.list.Count); $value = MathS.Zeta($args.list[0]); }
+    | 'hurwitzzeta(' args = function_arguments ')' { Assert("hurwitzzeta", 2, $args.list.Count); $value = MathS.Zeta($args.list[0], $args.list[1]); }
     /* The trigonometric and hyperbolic integrals. https://github.com/asc-community/AngouriMath/issues/1501 */
     | 'Si(' args = function_arguments ')' { Assert("Si", 1, $args.list.Count); $value = MathS.Si($args.list[0]); }
     | 'Ci(' args = function_arguments ')' { Assert("Ci", 1, $args.list.Count); $value = MathS.Ci($args.list[0]); }
@@ -699,6 +704,9 @@ atom returns[Entity value]
     | 'forwarddifference(' args = function_arguments ')' { Assert("forwarddifference", 2, $args.list.Count); $value = ParsingHelpers.ForwardDifference($args.list[0], $args.list[1]); }
     | 'jacobian(' args = function_arguments ')' { Assert("jacobian", 2, $args.list.Count); $value = ParsingHelpers.Jacobian($args.list[0], $args.list[1]); }
     | 'hessian(' args = function_arguments ')' { Assert("hessian", 2, $args.list.Count); $value = ParsingHelpers.Hessian($args.list[0], $args.list[1]); }
+    | 'gradient(' args = function_arguments ')' { $value = ParsingHelpers.Gradient($args.list); }
+    | 'divergence(' args = function_arguments ')' { $value = ParsingHelpers.Divergence($args.list); }
+    | 'curl(' args = function_arguments ')' { $value = ParsingHelpers.Curl($args.list); }
     | 'resultant(' args = function_arguments ')' { Assert("resultant", 3, $args.list.Count); $value = ParsingHelpers.Resultant($args.list[0], $args.list[1], $args.list[2]); }
     /* The complex conjugate, by its name and by the shorter one other systems use.
        https://github.com/asc-community/AngouriMath/issues/2145 */
@@ -723,14 +731,6 @@ atom returns[Entity value]
        between a missing function and a wrong answer. */
 
     | 'trunc(' args = function_arguments ')' { $value = NotImplementedFunction("trunc", "rounding functions"); }
-    /* Names of functions to come, reserved so that each is refused rather than read as a
-       product until it is implemented: zeta(s) was zeta * s. Only names no one writes as a
-       variable before a bracket; beta, norm, grad, div, curl and the other short ones are left
-       as products until each lands. The names and their conventions are in
-       https://github.com/asc-community/AngouriMath/issues/2182 */
-    | 'zeta(' args = function_arguments ')' { $value = NotImplementedFunction("zeta", "Riemann or Hurwitz zeta function yet"); }
-    | 'riemannzeta(' args = function_arguments ')' { $value = NotImplementedFunction("riemannzeta", "Riemann zeta function yet"); }
-    | 'hurwitzzeta(' args = function_arguments ')' { $value = NotImplementedFunction("hurwitzzeta", "Hurwitz zeta function yet"); }
     /* Names that will not be functions, refused with the spelling to use: what they mean is
        ambiguous between sources, or is already written exactly another way. */
     | 'heaviside(' args = function_arguments ')' { $value = NotAFunctionHere("heaviside", "its value at 0 is 0, 1/2 or 1 by source; write iverson(x > 0), iverson(x >= 0) or (1 + sgn(x))/2"); }
@@ -743,13 +743,10 @@ atom returns[Entity value]
     | 'quotient(' args = function_arguments ')' { $value = NotAFunctionHere("quotient", "write floor(a / b)"); }
     /* Names another system calls a function and this library has no node for, each refused
        with what can be written today: factorize(360) was factorize * 360, and φ(10) was φ * 10.
-       factorize, nextprime and divisors: https://github.com/asc-community/AngouriMath/issues/2449.
-       gradient and divergence: https://github.com/asc-community/AngouriMath/issues/2182 */
+       factorize, nextprime and divisors: https://github.com/asc-community/AngouriMath/issues/2449. */
     | 'factorize(' args = function_arguments ')' { $value = NotAFunctionHere("factorize", "the prime factorisation of an integer is factorization(n), and in C# Factorize() factors an expression"); }
     | 'nextprime(' args = function_arguments ')' { $value = NotImplementedFunction("nextprime", "nextprime yet; prime(primepi(n) + 1) is the least prime greater than n"); }
     | 'divisors(' args = function_arguments ')' { $value = NotImplementedFunction("divisors", "set of divisors yet; divisorsigma(0, n) counts them and divisorsigma(1, n) is their sum"); }
-    | 'gradient(' args = function_arguments ')' { $value = NotImplementedFunction("gradient", "gradient yet; jacobian([f], [x, y]) is the row of partial derivatives of f"); }
-    | 'divergence(' args = function_arguments ')' { $value = NotImplementedFunction("divergence", "divergence yet; trace(jacobian(F, [x, y])) is the divergence of F"); }
     | 'φ(' args = function_arguments ')' { $value = NotAFunctionHere("φ", "Euler's totient is written phi(n)"); }
     | 'ϕ(' args = function_arguments ')' { $value = NotAFunctionHere("ϕ", "Euler's totient is written phi(n)"); }
     | 'domain(' args = function_arguments ')' 

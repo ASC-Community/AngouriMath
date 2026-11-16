@@ -3374,6 +3374,28 @@ AngouriMath.Entity+Xorf.ToString() : System.String
 AngouriMath.Entity+Xorf.ctor(AngouriMath.Entity, AngouriMath.Entity)
 AngouriMath.Entity+Xorf.op_Equality(AngouriMath.Entity+Xorf, AngouriMath.Entity+Xorf) : System.Boolean
 AngouriMath.Entity+Xorf.op_Inequality(AngouriMath.Entity+Xorf, AngouriMath.Entity+Xorf) : System.Boolean
+AngouriMath.Entity+Zetaf.<Clone>$() : AngouriMath.Entity+Zetaf
+AngouriMath.Entity+Zetaf.Argument { } : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.Codomain { } : AngouriMath.Core.Domain
+AngouriMath.Entity+Zetaf.Deconstruct(AngouriMath.Entity&, AngouriMath.Entity&) : System.Void
+AngouriMath.Entity+Zetaf.EqualityContract { } : System.Type
+AngouriMath.Entity+Zetaf.Equals(AngouriMath.Entity+Function) : System.Boolean
+AngouriMath.Entity+Zetaf.Equals(AngouriMath.Entity+Zetaf) : System.Boolean
+AngouriMath.Entity+Zetaf.Equals(System.Object) : System.Boolean
+AngouriMath.Entity+Zetaf.GetHashCode() : System.Int32
+AngouriMath.Entity+Zetaf.InitDirectChildren() : AngouriMath.Entity[]
+AngouriMath.Entity+Zetaf.InnerDifferentiate(AngouriMath.Entity+Variable) : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.InnerSimplify(System.Boolean) : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.NodeFirstChild { } : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.NodeSecondChild { } : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.Parameter { } : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.PrintMembers(System.Text.StringBuilder) : System.Boolean
+AngouriMath.Entity+Zetaf.Replace(System.Func<AngouriMath.Entity,AngouriMath.Entity>) : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.Substitute(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.Entity+Zetaf.ToString() : System.String
+AngouriMath.Entity+Zetaf.ctor(AngouriMath.Entity, AngouriMath.Entity)
+AngouriMath.Entity+Zetaf.op_Equality(AngouriMath.Entity+Zetaf, AngouriMath.Entity+Zetaf) : System.Boolean
+AngouriMath.Entity+Zetaf.op_Inequality(AngouriMath.Entity+Zetaf, AngouriMath.Entity+Zetaf) : System.Boolean
 AngouriMath.Entity.<Clone>$() : AngouriMath.Entity
 AngouriMath.Entity.Abs() : AngouriMath.Entity
 AngouriMath.Entity.AdditiveIdentity { } : AngouriMath.Entity
@@ -3914,6 +3936,8 @@ AngouriMath.MathS.VectorLength(AngouriMath.Entity+Matrix) : AngouriMath.Entity
 AngouriMath.MathS.ZeroMatrix(System.Int32) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.ZeroMatrix(System.Int32, System.Int32) : AngouriMath.Entity+Matrix
 AngouriMath.MathS.ZeroVector(System.Int32) : AngouriMath.Entity+Matrix
+AngouriMath.MathS.Zeta(AngouriMath.Entity) : AngouriMath.Entity
+AngouriMath.MathS.Zeta(AngouriMath.Entity, AngouriMath.Entity) : AngouriMath.Entity
 AngouriMath.MathS.e : AngouriMath.Entity+Variable
 AngouriMath.MathS.eulergamma : AngouriMath.Entity+Variable
 AngouriMath.MathS.i : AngouriMath.Entity+Number+Complex
@@ -4127,6 +4151,7 @@ class AngouriMath.Entity+TrigonometricFunction
 class AngouriMath.Entity+Valuationf
 class AngouriMath.Entity+Variable
 class AngouriMath.Entity+Xorf
+class AngouriMath.Entity+Zetaf
 class AngouriMath.Extensions.AngouriMathExtensions
 class AngouriMath.MathS
 class AngouriMath.MathS+Boolean
