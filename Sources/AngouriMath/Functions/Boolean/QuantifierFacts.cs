@@ -490,6 +490,65 @@ namespace AngouriMath.Functions.Boolean
         }
 
         /// <summary>
+        /// The power <c>a ^ w</c> with each term of <paramref name="exponent"/> that is a whole number of
+        /// the power's periods by the facts in scope taken out, or <see langword="null"/>: <c>e ^ (x + 2 pi i n)</c>
+        /// is <c>e ^ x</c> for a whole <c>n</c>, as <c>Complex.exp_int_mul_two_pi_mul_I</c> has it. The principal
+        /// power is <c>a ^ w = e ^ (w ln(a))</c> for a base that is not zero (<c>Complex.cpow_def_of_ne_zero</c>),
+        /// so its period is <c>2 pi i / ln(a)</c>, and a term <c>t</c> is a whole number of them where
+        /// <c>t ln(a) / (2 pi i)</c> is a whole number: <c>2 ^ (log(2, 5) + 2 pi i n / ln(2))</c> is <c>5</c>.
+        /// A base that may be zero is left alone, since <c>0 ^ w</c> is no exponential.
+        /// https://github.com/asc-community/AngouriMath/issues/2319
+        /// </summary>
+        internal static Entity? WithoutWholeTurns(Entity @base, Entity exponent)
+        {
+            if (top is null || exponent is Number || !MentionsARenamedName(exponent) || MentionsARenamedName(@base)
+                || @base.Evaled is not Complex { IsZero: false, IsFinite: true })
+                return null;
+            var kept = new List<Entity>();
+            Entity? turns = null;
+            foreach (var term in Sumf.LinearChildren(exponent))
+                if (MentionsARenamedName(term) && IsWholeNumberOfTurns(term, @base))
+                    turns = turns is null ? term : turns + term;
+                else
+                    kept.Add(term);
+            if (turns is null)
+                return null;
+            var rest = kept.Count == 0 ? Integer.Zero : kept.Aggregate((left, right) => left + right);
+            return Recorded(MathS.Pow(@base, exponent), MathS.Pow(@base, rest), $"{turns} is a whole number of periods",
+                "Complex.exp_int_mul_two_pi_mul_I");
+        }
+
+        /// <summary>
+        /// Whether <paramref name="term"/> is <c>2 pi i k / ln(a)</c> for a whole <c>k</c> by the facts in scope,
+        /// read off its factors: one <c>pi</c>, one <c>1 / ln(a)</c> where the base is not <c>e</c>, numbers
+        /// whose product is <c>2 i</c> times a rational, and the rest that rational's multiple of a whole number.
+        /// </summary>
+        private static bool IsWholeNumberOfTurns(Entity term, Entity @base)
+        {
+            var factors = Mulf.LinearChildren(term).ToList();
+            if (factors.Count(factor => factor == MathS.pi) != 1)
+                return false;
+            factors.Remove(MathS.pi);
+            if (@base != MathS.e)
+            {
+                var reciprocal = factors.FindIndex(factor => factor is Powf(Logf(var logBase, var antilogarithm), Integer { EInteger: var power })
+                    && logBase == MathS.e && antilogarithm == @base && power.Equals(EInteger.FromInt32(-1)));
+                if (reciprocal < 0)
+                    return false;
+                factors.RemoveAt(reciprocal);
+            }
+            Entity numeric = Integer.One;
+            Entity rest = Integer.One;
+            foreach (var factor in factors)
+                if (factor is Complex)
+                    numeric *= factor;
+                else
+                    rest = rest == Integer.One ? factor : rest * factor;
+            return (numeric / (2 * MathS.i)).InnerSimplified is Rational multiple
+                && IsWholeNumber((multiple * rest).InnerSimplified);
+        }
+
+        /// <summary>
         /// <c>z</c> for the principal root <c>(z^n)^(1/n)</c> of a whole <c>n &gt;= 2</c>, where the facts in
         /// scope put <c>z</c> where that root takes its values, or <see langword="null"/>: at <c>0</c> or in
         /// the sector <c>-pi/n &lt; arg(z) &lt;= pi/n</c>, which is how the power's inversion states it, or on
@@ -544,9 +603,12 @@ namespace AngouriMath.Functions.Boolean
                 => !a.Vars.Any() && (a - b).Evaled is Complex difference && ((Real)difference.Abs()).EDecimal.ToDouble() < 1e-12;
         }
 
-        /// <summary>A function <see cref="WithoutWholePeriods"/> takes whole periods out of, of anything but a number.</summary>
+        /// <summary>A function <see cref="WithoutWholePeriods"/> or <see cref="WithoutWholeTurns"/> takes whole periods out of, of anything but a number.</summary>
+        /// <remarks>A power is one where its exponent has <c>i</c> in it, as a whole number of its periods
+        /// <c>2 pi i / ln(a)</c> has for every base but those with an imaginary logarithm.</remarks>
         private static bool IsPeriodic(Entity node)
-            => node is Sinf(not Number) or Cosf(not Number) or Tanf(not Number) or Cotanf(not Number) or Secantf(not Number) or Cosecantf(not Number);
+            => node is Sinf(not Number) or Cosf(not Number) or Tanf(not Number) or Cotanf(not Number) or Secantf(not Number) or Cosecantf(not Number)
+                || node is Powf(_, not Number and var exponent) && exponent.Nodes.Any(part => part is Complex { ImaginaryPart.IsZero: false });
 
         /// <summary><paramref name="to"/>, with the step from <paramref name="from"/> recorded where a proof is.</summary>
         private static Entity Recorded(Entity from, Entity to, string rule, string lemma)
