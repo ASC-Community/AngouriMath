@@ -329,6 +329,32 @@ behind it still answers.
 
 ---
 
+### A string parsed inside a settings scope is parsed under that scope
+
+**Silent: a stale value is corrected.** `MathS.FromString`, and with it the implicit conversion from `string` and
+`ToEntity`, cached its parse by the string object and returned it under whatever settings were in force later, on any
+thread. A literal is rounded as it is parsed, by `PrecisionErrorZeroRange`, `DecimalPrecisionContext`,
+`MaxAbsNumeratorOrDenominatorValue` and `DowncastingEnabled`, so the same string answered differently depending on
+where it had been parsed first ([#2478](https://github.com/asc-community/AngouriMath/issues/2478)). The cache now holds
+only parses made with every setting at its default, and inside a scope of any setting each call parses afresh, as
+`FromString(s, useCache: false)` always did. Measured with one string object parsed first at the defaults and then in
+the scope:
+
+| Input | Scope | Was (2.7.0) | Now |
+|---|---|---|---|
+| `1e-20` | `PrecisionErrorZeroRange` at `1e-10` | `1E-20` (`Real`) | `0` (`Integer`) |
+| `1e-20` | `DecimalPrecisionContext` at 20 digits | `1E-20` (`Real`) | `0` (`Integer`) |
+| `1.00000000001` | `PrecisionErrorZeroRange` at `1e-10` | `1.00000000001` | `1` |
+| `0.142857142857142857142857142857` | `DecimalPrecisionContext` at 20 digits | the decimal (`Real`) | `1/7` |
+| `0.12345679` | `MaxAbsNumeratorOrDenominatorValue` at 100 | `12345679/100000000` | `0.12345679` (`Real`) |
+
+In the other order, the scope's parse came back at the defaults: `1e-20` parsed first in the `1e-10` scope was `0`
+afterwards everywhere. And `0`, `1` and `-1`, which the cache answered without parsing, were `Integer` with
+`DowncastingEnabled` off, where every other whole number is `Real`; they are `Real` there now, as `FromString(s,
+useCache: false)` gave on 2.7.0. Outside any scope nothing moves.
+
+---
+
 ### An indexed union or intersection binds its index
 
 **Silent: a bound name is no longer reported free.** `FreeVariables` of `union(A_k, k in I)` and `intersection(A_k, k in I)`

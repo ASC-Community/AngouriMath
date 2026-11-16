@@ -170,6 +170,98 @@ namespace AngouriMath.Tests.Common
             Assert.Equal(Entity.Number.Integer.Create(0), "1e-20".ToEntity().EvalNumerical());
         }
 
+        // The parse cache answered a string with whatever it had been parsed to first, under
+        // whichever settings were then in force, though a literal is rounded by them as it is
+        // parsed. https://github.com/asc-community/AngouriMath/issues/2478
+        private static System.IDisposable ScopeOf(string setting) => setting switch
+        {
+            "zero range 1e-10" => MathS.Settings.PrecisionErrorZeroRange.Set(EDecimal.Create(1, -10)),
+            "20 digits" => MathS.Settings.DecimalPrecisionContext.Set(new EContext(20, ERounding.HalfUp, -100000, 100000, false)),
+            "max 100" => MathS.Settings.MaxAbsNumeratorOrDenominatorValue.Set(EInteger.FromInt32(100)),
+            "no downcasting" => MathS.Settings.DowncastingEnabled.Set(false),
+            _ => throw new System.ArgumentException(setting),
+        };
+
+        // The type with the value: an Integer and a Real of one value are different parses.
+        private static (System.Type, Entity) Parse(string text, bool useCache = true)
+        {
+            var parsed = MathS.FromString(text, useCache);
+            return (parsed.GetType(), parsed);
+        }
+
+        [Theory]
+        [InlineData("1e-20", "zero range 1e-10")]
+        [InlineData("1e-20", "20 digits")]
+        [InlineData("0.333333333333333333333333", "zero range 1e-10")]
+        [InlineData("0.333333333333333333333333", "20 digits")]
+        [InlineData("1.00000000001", "zero range 1e-10")]
+        [InlineData("0.142857142857142857142857142857", "20 digits")]
+        [InlineData("0.12345679", "20 digits")]
+        [InlineData("0.12345679", "max 100")]
+        [InlineData("1", "no downcasting")]
+        [InlineData("0.1", "no downcasting")]
+        public void Issue2478_ACachedParseIsTheParseUnderTheSettingsInForce(string text, string setting)
+        {
+            var atDefaults = Parse(text, useCache: false);
+            (System.Type, Entity) inScope;
+            using (ScopeOf(setting))
+                inScope = Parse(text, useCache: false);
+            Assert.NotEqual(atDefaults, inScope);
+
+            // Defaults first, then the scope, on one string object.
+            var first = new string(text.ToCharArray());
+            Assert.Equal(atDefaults, Parse(first));
+            using (ScopeOf(setting))
+                Assert.Equal(inScope, Parse(first));
+
+            // The scope first, then the defaults.
+            var second = new string(text.ToCharArray());
+            using (ScopeOf(setting))
+                Assert.Equal(inScope, Parse(second));
+            Assert.Equal(atDefaults, Parse(second));
+
+            // And the interned literal, which every assembly in the process shares.
+            var interned = string.Intern(text);
+            Assert.Equal(atDefaults, Parse(interned));
+            using (ScopeOf(setting))
+                Assert.Equal(inScope, Parse(interned));
+            Assert.Equal(atDefaults, Parse(interned));
+        }
+
+        // A scope is the calling flow's, so one thread's scope must not decide what another
+        // thread's parse of the same string object is, in either order.
+        // https://github.com/asc-community/AngouriMath/issues/2478
+        [Fact]
+        public void Issue2478_AScopeOnOneThreadDoesNotReachAnothersParse()
+        {
+            var atDefaults = Parse("1e-20", useCache: false);
+            (System.Type, Entity) inScope;
+            using (ScopeOf("zero range 1e-10"))
+                inScope = Parse("1e-20", useCache: false);
+            Assert.NotEqual(atDefaults, inScope);
+
+            (System.Type, Entity) OnAThread(string text, bool scoped)
+            {
+                (System.Type, Entity) result = default;
+                var thread = new System.Threading.Thread(() =>
+                {
+                    using var _ = scoped ? ScopeOf("zero range 1e-10") : null;
+                    result = Parse(text);
+                });
+                thread.Start();
+                thread.Join();
+                return result;
+            }
+
+            var first = new string("1e-20".ToCharArray());
+            Assert.Equal(atDefaults, OnAThread(first, scoped: false));
+            Assert.Equal(inScope, OnAThread(first, scoped: true));
+
+            var second = new string("1e-20".ToCharArray());
+            Assert.Equal(inScope, OnAThread(second, scoped: true));
+            Assert.Equal(atDefaults, OnAThread(second, scoped: false));
+        }
+
         // https://github.com/asc-community/AngouriMath/issues/561
         // The reporter's 4x4 matrix spans 1e5 to 1e50, so entries of its inverse fall
         // below 1e-16 and downcasting rounded them to zero. Fixed by the same change as
