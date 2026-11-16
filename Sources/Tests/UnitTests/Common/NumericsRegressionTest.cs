@@ -462,5 +462,20 @@ namespace AngouriMath.Tests.Common
                 root is Entity.Number.Complex complex and not Entity.Number.Real
                 && complex.ImaginaryPart.EDecimal.Abs().ToDouble() < 1e-15);
         }
+
+        // A rational root of an exact number is that root only where its power is the number exactly: one
+        // within 1e-16 of it was taken, so the square root of 9 + 4/10^24 was 3, which made the quadratic
+        // x^2 - 3x - 1/10^24 lose both its roots. The differences are worked out in mpmath at eighty digits.
+        // https://github.com/asc-community/AngouriMath/issues/2482
+        [Theory]
+        [InlineData("sqrt(9 + 4/10^24) - 3", "6.66666666666666666666666592593e-25")]
+        [InlineData("(8 + 1/10^30)^(1/3) - 2", "8.33333333333333333333333333333e-32")]
+        public void Issue2482_ARootOfAnExactNumberIsRationalOnlyWhereItIsExact(string difference, string trueValue)
+        {
+            var value = Assert.IsAssignableFrom<Entity.Number.Real>(difference.ToEntity().EvalNumerical());
+            var expected = EDecimal.FromString(trueValue);
+            Assert.True(value.EDecimal.Subtract(expected).Abs().CompareTo(expected.Multiply(EDecimal.FromString("1E-25"))) <= 0,
+                $"{difference} is {value}");
+        }
     }
 }

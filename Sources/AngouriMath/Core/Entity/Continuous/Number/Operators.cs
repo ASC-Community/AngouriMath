@@ -295,6 +295,23 @@ namespace AngouriMath
             /// <returns></returns>
             public static bool IsZero(Complex num) => IsZero(num.RealPart) && IsZero(num.ImaginaryPart);
 
+            /// <summary>
+            /// Whether <paramref name="residual"/>, what is left when a rational guessed under a widened
+            /// zero range is put back, says the guess is right: exactly zero where it is an exact ratio,
+            /// and otherwise under <see cref="MathS.Settings.DowncastingTolerance"/>, the tolerance
+            /// evaluation itself rounds to zero with, which is 1e-50 at a hundred digits.
+            /// <see cref="IsZero(Complex)"/> asks <see cref="MathS.Settings.PrecisionErrorZeroRange"/>,
+            /// 1e-16, which took <c>sqrt(9 + 4/10^24)</c> for 3. The guessing goes with downcasting in v3.
+            /// <a href="https://github.com/asc-community/AngouriMath/issues/2482">#2482</a>,
+            /// <a href="https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225">#1019</a>
+            /// </summary>
+            internal static bool IsZeroAtTheWorkingPrecision(Complex residual)
+                => residual is Rational ratio ? ratio.ERational.IsZero
+                   : IsUnderTheDowncastingTolerance(residual.RealPart) && IsUnderTheDowncastingTolerance(residual.ImaginaryPart);
+
+            private static bool IsUnderTheDowncastingTolerance(Real part)
+                => part.IsFinite && part.EDecimal.Abs().LessThan(MathS.Settings.DowncastingTolerance);
+
             internal static bool AreEqual<T>(T a, T b) where T : Number =>
                 SuperSwitch<bool>(a, b,
                     (a, b) => a.EInteger.Equals(b.EInteger),
@@ -432,7 +449,10 @@ namespace AngouriMath
                     using (MathS.Settings.FloatToRationalIterCount.Set(15))
                     using (MathS.Settings.PrecisionErrorZeroRange.Set(1e-6m))
                         rounded = Complex.Create(root.RealPart, root.ImaginaryPart);
-                    if (rounded is Rational rational && IsZero(Pow(rational, power) - @base))  // To keep user's desired precision
+                    // A power of the rational that is the base at the working precision, and exactly where the
+                    // base is exact: by IsZero, at 1e-16, sqrt(9 + 4/10^24) was 3.
+                    // https://github.com/asc-community/AngouriMath/issues/2482
+                    if (rounded is Rational rational && IsZeroAtTheWorkingPrecision(Pow(rational, power) - @base))
                         return rational;
                     // The root as GetAllRoots made it, at the working precision.
                     switch (root)

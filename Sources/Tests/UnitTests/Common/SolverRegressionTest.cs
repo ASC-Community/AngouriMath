@@ -395,6 +395,74 @@ namespace AngouriMath.Tests.Common
         public void Issue2319_AFamilyMetWithTheRealsIsItsRealMembers(string statement, string expected)
             => Assert.Equal(expected.ToEntity().InnerSimplified, statement.ToEntity().Solve("x").InnerSimplified);
 
+        // A rational guessed for a root under a zero range of 1e-7 is a root only where it is one at the
+        // working precision: x^2 - 3x - 1e-24 had the roots 0 and 3, each leaving -1e-24, and with the
+        // constant written exactly the square root of 9 + 4/10^24 was 3, so both roots were dropped and
+        // the equation left unsolved. The roots are compared with the true ones, worked out in mpmath at
+        // eighty digits. The guessing goes with downcasting in v3.
+        // https://github.com/asc-community/AngouriMath/issues/2482
+        // https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225
+        [Theory]
+        [InlineData("x^2 - 3x - 1e-24", "-3.33333333333333333333333296296e-25", "3.00000000000000000000000033333")]
+        [InlineData("x^2 - 3x + 1e-24", "3.3333333333333333333333337037e-25", "2.99999999999999999999999966667")]
+        [InlineData("x^2 - 3x - 1e-12", "-3.33333333333296296296296304527e-13", "3.0000000000003333333333332963")]
+        [InlineData("x^2 - 3x - 1e-9", "-3.33333333296296296304526748969e-10", "3.0000000003333333332962962963")]
+        [InlineData("x^2 - 1e-30", "-1e-15", "1e-15")]
+        [InlineData("x^3 - x - 1e-20", "-0.999999999999999999995", "-1.0e-20", "1.000000000000000000005")]
+        [InlineData("x^2 - 3x - 1/10^24", "-3.33333333333333333333333296296e-25", "3.00000000000000000000000033333")]
+        [InlineData("x^2 - 3333333333333333333333333/10^24 x - 1/10^24", "-3.00000000000000000000000003e-25", "3.3333333333333333333333333")]
+        public void Issue2482_AGuessedRootIsARootAtTheWorkingPrecision(string equation, params string[] trueRoots)
+        {
+            foreach (var solutions in new[] { equation.ToEntity().SolveEquation("x"), equation.ToEntity().Equalizes(0).Solve("x") })
+                AssertTheRoots(solutions, trueRoots);
+        }
+
+        // The same guess made of an eigenvalue: the determinant of the first is -1e-24, not 0.
+        // https://github.com/asc-community/AngouriMath/issues/2482
+        [Theory]
+        [InlineData("[[0.333333333333333333333333, 1], [1, 3]]", "-3.00000000000000000000000003e-25", "3.3333333333333333333333333")]
+        [InlineData("[[333333333333333333333333/10^24, 1], [1, 3]]", "-3.00000000000000000000000003e-25", "3.3333333333333333333333333")]
+        [InlineData("[[1, 1], [1, 1.000000000000000000001]]", "4.99999999999999999999875e-22", "2.0000000000000000000005")]
+        [InlineData("[[2, 4], [1, 2.0000000000000000001]]", "4.9999999999999999999375e-20", "4.00000000000000000005")]
+        [InlineData("[[1, 2], [3, 6.000000000001]]", "1.42857142857125364431486882251e-13", "7.00000000000085714285714287464")]
+        public void Issue2482_AGuessedEigenvalueIsOneAtTheWorkingPrecision(string matrix, params string[] trueEigenvalues)
+            => AssertTheRoots(Assert.IsType<Entity.Matrix>(matrix.ToEntity().InnerSimplified).Eigenvalues, trueEigenvalues);
+
+        // And a guess that is right is still made: these roots come back as the rationals they are.
+        // https://github.com/asc-community/AngouriMath/issues/2482
+        [Theory]
+        [InlineData("6x^2 - 5x + 1", "1/2", "1/3")]
+        [InlineData("x^2 - 0.25", "1/2", "-1/2")]
+        [InlineData("x^2 - 0.5x + 0.06", "1/5", "3/10")]
+        [InlineData("2x^2 - 0.5", "1/2", "-1/2")]
+        [InlineData("x^3 - 0.001", "1/10")]
+        public void Issue2482_ARightGuessIsStillMade(string equation, params string[] rationalRoots)
+        {
+            var roots = Assert.IsType<Entity.Set.FiniteSet>(equation.ToEntity().SolveEquation("x"));
+            foreach (var rationalRoot in rationalRoots)
+                Assert.Contains(Assert.IsAssignableFrom<Entity.Number.Rational>(rationalRoot.ToEntity().Evaled), roots);
+        }
+
+        /// <summary>
+        /// That <paramref name="solutions"/> is a finite set of as many roots as <paramref name="trueRoots"/>,
+        /// each within a relative 1e-25 of one of them, and real to 1e-40.
+        /// </summary>
+        private static void AssertTheRoots(Entity? solutions, string[] trueRoots)
+        {
+            var roots = Assert.IsType<Entity.Set.FiniteSet>(solutions);
+            Assert.Equal(trueRoots.Length, roots.Count);
+            var values = roots.Select(root => Assert.IsAssignableFrom<Entity.Number.Complex>(root.EvalNumerical())).ToList();
+            foreach (var trueRoot in trueRoots)
+            {
+                var expected = PeterO.Numbers.EDecimal.FromString(trueRoot);
+                var bound = expected.Abs().Multiply(PeterO.Numbers.EDecimal.FromString("1E-25"));
+                Assert.True(values.Any(value =>
+                        value.RealPart.EDecimal.Subtract(expected).Abs().CompareTo(bound) <= 0
+                        && value.ImaginaryPart.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.FromString("1E-40")) <= 0),
+                    $"no root near {trueRoot} in {solutions}: {string.Join(", ", values)}");
+            }
+        }
+
         // Two powers of numbers with no common rate, a^p = -b^q, are p ln(a) = ln(-1) + q ln(b) + 2 pi i n,
         // a family written exactly: (-2)^x + 4^x = 0 is i pi (2 n + 1) / (i pi - ln(2)), where Newton's method
         // answered nine members in decimals as though they were every root.

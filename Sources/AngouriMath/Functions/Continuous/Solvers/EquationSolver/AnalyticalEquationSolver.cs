@@ -154,10 +154,12 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // answer and a decoration (https://github.com/asc-community/AngouriMath/issues/235).
             // Where the residual comes out as an exact ratio, which is the case whenever the
             // equation and the candidate are both rational, it is required to be exactly zero.
-            // Where it does not -- an equation carrying pi, say -- there is nothing to be exact
-            // about and the ordinary tolerance still decides.
-            static bool IsGenuineRoot(Complex residual)
-                => residual is Rational ratio ? ratio.ERational.IsZero : IsZero(residual);
+            // Where it does not -- an equation carrying pi or a decimal, say -- it is required to be
+            // zero at the working precision, under the tolerance evaluation itself rounds to zero
+            // with: 1e-50 at a hundred digits. PrecisionErrorZeroRange, 1e-16, took the -1e-24 that
+            // x^2 - 3x - 1e-24 leaves at 0 for zero.
+            // https://github.com/asc-community/AngouriMath/issues/2482
+            static bool IsGenuineRoot(Complex residual) => Number.IsZeroAtTheWorkingPrecision(residual);
 
             // Applies an attempt to downcast roots
             static Entity TryDowncast(Entity equation, Variable x, Entity root)
@@ -165,15 +167,18 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 if (root.Evaled is not Complex preciseValue)
                     return root;
                 Complex downcasted;
-                bool genuine;
                 using (MathS.Settings.FloatToRationalIterCount.Set(20))
                 using (MathS.Settings.PrecisionErrorZeroRange.Set(1e-7m))
-                {
                     downcasted = Complex.Create(preciseValue.RealPart, preciseValue.ImaginaryPart);
-                    if (equation.Substitute(x, downcasted).Evaled is not Complex error)
-                        return root;
-                    genuine = IsGenuineRoot(error);
-                }
+                // Checked outside the scope the guess is made in: inside it a residual under 1e-7
+                // evaluates to 0, so x^2 - 3x - 1e-12 had the root 0, which leaves -1e-12, and
+                // [[1, 2], [3, 6.000000000001]] the eigenvalue 0. The loose tolerance goes with
+                // downcasting in v3.
+                // https://github.com/asc-community/AngouriMath/issues/2482
+                // https://github.com/asc-community/AngouriMath/issues/1019#issuecomment-5754734225
+                if (equation.Substitute(x, downcasted).Evaled is not Complex error)
+                    return root;
+                var genuine = IsGenuineRoot(error);
                 // The root the guess is not, simplified under the solver's own settings rather than
                 // the loose tolerance the guess is made with, which would round it.
                 // https://github.com/asc-community/AngouriMath/issues/2479
