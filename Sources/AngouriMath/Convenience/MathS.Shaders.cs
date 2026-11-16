@@ -26,14 +26,34 @@ namespace AngouriMath
         /// </para>
         /// <para>
         /// The code computes the real-valued reading, the one <c>Compile&lt;double, …&gt;</c>
-        /// computes; where that has no value the shader's is <c>NaN</c> or unspecified, as the
-        /// language's own <c>pow</c> and <c>sqrt</c> leave it. A node with no faithful form —
-        /// a complex constant, a set, a piecewise with inputs it gives no value to — is declined
-        /// with the node named, never printed approximately.
+        /// computes; where that has no value the shader's is <c>NaN</c>, an infinity or
+        /// unspecified, as the language's own <c>/</c>, <c>pow</c> and <c>sqrt</c> leave it.
+        /// Three of those are worth naming, because a GPU does give them a value: a division by
+        /// zero, <c>a / b</c> at <c>b = 0</c>, is <c>NaN</c> compiled and ±infinity in the
+        /// shader; so is zero to a negative power, <c>x^(-2)</c> or <c>x^(-1/2)</c> at <c>x = 0</c>,
+        /// printed <c>1.0 / (x * x)</c> and <c>rsqrt(x)</c>; and an unsimplified <c>x^0</c> is
+        /// printed <c>1.0</c>, which is 1 at <c>x = 0</c> where compiled it is <c>NaN</c>. A
+        /// branch on every quotient would cost more than the difference is worth, so the
+        /// difference is documented rather than paid for. Nor is <c>pow</c> of a negative base
+        /// defined in a shader, even where the exponent is a variable that happens to be whole.
+        /// </para>
+        /// <para>
+        /// A node with no faithful form — a complex constant, a set, a piecewise with inputs it
+        /// gives no value to, a function with no intrinsic and no straight-line form — is declined
+        /// with the node named, never printed approximately; and what <c>Compile</c> refuses, a
+        /// binder or a statement where a number is expected, is declined with <c>Compile</c>'s
+        /// message.
         /// </para>
         /// <para>
         /// Nothing is simplified. Call <see cref="Entity.Simplify(int)"/> first if a smaller
-        /// form is wanted: what is printed is the expression that was given.
+        /// form is wanted: what is printed is the expression that was given. The only rewrites
+        /// are the ones <c>Compile</c> makes as well: an operation on matrices written out is
+        /// the number it gives, a membership in an interval or a finite set is the comparisons
+        /// it stands for, and <c>(b^v + c1) / (b^v + c2)</c>, as <c>tanh</c> is spelled, is taken
+        /// as <c>1 + (c1 - c2) / (b^v + c2)</c> so that it does not overflow.
+        /// </para>
+        /// <para>
+        /// The page <c>Docs/Usage/Shaders.md</c> works an example through.
         /// </para>
         /// </remarks>
         public static class Shaders

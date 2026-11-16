@@ -8,6 +8,8 @@
 using System;
 using System.Globalization;
 using System.Text;
+using AngouriMath.Core.Compilation;
+using AngouriMath.Core.Exceptions;
 using PeterO.Numbers;
 using static AngouriMath.Entity;
 
@@ -34,13 +36,20 @@ namespace AngouriMath.Functions.Compilation.IntoSource
     /// unspecified, as the shading language's own <c>pow</c> and <c>sqrt</c> leave it. A
     /// node with no faithful form in that reading — a complex constant, a set, a rounding
     /// rule whose tie-breaking the languages do not agree on — is declined, naming the node,
-    /// rather than printed as something close.
+    /// rather than printed as something close. What <c>Compile</c> refuses is declined with
+    /// the message <c>Compile</c> gives.
+    /// </para>
+    /// <para>
+    /// Every expression is checked before anything is printed, so that printing has nothing
+    /// left to decline: the check is <see cref="Refusal"/>, and <see cref="Print"/> prints
+    /// exactly the nodes it accepts.
     /// </para>
     /// <para>
     /// Integer powers are multiplied out up to the fourth, and above that taken as
     /// <c>pow(abs(x), n)</c> with the sign restored for an odd <c>n</c>: <c>pow</c> of a
     /// negative base is undefined in both HLSL and GLSL, while <c>x^5</c> is defined for every
-    /// real <c>x</c>.
+    /// real <c>x</c>. A rational power with an odd denominator below ten is the real root
+    /// of a negative base, as <c>Compile</c> takes it, and is printed the same way.
     /// </para>
     /// </remarks>
     internal sealed class ShaderSource
@@ -56,12 +65,6 @@ namespace AngouriMath.Functions.Compilation.IntoSource
         private ShaderSource(SourceDialect dialect, IReadOnlyDictionary<Variable, string> names)
             => (this.dialect, this.names) = (dialect, names);
 
-        private sealed class Declined : Exception
-        {
-            internal Entity At { get; }
-            internal Declined(Entity at, string reason) : base(reason) => At = at;
-        }
-
         // Checked by hand: a regular expression would add System.Text.RegularExpressions to what
         // the kernel references, which KernelDependenciesTest holds fixed.
         private static bool IsIdentifier(string s)
@@ -70,20 +73,102 @@ namespace AngouriMath.Functions.Compilation.IntoSource
         internal static GeneratedSource Emit(SourceDialect dialect, IReadOnlyList<KeyValuePair<string, Entity>> outputs, IReadOnlyDictionary<Variable, string>? names)
         {
             var emitter = new ShaderSource(dialect, names ?? new Dictionary<Variable, string>());
-            try
+            var prepared = new List<KeyValuePair<string, Entity>>(outputs.Count);
+            foreach (var output in outputs)
             {
-                foreach (var output in outputs)
-                    emitter.Count(output.Value);
-                var lines = new StringBuilder();
-                foreach (var output in outputs)
-                    lines.Append(output.Key).Append(" = ").Append(emitter.Value(output.Value)).Append(";\n");
-                return new GeneratedSource(emitter.body.ToString() + lines, null, "");
+                var expression = Prepared(output.Value);
+                if (emitter.Refusal(expression) is { } refusal)
+                    return new GeneratedSource(null, refusal.At, refusal.Reason);
+                prepared.Add(new(output.Key, expression));
             }
-            catch (Declined d)
-            {
-                return new GeneratedSource(null, d.At, d.Message);
-            }
+            foreach (var output in prepared)
+                emitter.Count(output.Value);
+            var lines = new StringBuilder();
+            foreach (var output in prepared)
+                lines.Append(output.Key).Append(" = ").Append(emitter.Value(output.Value)).Append(";\n");
+            return new GeneratedSource(emitter.body.ToString() + lines, null, "");
         }
+
+        // The rewrites Compile makes before compiling, so that the shader computes what it
+        // computes. A membership in an interval, a finite set or a union of them is the comparisons
+        // it stands for. A matrix operation on matrices written out is reduced to the number it gives,
+        // as Compile reduces it, since a shader output is a number. A quotient of one exponential
+        // plus a constant by the same exponential plus another, which is how tanh is spelled, is
+        // taken as 1 + (c1 - c2) / (b^v + c2), which does not divide an overflow by an overflow:
+        // in single precision e^(2x) overflows from x = 45 on.
+        // https://github.com/asc-community/AngouriMath/issues/2254
+        private static Entity Prepared(Entity expression)
+        {
+            if (expression.Nodes.Any(node => node is Matrix))
+                expression = expression.Replace(node => node switch
+                {
+                    DotProductf(Matrix, Matrix) or CrossProductf(Matrix, Matrix) or Transposef(Matrix)
+                        or Determinantf(Matrix) or Tracef(Matrix) or MatrixEntryf(Matrix, _, _) => node.InnerSimplified,
+                    _ => node,
+                });
+            return ExponentialQuotients.Rewritten(CompiledMembership.Rewritten(expression));
+        }
+
+        private (Entity At, string Reason)? Refusal(Entity expression)
+        {
+            if (Binders.Refusal(expression) is { } binder)
+                return binder;
+            if (StatementPositions.Refusal(expression) is { } statement)
+                return statement;
+            foreach (var node in expression.Nodes)
+                if (Refusal(node, NodeRefusal(node)) is { } refusal)
+                    return refusal;
+            return null;
+
+            static (Entity, string)? Refusal(Entity node, string? reason) => reason is null ? null : (node, reason);
+        }
+
+        // Why this one node cannot be printed, or null where Print prints it. Its children are
+        // asked separately.
+        private string? NodeRefusal(Entity node) => node switch
+        {
+            Constant c when c == MathS.pi || c == MathS.e => null,
+            Constant c => $"the constant {c} has no literal here",
+            Variable v => NameRefusal(v),
+            Integer or Rational => null,
+            Real { EDecimal: var d } => d.IsFinite ? null : $"{node} is not a finite real number",
+            Number => $"{node} is not a real number, and the shader computes the real-valued reading",
+            Entity.Boolean => null,
+
+            Sumf or Minusf or Mulf or Divf or Powf or Modf => null,
+            Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf => null,
+            Arcsinf or Arccosf or Arctanf or Arccotanf or Arcsecantf or Arccosecantf => null,
+            Logf or Absf or Signumf or Floorf or Ceilf or Maxf or Minf => null,
+            Conjugatef or Ref or Imf or Argf => null,
+            Greaterf or GreaterOrEqualf or Lessf or LessOrEqualf or Equalsf => null,
+            Andf or Orf or Xorf or Impliesf or Notf or Iversonf => null,
+            Piecewise pw => pw.Cases.LastOrDefault() is { Predicate: var last } && last == Entity.Boolean.True
+                ? null
+                : "a piecewise without a final case that is always true has inputs with no value, and a shader cannot say there is none",
+
+            Providedf => "a shader cannot say there is no value: where the condition cannot fail, give the expression without it",
+            Roundf => "round takes a tie to the even neighbour, and HLSL's and GLSL's round leave ties to the implementation",
+            Matrix => $"`{node.Stringize()}` is a matrix, and each output of a shader here is a number: assign the entries one by one",
+            DotProductf or CrossProductf => $"`{node.Stringize()}` is taken of vectors, and every variable of the shader is a number",
+            Transposef or Determinantf or Tracef or MatrixEntryf => $"`{node.Stringize()}` is taken of a matrix, and every variable of the shader is a number",
+            Set => $"`{node.Stringize()}` is a set, which has no value in a shader",
+            Set.Inf => $"`{node.Stringize()}` is a membership in a set of numbers, which has no straight-line test in a shader",
+            Gcdf or Lcmf => $"`{node.Stringize()}` needs Euclid's algorithm, a loop, and the shader is straight-line code",
+            _ => $"`{node.Stringize()}` has no intrinsic in HLSL or GLSL and no straight-line form",
+        };
+
+        private string? NameRefusal(Variable v)
+        {
+            var name = NameOf(v);
+            // A swizzle or a member such as p.x is a legitimate target name.
+            if (!name.Split('.').All(IsIdentifier))
+                return $"{name} is not an identifier; map it to one through the names";
+            if (name.Length > 2 && name.StartsWith("am") && name.Skip(2).All(char.IsDigit))
+                return $"{name} is the name of a local this code declares";
+            return null;
+        }
+
+        private string NameOf(Variable v) => names.TryGetValue(v, out var n) ? n : v.Name;
 
         private string Real => dialect == SourceDialect.CSharpCheck ? "double" : "float";
 
@@ -152,25 +237,13 @@ namespace AngouriMath.Functions.Compilation.IntoSource
         {
             Constant c when c == MathS.pi => Literal(Math.PI),
             Constant c when c == MathS.e => Literal(Math.E),
-            Constant c => throw new Declined(c, $"the constant {c} has no literal here"),
-            Variable v => Name(v),
+            Variable v => NameOf(v),
             Integer i => Literal(EDecimal.FromEInteger(i.EInteger)),
             Rational r => Literal(r.ERational.ToEDecimal(EContext.Binary64)),
-            Real { EDecimal: var d } when d.IsFinite => Literal(d),
+            Real { EDecimal: var d } => Literal(d),
             Entity.Boolean b => (bool)b ? "true" : "false",
-            _ => throw new Declined(e, $"{e} is not a finite real number"),
+            _ => throw new AngouriBugException($"{e} passed the shader's check and has no literal"),
         };
-
-        private string Name(Variable v)
-        {
-            var name = names.TryGetValue(v, out var n) ? n : v.Name;
-            // A swizzle or a member such as p.x is a legitimate target name.
-            if (!name.Split('.').All(IsIdentifier))
-                throw new Declined(v, $"{name} is not an identifier; map it to one through the names");
-            if (name.Length > 2 && name.StartsWith("am") && name.Skip(2).All(char.IsDigit))
-                throw new Declined(v, $"{name} is the name of a local this code declares");
-            return name;
-        }
 
         private static string Literal(EDecimal d) => Literal(d.ToDouble());
 
@@ -182,6 +255,8 @@ namespace AngouriMath.Functions.Compilation.IntoSource
             return s.Contains(".") || s.Contains("E") ? s.Replace("E", "e") : s + ".0";
         }
 
+        private string One => Literal(1.0);
+
         private string Print(Entity e) => e switch
         {
             Sumf(var a, var b) => $"({Value(a)} + {Value(b)})",
@@ -189,7 +264,7 @@ namespace AngouriMath.Functions.Compilation.IntoSource
             Mulf(Integer { EInteger: var k }, var b) when k.Equals(EInteger.FromInt32(-1)) => $"(-{Value(b)})",
             Mulf(var a, var b) => $"({Value(a)} * {Value(b)})",
             Divf(var a, var b) => $"({Value(a)} / {Value(b)})",
-            Powf(var b, var p) => Power(e, b, p),
+            Powf(var b, var p) => Power(b, p),
             // Floored, as Modf is: the remainder takes the divisor's sign, which neither
             // HLSL's fmod nor C's % does.
             Modf(var a, var b) => Modulo(a, b),
@@ -197,9 +272,17 @@ namespace AngouriMath.Functions.Compilation.IntoSource
             Sinf(var a) => $"sin({Value(a)})",
             Cosf(var a) => $"cos({Value(a)})",
             Tanf(var a) => $"tan({Value(a)})",
+            // As Compile takes them: the reciprocal, and the inverse of the reciprocal, which
+            // gives arccotan its range (-pi/2, pi/2] with pi/2 at 0, where 1 / 0 is +inf.
+            Cotanf(var a) => $"({One} / tan({Value(a)}))",
+            Secantf(var a) => $"({One} / cos({Value(a)}))",
+            Cosecantf(var a) => $"({One} / sin({Value(a)}))",
             Arcsinf(var a) => $"asin({Value(a)})",
             Arccosf(var a) => $"acos({Value(a)})",
             Arctanf(var a) => $"atan({Value(a)})",
+            Arccotanf(var a) => $"atan({One} / {Value(a)})",
+            Arcsecantf(var a) => $"acos({One} / {Value(a)})",
+            Arccosecantf(var a) => $"asin({One} / {Value(a)})",
             Logf(Constant c, var a) when c == MathS.e => $"log({Value(a)})",
             Logf(var b, var a) => $"(log({Value(a)}) / log({Value(b)}))",
             Absf(var a) => $"abs({Value(a)})",
@@ -210,6 +293,14 @@ namespace AngouriMath.Functions.Compilation.IntoSource
             Maxf(var a, var b) => $"max({Value(a)}, {Value(b)})",
             Minf(var a, var b) => $"min({Value(a)}, {Value(b)})",
 
+            // Of a real number, as Compile over double has them: the conjugate and the real part
+            // are the number, the imaginary part is 0, and the argument is pi to the left of 0
+            // and 0 to the right.
+            Conjugatef(var a) => Value(a),
+            Ref(var a) => Value(a),
+            Imf => Literal(0.0),
+            Argf(var a) => $"(({Value(a)} < {Literal(0.0)}) ? {Literal(Math.PI)} : {Literal(0.0)})",
+
             Piecewise pw => Cases(pw),
             Greaterf(var a, var b) => $"({Value(a)} > {Value(b)})",
             GreaterOrEqualf(var a, var b) => $"({Value(a)} >= {Value(b)})",
@@ -218,15 +309,26 @@ namespace AngouriMath.Functions.Compilation.IntoSource
             Equalsf(var a, var b) => $"({Value(a)} == {Value(b)})",
             Andf(var a, var b) => $"({Value(a)} && {Value(b)})",
             Orf(var a, var b) => $"({Value(a)} || {Value(b)})",
+            Xorf(var a, var b) => $"({Value(a)} != {Value(b)})",
+            Impliesf(var a, var b) => $"((!{Value(a)}) || {Value(b)})",
             Notf(var a) => $"(!{Value(a)})",
+            Iversonf(var a) => $"({Value(a)} ? {One} : {Literal(0.0)})",
 
-            _ => throw new Declined(e, $"{e.GetType().Name} has no faithful form in the real-valued reading"),
+            _ => throw new AngouriBugException($"{e.GetType().Name} passed the shader's check and has no printed form"),
         };
 
-        private string Power(Entity at, Entity b, Entity p)
+        private string Power(Entity b, Entity p)
         {
             if (b is Constant c && c == MathS.e)
                 return $"exp({Value(p)})";
+            // An odd denominator below ten: the real root of a negative base, with the sign of
+            // the base where the numerator is odd, as Compile and evaluation take it.
+            if (RealProducts.RealRootExponent(p) is { } ratio)
+            {
+                var x = Once(b);
+                var magnitude = $"pow(abs({x}), {Value(p)})";
+                return ratio.Numerator.IsEven ? magnitude : $"({ToReal($"sign({x})")} * {magnitude})";
+            }
             if (p is not Rational q)
                 return $"pow({Value(b)}, {Value(p)})";
             if (q is Integer { EInteger: var k } && k.CanFitInInt32())
@@ -234,9 +336,9 @@ namespace AngouriMath.Functions.Compilation.IntoSource
                 var n = k.ToInt32Checked();
                 switch (n)
                 {
-                    case 0: return Literal(1.0);
+                    case 0: return One;
                     case 1: return Value(b);
-                    case -1: return $"({Literal(1.0)} / {Value(b)})";
+                    case -1: return $"({One} / {Value(b)})";
                 }
                 var x = Once(b);
                 var magnitude = Math.Abs(n) switch
@@ -247,7 +349,7 @@ namespace AngouriMath.Functions.Compilation.IntoSource
                     var m when m % 2 == 0 => $"pow(abs({x}), {Literal((double)m)})",
                     var m => $"({ToReal($"sign({x})")} * pow(abs({x}), {Literal((double)m)}))",
                 };
-                return n > 0 ? magnitude : $"({Literal(1.0)} / {magnitude})";
+                return n > 0 ? magnitude : $"({One} / {magnitude})";
             }
             if (q.ERational.CompareTo(ERational.Create(1, 2)) == 0)
                 return $"sqrt({Value(b)})";
@@ -265,14 +367,11 @@ namespace AngouriMath.Functions.Compilation.IntoSource
             return $"({x} - {y} * floor({x} / {y}))";
         }
 
-        // A conditional per case, the last one taken as the fallback only where its condition is
-        // literally true: a piecewise with no case for some input has no value there, and a
-        // shader cannot say so.
+        // A conditional per case, the last one taken as the fallback: the check accepted only a
+        // piecewise whose last condition is literally true.
         private string Cases(Piecewise pw)
         {
             var cases = pw.Cases.ToList();
-            if (cases.Count == 0 || cases[cases.Count - 1].Predicate != Entity.Boolean.True)
-                throw new Declined(pw, "a piecewise without a final case that is always true has inputs with no value");
             var text = Value(cases[cases.Count - 1].Expression);
             for (var k = cases.Count - 2; k >= 0; k--)
                 text = $"({Value(cases[k].Predicate)} ? {Value(cases[k].Expression)} : {text})";

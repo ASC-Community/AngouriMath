@@ -22,13 +22,21 @@ namespace AngouriMath.Core.Compilation
     {
         internal static void Check(Entity expression)
         {
+            if (Refusal(expression) is { } refusal)
+                throw new UncompilableNodeException(refusal.Message);
+        }
+
+        /// <summary>The first binder in <paramref name="expression"/> and why it is refused, or null where there is none.</summary>
+        internal static (Entity Node, string Message)? Refusal(Entity expression)
+        {
             foreach (var node in expression.Nodes)
                 if (Kind(node) is { } kind)
-                    throw new UncompilableNodeException(
+                    return (node,
                         $"`{node.Stringize()}` is {kind}, which has no compiled form. "
                         + (node is Lambda
                             ? "Apply it to an argument, call .Evaled or Simplify() on that, and compile the result."
                             : "Call .Evaled or Simplify() on the expression first, and compile the result."));
+            return null;
         }
 
         private static string? Kind(Entity node) => node switch

@@ -273,6 +273,7 @@ subsystem's own directory.
 | Gröbner bases | one inbound edge, `Functions/Continuous/Solvers/EquationSolver.cs`, and **0 public members**. Reachable from `Solve` on a system, which is a measured popular use case — **kernel** |
 | Boolean minimisation | reached from `Simplificator` — **kernel** |
 | compilation into LINQ | `System.Linq.Expressions` is in the framework, so (D) does not fire; measured AOT-clean — **kernel** |
+| shader source, `MathS.Shaders` | string output, no new dependency (`KernelDependenciesTest`), and off every default path. It reads the compilers' own internal refusals and rewrites, so that it declines and computes what `Compile<double, …>` does, which is (C)'s test failing: it composes the kernel — **kernel** |
 | quantum, and the monoid algebra it is the only consumer of | 702 lines, 0.5% of the assembly. Reached **only from `Convenience/MathS.cs`** — the facade — and by nothing in the engine. Its whole public surface is `MathS.Quantum` and its five methods. No clause fires, so the rule leaves it in the kernel; §6 says why that is the right answer despite the boundary being arguably wrong |
 | `MathS.ExperimentalFeatures` | 191 lines, 12 public members, kernel. The one case where a boundary would buy something real — §6 |
 
