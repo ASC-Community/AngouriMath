@@ -63,7 +63,7 @@ namespace AngouriMath
         /// Prints
         /// <code>
         /// sin(x) = 1/2
-        /// { arcsin(1/2) + 2 * pi * n_1, pi - arcsin(1/2) + 2 * pi * n_1 }
+        /// union({ pi / 6 + 2 * pi * n, pi - pi / 6 + 2 * pi * n }, n in ZZ)
         /// -----------------
         /// x ^ 2 + 2 * x * y - y = 0
         /// { (-2 * y - sqrt((2 * y) ^ 2 - 4 * -y)) / 2, (-2 * y + sqrt((2 * y) ^ 2 - 4 * -y)) / 2 }
@@ -92,7 +92,7 @@ namespace AngouriMath
             // A statement the solver declines -- an inequality it cannot read -- is reported as
             // unsupported here, where the library's own callers read the decline as not solved.
             if (this is Statement or Providedf)
-                return StatementSolver.Solved(this, var) ?? throw new NotSufficientlySupportedException(AnalyticalInequalitySolver.Unsupported);
+                return SolutionParameters.Bound((statement: this, var), static question => StatementSolver.Solved(question.statement, question.var) ?? throw new NotSufficientlySupportedException(AnalyticalInequalitySolver.Unsupported));
             if (this == var)
                 return new FiniteSet(Boolean.True);
             throw new SolveRequiresStatementException();

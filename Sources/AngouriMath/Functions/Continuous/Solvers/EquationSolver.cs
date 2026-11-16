@@ -17,7 +17,18 @@ namespace AngouriMath.Functions.Algebra
     using static Entity;
     internal static class EquationSolver
     {
-        /// <summary>Solves one equation</summary>
+        /// <summary>
+        /// Solves one equation as the library's callers see it: a family of roots is an indexed
+        /// union over the whole numbers, outside a system. See <see cref="SolutionParameters.Bound"/>.
+        /// </summary>
+        internal static Set SolveBound(Entity equation, Variable x)
+            => SolutionParameters.Bound((equation, x), static question => Solve(question.equation, question.x));
+
+        /// <summary>
+        /// Solves one equation, with a parameter a family of roots brings left free: the
+        /// <c>n_1</c> of <c>sin(x) = 0</c>, <c>2 pi n_1</c>, which a caller inside the library
+        /// substitutes for and a system's row carries.
+        /// </summary>
         internal static Set Solve(Entity equation, Variable x)
         {
             // An equality `a = b` is `a - b = 0`, as a statement's own solve reads it: passed on as it
@@ -445,7 +456,8 @@ namespace AngouriMath.Functions.Algebra
             if (equations.Count == 1)
             {
                 var solutions = equations[0].InnerSimplified.SolveEquation(var).InnerSimplified;
-                if (solutions is FiniteSet els)
+                // A family that comes as an indexed union is a row with a parameter for its index.
+                if (SolutionParameters.Each(solutions, nameSource + equations[0]) is { } els)
                     return els.Select(sol => new List<Entity> { sol }).ToList();
                 // Nothing is left to constrain `var`, so every value of it extends to a solution
                 // of the system rather than none of them doing so. Reporting no solutions here is
@@ -477,8 +489,7 @@ namespace AngouriMath.Functions.Algebra
             for (int i = 0; i < equations.Count; i++)
                 if (equations[i].ContainsNode(var))
                 {
-                    if (equations[i].SolveEquation(var).InnerSimplified is not FiniteSet sols
-                        || sols.Count == 0)
+                    if (SolutionParameters.Each(equations[i].SolveEquation(var).InnerSimplified, nameSource + equations[i]) is not { Count: > 0 } sols)
                         continue;
 
                     var rest = new List<Entity>(equations);

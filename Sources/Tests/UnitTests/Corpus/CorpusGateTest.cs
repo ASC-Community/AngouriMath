@@ -261,12 +261,41 @@ namespace AngouriMath.Tests.Corpus
                 : new Result(problem, Verdict.Wrong, simplified.Stringize(), note);
         }
 
+        /// <summary>
+        /// The roots an answer lists: the members of a finite set, and of an indexed union each
+        /// member at the values of <see cref="ParameterValues"/> its index set has, the family
+        /// <c>union({ 2 pi n }, n in ZZ)</c> at <c>n = 0, 1, -1, 2</c>; <see langword="null"/>
+        /// for any other set.
+        /// </summary>
+        private static List<Entity>? Listed(Entity roots)
+        {
+            switch (roots)
+            {
+                case Entity.Set.FiniteSet finite:
+                    return finite.ToList();
+                case Entity.Set.Unionf(var left, var right):
+                    return Listed(left) is { } first && Listed(right) is { } second ? first.Concat(second).ToList() : null;
+                case Entity.Set.IndexedUnionf family:
+                    var members = new List<Entity>();
+                    foreach (var value in ParameterValues)
+                        if (((Entity)value).In(family.Over).Simplify() == Entity.Boolean.True)
+                        {
+                            if (Listed(family.Body.Substitute(family.Var, value)) is not { } each)
+                                return null;
+                            members.AddRange(each);
+                        }
+                    return members;
+                default:
+                    return null;
+            }
+        }
+
         private static Result CheckSolve(Problem problem)
         {
             var input = problem.Input.ToEntity();
             var roots = input.SolveEquation("x");
-            if (roots is not Entity.Set.FiniteSet finite)
-                return new Result(problem, Verdict.Unsolved, roots.Stringize(), "not a finite root set");
+            if (Listed(roots) is not { } finite)
+                return new Result(problem, Verdict.Unsolved, roots.Stringize(), "not a finite root set or a family");
             if (finite.Count == 0)
                 return new Result(problem, Verdict.Unsolved, roots.Stringize(), "no roots found");
 

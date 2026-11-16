@@ -216,9 +216,12 @@ namespace AngouriMath.Tests.Convenience
         [Fact]
         public void SolvingGivesEverySolution()
         {
-            var solution = Assert.Single(Assert.IsType<Entity.Set.FiniteSet>(("x mod 3".ToEntity() - 1).SolveEquation("x")).Elements);
-            var parameter = Assert.Single(solution.Vars);
-            Assert.Equal((Entity)4, solution.Substitute(parameter, 1).Evaled);
+            // The family x = 1 + 3 n, written as a union over the whole n.
+            // https://github.com/asc-community/AngouriMath/issues/2319
+            var family = Assert.IsType<Entity.Set.IndexedUnionf>(("x mod 3".ToEntity() - 1).SolveEquation("x"));
+            Assert.Equal(MathS.Sets.Z, family.Over);
+            var solution = Assert.Single(Assert.IsType<Entity.Set.FiniteSet>(family.Body).Elements);
+            Assert.Equal((Entity)4, solution.Substitute(family.Var, 1).Evaled);
         }
     }
 }

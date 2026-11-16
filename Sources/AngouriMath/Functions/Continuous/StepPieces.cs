@@ -172,7 +172,8 @@ namespace AngouriMath.Functions.Algebra
             for (var k = least; k.CompareTo(most) <= 0; k = k.Add(EInteger.One))
             {
                 var whole = Integer.Create(k);
-                if ((argument - whole).SolveEquation(x) is not Set.FiniteSet solutions)
+                // With a family's parameter free, to be tried at the whole numbers near the range below.
+                if (EquationSolver.Solve(argument - whole, x) is not Set.FiniteSet solutions)
                     return null;
                 foreach (var solution in solutions)
                 {

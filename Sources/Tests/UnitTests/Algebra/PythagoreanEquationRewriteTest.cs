@@ -48,16 +48,15 @@ namespace AngouriMath.Tests.Algebra
                 specialised = specialised.Substitute(symbol, value);
                 truth = truth.Substitute(symbol, value);
             }
-            var roots = Assert.IsType<Entity.Set.FiniteSet>(specialised.InnerSimplified);
+            // A family is an indexed union over the whole numbers, read at a few of them.
+            // https://github.com/asc-community/AngouriMath/issues/2319
+            var roots = specialised.Members(-1, 0, 1);
             Assert.NotEmpty(roots);
 
             var checkedRoots = 0;
             foreach (var root in roots)
             {
-                // The periodic parameter is a free integer; 0 is a root whatever it is.
                 var point = root;
-                foreach (var free in point.Vars.Where(v => v.Name.StartsWith("n_")))
-                    point = point.Substitute(free, 0);
                 if (point.Vars.Any()) continue;
                 double residual;
                 try

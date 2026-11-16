@@ -163,7 +163,8 @@ namespace AngouriMath.Tests.Common
         [InlineData("x ^ 3 - 1 = 0", 3)]
         [InlineData("x + ln(x) = 0", 1)]
         public void RootVerificationKeepsEveryGenuineRoot(string equation, int expected) =>
-            Assert.Equal(expected, ((Entity.Set.FiniteSet)equation.ToEntity().Solve("x")).Count);
+            // A family counts once, by its principal member.
+            Assert.Equal(expected, equation.ToEntity().Solve("x").Members(0).Count);
 
         // https://github.com/asc-community/AngouriMath/issues/115
         // The numerical solver starts from a two-dimensional grid, so its resolution
@@ -263,15 +264,15 @@ namespace AngouriMath.Tests.Common
         [InlineData("e^(x^2) = -1", 0)]
         [InlineData("e^(x^2) + e^(-x^2) = 1", 0)]
         // A replacement that is not real at a real x is solved over the complex numbers:
-        // e^(i x) = -1 has the real root pi.
+        // e^(i x) = -1 has the real roots pi + 2 pi n, one family.
         [InlineData("e^(i x) = -1", 1)]
         public void Issue2425_AnExponentialEquationOverTheRealsHasOnlyRealRoots(string equation, int count)
         {
             using var _ = MathS.Settings.Codomain.Set(AngouriMath.Core.Domain.Real);
             var statement = (Entity.Equalsf)equation.ToEntity();
-            var roots = Assert.IsType<Entity.Set.FiniteSet>(statement.Solve("x"));
-            Assert.Equal(count, roots.Count);
-            foreach (var root in roots)
+            var solved = statement.Solve("x");
+            Assert.Equal(count, solved.Members(0).Count);
+            foreach (var root in solved.Members(-1, 0, 1))
             {
                 var value = Assert.IsAssignableFrom<Entity.Number.Complex>(root.Evaled);
                 Assert.True(value.ImaginaryPart.EDecimal.Abs().CompareTo(PeterO.Numbers.EDecimal.FromString("1E-30")) < 0,
@@ -379,12 +380,34 @@ namespace AngouriMath.Tests.Common
             }
         }
 
+        // Two powers of numbers with no common rate, a^p = -b^q, are p ln(a) = ln(-1) + q ln(b) + 2 pi i n,
+        // a family written exactly: (-2)^x + 4^x = 0 is i pi (2 n + 1) / (i pi - ln(2)), where Newton's method
+        // answered nine members in decimals as though they were every root.
+        // https://github.com/asc-community/AngouriMath/issues/2424, https://github.com/asc-community/AngouriMath/issues/2319
+        [Theory]
+        [InlineData("(-2)^x + 4^x")]
+        [InlineData("2 * 3^x - 5 * 7^x")]
+        [InlineData("i^x - 2")]
+        public void Issue2424_TwoPowersAreAnExactFamily(string equation)
+        {
+            var family = Assert.IsType<Entity.Set.IndexedUnionf>(equation.ToEntity().SolveEquation("x"));
+            Assert.Equal(MathS.Sets.Z, family.Over);
+            Assert.DoesNotContain(family.Nodes, node => node is Entity.Number { IsExact: false });
+            foreach (var root in family.Members(-2, -1, 0, 1, 2))
+            {
+                var residual = Assert.IsAssignableFrom<Entity.Number.Complex>(equation.ToEntity().Substitute("x", root).Evaled);
+                Assert.True(residual.Abs().EDecimal.CompareTo(PeterO.Numbers.EDecimal.FromString("1E-30")) < 0,
+                    $"{root} leaves {residual}");
+            }
+        }
+
         // The complex reading is untouched: e^x + 1 = 0 has the root i pi there.
         [Fact]
         public void Issue2425_OverTheComplexNumbersTheRootIsKept()
         {
             var statement = (Entity.Equalsf)"e^x + 1 = 0".ToEntity();
-            var root = Assert.Single(Assert.IsType<Entity.Set.FiniteSet>(statement.Solve("x")));
+            // The principal member of the family i pi + 2 pi i n.
+            var root = Assert.Single(statement.Solve("x").Members(0));
             var value = Assert.IsAssignableFrom<Entity.Number.Complex>(root.Evaled);
             Assert.Equal(System.Math.PI, value.ImaginaryPart.EDecimal.ToDouble(), 12);
         }

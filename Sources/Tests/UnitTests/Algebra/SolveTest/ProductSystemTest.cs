@@ -58,7 +58,9 @@ namespace AngouriMath.Tests.Algebra
         [InlineData("x * y", "sin(x) + y - 1", 3, "0", "1")]
         [InlineData("x * y", "y - cos(x)", 3, "0", "1")]
         [InlineData("(x - 1) * (y - 2)", "e^x - y", 2, "1", "e")]
-        [InlineData("(x - 1) * (y - 2)", "e^x - y", 2, "ln(2)", "2")]
+        // Over the complex numbers e^x = 2 is a family, its whole parameter free in the row.
+        // https://github.com/asc-community/AngouriMath/issues/2319
+        [InlineData("(x - 1) * (y - 2)", "e^x - y", 2, "ln(2) + 2 * pi * i * n_1", "2")]
         public void EachFactorIsABranch(string first, string second, int rows, string x, string y)
         {
             var solutions = Solve(first, second);

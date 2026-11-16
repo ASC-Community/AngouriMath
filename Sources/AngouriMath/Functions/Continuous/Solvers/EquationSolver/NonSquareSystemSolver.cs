@@ -143,7 +143,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 // An empty set is passed over as InSolveSystem passes it over: substituting an
                 // earlier unknown can leave an occurrence that cancels, and then the solve has
                 // nothing to say about this one.
-                if (equations[i].SolveEquation(variable).InnerSimplified is not FiniteSet roots || roots.Count == 0)
+                // A family that comes as an indexed union is read with a parameter for its index.
+                if (SolutionParameters.Each(equations[i].SolveEquation(variable).InnerSimplified, equations[i]) is not { Count: > 0 } roots)
                     continue;
                 var rest = new List<Entity>(equations);
                 rest.RemoveAt(i);
@@ -165,7 +166,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// The solutions where the last of the unknowns is each of <paramref name="roots"/> in
         /// turn, or <see langword="null"/> where that could not be told for one of them.
         /// </summary>
-        private static List<List<Entity>>? EachRoot(FiniteSet roots, List<Entity> rest, Variable[] variables, int count,
+        private static List<List<Entity>>? EachRoot(List<Entity> roots, List<Entity> rest, Variable[] variables, int count,
             Func<int, Variable> parameterFor, BudgetLedger ledger)
         {
             var variable = variables[count - 1];

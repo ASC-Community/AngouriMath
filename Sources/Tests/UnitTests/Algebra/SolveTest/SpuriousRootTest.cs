@@ -32,9 +32,9 @@ namespace AngouriMath.Tests.Algebra.SolveTest
             var expr = expression.ToEntity();
             foreach (var variable in variables)
             {
-                var roots = expr.SolveEquation(variable);
-                var finite = Assert.IsType<Entity.Set.FiniteSet>(roots);
-                foreach (var root in finite)
+                // A family is checked at the members either side of the principal one as well.
+                // https://github.com/asc-community/AngouriMath/issues/2319
+                foreach (var root in expr.SolveEquation(variable).Members(-2, -1, 0, 1, 2))
                 {
                     if (root.Vars.Any())
                         continue;
@@ -71,8 +71,8 @@ namespace AngouriMath.Tests.Algebra.SolveTest
         [InlineData("x ^ 3 - 1")]
         public void WritingOutTheEqualsSignChangesNothing(string expression)
         {
-            var bare = Assert.IsType<Entity.Set.FiniteSet>(expression.ToEntity().SolveEquation("x"));
-            var written = Assert.IsType<Entity.Set.FiniteSet>($"{expression} = 0".ToEntity().Solve("x"));
+            var bare = new Entity.Set.FiniteSet(expression.ToEntity().SolveEquation("x").Members(-1, 0, 1));
+            var written = new Entity.Set.FiniteSet($"{expression} = 0".ToEntity().Solve("x").Members(-1, 0, 1));
             // Compared as numbers rather than as trees: the two arrive at the same roots by
             // different routes and write them differently, sqrt(3/4) * (-1) against
             // (-1/2) * sqrt(3) and -1/2 against -0.5, while the claim here is only about
@@ -120,8 +120,8 @@ namespace AngouriMath.Tests.Algebra.SolveTest
         [InlineData("sin(x)", 2)]
         public void TheRootsThatWereRightAreStillThere(string expression, int count)
         {
-            var roots = Assert.IsType<Entity.Set.FiniteSet>(expression.ToEntity().SolveEquation("x"));
-            Assert.Equal(count, roots.Count);
+            // A family counts once, by its principal member.
+            Assert.Equal(count, expression.ToEntity().SolveEquation("x").Members(0).Count);
         }
     }
 }

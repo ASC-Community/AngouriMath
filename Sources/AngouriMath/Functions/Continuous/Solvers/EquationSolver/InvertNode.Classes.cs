@@ -166,12 +166,75 @@ namespace AngouriMath
                 // Over the reals a positive base to a real power is positive, so a value that is not
                 // a positive real is no power of it: e^x = -1 has no real root, and log(e, -1) is
                 // i pi. https://github.com/asc-community/AngouriMath/issues/2425
-                if (MathS.Settings.Codomain.Value == Core.Domain.Real && IsNotAPowerOverTheReals(value, x))
+                var overTheReals = MathS.Settings.Codomain.Value == Core.Domain.Real;
+                if (overTheReals && IsNotAPowerOverTheReals(value, x))
                     return Enumerable.Empty<Entity>();
-                // a ^ x = value => x = log(a, value)
-                // TODO: determine how we should return periodic roots as
-                // (e ^ x) ^ a != (e ^ a) ^ x for logs
-                return Exponent.Invert(MathS.Log(Base, value), x);
+                // a ^ f = value is e ^ (f ln(a)) = value, so f ln(a) is ln(value) + 2 pi i n for
+                // every whole n, and the principal logarithm log(a, value) is the n = 0 root alone:
+                // e ^ x = 2 is ln(2) + 2 pi i n, and 2 ^ x = 5 is log(2, 5) + 2 pi i n / ln(2). Over the
+                // reals, with f real, every n but 0 takes f ln(a) off the real line, so there the
+                // principal root is the only one -- except where the exponent is i times something,
+                // e ^ (i t) = value, which is how the trigonometric equations are solved: then
+                // t = ln(value) / i + 2 pi n, a family in either reading.
+                // https://github.com/asc-community/AngouriMath/issues/2319
+                // A positive base has a positive real power, and only there is the value positive.
+                value = WhereAPowerCanBe(value, overTheReals && Rotated() is null && Base.Evaled is Real { IsPositive: true });
+                if (Rotated() is { } angle)
+                    return angle.Invert(MathS.Log(Base, value) / MathS.i + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x);
+                if (overTheReals || Base.Evaled is Complex { IsZero: true } || Base.Evaled == Integer.One)
+                    return Exponent.Invert(MathS.Log(Base, value), x);
+                var turn = 2 * MathS.pi * MathS.i * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z);
+                return Exponent.Invert(MathS.Log(Base, value) + (Base == MathS.e ? turn : turn / MathS.Ln(Base)), x);
+            }
+
+            /// <summary>
+            /// <c>t</c> where this is <c>e ^ (i t)</c>, whose preimages in <c>t</c> are a family
+            /// <c>2 pi</c> apart; otherwise <see langword="null"/>.
+            /// </summary>
+            private Entity? Rotated()
+                => Base == MathS.e && Exponent is Mulf(var left, var right)
+                    ? left == MathS.i ? right : right == MathS.i ? left : null
+                    : null;
+
+            /// <summary>
+            /// <paramref name="value"/> with each whole parameter of the solve it is linear in ranging
+            /// only where the value is a power: away from 0, which no power is, and over the reals
+            /// where the value is positive. <c>sin(e ^ x) = 0</c> is <c>e ^ x = 2 pi n</c>, which
+            /// has no root at <c>n = 0</c>, and over the reals none for a negative <c>n</c>; so it is
+            /// <c>e ^ x = 2 pi k</c> for a whole <c>k</c> other than 0, or a positive one. A new
+            /// parameter is minted for that set, since the one in the value may be shared with
+            /// another root, as the two of a sine are.
+            /// https://github.com/asc-community/AngouriMath/issues/2319
+            /// </summary>
+            private static Entity WhereAPowerCanBe(Entity value, bool positive)
+            {
+                if (SolutionParameters.Current is not { } scope)
+                    return value;
+                foreach (var parameter in value.Vars.Distinct().ToList())
+                {
+                    if (scope.SetOf(parameter) != MathS.Sets.Z
+                        || !TreeAnalyzer.TryGetPolyLinear(value, parameter, out var slope, out var constant)
+                        || slope.Evaled is not Complex { IsZero: false } a || constant.Evaled is not Complex b)
+                        continue;
+                    Set? where = null;
+                    if (positive)
+                    {
+                        if (a is not Real ra || b is not Real rb)
+                            continue;
+                        // a n + b > 0 is n > -b / a for a positive a, and n < -b / a for a negative one.
+                        var bound = ((Real)(-rb / ra)).EDecimal;
+                        var context = PeterO.Numbers.EContext.ForPrecision(0);
+                        where = ra.IsPositive
+                            ? MathS.Intersection(MathS.Sets.Z, MathS.Sets.Interval(Integer.Create(bound.RoundToIntegerNoRoundedFlag(context.WithRounding(PeterO.Numbers.ERounding.Floor)).ToEInteger() + 1), true, Real.PositiveInfinity, false))
+                            : MathS.Intersection(MathS.Sets.Z, MathS.Sets.Interval(Real.NegativeInfinity, false, Integer.Create(bound.RoundToIntegerNoRoundedFlag(context.WithRounding(PeterO.Numbers.ERounding.Ceiling)).ToEInteger() - 1), true));
+                    }
+                    else if ((-b / a).InnerSimplified is Integer zero)
+                        where = MathS.SetSubtraction(MathS.Sets.Z, new Set.FiniteSet(zero));
+                    if (where is null)
+                        continue;
+                    value = value.Substitute(parameter, SolutionParameters.Mint(value, parameter.SplitIndex() is var (prefix, _) ? prefix : parameter.Name, where));
+                }
+                return value;
             }
 
             /// <summary>

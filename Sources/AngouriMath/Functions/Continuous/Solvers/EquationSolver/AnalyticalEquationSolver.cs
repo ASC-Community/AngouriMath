@@ -37,7 +37,7 @@ namespace AngouriMath
         /// <returns>
         /// Returns <see cref="Set"/>
         /// </returns>
-        public Set SolveEquation(Variable x) => EquationSolver.Solve(this, x);
+        public Set SolveEquation(Variable x) => EquationSolver.SolveBound(this, x);
     }
 }
 

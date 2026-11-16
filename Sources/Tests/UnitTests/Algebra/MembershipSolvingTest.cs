@@ -64,6 +64,12 @@ namespace AngouriMath.Tests.Algebra
         /// <summary>The trigonometric equation's family is the pre-image of <c>{0}</c> under the sine.</summary>
         [Fact]
         public void AMemberEquationKeepsItsFamily()
-            => Assert.Contains("n_1", Solved("sin(x) in {0}").Stringize());
+        {
+            // Written as a union over the whole numbers, which decides membership.
+            // https://github.com/asc-community/AngouriMath/issues/2319
+            var family = Solved("sin(x) in {0}");
+            Assert.Equal(Boolean.True, MathS.pi.In(family).Simplify());
+            Assert.NotEqual(Boolean.True, (MathS.pi / 2).In(family).Simplify());
+        }
     }
 }

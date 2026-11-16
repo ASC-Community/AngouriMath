@@ -188,9 +188,9 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 
         /// <summary>
         /// Whether a root demonstrably fails the equation. Anything that cannot be
-        /// evaluated to a number -- a root still carrying a parameter, say
-        /// <c>pi + 2 * pi * n_1</c>, or one whose residual is not finite -- is kept, so
-        /// that a root is only ever dropped on positive evidence against it. A function
+        /// evaluated to a number -- a root still carrying a symbol of the equation's, or one
+        /// whose residual is not finite -- is kept, so that a root is only ever dropped on
+        /// positive evidence against it. A family, <c>pi + 2 * pi * n_1</c>, is judged by a member. A function
         /// undefined at exact arguments is such evidence; see <see cref="IsUndefinedExactly"/>.
         /// </summary>
         private static RootVerdict Verdict(Entity equation, Variable x, Entity root)
@@ -210,8 +210,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // https://github.com/asc-community/AngouriMath/issues/744
             if (root.ContainsNode(x))
                 return RootVerdict.Spurious;
+            // A family of roots, whose parameters are whole numbers, is judged by one of its
+            // members, as the principal root alone was before the family was written: a member
+            // that fails is evidence against the family, and one that passes proves nothing
+            // about the rest, so the family is kept. https://github.com/asc-community/AngouriMath/issues/2319
             if (root.Vars.Any())
-                return RootVerdict.Kept;
+                return SolutionParameters.AtAMember(root) is { } member && !member.Vars.Any() && Verdict(equation, x, member) is var verdict and not RootVerdict.Kept
+                    ? verdict
+                    : RootVerdict.Kept;
             var substituted = equation.Substitute(x, root);
             if (IsUndefinedExactly(substituted))
                 return RootVerdict.Spurious;
