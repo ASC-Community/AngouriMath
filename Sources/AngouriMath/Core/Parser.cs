@@ -110,6 +110,57 @@ namespace AngouriMath.Core
         }
 
         /// <summary>
+        /// A call of <c>beta</c> or <c>norm</c> with one argument, handed back as the name and a bracket,
+        /// which is what it was read as before the two were functions: <c>beta(x)</c> is <c>beta * x</c>
+        /// and <c>norm([3, 4])</c> is <c>norm * [3, 4]</c>, the bracket binding as it did, so that
+        /// <c>norm(x)^2</c> is still <c>norm * x ^ 2</c>. The functions are the two-argument forms,
+        /// B(a, b) and the p-norm, which were parse errors; what the one-argument forms mean waits on
+        /// https://github.com/asc-community/AngouriMath/issues/1019.
+        /// https://github.com/asc-community/AngouriMath/issues/2182
+        /// </summary>
+        private static void SplitOneArgumentCalls(IList<IToken> tokenList)
+        {
+            for (var i = 0; i < tokenList.Count; i++)
+            {
+                var call = tokenList[i];
+                if (call.Channel != 0 || DisplayName(call) is not ("'beta('" or "'norm('") || HasASecondArgument(tokenList, i))
+                    continue;
+                var name = call.Text.Substring(0, call.Text.Length - 1);
+                tokenList[i] = new CommonToken(AngouriMathLexer.VARIABLE, name) { Line = call.Line, Column = call.Column };
+                var bracket = 0;
+                while (AngouriMathLexer.DefaultVocabulary.GetDisplayName(bracket) != "'('")
+                    bracket++;
+                tokenList.Insert(i + 1, new CommonToken(bracket, "(") { Line = call.Line, Column = call.Column + name.Length });
+            }
+
+            static string DisplayName(IToken token) => AngouriMathLexer.DefaultVocabulary.GetDisplayName(token.Type);
+
+            // Whether a comma stands at the call's own depth before the bracket that closes it.
+            static bool HasASecondArgument(IList<IToken> tokens, int call)
+            {
+                var depth = 0;
+                for (var j = call + 1; j < tokens.Count; j++)
+                {
+                    if (tokens[j].Channel != 0)
+                        continue;
+                    switch (DisplayName(tokens[j]))
+                    {
+                        case "','" when depth == 0:
+                            return true;
+                        case "')'" or "']'" or "']T'" or "'}'" or "'|)'":
+                            if (depth-- == 0)
+                                return false;
+                            break;
+                        case var opens when opens is "'('" or "'['" or "'{'" or "'(|'" || opens.EndsWith("('"):
+                            depth++;
+                            break;
+                    }
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
         /// This method inserts omitted tokens when no
         /// explicit-only parsing is enabled. Otherwise,
         /// it will throw an exception.
@@ -189,6 +240,7 @@ namespace AngouriMath.Core
                 );
             
             ExpandSuperscripts(tokenList, lexer);
+            SplitOneArgumentCalls(tokenList);
             if (InsertOmittedTokensOrProvideDiagnostic(tokenList, lexer).Is<ReasonWhyParsingFailed>(out var whyFailed))
                 return new Failure<ReasonWhyParsingFailed>(whyFailed);
 

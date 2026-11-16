@@ -96,6 +96,7 @@ namespace AngouriMath.Core
             CALL_FALLING_FACTORIAL,
             CALL_RISING_FACTORIAL,
             CALL_LAMBERTW,
+            CALL_BETA,
             CALL_POLYGAMMA,
             CALL_HARMONIC_NUMBER,
             CALL_DIVISOR_SIGMA,
@@ -389,6 +390,10 @@ namespace AngouriMath.Core
                         break;
                     case InstructionType.CALL_RISING_FACTORIAL:
                         stack.Push(AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(stack.Pop(), stack.Pop()));
+                        break;
+                    // The beta function. https://github.com/asc-community/AngouriMath/issues/2182
+                    case InstructionType.CALL_BETA:
+                        stack.Push(AngouriMath.Numerics.CombinatorialFunctions.Beta(stack.Pop(), stack.Pop()));
                         break;
                     case InstructionType.CALL_LAMBERTW:
                         stack.Push(AngouriMath.Numerics.LambertWFunction.LambertW(stack.Pop(), Core.Compilation.ComplexBranches.Unsigned(stack.Pop())));

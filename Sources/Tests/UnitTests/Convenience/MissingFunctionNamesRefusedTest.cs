@@ -75,6 +75,7 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("factorize + nextprime * divisors", "factorize + nextprime * divisors")]
         [InlineData("gradient - divergence", "gradient - divergence")]
         [InlineData("curl + grad * div", "curl + grad * div")]
+        [InlineData("beta + norm * 2", "beta + norm * 2")]
         [InlineData("φ * 2 + ϕ", "φ * 2 + ϕ")]
         [InlineData("rect(x)", "rect * x")]
         public void TheSameNameWithoutTheBracketIsStillAVariable(string written, string expected) =>

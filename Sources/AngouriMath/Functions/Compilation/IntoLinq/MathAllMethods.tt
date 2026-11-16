@@ -18,7 +18,7 @@
     // The combinatorial functions, for Complex and double alone in the same way: one argument, and two.
     // https://github.com/asc-community/AngouriMath/issues/2195
     var combinatorial = new[]{ "DoubleFactorial", "CatalanNumber" };
-    var combinatorialBinary = new[]{ "Binomial", "FallingFactorial", "RisingFactorial" };
+    var combinatorialBinary = new[]{ "Binomial", "FallingFactorial", "RisingFactorial", "Beta" };
     // The number-theoretic functions, exact at a whole argument and NaN at any other.
     var numberTheoretic = new[]{ "Mobius", "PrimeNu", "PrimeOmega", "Prime", "PrimePi" };
     var numberTheoreticBinary = new[]{ "DivisorSigma", "Valuation", "Gcd", "Lcm" };

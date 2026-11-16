@@ -410,6 +410,20 @@ namespace AngouriMath
                 : -Argument * New(Argument + 1, Parameter) * Parameter.DerivativeOver(variable);
         }
 
+        partial record Betaf
+        {
+            // dB/da = B(a, b) (psi(a) - psi(a + b)) and dB/db = B(a, b) (psi(b) - psi(a + b)), from
+            // ln B(a, b) = ln Gamma(a) + ln Gamma(b) - ln Gamma(a + b) (DLMF 5.12.1, 5.2.2).
+            // https://github.com/asc-community/AngouriMath/issues/2182
+            /// <inheritdoc/>
+            protected override Entity InnerDifferentiate(Variable variable)
+            {
+                var sum = MathS.Digamma(First + Second);
+                return this * ((MathS.Digamma(First) - sum) * First.DerivativeOver(variable)
+                    + (MathS.Digamma(Second) - sum) * Second.DerivativeOver(variable));
+            }
+        }
+
         partial record Polygammaf
         {
             // psi^(n)(a)' = psi^(n + 1)(a) a'. The order is whole, so an order that varies has no derivative

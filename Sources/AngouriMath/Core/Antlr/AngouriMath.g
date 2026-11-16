@@ -685,6 +685,10 @@ atom returns[Entity value]
     | 'zeta(' args = function_arguments ')' { if (Assert("zeta", (1, 2), $args.list.Count)) $value = MathS.Zeta($args.list[0]); else $value = MathS.Zeta($args.list[0], $args.list[1]); }
     | 'riemannzeta(' args = function_arguments ')' { Assert("riemannzeta", 1, $args.list.Count); $value = MathS.Zeta($args.list[0]); }
     | 'hurwitzzeta(' args = function_arguments ')' { Assert("hurwitzzeta", 2, $args.list.Count); $value = MathS.Zeta($args.list[0], $args.list[1]); }
+    /* The beta function B(a, b), named by its symbol as gamma is. A call with one argument is not
+       this rule's: Parser.cs hands it back as the name and a bracket, so beta(x) is still beta * x.
+       https://github.com/asc-community/AngouriMath/issues/2182 */
+    | 'beta(' args = function_arguments ')' { Assert("beta", 2, $args.list.Count); $value = MathS.Beta($args.list[0], $args.list[1]); }
     /* The trigonometric and hyperbolic integrals. https://github.com/asc-community/AngouriMath/issues/1501 */
     | 'Si(' args = function_arguments ')' { Assert("Si", 1, $args.list.Count); $value = MathS.Si($args.list[0]); }
     | 'Ci(' args = function_arguments ')' { Assert("Ci", 1, $args.list.Count); $value = MathS.Ci($args.list[0]); }
@@ -707,6 +711,9 @@ atom returns[Entity value]
     | 'gradient(' args = function_arguments ')' { $value = ParsingHelpers.Gradient($args.list); }
     | 'divergence(' args = function_arguments ')' { $value = ParsingHelpers.Divergence($args.list); }
     | 'curl(' args = function_arguments ')' { $value = ParsingHelpers.Curl($args.list); }
+    /* The p-norm of a vector. With one argument it is still the product Parser.cs leaves it as,
+       norm * v. https://github.com/asc-community/AngouriMath/issues/2182 */
+    | 'norm(' args = function_arguments ')' { $value = ParsingHelpers.Norm($args.list); }
     | 'resultant(' args = function_arguments ')' { Assert("resultant", 3, $args.list.Count); $value = ParsingHelpers.Resultant($args.list[0], $args.list[1], $args.list[2]); }
     /* The complex conjugate, by its name and by the shorter one other systems use.
        https://github.com/asc-community/AngouriMath/issues/2145 */

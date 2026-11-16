@@ -356,6 +356,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         public static double FallingFactorial(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.FallingFactorial(a, b);
         public static System.Numerics.Complex RisingFactorial(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(a, b);
         public static double RisingFactorial(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.RisingFactorial(a, b);
+        public static System.Numerics.Complex Beta(System.Numerics.Complex a, System.Numerics.Complex b) => AngouriMath.Numerics.CombinatorialFunctions.Beta(a, b);
+        public static double Beta(double a, double b) => AngouriMath.Numerics.CombinatorialFunctions.Beta(a, b);
 
         // The Lambert W function on the branch the first argument names.
         // https://github.com/asc-community/AngouriMath/issues/2195
@@ -586,6 +588,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             { ("FallingFactorial", 2, typeof(double)), Def<double>((a, b) => FallingFactorial(a, b)) },
             { ("RisingFactorial", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => RisingFactorial(a, b)) },
             { ("RisingFactorial", 2, typeof(double)), Def<double>((a, b) => RisingFactorial(a, b)) },
+            { ("Beta", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Beta(a, b)) },
+            { ("Beta", 2, typeof(double)), Def<double>((a, b) => Beta(a, b)) },
             { ("LambertW", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => LambertW(a, b)) },
             { ("Polygamma", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => Polygamma(a, b)) },
             { ("HarmonicNumber", 2, typeof(System.Numerics.Complex)), Def<System.Numerics.Complex>((a, b) => HarmonicNumber(a, b)) },

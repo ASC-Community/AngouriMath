@@ -335,6 +335,20 @@ namespace AngouriMath
                 => this == x ? value : New(Argument.Substitute(x, value), Parameter.Substitute(x, value));
         }
 
+        partial record Betaf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(First.Substitute(x, value), Second.Substitute(x, value));
+        }
+
+        partial record Normf
+        {
+            /// <inheritdoc/>
+            public override Entity Substitute(Entity x, Entity value)
+                => this == x ? value : New(Argument.Substitute(x, value), Order.Substitute(x, value));
+        }
+
         partial record Polygammaf
         {
             /// <inheritdoc/>

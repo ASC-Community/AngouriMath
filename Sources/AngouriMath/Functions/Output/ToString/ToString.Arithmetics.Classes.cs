@@ -320,6 +320,22 @@ namespace AngouriMath
             public override string ToString() => Stringize();
         }
 
+        partial record Betaf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"beta({First.Stringize()}, {Second.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
+        partial record Normf
+        {
+            /// <inheritdoc/>
+            private protected override string StringizeNode() => $"norm({Argument.Stringize()}, {Order.Stringize()})";
+            /// <inheritdoc/>
+            public override string ToString() => Stringize();
+        }
+
         public partial record Polygammaf
         {
             /// <inheritdoc/>

@@ -164,6 +164,18 @@ namespace AngouriMath
                 => IsRiemann ? $"sympy.zeta({Argument.ToSymPy()})" : $"sympy.zeta({Argument.ToSymPy()}, {Parameter.ToSymPy()})";
         }
 
+        public partial record Betaf
+        {
+            internal override string ToSymPy() => $"sympy.beta({First.ToSymPy()}, {Second.ToSymPy()})";
+        }
+
+        public partial record Normf
+        {
+            // SymPy's norm is a method of its matrices, Matrix.norm(ord), the p-norm of a vector for ord >= 1 and the
+            // largest modulus for ord = oo.
+            internal override string ToSymPy() => $"({Argument.ToSymPy()}).norm({Order.ToSymPy()})";
+        }
+
         public partial record Polygammaf
         {
             internal override string ToSymPy()

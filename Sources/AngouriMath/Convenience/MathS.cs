@@ -1783,6 +1783,27 @@ namespace AngouriMath
         /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
         public static Entity Zeta(Entity s, Entity a) => new Zetaf(s, a);
 
+        /// <summary>The beta function, <c>B(a, b) = Gamma(a) Gamma(b)/Gamma(a + b)</c> (DLMF 5.12.1)</summary>
+        /// <param name="a">The first argument, any complex number but <c>0, -1, -2, ...</c></param>
+        /// <param name="b">The second argument, any complex number but <c>0, -1, -2, ...</c></param>
+        /// <returns>The <see cref="Entity.Betaf"/> node</returns>
+        /// <remarks>
+        /// Where one argument is <c>0, -1, -2, ...</c> and so is <c>a + b</c>, the other is a whole number <c>n</c>
+        /// and the value is that of <c>(n - 1)!/(b (b + 1) ... (b + n - 1))</c>, so <c>B(1, b) = 1/b</c> wherever
+        /// either side has a value. https://github.com/asc-community/AngouriMath/issues/2182
+        /// </remarks>
+        public static Entity Beta(Entity a, Entity b) => new Betaf(a, b);
+
+        /// <summary>
+        /// The p-norm of a vector, <c>(|v_1|^p + ... + |v_n|^p)^(1/p)</c> for <c>p &gt;= 1</c>, the largest modulus
+        /// at <c>p = +oo</c>; the 2-norm is <see cref="Abs(Entity)"/> of the vector
+        /// </summary>
+        /// <param name="v">The vector, a column or a row</param>
+        /// <param name="p">The order, a real number at least <c>1</c>, or <c>+oo</c></param>
+        /// <returns>The <see cref="Entity.Normf"/> node</returns>
+        /// <remarks>https://github.com/asc-community/AngouriMath/issues/2182</remarks>
+        public static Entity Norm(Entity v, Entity p) => new Normf(v, p);
+
         /// <summary>The upper incomplete gamma function, <c>Gamma(a, z) = int_z^oo t^(a - 1) e^(-t) dt</c></summary>
         /// <param name="parameter">The parameter <c>a</c>, any complex number</param>
         /// <param name="lowerLimit">The lower limit <c>z</c>, any complex number; <c>0</c> only where <c>Re a > 0</c></param>

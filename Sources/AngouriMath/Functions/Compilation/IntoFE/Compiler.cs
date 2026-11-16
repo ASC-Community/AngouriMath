@@ -624,6 +624,19 @@ namespace AngouriMath
             }
         }
 
+        // The beta function, a ratio of gamma functions. https://github.com/asc-community/AngouriMath/issues/2182
+        public partial record Betaf
+        {
+            private protected override bool CompilesItself => true;
+
+            private protected override void CompileNode(Compiler compiler)
+            {
+                Second.InnerCompile(compiler);
+                First.InnerCompile(compiler);
+                compiler.Instructions.Add(new(InstructionType.CALL_BETA));
+            }
+        }
+
         // The Lambert W function on its branch. https://github.com/asc-community/AngouriMath/issues/2195
         public partial record LambertWf
         {

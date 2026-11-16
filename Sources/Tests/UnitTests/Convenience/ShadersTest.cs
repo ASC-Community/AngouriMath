@@ -221,6 +221,7 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("transpose(x)", "transpose(x)")]
         [InlineData("[x, y]", "[x, y]")]
         [InlineData("iverson(x in RR)", "x in RR")]
+        [InlineData("beta(x, y) + 1", "beta(x, y)")]
         [InlineData("x + {1, 2}", "{ 1, 2 }")]
         public void WhatHasNoFaithfulFormIsDeclined(string input, string at)
         {
@@ -241,6 +242,7 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("x + factorization(y)", "factorization(y)")]
         [InlineData("x + zeta(x)", "zeta(x)")]
         [InlineData("zeta(5/2, x) * y", "zeta(5/2, x)")]
+        [InlineData("x + norm(y, 3)", "norm(y, 3)")]
         public void WhatCompileRefusesIsDeclinedWithItsMessage(string input, string at)
         {
             Entity expr = input;

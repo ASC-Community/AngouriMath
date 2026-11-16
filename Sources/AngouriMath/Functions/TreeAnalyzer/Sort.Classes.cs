@@ -385,6 +385,16 @@ namespace AngouriMath
             private protected override string SortHashName(SortLevel level) => "zetaf_";
         }
 
+        public partial record Betaf
+        {
+            private protected override string SortHashName(SortLevel level) => "betaf_";
+        }
+
+        public partial record Normf
+        {
+            private protected override string SortHashName(SortLevel level) => "normf_";
+        }
+
         public partial record Polygammaf
         {
             private protected override string SortHashName(SortLevel level)

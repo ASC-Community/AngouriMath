@@ -148,6 +148,10 @@ namespace AngouriMath.AotSmokeTest
             CheckClose("zeta at x = 3", At(zeta, "x", 3), 1.2020569031595942854);
             var hurwitz = MathS.FromString("zeta(2.5, x)");
             CheckClose("zeta(2.5, x) at x = 0.5", At(hurwitz, "x", 0.5), 6.2471106345688114853);
+            var beta = MathS.FromString("beta(x, 1.3)");
+            CheckClose("beta(x, 1.3) at x = 2.5", At(beta, "x", 2.5), 0.25415419017646049454);
+            var norm = MathS.FromString("norm([x, 4, -2], 3)").InnerSimplified;
+            CheckClose("norm([x, 4, -2], 3) at x = 3", At(norm, "x", 3), 4.6260650091827411);
             var harmonic = MathS.FromString("harmonicnumber(x, 2)");
             CheckClose("harmonicnumber(x, 2) at x = 4", At(harmonic, "x", 4), 205.0 / 144);
             var difference = MathS.FromString("forwarddifference(x^3, x)");

@@ -520,6 +520,22 @@ namespace AngouriMath
             internal override Domain DefaultCodomain => Domain.Complex;
         }
 
+        partial record Betaf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Complex;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Complex;
+        }
+
+        partial record Normf
+        {
+            /// <inheritdoc/>
+            public override Domain Codomain { get; protected init; } = Domain.Real;
+            /// <inheritdoc/>
+            internal override Domain DefaultCodomain => Domain.Real;
+        }
+
         partial record Polygammaf
         {
             /// <inheritdoc/>

@@ -271,7 +271,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             {
                 Entity.Powf => !firstIsMatrix,
                 Entity.Logf or Entity.Maxf or Entity.Minf or Entity.Modf or Entity.Binomialf or Entity.FallingFactorialf
-                    or Entity.RisingFactorialf or Entity.LambertWf or Entity.Polygammaf or Entity.DivisorSigmaf
+                    or Entity.RisingFactorialf or Entity.LambertWf or Entity.Betaf or Entity.Polygammaf or Entity.DivisorSigmaf
                     or Entity.Gcdf or Entity.Lcmf => true,
                 _ => false,
             };

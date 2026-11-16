@@ -295,6 +295,17 @@ give them. They too are made of `derivative` nodes when parsed, so `divergence(c
 
 `(|x|)` is the absolute value of `x`, and prints back as `abs(x)`.
 
+`norm(v, p)` is the p-norm of a vector, `(|v_1|^p + ... + |v_n|^p)^(1/p)`, for a real `p >= 1`, and the
+largest modulus `|v_i|` at `p = +oo`, drawn `\left\| v \right\|_{p}`. A vector written out, a column or a
+row, real or complex, is taken when simplified: `norm([3, 4], 1)` is `7`, `norm([3, 4], +oo)` is `4` and
+`norm([3, 4], 3)` is `91^(1/3)`. The 2-norm is `abs(v)`, and `norm(v, 2)` is computed as that, so the two
+are the same expression. Below `p = 1` it is not a norm, the triangle inequality failing, so a `p` that is
+a number below `1`, or off the real line, is refused, as is a matrix written out that is not a vector,
+whose norms are other functions; a symbolic `p` stays as written, with the condition `p >= 1`. With one
+argument, `norm(v)` is still the product `norm * v`, as it was before the norm was a function: what it
+should mean waits on [#1019](https://github.com/asc-community/AngouriMath/issues/1019)
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 ## Functions
 
 Everything below is written `name(argument, ...)`.
@@ -487,6 +498,18 @@ derivative in `s` has no closed form and stays a `derivative`. `Zeta(s)` is stil
 `Zeta * s`: Mathematica's two-argument `Zeta[s, a]` is another function than Hurwitz's where `Re a < 0`
 ([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
 
+**Beta function** — `beta(a, b)`, drawn `\operatorname{B}\left(a, b\right)`: `Gamma(a) Gamma(b)/Gamma(a + b)`,
+as [DLMF 5.12.1](https://dlmf.nist.gov/5.12.E1) has it. It is exact where the gamma functions are: at a
+whole argument `n` it is `(n - 1)!/(b (b + 1) ... (b + n - 1))`, so `beta(1, b)` is `1/b`, and at two
+half-whole ones a rational times `pi`, so `beta(1/2, 1/2)` is `pi`. It has no value where `a` or `b` is
+`0, -1, -2, ...`, unless `a + b` is one too: there the other argument is a whole `n`, and the value is that
+of the rational function above, so `beta(2, -3)` is `1/6`, as mpmath's `beta` takes it; where only `a + b`
+is one it is `0`. Anything else numeric, real or complex, is evaluated to the working precision. It is
+symmetric, `beta(b, a)` simplifying to the same node, and its derivative in `a` is
+`beta(a, b) * (digamma(a) - digamma(a + b))`. As `gamma` is, `beta` alone is a variable and `beta (x)`
+with a space a product; with one argument, `beta(x)` is still the product `beta * x`
+([#2182](https://github.com/asc-community/AngouriMath/issues/2182)).
+
 **Polygamma functions** — `polygamma(n, z)` `digamma(z)`. The polygamma function `psi^(n)(z)`, the
 `(n + 1)`-th derivative of `ln Gamma(z)` for a whole `n >= 0`, and the digamma function
 `psi(z) = Gamma'(z)/Gamma(z)`, which is `polygamma(0, z)` and prints as `digamma(z)`. Each is evaluated
@@ -652,7 +675,7 @@ written exactly, and are refused with the spelling to use. `heaviside` takes `0`
 `0` by source: write `iverson(x > 0)`, `iverson(x >= 0)` or `(1 + sgn(x))/2`; `unitstep` is
 `iverson(x >= 0)`. `isprime(n)` is `n in PP`, `fractionalpart(x)` is `x mod 1`,
 `quotient(a, b)` is `floor(a / b)`, and `pochhammer` is the rising factorial to some authors and the
-falling one to others. Short names that could be somebody's variable, such as `beta` or `norm`, are
+falling one to others. Short names that could be somebody's variable, such as `grad` or `div`, are
 not refused.
 
 Some names other systems call functions have no node here yet and are refused with what to write
