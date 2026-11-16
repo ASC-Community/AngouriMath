@@ -51,7 +51,8 @@ namespace AngouriMath.Functions.Algebra.Groebner
         [ConstantField]
         internal static readonly WorkBudget Default = new() { Time = TimeSpan.FromSeconds(5) };
 
-        private readonly BudgetLedger ledger = BudgetLedger.For("Gröbner", Default);
+        // An allowance: a set MathS.Settings.Budget replaces Default, so a caller can raise it.
+        private readonly BudgetLedger ledger = BudgetLedger.For("Gröbner", Default, BudgetRole.Allowance);
 
         /// <summary>
         /// Charges one unit of work and answers whether to carry on. Called where the

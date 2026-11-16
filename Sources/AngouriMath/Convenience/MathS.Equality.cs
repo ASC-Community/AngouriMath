@@ -25,7 +25,8 @@ namespace AngouriMath
         /// tried, a rule's match attempt, a node the graph grows by -- so the same question under
         /// the same steps gets the same answer on any machine; a <see cref="WorkBudget.Time"/>
         /// makes it depend on the machine, and <see cref="EqualityAnswer.Budget"/> says when it
-        /// did. <see cref="Settings.Budget"/>, where set, overrides this.
+        /// did. <see cref="Settings.Budget"/>, where set, caps this: the smaller limit on each axis
+        /// applies, so an ambient <see cref="WorkBudget.Unlimited"/> leaves it as passed.
         /// </param>
         /// <param name="weakest">
         /// The weakest soundness a proof may rest on. <see cref="Soundness.Sound"/>, the default,

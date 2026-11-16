@@ -120,7 +120,9 @@ namespace AngouriMath.Functions.Algebra
             // budget of its own is what bounded the fast path and left the fall-through
             // unbounded, so the same `Solve` finished or did not depending on which internal
             // path accepted it. https://github.com/asc-community/AngouriMath/issues/896
-            var ledger = BudgetLedger.For("SolveSystem", SystemSolveBudget);
+            // An allowance: a set MathS.Settings.Budget replaces SystemSolveBudget, which is
+            // what the exceptions below mean by "raise MathS.Settings.Budget to allow more".
+            var ledger = BudgetLedger.For("SolveSystem", SystemSolveBudget, BudgetRole.Allowance);
             try
             {
                 var variables = new Variable[vars.Length];

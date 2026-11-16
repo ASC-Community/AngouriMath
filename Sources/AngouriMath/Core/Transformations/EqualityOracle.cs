@@ -203,7 +203,8 @@ namespace AngouriMath.Core.Transformations
                 throw new ArgumentOutOfRangeException(nameof(domain), domain,
                     "Equality is asked over the complex or the real numbers.");
 
-            var ledger = BudgetLedger.For(Where, budget);
+            // The caller's argument, capped by a set MathS.Settings.Budget.
+            var ledger = BudgetLedger.For(Where, budget, BudgetRole.Argument);
             try
             {
                 if (left.Equals(right))

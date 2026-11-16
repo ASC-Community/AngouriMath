@@ -91,7 +91,7 @@ namespace AngouriMath.Tests.Core.Transformations
         {
             var graph = new EGraph();
             graph.AddEntity(source.ToEntity());
-            var ledger = BudgetLedger.For(nameof(SaturationAblationTest), Quick);
+            var ledger = BudgetLedger.For(nameof(SaturationAblationTest), Quick, BudgetRole.Argument);
             var saturated = Saturation.Run(graph, rules, ledger, node => node.Complexity);
             return (saturated, graph.NodeCount);
         }

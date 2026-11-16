@@ -201,8 +201,10 @@ namespace AngouriMath.Functions
         /// What the rewrite graph may spend proving a cross term equal to its candidate: two
         /// thousand steps and fifty milliseconds. On the corpus the safe ceiling saturates a
         /// term of this size in under a millisecond and a few dozen e-nodes, so this is a lid
-        /// against the stall family rather than a working allowance.
+        /// against the stall family rather than a working allowance, and is declared as one: a set
+        /// <see cref="MathS.Settings.Budget"/> can only tighten it.
         /// https://github.com/asc-community/AngouriMath/issues/1200
+        /// https://github.com/asc-community/AngouriMath/issues/2454
         /// </summary>
         [ConstantField] private static readonly WorkBudget PerfectSquareProofBudget
             = new() { Steps = 2_000, Time = TimeSpan.FromMilliseconds(50) };

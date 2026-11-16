@@ -6694,11 +6694,40 @@ namespace AngouriMath
             /// <para>
             /// <b>Leaving this alone is not the same as setting it to
             /// <see cref="WorkBudget.Unlimited"/>.</b> Unset, each algorithm keeps the budget
-            /// it chose for itself -- the Gr&#246;bner path bounds itself by five seconds and
-            /// by five structural ceilings, and did so before this setting existed. Set, this
-            /// replaces those defaults wherever a budget is honoured, so
+            /// it chose for itself. Set, what it does depends on what that budget is for
+            /// (<a href="https://github.com/asc-community/AngouriMath/issues/2454">#2454</a>):
+            /// </para>
+            /// <list type="bullet">
+            /// <item><b>A working allowance is replaced.</b> The system solver
+            /// (<see cref="Core.EquationSystem.Solve(Variable[])"/>: 10,000 steps and 60 seconds
+            /// over the whole call) and its Gr&#246;bner path (5 seconds) run under this budget
+            /// instead of their own, so this is how a caller raises them -- and
             /// <see cref="WorkBudget.Unlimited"/> here means "do not stop", which for a
-            /// doubly-exponential algorithm means what it says.
+            /// doubly-exponential algorithm means what it says.</item>
+            /// <item><b>A lid can only be tightened.</b> The proof that a written-out perfect
+            /// square is one, which <see cref="Entity.Factorize(int)"/> runs and
+            /// <see cref="Entity.Simplify(int)"/> offers as a candidate, bounds itself by 2,000
+            /// steps and 50 milliseconds against a stall. It runs under the smaller limit on
+            /// each axis of that and this, so setting this never makes <c>Simplify</c> or
+            /// <c>Factorize</c> run longer. A proof stopped early is "not proved" and falls back
+            /// to the symbolic test, so tightening it costs time, not answers.</item>
+            /// <item><b>A budget passed as an argument is capped.</b>
+            /// <see cref="Core.Transformations.Transformation.EqualitySaturation(WorkBudget, Core.CostModel)"/>,
+            /// <see cref="Core.Transformations.Transformation.CanonicalizationOverGraph(WorkBudget)"/> and
+            /// <see cref="AreEqual(Entity, Entity, WorkBudget, Core.Transformations.Soundness, Core.Domain)"/>
+            /// spend the budget they were given, under the smaller limit on each axis of it and
+            /// this: the outer scope bounds the inner one, and
+            /// <see cref="WorkBudget.Unlimited"/> here leaves the argument as passed.</item>
+            /// </list>
+            /// <para>
+            /// <b>A budget names both axes.</b> <see cref="WorkBudget"/> cannot say "no opinion"
+            /// about one of them, so a <see cref="WorkBudget.Time"/> left <see langword="null"/>
+            /// is "no clock": <c>new WorkBudget { Steps = 1_000_000 }</c> raises the solver's
+            /// steps and also removes its 60 seconds. Against a lid or an argument the missing
+            /// clock is simply the looser limit, and theirs applies -- the lid's 50 milliseconds
+            /// included, which decide how soon the proof gives up and not the answer. Saying
+            /// "no opinion" per axis is a change to <see cref="WorkBudget"/> itself, left to v3
+            /// (<a href="https://github.com/asc-community/AngouriMath/issues/746">#746</a>).
             /// </para>
             /// <para>
             /// A budget in <see cref="WorkBudget.Steps"/> is reproducible and one in
@@ -6709,17 +6738,10 @@ namespace AngouriMath
             /// (<a href="https://github.com/asc-community/AngouriMath/issues/373">#373</a>)
             /// </para>
             /// <para>
-            /// It is honoured only where an algorithm asks. Today that is the system solver --
-            /// its Gr&#246;bner path, and the ledger <see cref="Core.EquationSystem.Solve(Variable[])"/>
-            /// keeps over the whole call --, the rewrite graph wherever it runs:
-            /// <see cref="Core.Transformations.Transformation.EqualitySaturation(WorkBudget, Core.CostModel)"/>,
-            /// <see cref="Core.Transformations.Transformation.CanonicalizationOverGraph(WorkBudget)"/> and
-            /// <see cref="AreEqual(Entity, Entity, WorkBudget, Core.Transformations.Soundness, Core.Domain)"/>, and the proof that a written-out perfect
-            /// square is one, which <see cref="Entity.Factorize(int)"/> runs and
-            /// <see cref="Entity.Simplify(int)"/> offers as a candidate. <c>Simplify</c> itself
-            /// is not bounded by it, and nor is anything else in the library, each of which
-            /// bounds itself by ceilings of its own that this does not reach; so setting it does
-            /// not make an arbitrary call bounded.
+            /// It is honoured only at the sites listed above. <c>Simplify</c> itself is not
+            /// bounded by it, and nor is anything else in the library, each of which bounds
+            /// itself by ceilings of its own that this does not reach; so setting it does not
+            /// make an arbitrary call bounded.
             /// </para>
             /// </remarks>
             /// <example>
