@@ -5,13 +5,109 @@
 // Website: https://am.angouri.org.
 //
 
+using System.Collections.Generic;
+using PeterO.Numbers;
 using static AngouriMath.Entity;
+using static AngouriMath.Entity.Number;
 using static AngouriMath.Entity.Set;
 
 namespace AngouriMath.Core.Sets
 {
     internal static partial class SetOperators
     {
+        /// <summary>
+        /// The members of a family of roots <paramref name="family"/> that are in a set of reals
+        /// <paramref name="real"/> -- the reals or an interval with numbers for its ends -- as a
+        /// finite set; <see langword="null"/> where the family is not of the shape read here or a
+        /// membership is not decided, and the intersection stays as written.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Each member is read as <c>c + k n</c> in the index <c>n</c>, with numbers <c>c</c> and
+        /// <c>k</c>, <c>k</c> not 0. Its imaginary part is <c>Im(c) + n Im(k)</c>. Where <c>k</c> is not
+        /// real that is 0 at one <c>n</c> only, <c>n0 = -Im(c) / Im(k)</c>, so the family has one real
+        /// member where <c>n0</c> is a whole number in the index set and none otherwise: every
+        /// exponential's family over the complex numbers, <c>ln(2) + 2 pi i n</c>, is real at
+        /// <c>n = 0</c> alone, which makes <c>e ^ x = 2 and x in RR</c> the root <c>ln(2)</c>. Where
+        /// <c>k</c> is real every member is real if <c>Im(c) = 0</c> and none is otherwise, and the
+        /// members inside a bounded interval are the <c>n</c> between its ends mapped back, at most
+        /// <see cref="MostRealMembers"/> of them: <c>sin(x) = 1/2</c> on <c>[0; 2 pi]</c> is
+        /// <c>{ pi/6, 5 pi/6 }</c>. Over an unbounded set there are infinitely many, and the
+        /// intersection stays.
+        /// </para>
+        /// <para>
+        /// <c>n0</c> is a ratio of the imaginary parts as evaluated, taken as whole within
+        /// <c>1e-30</c>; the member at it is then put in <paramref name="real"/> as an exact
+        /// expression, which is what decides it.
+        /// https://github.com/asc-community/AngouriMath/issues/2319
+        /// </para>
+        /// </remarks>
+        internal static Set? RealMembers(IndexedUnionf family, Set real)
+        {
+            if (family.Var is not Variable n || family.Over is not Set over || family.Body is not FiniteSet body)
+                return null;
+            Real? from = null, to = null;
+            switch (real)
+            {
+                case SpecialSet.Reals:
+                    break;
+                case Interval { Left: var left, Right: var right }
+                    when left.Evaled is Real lower && right.Evaled is Real upper:
+                    (from, to) = (lower, upper);
+                    break;
+                default:
+                    return null;
+            }
+            var found = new FiniteSetBuilder();
+            foreach (var member in body)
+            {
+                if (Functions.Algebra.AnalyticalSolving.SolutionParameters.NumericLine(member, n) is not var (k, c))
+                    return null;
+                var indices = new List<EInteger>();
+                if (!k.ImaginaryPart.IsZero)
+                {
+                    var at = (-c.ImaginaryPart.EDecimal).Divide(k.ImaginaryPart.EDecimal, MathS.Settings.DecimalPrecisionContext.Value);
+                    var whole = at.RoundToIntegerNoRoundedFlag(EContext.Unlimited.WithRounding(ERounding.HalfEven));
+                    if (at.Subtract(whole).Abs().CompareTo(EDecimal.Create(1, -30)) < 0)
+                        indices.Add(whole.ToEInteger());
+                }
+                else if (c.ImaginaryPart.IsZero)
+                {
+                    if (from is not { EDecimal.IsFinite: true } || to is not { EDecimal.IsFinite: true })
+                        return null;
+                    var context = MathS.Settings.DecimalPrecisionContext.Value;
+                    var atFrom = from.EDecimal.Subtract(c.RealPart.EDecimal).Divide(k.RealPart.EDecimal, context);
+                    var atTo = to.EDecimal.Subtract(c.RealPart.EDecimal).Divide(k.RealPart.EDecimal, context);
+                    var low = EDecimal.Min(atFrom, atTo).RoundToIntegerNoRoundedFlag(EContext.Unlimited.WithRounding(ERounding.Floor)).ToEInteger();
+                    var high = EDecimal.Max(atFrom, atTo).RoundToIntegerNoRoundedFlag(EContext.Unlimited.WithRounding(ERounding.Ceiling)).ToEInteger();
+                    if (high.Subtract(low).CompareTo(EInteger.FromInt32(MostRealMembers)) > 0)
+                        return null;
+                    for (var index = low; index.CompareTo(high) <= 0; index += EInteger.One)
+                        indices.Add(index);
+                }
+                foreach (var index in indices)
+                {
+                    if (!over.TryContains(Integer.Create(index), out var inOver))
+                        return null;
+                    if (!inOver)
+                        continue;
+                    var value = member.Substitute(n, Integer.Create(index)).InnerSimplified;
+                    if (!real.TryContains(value, out var inReal))
+                        return null;
+                    if (inReal)
+                        found.Add(value);
+                }
+            }
+            return found.ToFiniteSet();
+        }
+
+        /// <summary>The most members of a family with a real step read inside a bounded interval.</summary>
+        private const int MostRealMembers = 64;
+
+        /// <summary>Whether <paramref name="set"/> is a union with a family of roots among its pieces.</summary>
+        internal static bool HasAFamily(Set set)
+            => set is IndexedUnionf || set is Unionf(Set left, Set right) && (HasAFamily(left) || HasAFamily(right));
+
         /// <summary>
         /// The members of <paramref name="finite"/> that are in <paramref name="set"/>, and the
         /// intersection left as written for those whose membership is not decided.

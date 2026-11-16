@@ -344,6 +344,13 @@ namespace AngouriMath
                                 => MathS.SetSubtraction(MathS.Intersection(from, other).InnerSimplified(isExact), removed).InnerSimplified(isExact),
                             (Set other, SetMinusf(var from, var removed)) when other is not SetMinusf
                                 => MathS.SetSubtraction(MathS.Intersection(other, from).InnerSimplified(isExact), removed).InnerSimplified(isExact),
+                            // A family of roots meets a set of reals in its real members, where they are
+                            // decided; and a union with a family in it meets one piece by piece.
+                            // https://github.com/asc-community/AngouriMath/issues/2319
+                            (IndexedUnionf family, Set real) when SetOperators.RealMembers(family, real) is { } members => members,
+                            (Set real, IndexedUnionf family) when SetOperators.RealMembers(family, real) is { } members => members,
+                            (Unionf(var left, var right) union, SpecialSet.Reals or Interval) when SetOperators.HasAFamily(union)
+                                => MathS.Union(MathS.Intersection(left, b).InnerSimplified(isExact), MathS.Intersection(right, b).InnerSimplified(isExact)).InnerSimplified(isExact),
                             _ => null
                         },
                         (@this, a, b) => ((Intersectionf)@this).New(a, b), isExact, propagateSet: false);

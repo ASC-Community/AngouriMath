@@ -6,6 +6,7 @@
 //
 
 using System;
+using AngouriMath.Core.Sets;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Set;
 using static AngouriMath.Entity.Number;
@@ -145,9 +146,54 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             return minted is null ? new() : minted.Where(parameter => IsWhole(sets![parameter]) && vars.Contains(parameter)).ToList();
         }
 
-        /// <summary><paramref name="answer"/> with each listed root that has whole parameters in it bound.</summary>
+        /// <summary>
+        /// <paramref name="answer"/> with each listed root that has whole parameters in it bound, and
+        /// an intersection a family is now in simplified, where it meets a set of reals in its real
+        /// members: <c>e ^ x = 2 and x in RR</c> is <c>{ ln(2) }</c>. The solve met
+        /// <c>{ ln(2) + 2 pi i n_1 }</c> with the reals, which a root with a free parameter could not.
+        /// </summary>
         private Set BindWholeParameters(Set answer)
-            => (Set)answer.Replace(node => node is FiniteSet listed && listed.Any(root => WholeParametersOf(root).Count > 0) ? Bind(listed) : node);
+            => (Set)answer.Replace(node => node switch
+            {
+                FiniteSet listed when listed.Any(root => WholeParametersOf(root).Count > 0) => Bind(listed),
+                Intersectionf(Set left, Set right) when SetOperators.HasAFamily(left) || SetOperators.HasAFamily(right) => node.InnerSimplified,
+                // Two pieces the intersection above made finite are one set.
+                Unionf(FiniteSet, FiniteSet) => node.InnerSimplified,
+                _ => node,
+            });
+
+        /// <summary>
+        /// The numbers <c>k</c> other than 0 and <c>c</c> where <paramref name="value"/> is written
+        /// <c>k n + c</c> in <paramref name="n"/>, read off its terms and their factors; otherwise
+        /// <see langword="null"/>. Not by gathering a polynomial, which expands: the value of a power
+        /// inverted inside a large equation is a large expression, and expanding it was most of what
+        /// solving such an equation cost.
+        /// </summary>
+        internal static (Complex Slope, Complex Constant)? NumericLine(Entity value, Variable n)
+        {
+            Entity slope = Integer.Zero, constant = Integer.Zero;
+            foreach (var term in Sumf.LinearChildren(value))
+            {
+                if (!term.ContainsNode(n))
+                {
+                    constant += term;
+                    continue;
+                }
+                Entity coefficient = Integer.One;
+                var occurrences = 0;
+                foreach (var factor in Mulf.LinearChildren(term))
+                    if (factor == n)
+                        occurrences++;
+                    else if (factor.ContainsNode(n))
+                        return null;
+                    else
+                        coefficient *= factor;
+                if (occurrences != 1)
+                    return null;
+                slope += coefficient;
+            }
+            return slope.Evaled is Complex { IsZero: false } k && constant.Evaled is Complex c ? (k, c) : null;
+        }
 
         /// <summary>
         /// <paramref name="listed"/> as the roots with no whole parameter, united with one indexed
