@@ -29,7 +29,7 @@ namespace AngouriMath.Tests.Algebra.SolveTest
         [Theory]
         [InlineData("x6 + x y + 1 = 0")]
         [InlineData("sin(x) + x + y = 0")]
-        [InlineData("e^x + x + y = 0")]
+        [InlineData("e^x + x^2 + y = 0")]
         [InlineData("x y + sin(x) ^ 2 + ln(x) = 0")]
         public void ExhaustedIsNotEmpty(string equation)
         {
