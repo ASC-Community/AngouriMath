@@ -58,6 +58,23 @@ namespace AngouriMath.Tests.Algebra.SolveTest
             Assert.Equal(Set.Empty, "x e^x = -1".ToEntity().Solve("x"));
         }
 
+        /// <summary>
+        /// An exponential equal to a line over the reals: e^x = x + 2 meets the line twice, e^x = e x
+        /// touches it at 1, and e^x = 2 x does not meet it, since e^x - 2x is 2 - 2 ln 2 at its least.
+        /// </summary>
+        [Theory]
+        [InlineData("e^x = x + 2", 2)]
+        [InlineData("e^x = e x", 1)]
+        [InlineData("e^x = 2 x", 0)]
+        public void AnExponentialMeetsALineOverTheReals(string equation, int count)
+        {
+            using var _ = MathS.Settings.Codomain.Set(Domain.Real);
+            var roots = Assert.IsType<Set.FiniteSet>(equation.ToEntity().Solve("x"));
+            Assert.Equal(count, roots.Count);
+            foreach (var root in roots)
+                Satisfies(equation, root);
+        }
+
         /// <summary>Over the reals a symbolic right side carries where each branch is real.</summary>
         [Fact]
         public void ASymbolicRightSideCarriesTheConditions()
@@ -73,6 +90,11 @@ namespace AngouriMath.Tests.Algebra.SolveTest
         [InlineData("x e^x = 2")]
         [InlineData("(x + 1) e^x = 2")]
         [InlineData("(2 x - 1) e^(3 x + 1) = 4")]
+        // An exponential equal to a line is the product written as a sum: e^x = x + 2 is (x + 2) e^(-x) = 1.
+        [InlineData("e^x = x + 2")]
+        [InlineData("e^x = 2 x")]
+        [InlineData("3 e^(2 x) - x = 1")]
+        [InlineData("2^x = x + 3")]
         public void OverTheComplexNumbersEveryBranchIsARoot(string equation)
         {
             // The branches are a union over the whole numbers.

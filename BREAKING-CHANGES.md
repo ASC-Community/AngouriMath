@@ -130,6 +130,26 @@ such a polynomial in `e^(ix)` is answered the same way, one family member per ro
 | `(x - i)^2 (x^5 + 2x + i) = 0`, written out | 11 numbers | its 6 roots |
 | `sin(3x) = cos(2x)` | a family of 17 members | a family of 5 members |
 
+### An exponential equal to a line is solved by the Lambert W function
+
+**Silent: wrong answers become right.** `e^x = x + 2` is `(x + 2) e^(-x) = 1`, the product of a line and an exponential
+that the Lambert W function solves, but written as a sum it was not read as one. Newton's method answered it instead:
+- a list of decimals for an equation with infinitely many roots;
+- complex numbers over the reals;
+- near-copies of a repeated root.
+
+Each such equation is now the family of its Lambert W branches over the complex numbers, and the real branches, or no
+root, over the reals.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"e^x = x + 2".ToEntity().Solve("x")` | `{ -1.841405…, 1.146193…, 2.131075… - 7.341435…i, … }` | `union({ -lambertw(n, (-1) / e ^ 2) + -2 }, n in ZZ)` |
+| the same over the reals | the same list, complex numbers included | `{ -lambertw((-1) / e ^ 2) + -2, -lambertw(-1, (-1) / e ^ 2) + -2 }` |
+| `e^x = 2 x` over the reals | `{ 0.794023… - 0.770111…i, 0.794023… + 0.770111…i, … }` | `{ }` |
+| `e^x = e x` over the reals | near-copies of `1`, such as `0.999999… - 2.475484E-8i` | `{ 1 }` |
+| `2^x = x + 3` | `{ -2.862500…, 2.444907…, 3.636625… - 10.518881…i, … }` | `union({ lambertw(n, -1/8 * ln(2)) / (-ln(2)) + -3 }, n in ZZ)` |
+| `e^x + x + y = 0` | `{ x : e ^ x + x = -y }`, unsolved | `union({ -lambertw(n, e ^ (-y)) + -y }, n in ZZ)` |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**

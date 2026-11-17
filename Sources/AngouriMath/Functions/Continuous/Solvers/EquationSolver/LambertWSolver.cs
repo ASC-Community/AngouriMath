@@ -14,7 +14,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 {
     /// <summary>
     /// <c>K (alpha x + beta) b^(gamma x + delta) = c</c>, a linear function times an exponential of
-    /// another, solved by the Lambert W function. https://github.com/asc-community/AngouriMath/issues/2182
+    /// another, solved by the Lambert W function, and an exponential equal to a line, which is that
+    /// product written as a sum. https://github.com/asc-community/AngouriMath/issues/2182
     /// </summary>
     /// <remarks>
     /// Written <c>e^((gamma x + delta) ln b)</c>, the exponent is <c>u = g x + d</c>, and with
@@ -31,6 +32,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         {
             var terms = Sumf.LinearChildren(expr);
             var withX = terms.Where(term => term.ContainsNode(x)).ToList();
+            if (withX.Count > 1)
+                return AsAProduct(terms, x) is { } product ? Solve(product, x) : null;
             if (withX.Count != 1)
                 return null;
             var c = (-terms.Where(term => !term.ContainsNode(x)).Aggregate((Entity)Integer.Zero, (sum, term) => sum + term)).InnerSimplified;
@@ -86,6 +89,39 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             return new FiniteSet(
                 Root(Integer.Zero).Provided(a >= -1 / MathS.e),
                 Root(Integer.MinusOne).Provided((a >= -1 / MathS.e) & (a < 0)));
+        }
+
+        /// <summary>
+        /// <c>K b^E + alpha x + beta = 0</c>, an exponential equal to a line, as the product
+        /// <c>(alpha x + beta) b^(-E) + K = 0</c>, which has the same roots since <c>b^E</c> is never 0:
+        /// <c>e^x = x + 2</c> is <c>(x + 2) e^(-x) = 1</c>. <see langword="null"/> for any other sum.
+        /// </summary>
+        private static Entity? AsAProduct(IReadOnlyList<Entity> terms, Variable x)
+        {
+            Entity? exponential = null;
+            Entity line = Integer.Zero;
+            foreach (var term in terms)
+                if (term.ContainsNode(x) && Mulf.LinearChildren(term).Any(factor => factor is Powf(var @base, var power) && !@base.ContainsNode(x) && power.ContainsNode(x)))
+                {
+                    if (exponential is not null)
+                        return null;
+                    exponential = term;
+                }
+                else
+                    line += term;
+            if (exponential is null || !line.ContainsNode(x) || !TreeAnalyzer.TryGetPolyLinear(line, x, out var slope, out _)
+                || !IsANonZeroNumber(slope.InnerSimplified))
+                return null;
+            Entity k = Integer.One;
+            Powf? exponent = null;
+            foreach (var factor in Mulf.LinearChildren(exponential))
+                if (!factor.ContainsNode(x))
+                    k *= factor;
+                else if (factor is Powf { Base: var @base } power && !@base.ContainsNode(x) && exponent is null)
+                    exponent = power;
+                else
+                    return null;
+            return exponent is null ? null : line * MathS.Pow(exponent.Base, -exponent.Exponent) + k;
         }
 
         private static bool IsANonZeroNumber(Entity e) => e.Evaled is Complex number && !number.IsZero;

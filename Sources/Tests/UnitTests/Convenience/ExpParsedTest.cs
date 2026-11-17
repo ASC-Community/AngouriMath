@@ -51,7 +51,8 @@ namespace AngouriMath.Tests.Convenience
         [Fact]
         public void Issue_ExpEquationIsSolvedRatherThanMisread()
         {
-            var roots = (Entity.Set.FiniteSet)"exp(x) - 3 * x".ToEntity().SolveEquation("x");
+            // Every branch of the Lambert W function is a root, and the real ones are the branches -1 and 0.
+            var roots = "exp(x) - 3 * x".ToEntity().SolveEquation("x").Members(-1, 0);
             var real = roots.Select(root => root.EvalNumerical())
                             .Where(root => root.ImaginaryPart.EDecimal.Abs().ToDouble() < 1e-8)
                             .Select(root => root.RealPart.EDecimal.ToDouble())
