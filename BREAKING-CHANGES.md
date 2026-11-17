@@ -114,6 +114,22 @@ membership in such a family is decided the same way
 | `"tan(x)/x = 0 and x in [-4; 4]".ToEntity().Solve("x")` | `union({ pi * n provided not pi * n = 0 }, n in ZZ) /\ [-4; 4]` | `{ pi * (-1), pi }` |
 | `0` in `union({ 2 * pi * n provided not 2 * pi * n = 0 }, n in ZZ)` | not decided | `false` |
 
+### A polynomial with non-real coefficients and a repeated root has each root once
+
+**Silent: wrong answers become right.** A polynomial whose coefficients are not all real reached Newton's method if
+no closed form answered it. Newton's method crawls to a repeated root, and each start that crawled there came back as a
+root of its own, so the answer had more numbers than the polynomial has roots, most of them near-copies that are not
+roots. Such a polynomial is now solved through the product with its conjugate, which has rational coefficients and is
+solved square-free part by square-free part, so each distinct root comes back once. A trigonometric equation that is
+such a polynomial in `e^(ix)` is answered the same way, one family member per root.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"x^6 - i x^5 - i x - 1 = 0".ToEntity().Solve("x")`, which is `(x - i)(x^5 - i)` | 17 numbers, 13 of them within `1e-6` of `i` | `{ 0.951056… + 0.309016…i, -0.951056… + 0.309016…i, -0.587785… - 0.809016…i, 0.587785… - 0.809016…i, i }` |
+| `(x^5 + i x + 1)^2 = 0`, written out | 10 numbers | its 5 roots |
+| `(x - i)^2 (x^5 + 2x + i) = 0`, written out | 11 numbers | its 6 roots |
+| `sin(3x) = cos(2x)` | a family of 17 members | a family of 5 members |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**
