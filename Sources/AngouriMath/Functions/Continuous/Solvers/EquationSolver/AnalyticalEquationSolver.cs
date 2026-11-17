@@ -9,7 +9,9 @@ using AngouriMath.Core.Exceptions;
 using AngouriMath.Core.Multithreading;
 using AngouriMath.Extensions;
 using AngouriMath.Functions.Algebra;
+using System;
 using System.Linq.Expressions;
+using PeterO.Numbers;
 using static AngouriMath.Entity;
 using static AngouriMath.Entity.Set;
 
@@ -447,7 +449,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // near -18.5, and was answered with four roots of its five.
             if (MathS.Settings.AllowNewton && expr.Vars.Count == 1
                 && (SumOverSet.NumericRoots(expr, x)
-                    ?? Algebra.NumericalSolving.DurandKerner.RootsOf(expr, x, MathS.Settings.DecimalPrecisionContext.Value)) is { Count: > 0 } numeric)
+                    ?? Algebra.NumericalSolving.DurandKerner.RootsOf(expr, x, MathS.Settings.DecimalPrecisionContext.Value)
+                    ?? RootsOfAPolynomialWithNonRealCoefficients(expr, x)) is { Count: > 0 } numeric)
                 return numeric.Select(ent => TryDowncast(expr, x, ent)).ToSet();
 
             // An identity is satisfied by every x, and not by the points a numerical search
@@ -489,6 +492,91 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     ? found : Unsolved(expr, x);
 
             return Unsolved(expr, x);
+        }
+
+        /// <summary>
+        /// Every distinct root of <paramref name="expr"/>, a polynomial in <paramref name="x"/> whose
+        /// coefficients are Gaussian rationals and not all real, to the working precision; or
+        /// <see langword="null"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The polynomial p times the polynomial with its coefficients conjugated has rational
+        /// coefficients, and its roots are the roots of p and their conjugates, since p(z) = 0 exactly
+        /// where the conjugated polynomial is 0 at conj z. That product's roots are found as any
+        /// polynomial's with rational coefficients is, square-free part by square-free part, and those
+        /// at which p vanishes are kept.
+        /// </para>
+        /// <para>
+        /// Newton's method answered these before, and crawls to a repeated root: each start that
+        /// crawled there came back as a root of its own, so (x - i)(x^5 - i), of degree 6, was answered
+        /// with 17 numbers, 13 of them within 1e-6 of i.
+        /// </para>
+        /// </remarks>
+        private static IReadOnlyList<Entity>? RootsOfAPolynomialWithNonRealCoefficients(Entity expr, Variable x)
+        {
+            if (!TreeAnalyzer.TryGetPolynomial(expr, x, out var monomials) || monomials.Count == 0)
+                return null;
+            var degree = 0;
+            foreach (var power in monomials.Keys)
+            {
+                if (power.Sign < 0 || power.CompareTo(EInteger.FromInt32(64)) > 0)
+                    return null;
+                degree = Math.Max(degree, power.ToInt32Checked());
+            }
+            if (degree < 1)
+                return null;
+            var coefficients = new Complex[degree + 1];
+            for (var i = 0; i <= degree; i++)
+                coefficients[i] = Integer.Zero;
+            var nonReal = false;
+            foreach (var monomial in monomials)
+            {
+                var (power, coefficient) = (monomial.Key, monomial.Value);
+                if (coefficient.InnerSimplified is not Complex { RealPart: Rational, ImaginaryPart: Rational } exact)
+                    return null;
+                nonReal |= exact is not Real;
+                coefficients[power.ToInt32Checked()] = exact;
+            }
+            if (!nonReal)
+                return null;
+            // p(x) conj(p)(x), whose coefficients are real: the k-th is the sum of p_i conj(p_j) over i + j = k.
+            Entity product = Integer.Zero;
+            for (var k = 0; k <= 2 * degree; k++)
+            {
+                Complex sum = Integer.Zero;
+                for (var i = Math.Max(0, k - degree); i <= Math.Min(k, degree); i++)
+                    sum += coefficients[i] * Complex.Create(coefficients[k - i].RealPart, -coefficients[k - i].ImaginaryPart);
+                if (sum is not Rational real)
+                    return null;
+                if (!real.IsZero)
+                    product += real * MathS.Pow(x, k);
+            }
+            if (SumOverSet.NumericRoots(product, x) is not { } candidates)
+                return null;
+            // A root of p leaves p as small as the working precision allows, and a root of the
+            // conjugated polynomial alone leaves it as far from 0 as the two polynomials' roots are apart.
+            var context = MathS.Settings.DecimalPrecisionContext.Value;
+            var digits = context.Precision.ToInt32Checked();
+            var tolerance = EDecimal.Create(EInteger.One, EInteger.FromInt32(-(digits / 2)));
+            var roots = new List<Entity>();
+            foreach (var candidate in candidates)
+            {
+                if (candidate.Evaled is not Complex z)
+                    return null;
+                Complex value = Integer.Zero;
+                var scale = EDecimal.Zero;
+                var radius = EDecimal.Max(z.Abs().EDecimal, EDecimal.One);
+                for (var i = degree; i >= 0; i--)
+                {
+                    value = value * z + coefficients[i];
+                    scale = scale.Multiply(radius, context).Add(coefficients[i].Abs().EDecimal, context);
+                }
+                if (value.Abs().EDecimal.CompareTo(scale.Multiply(tolerance, context)) <= 0)
+                    roots.Add(z);
+            }
+            // At most as many as the degree, and at least one, as a polynomial of degree one or more has.
+            return roots.Count >= 1 && roots.Count <= degree ? roots : null;
         }
 
         /// <summary>
