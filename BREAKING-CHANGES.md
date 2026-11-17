@@ -150,6 +150,25 @@ root, over the reals.
 | `2^x = x + 3` | `{ -2.862500…, 2.444907…, 3.636625… - 10.518881…i, … }` | `union({ lambertw(n, -1/8 * ln(2)) / (-ln(2)) + -3 }, n in ZZ)` |
 | `e^x + x + y = 0` | `{ x : e ^ x + x = -y }`, unsolved | `union({ -lambertw(n, e ^ (-y)) + -y }, n in ZZ)` |
 
+### `arcosh` and `arsech` take their principal values
+
+**Silent: wrong answers become right.** `arcosh(z)` was written `ln(z + sqrt(z^2 - 1))`, whose one root takes the other
+sign wherever `Re z < 0`, so that the logarithm came out negated: `arcosh(-2)` was `-1.317… + πi`, and the principal value
+is `1.317… + πi`. It is now `ln(z + sqrt(z + 1) sqrt(z - 1))` (DLMF 4.37.19), and `arsech(z)` is that of `1/z`. The two
+agree wherever `Re z >= 0`, so on the real line they differ only at `z < -1`, and `arsech` only at `-1 < z < 0`, where
+neither is real. The printed form changes everywhere. An antiderivative holding either function is written with the same two roots,
+and is an antiderivative of the principal value off the real line as well.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"arcosh(-2)".ToEntity().Evaled` | `-1.316957… + 3.141592…i` | `1.316957… + 3.141592…i` |
+| `"arcosh(-1-i)".ToEntity().Evaled` | `-1.061275… + 2.237035…i` | `1.061275… - 2.237035…i` |
+| `"arsech(-1-i)".ToEntity().Evaled` | `-0.530637… - 2.023074…i` | `0.530637… + 2.023074…i` |
+| `"arcosh(x)".ToEntity().Differentiate("x")` at `-3` | `0.353553…` | `-0.353553…` |
+| `MathS.Hyperbolic.Arcosh("x")` | `ln(x + sqrt(x ^ 2 - 1))` | `ln(x + sqrt(x + 1) * sqrt(x - 1))` |
+| `"acosh(x)/sqrt(1-x^2)".Integrate("x")` | `ln(x + sqrt(x ^ 2 - 1)) ^ 2 / 2 / (sqrt(1 - x ^ 2) / sqrt(x ^ 2 - 1)) + C` | `ln(x + sqrt(x + 1) * sqrt(x - 1)) ^ 2 / 2 / (sqrt(1 - x ^ 2) / (sqrt(x + 1) * sqrt(x - 1))) + C` |
+| `"arcosh(x) = 2".Solve("x")` | `{ -((e ^ 2) ^ 2 + 1) / ((-2) * e ^ 2) }` | `{ -((e ^ 2) ^ 2 + 1) / ((-2) * e ^ 2 + 1 + -1) }`, the same value |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**

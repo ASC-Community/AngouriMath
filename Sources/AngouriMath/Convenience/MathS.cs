@@ -2496,7 +2496,7 @@ namespace AngouriMath
             /// ln(x + sqrt(x ^ 2 + 1))
             /// 10
             /// ----------------------
-            /// ln(x + sqrt(x ^ 2 - 1))
+            /// ln(x + sqrt(x + 1) * sqrt(x - 1))
             /// 10
             /// ----------------------
             /// 1/2 * ln((1 + x) / (1 - x))
@@ -2505,7 +2505,7 @@ namespace AngouriMath
             /// 1/2 * ln((x + 1) / (x - 1))
             /// 10
             /// ----------------------
-            /// ln(1 / x + sqrt(1 / x ^ 2 - 1))
+            /// ln(1 / x + sqrt(1 / x + 1) * sqrt(1 / x - 1))
             /// 10
             /// ----------------------
             /// ln(1 / x + sqrt(1 / x ^ 2 + 1))
@@ -2516,8 +2516,8 @@ namespace AngouriMath
             public static Entity Arsinh(Entity x) => Ln(x + Sqrt(x.Pow(2) + 1));
 
             /// <summary>
-            /// Inverse hyperbolic cosine:
-            /// <code>ln(x + sqrt(x ^ 2 - 1))</code>
+            /// Inverse hyperbolic cosine, its principal value:
+            /// <code>ln(x + sqrt(x + 1) * sqrt(x - 1))</code>
             /// <a href="https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions">Wikipedia</a>
             /// </summary>
             /// <example>
@@ -2548,7 +2548,7 @@ namespace AngouriMath
             /// ln(x + sqrt(x ^ 2 + 1))
             /// 10
             /// ----------------------
-            /// ln(x + sqrt(x ^ 2 - 1))
+            /// ln(x + sqrt(x + 1) * sqrt(x - 1))
             /// 10
             /// ----------------------
             /// 1/2 * ln((1 + x) / (1 - x))
@@ -2557,7 +2557,7 @@ namespace AngouriMath
             /// 1/2 * ln((x + 1) / (x - 1))
             /// 10
             /// ----------------------
-            /// ln(1 / x + sqrt(1 / x ^ 2 - 1))
+            /// ln(1 / x + sqrt(1 / x + 1) * sqrt(1 / x - 1))
             /// 10
             /// ----------------------
             /// ln(1 / x + sqrt(1 / x ^ 2 + 1))
@@ -2565,7 +2565,10 @@ namespace AngouriMath
             /// </code>
             /// </example>
             [MethodImpl(MethodImplOptions.AggressiveInlining), NativeExport]
-            public static Entity Arcosh(Entity x) => Ln(x + Sqrt(x.Pow(2) - 1));
+            // `sqrt(x + 1) sqrt(x - 1)` and not `sqrt(x^2 - 1)`: the two agree where Re x >= 0, and
+            // elsewhere the single root takes the other sign, which negates the logarithm, so that
+            // arcosh(-2) was -1.317 + pi i and not 1.317 + pi i (DLMF 4.37.19).
+            public static Entity Arcosh(Entity x) => Ln(x + Sqrt(x + 1) * Sqrt(x - 1));
 
             /// <summary>
             /// Inverse hyperbolic tangent:
@@ -2600,7 +2603,7 @@ namespace AngouriMath
             /// ln(x + sqrt(x ^ 2 + 1))
             /// 10
             /// ----------------------
-            /// ln(x + sqrt(x ^ 2 - 1))
+            /// ln(x + sqrt(x + 1) * sqrt(x - 1))
             /// 10
             /// ----------------------
             /// 1/2 * ln((1 + x) / (1 - x))
@@ -2609,7 +2612,7 @@ namespace AngouriMath
             /// 1/2 * ln((x + 1) / (x - 1))
             /// 10
             /// ----------------------
-            /// ln(1 / x + sqrt(1 / x ^ 2 - 1))
+            /// ln(1 / x + sqrt(1 / x + 1) * sqrt(1 / x - 1))
             /// 10
             /// ----------------------
             /// ln(1 / x + sqrt(1 / x ^ 2 + 1))
@@ -2652,7 +2655,7 @@ namespace AngouriMath
             /// ln(x + sqrt(x ^ 2 + 1))
             /// 10
             /// ----------------------
-            /// ln(x + sqrt(x ^ 2 - 1))
+            /// ln(x + sqrt(x + 1) * sqrt(x - 1))
             /// 10
             /// ----------------------
             /// 1/2 * ln((1 + x) / (1 - x))
@@ -2661,7 +2664,7 @@ namespace AngouriMath
             /// 1/2 * ln((x + 1) / (x - 1))
             /// 10
             /// ----------------------
-            /// ln(1 / x + sqrt(1 / x ^ 2 - 1))
+            /// ln(1 / x + sqrt(1 / x + 1) * sqrt(1 / x - 1))
             /// 10
             /// ----------------------
             /// ln(1 / x + sqrt(1 / x ^ 2 + 1))
@@ -2672,8 +2675,8 @@ namespace AngouriMath
             public static Entity Arcotanh(Entity x) => 0.5 * Ln((x + 1) / (x - 1));
 
             /// <summary>
-            /// Inverse hyperbolic secant:
-            /// <code>ln(1 / x + sqrt(1 / sqr(x) - 1))</code>
+            /// Inverse hyperbolic secant, its principal value:
+            /// <code>ln(1 / x + sqrt(1 / x + 1) * sqrt(1 / x - 1))</code>
             /// <a href="https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions">Wikipedia</a>
             /// </summary>
             /// <example>
@@ -2704,7 +2707,7 @@ namespace AngouriMath
             /// ln(x + sqrt(x ^ 2 + 1))
             /// 10
             /// ----------------------
-            /// ln(x + sqrt(x ^ 2 - 1))
+            /// ln(x + sqrt(x + 1) * sqrt(x - 1))
             /// 10
             /// ----------------------
             /// 1/2 * ln((1 + x) / (1 - x))
@@ -2713,7 +2716,7 @@ namespace AngouriMath
             /// 1/2 * ln((x + 1) / (x - 1))
             /// 10
             /// ----------------------
-            /// ln(1 / x + sqrt(1 / x ^ 2 - 1))
+            /// ln(1 / x + sqrt(1 / x + 1) * sqrt(1 / x - 1))
             /// 10
             /// ----------------------
             /// ln(1 / x + sqrt(1 / x ^ 2 + 1))
@@ -2721,7 +2724,8 @@ namespace AngouriMath
             /// </code>
             /// </example>
             [MethodImpl(MethodImplOptions.AggressiveInlining), NativeExport]
-            public static Entity Arsech(Entity x) => Ln(1 / x + Sqrt(1 / Sqr(x) - 1));
+            // arcosh(1/x), with arcosh's two roots, for the same reason (DLMF 4.37.22).
+            public static Entity Arsech(Entity x) => Ln(1 / x + Sqrt(1 / x + 1) * Sqrt(1 / x - 1));
 
             /// <summary>
             /// Inverse hyperbolic cosecant:
@@ -2756,7 +2760,7 @@ namespace AngouriMath
             /// ln(x + sqrt(x ^ 2 + 1))
             /// 10
             /// ----------------------
-            /// ln(x + sqrt(x ^ 2 - 1))
+            /// ln(x + sqrt(x + 1) * sqrt(x - 1))
             /// 10
             /// ----------------------
             /// 1/2 * ln((1 + x) / (1 - x))
@@ -2765,7 +2769,7 @@ namespace AngouriMath
             /// 1/2 * ln((x + 1) / (x - 1))
             /// 10
             /// ----------------------
-            /// ln(1 / x + sqrt(1 / x ^ 2 - 1))
+            /// ln(1 / x + sqrt(1 / x + 1) * sqrt(1 / x - 1))
             /// 10
             /// ----------------------
             /// ln(1 / x + sqrt(1 / x ^ 2 + 1))
