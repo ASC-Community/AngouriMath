@@ -13533,7 +13533,9 @@ namespace AngouriMath.Functions.Algebra
         /// integrated by the substitution that undoes it. The inverse hyperbolic functions
         /// are not nodes here -- <c>arsinh(L)</c> is written <c>ln(L + sqrt(L^2 + 1))</c>,
         /// <c>arcosh(L)</c> is <c>ln(L + sqrt(L^2 - 1))</c> and <c>artanh(L)</c> is
-        /// <c>ln((1 + L)/(1 - L))/2</c> -- so the logarithm is read for the function it is,
+        /// <c>ln((1 + L)/(1 - L))/2</c>, the principal <c>arcosh</c>'s two roots written as one
+        /// before the question is asked (see <see cref="PrincipalInverseHyperbolicCosine"/>)
+        /// -- so the logarithm is read for the function it is,
         /// and under <c>L = sinh(u)</c>, <c>cosh(u)</c> or <c>tanh(u)</c> it is <c>u</c>, the
         /// radical of <c>L^2 + 1</c> is <c>cosh(u)</c>, of <c>L^2 - 1</c> is <c>sinh(u)</c>
         /// (for <c>u</c> not negative, where the principal <c>arcosh</c> lies) and

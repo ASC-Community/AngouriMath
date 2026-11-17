@@ -626,13 +626,13 @@ namespace AngouriMath.Tests.Convenience
         [Fact] public void Arsinh()
             => TestSimplify(@"\ln\left(x+\sqrt{1+{x}^{2}}\right)", MathS.Hyperbolic.Arsinh(x));
         [Fact] public void Arcosh()
-            => TestSimplify(@"\ln\left(x+\sqrt{{x}^{2}-1}\right)", MathS.Hyperbolic.Arcosh(x));
+            => TestSimplify(@"\ln\left(x+\sqrt{x+1} \sqrt{x-1}\right)", MathS.Hyperbolic.Arcosh(x));
         [Fact] public void Artanh()
             => TestSimplify(@"\frac{\ln\left(\frac{2}{1-x}-1\right)}{2}", MathS.Hyperbolic.Artanh(x));
         [Fact] public void Arcotanh()
             => TestSimplify(@"\frac{\ln\left(1+\frac{2}{x-1}\right)}{2}", MathS.Hyperbolic.Arcotanh(x));
         [Fact] public void Arsech()
-            => TestSimplify(@"\ln\left(\frac{1}{x}+\sqrt{\frac{1}{{x}^{2}}-1}\right)", MathS.Hyperbolic.Arsech(x));
+            => TestSimplify(@"\ln\left(\frac{1}{x}+\sqrt{\frac{1}{x}+1} \sqrt{\frac{1}{x}-1}\right)", MathS.Hyperbolic.Arsech(x));
         [Fact] public void Arcosech()
             => TestSimplify(@"\ln\left(\frac{1}{x}+\sqrt{1+\frac{1}{{x}^{2}}}\right)", MathS.Hyperbolic.Arcosech(x));
 

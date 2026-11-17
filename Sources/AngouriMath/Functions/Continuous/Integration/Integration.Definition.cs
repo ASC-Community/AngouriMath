@@ -745,6 +745,16 @@ namespace AngouriMath.Functions.Algebra
             }
             if (descentDepth != 0)
                 return ComputeIndefiniteIntegralGuarded(expr, x, integrateByParts);
+            // The routes read arcosh and arsech with one root; the answer is written back with the
+            // principal two. See PrincipalInverseHyperbolicCosine.
+            var (singleRoot, centers) = PrincipalInverseHyperbolicCosine.ToTheSingleRoot(expr);
+            return ComputeIndefiniteIntegralAtTheTop(singleRoot, x, integrateByParts) is { } antiderivative
+                ? PrincipalInverseHyperbolicCosine.ToThePrincipal(antiderivative, centers)
+                : null;
+        }
+
+        private static Entity? ComputeIndefiniteIntegralAtTheTop(Entity expr, Entity.Variable x, bool integrateByParts)
+        {
             descentTruncated = false;
             inProgress?.Clear();
             ASumOverRootsWouldAnswer = false;
