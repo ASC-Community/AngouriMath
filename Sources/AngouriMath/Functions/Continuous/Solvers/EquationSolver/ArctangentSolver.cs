@@ -42,10 +42,15 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         {
             if (expr.Vars.Any(variable => variable != x))
                 return null;
-            var arctangents = new List<(EInteger Multiplier, Entity Argument)>();
+            var gathered = new List<(ERational Multiplier, Entity Argument)>();
             Entity constant = Integer.Zero;
-            if (!Gather(expr, ERational.One, x, arctangents, ref constant) || arctangents.Count < 2)
+            if (!Gather(expr, ERational.One, x, gathered, ref constant) || gathered.Count < 2)
                 return null;
+            // Whole and coprime: (arctan(x) + arctan(2x) + 1) 10^12 is arctan(x) + arctan(2x) + 1,
+            // and the half of a sum of arctangents is the sum.
+            var common = PolynomialCandidates.CommonFactor(gathered.Select(arctangent => arctangent.Multiplier));
+            var arctangents = gathered.Select(arctangent => (Multiplier: PolynomialCandidates.WholeMultiple(arctangent.Multiplier, common), arctangent.Argument)).ToList();
+            constant = (constant / Rational.Create(common)).InnerSimplified;
 
             // P + i Q, multiplied out one factor at a time: (P + i Q)(d + i s n) for the argument
             // n / d and the sign s of its multiplier, which arctan being odd allows.
@@ -63,6 +68,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                         return null;
                     largest = System.Math.Max(largest, monomials.Count == 0 ? 0 : monomials.Keys.Max()!.ToInt32Checked());
                 }
+                if (multiplier.Abs().CompareTo(HighestDegree) > 0)
+                    return null;
                 degree += multiplier.Abs().ToInt32Checked() * largest;
                 if (degree > HighestDegree)
                     return null;
@@ -77,16 +84,18 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var product = MathS.Cos(target).Simplify() is Integer { IsZero: true }
                 ? real
                 : imaginary - MathS.Tan(target) * real;
-            return PolynomialCandidates.RootsAmong(expr, x, product, degree);
+            // Checked against the equation divided as its multipliers were, so that the residual has
+            // the size it has at scale one, which is what the bound on it is for.
+            return PolynomialCandidates.RootsAmong(expr / Rational.Create(common), x, product, degree);
         }
 
         /// <summary>
-        /// Reads <paramref name="term"/>, times <paramref name="sign"/>, as integer multiples of
+        /// Reads <paramref name="term"/>, times <paramref name="sign"/>, as rational multiples of
         /// arctangents of <paramref name="x"/> and a constant; <see langword="false"/> where it is
         /// anything else.
         /// </summary>
         private static bool Gather(Entity term, ERational sign, Variable x,
-            List<(EInteger Multiplier, Entity Argument)> arctangents, ref Entity constant)
+            List<(ERational Multiplier, Entity Argument)> arctangents, ref Entity constant)
         {
             switch (term)
             {
@@ -99,12 +108,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 case Minusf(var minuend, var subtrahend):
                     return Gather(minuend, sign, x, arctangents, ref constant)
                         && Gather(subtrahend, sign.Negate(), x, arctangents, ref constant);
-                case Mulf(Integer multiplier, var rest):
+                case Mulf(Rational multiplier, var rest):
                     return Gather(rest, sign.Multiply(multiplier.ERational), x, arctangents, ref constant);
-                case Mulf(var rest, Integer multiplier):
+                case Mulf(var rest, Rational multiplier):
                     return Gather(rest, sign.Multiply(multiplier.ERational), x, arctangents, ref constant);
-                case Arctanf(var argument) when sign.Denominator.Equals(EInteger.One) && !sign.IsZero:
-                    arctangents.Add((sign.Numerator, argument));
+                case Divf(var rest, Rational { IsZero: false } divisor):
+                    return Gather(rest, sign.Divide(divisor.ERational), x, arctangents, ref constant);
+                case Arctanf(var argument) when !sign.IsZero:
+                    arctangents.Add((sign, argument));
                     return true;
                 default:
                     return false;

@@ -57,6 +57,19 @@ the conversion from a string still throw it, with its own type
 | `Entity.TryParse("factorize(360)", null, out _)` | throws `UnrecognizedFunctionParseException` | `false` |
 | `"factorize(360)".ToEntity()` | throws `UnrecognizedFunctionParseException` | the same |
 
+### A sum of logarithms or arctangents times a number is solved as the sum
+
+**Silent where it was `{ }`; an exception becomes an answer.** The solvers for a sum of logarithms and for a sum of
+arctangents read a number the whole sum was multiplied by into each function's multiplier, as a power to raise its
+argument to. Times `10^12`, working out the degree overflowed. A sum times a fraction had multipliers that were not
+whole, and the arctangent solver declined it. The multipliers are now divided by their common factor first.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"(ln(-3x) + ln(1 - x)) * 10^12 = 0".ToEntity().Solve("x")` | `OverflowException` | `{ (3 - sqrt(21)) / 6 }` |
+| `"(arctan(x) + arctan(2x) + 1) * 10^12 = 0".ToEntity().Solve("x")` | `{ }`, and `OverflowException` since the arctangent solver | the root of `arctan(x) + arctan(2x) = -1` |
+| `"(arctan(x) + arctan(2x)) / 2 = 1/2".ToEntity().Solve("x")` | `{ 0.373947426651419168… }` | `{ (-3 + sqrt(9 - 4 * 2 * tan(1) * -tan(1))) / (2 * 2 * tan(1)) }` |
+
 ### An equation is not raised to clear a radical the rest of it still holds
 
 **Silent.** `Solve` raised an equation to clear a radical even where the rest of it held one too, inside a function:

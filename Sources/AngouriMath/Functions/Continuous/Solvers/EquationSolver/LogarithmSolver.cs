@@ -46,6 +46,13 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (!Gather(expr, ERational.One, x, logarithms, ref constant, ref logBase) || logarithms.Count < 2 || logBase is null)
                 return null;
 
+            // Whole and coprime: (ln(a) + ln(b)) 10^12 = 0 is ln(a) + ln(b) = 0, and not a and b
+            // each to the 10^12th power, which overflowed working out the degree.
+            var factor = PolynomialCandidates.CommonFactor(logarithms.Select(logarithm => logarithm.Multiplier));
+            for (var i = 0; i < logarithms.Count; i++)
+                logarithms[i] = (ERational.FromEInteger(PolynomialCandidates.WholeMultiple(logarithms[i].Multiplier, factor)), logarithms[i].Argument);
+            constant = (constant / Rational.Create(factor)).InnerSimplified;
+            expr /= Rational.Create(factor);
             var common = EInteger.One;
             foreach (var (multiplier, _) in logarithms)
                 common = common.Multiply(multiplier.Denominator).Divide(common.Gcd(multiplier.Denominator));
@@ -58,6 +65,8 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 if (!TreeAnalyzer.TryGetPolynomial(argument, x, out var monomials)
                     || monomials.Keys.Any(exponent => exponent.Sign < 0)
                     || monomials.Values.Any(coefficient => coefficient.ContainsNode(x)))
+                    return null;
+                if (power.Abs().CompareTo(HighestDegree) > 0)
                     return null;
                 degree += power.Abs().ToInt32Checked() * monomials.Keys.Max()!.ToInt32Checked();
                 if (degree > HighestDegree)
