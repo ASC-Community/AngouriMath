@@ -150,6 +150,12 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (!compensateSolving && LogarithmSolver.Solve(expr, x) is { } byExponentiating)
                 return byExponentiating;
 
+            // So is a sum of integer multiples of arctangents of polynomials, by taking the tangent:
+            // arctan(x) + arctan(2x) = pi/4 is { (sqrt(17) - 3) / 4 }, where Newton's method answered
+            // a decimal, and arctan(x) - arctan(2x) = 1, whose roots are complex, was not answered.
+            if (!compensateSolving && ArctangentSolver.Solve(expr, x) is { } byTheTangent)
+                return byTheTangent;
+
             // Whether a candidate root really is one. The loose tolerance that guesses the
             // rational must not also be what decides this: at 1e-7, x^41 + 6x + 1 accepted
             // -1/6, whose residual is -1.25e-32 -- small, but the difference between an

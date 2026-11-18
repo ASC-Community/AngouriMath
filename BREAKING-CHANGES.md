@@ -169,6 +169,22 @@ and is an antiderivative of the principal value off the real line as well.
 | `"acosh(x)/sqrt(1-x^2)".Integrate("x")` | `ln(x + sqrt(x ^ 2 - 1)) ^ 2 / 2 / (sqrt(1 - x ^ 2) / sqrt(x ^ 2 - 1)) + C` | `ln(x + sqrt(x + 1) * sqrt(x - 1)) ^ 2 / 2 / (sqrt(1 - x ^ 2) / (sqrt(x + 1) * sqrt(x - 1))) + C` |
 | `"arcosh(x) = 2".Solve("x")` | `{ -((e ^ 2) ^ 2 + 1) / ((-2) * e ^ 2) }` | `{ -((e ^ 2) ^ 2 + 1) / ((-2) * e ^ 2 + 1 + -1) }`, the same value |
 
+### A sum of arctangents is solved by taking the tangent
+
+**Silent: decimals become exact, and unanswered equations are answered.** An equation in integer multiples of
+arctangents of polynomials, such as `arctan(x) + arctan(2x) = c`, is a polynomial equation once the tangent of both
+sides is taken, and each of that one's roots is put back into the equation as written, since the tangents agree at every
+other multiple of `pi` as well. Newton's method answered these before: in decimals where it found a root, and not at all
+where the roots are complex or there are none.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"arctan(x) + arctan(2x) = pi/4".ToEntity().Solve("x")` | `{ 0.280776406404415146… }` | `{ (-3 + sqrt(17)) / 4 }` |
+| `"arctan(x) + arctan(2x) = 1".ToEntity().Solve("x")` | `{ 0.373947426651419168… }` | `{ (-3 + sqrt(9 - 4 * 2 * tan(1) * -tan(1))) / (2 * 2 * tan(1)) }` |
+| `"arctan(x) - arctan(2x) = 1".ToEntity().Solve("x")` | `{ x : arctan(x) - arctan(2 * x) = 1 }`, unsolved | `{ (1 - sqrt(1 - 4 * (-2) * tan(1) * -tan(1))) / (2 * (-2) * tan(1)), (1 + sqrt(…)) / (2 * (-2) * tan(1)) }` |
+| `"arctan(x) + arctan(2x) = 4".ToEntity().Solve("x")` | `{ x : arctan(x) + arctan(2 * x) = 4 }`, unsolved | `{ }` |
+| `"2 arctan(x) - arctan(x + 1) = 0".ToEntity().Solve("x")` | `{ 0.543689012692076367… }` | `{ -(1 + ((-34 + 6 * sqrt(33)) / 2) ^ (1/3) + (-2) / ((-34 + 6 * sqrt(33)) / 2) ^ (1/3)) / 3 }` |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**
