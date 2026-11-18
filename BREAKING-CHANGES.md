@@ -42,6 +42,21 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.8.0
 
+### An equation multiplied by a number has the roots it had
+
+**Silent: answers lose roots that are not roots, and regain roots that were dropped.** A root found numerically, or
+a candidate that squaring or cubing an equation added, is kept when the equation's residual there is small next to the
+terms it is the sum of. A residual below an absolute 1e-6 was taken for none, so an equation multiplied by `10^-12`
+kept every candidate, roots or not. And an equation multiplied by a number is one product, which was read as one
+term and so as its own scale, so its residual was large next to itself and every root of it that was found
+numerically was dropped. The terms are now read through a product, and the absolute bound is left only for an
+equation with no terms to cancel, such as one function's value.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"(x * (2 - 4x + 2x^2)^(1/3) - 2) * 10^(-12) = 0".ToEntity().Solve("x")` | five roots, two of which leave 3.46e-12 | the three of `x * (2 - 4x + 2x^2)^(1/3) = 2` |
+| `"(sin(x) - x) * 10^12 = 0".ToEntity().Solve("x")` | `{ 0 }` | the nine of `sin(x) = x` |
+
 ### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
 
 **Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the

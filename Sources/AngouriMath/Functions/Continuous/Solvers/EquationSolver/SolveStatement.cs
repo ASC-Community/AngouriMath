@@ -434,11 +434,19 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 // tenth more allocation on solving x^2 + x + 1.
                 if (size.CompareTo(share.Multiply(share)) <= 0)
                     return false;
-                return size.GreaterThan(EDecimal.Max(LargestTerm(substituted), share).Multiply(share));
+                var unused = false;
+                return size.GreaterThan(EDecimal.Max(LargestTerm(substituted, ref unused), share).Multiply(share));
             }
-            if (size.LessThan(MathS.Settings.PrecisionErrorCommon))
-                return false;
-            return size.GreaterThan(LargestTerm(substituted).Multiply(RelativeResidualTolerance));
+            var cancels = false;
+            var largest = LargestTerm(substituted, ref cancels);
+            // Where nothing cancels, as in an equation that is one function's value, the residual
+            // is the only term and its size against itself says nothing, so its size alone is
+            // read. Where terms cancel the comparison is with them and nothing else: an absolute
+            // floor took a residual of 3.46e-12 against terms of 2e-12 for none, so the equation
+            // times 10^-12 kept two candidates that cubing it had added.
+            if (!cancels)
+                return !size.LessThan(MathS.Settings.PrecisionErrorCommon);
+            return size.GreaterThan(largest.Multiply(RelativeResidualTolerance));
         }
 
         /// <summary>
@@ -482,17 +490,33 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
 
         /// <summary>
         /// The largest of the terms the equation adds up to at the root, which is the scale
-        /// the residual has to be read against. A single term is its own largest, so an
-        /// equation that is not a sum is judged on the size of its residual alone -- there
-        /// is nothing there for a root to have cancelled inexactly.
+        /// the residual has to be read against, and in <paramref name="cancels"/> whether there
+        /// are terms at all: whether a sum was split.
         /// </summary>
-        private static EDecimal LargestTerm(Entity substituted)
+        /// <remarks>
+        /// A product or a quotient by a number is multiplied out first. The terms of
+        /// <c>(sin(x) - x) 10^-12</c> are <c>sin(x) 10^-12</c> and <c>x 10^-12</c>; read as one
+        /// term, it was its own scale, and every root Newton's method found for it was thrown out
+        /// at <c>10^12</c>, where its residual is past the floor.
+        /// </remarks>
+        private static EDecimal LargestTerm(Entity substituted, ref bool cancels)
         {
-            var largest = EDecimal.Zero;
-            foreach (var term in Sumf.LinearChildren(substituted))
-                if (term.Evaled is Number.Complex value && value.IsFinite)
-                    largest = EDecimal.Max(largest, value.Abs().EDecimal);
-            return largest;
+            switch (substituted)
+            {
+                case Sumf or Minusf:
+                    cancels = true;
+                    var largest = EDecimal.Zero;
+                    foreach (var term in Sumf.LinearChildren(substituted))
+                        largest = EDecimal.Max(largest, LargestTerm(term, ref cancels));
+                    return largest;
+                case Mulf(var multiplier, var multiplicand):
+                    return LargestTerm(multiplier, ref cancels).Multiply(LargestTerm(multiplicand, ref cancels));
+                case Divf(var dividend, var divisor) when divisor.Evaled is Number.Complex { IsFinite: true } value
+                                                          && !value.Abs().EDecimal.IsZero:
+                    return LargestTerm(dividend, ref cancels).Divide(value.Abs().EDecimal, MathS.Settings.DecimalPrecisionContext);
+                default:
+                    return substituted.Evaled is Number.Complex { IsFinite: true } number ? number.Abs().EDecimal : EDecimal.Zero;
+            }
         }
 
         /// <summary>
