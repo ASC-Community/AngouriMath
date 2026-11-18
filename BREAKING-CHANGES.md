@@ -199,6 +199,23 @@ answered these before, with the roots it happened to find.
 | `"arcsin(x) = arccos(x)".ToEntity().Solve("x")` | `{ 0.707106781186547572… }` | `{ 1/2 * sqrt(2) }` |
 | `"arctan(x) = arccos(1 - 2x)".ToEntity().Solve("x")` | `{ x : arctan(x) = arccos(1 - 2 * x) }`, unsolved | `0` and the two complex roots of `4x^3 - 4x^2 + 5x - 4`, by Cardano |
 
+### The MCP server's numeric checks tell small values apart
+
+**Silent: answers of "equal" become "not equal", and errors of 0 become the error.** `am_verify_equal` and
+`am_check_steps`, where the difference does not simplify to 0, compared it against 0 with a tolerance of 1e-6 that was
+absolute below a magnitude of 1, so any two expressions smaller than that were equal. The tolerance is now relative to
+the two sides, with an absolute part only at half the evaluator's digits. `am_compare_numeric` scored no relative error
+where the reference was below 1e-12, and subtracted the two sides after rounding each to a double, so values within
+1e-16 of each other differed by 0. It now subtracts at the evaluator's precision, and scores the relative error wherever
+the reference is not 0.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `am_verify_equal`, `x / 10^9` and `2 * x / 10^9` | `equal: true` | `equal: false` |
+| `am_check_steps`, `x / 10^9` then `2 * x / 10^9` | the step holds | `first_invalid_step: 1` |
+| `am_compare_numeric`, `e^(-x)` and `0` on [30, 40] | `max_relative_error: 0` | `1` |
+| `am_compare_numeric`, `1 + e^(-40) * x` and `1` on [1, 2] | `max_absolute_error: 0` | `8.5e-18`, at 2 |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**

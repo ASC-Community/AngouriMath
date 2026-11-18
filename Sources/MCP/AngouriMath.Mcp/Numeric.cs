@@ -30,10 +30,34 @@ internal static class Numeric
     private const double RelativeTolerance = 1e-6;
 
     /// <summary>
+    /// What is left of an exact zero after evaluation: half the evaluator's digits, the margin
+    /// <c>MathS.UnsafeAndInternal.AreEqualNumerically</c> keeps since #1674. It is the only
+    /// absolute part of a tolerance. A value of 1e-9 is a value, and it is as far from
+    /// 2e-9 as 1 is from 2.
+    /// https://github.com/asc-community/AngouriMath/issues/1674
+    /// </summary>
+    private static double AbsoluteTolerance =>
+        Math.Pow(10, -(double)MathS.Settings.DecimalPrecisionContext.Value.Precision.ToInt32Checked() / 2);
+
+    /// <summary>
     /// True / false / null, where null means "could not be evaluated at any sample point"
     /// — which is not evidence either way and must not be reported as inequality.
     /// </summary>
-    public static bool? Equal(Entity left, Entity right, Entity[]? points = null)
+    public static bool? Equal(Entity left, Entity right, Entity[]? points = null) =>
+        Vanishes(null, left, right, points);
+
+    /// <summary>
+    /// As <see cref="Equal"/>, for a <paramref name="difference"/> of <paramref name="left"/>
+    /// and <paramref name="right"/> that has already been simplified. The difference is what is
+    /// evaluated, since Simplify has collapsed any derivative(…) or integral(…) node in it
+    /// that leaves a side without a value, and the sides give it a scale. Compared against 0
+    /// it has none, and an absolute tolerance read every small difference as zero.
+    /// </summary>
+    public static bool? DifferenceVanishes(Entity difference, Entity left, Entity right,
+        Entity[]? points = null) =>
+        Vanishes(difference, left, right, points);
+
+    private static bool? Vanishes(Entity? difference, Entity left, Entity right, Entity[]? points)
     {
         points ??= PositivePoints;
 
@@ -41,8 +65,10 @@ internal static class Numeric
         // they are dropped for the comparison only.
         var a = Strip(left);
         var b = Strip(right);
+        var d = difference is null ? null : Strip(difference);
+        Entity? simplifiedA = null, simplifiedB = null;
 
-        var variables = a.Vars.Concat(b.Vars)
+        var variables = a.Vars.Concat(b.Vars).Concat(d?.Vars ?? [])
             .Select(v => v.Name)
             .Distinct()
             .ToArray();
@@ -53,34 +79,40 @@ internal static class Numeric
         // f(x, y) = x*y is not mistaken for f(x, y) = x^2.
         for (var offset = 0; offset < points.Length; offset++)
         {
-            var subA = a;
-            var subB = b;
-            for (var i = 0; i < variables.Length; i++)
+            Entity At(Entity e)
             {
-                var point = points[(i + offset) % points.Length];
-                var variable = MathS.Var(variables[i]);
-                subA = subA.Substitute(variable, point);
-                subB = subB.Substitute(variable, point);
+                for (var i = 0; i < variables.Length; i++)
+                    e = e.Substitute(MathS.Var(variables[i]), points[(i + offset) % points.Length]);
+                return e;
             }
 
-            var valueA = AsDouble(subA);
-            var valueB = AsDouble(subB);
+            var valueA = Evaluate(At(a));
+            var valueB = Evaluate(At(b));
 
-            // A point where either side is undefined tells us nothing; skip it rather than
-            // counting it as disagreement.
-            if (valueA is null || valueB is null) continue;
+            Number.Complex gap;
+            if (d is null)
+            {
+                // A point where either side is undefined tells us nothing; skip it rather
+                // than counting it as disagreement.
+                if (valueA is null || valueB is null) continue;
+                gap = valueA - valueB;
+            }
+            else
+            {
+                if (Evaluate(At(d)) is not { } evaluated) continue;
+                gap = evaluated;
+                // A side holding an unevaluated derivative(…) has its value once simplified.
+                valueA ??= Evaluate(At(simplifiedA ??= a.Simplify()));
+                valueB ??= Evaluate(At(simplifiedB ??= b.Simplify()));
+                if (valueA is null && valueB is null) continue;
+            }
 
-            var (realA, imagA) = valueA.Value;
-            var (realB, imagB) = valueB.Value;
-
-            var separation = Math.Sqrt(
-                (realA - realB) * (realA - realB) + (imagA - imagB) * (imagA - imagB));
-            var scale = Math.Max(
-                1.0,
-                Math.Max(Math.Sqrt(realA * realA + imagA * imagA),
-                         Math.Sqrt(realB * realB + imagB * imagB)));
-
-            if (separation / scale > RelativeTolerance) return false;
+            // A value past the range of a double rounds to infinity, and an infinite scale
+            // would make any gap fit inside it. Such a point is skipped, as it was before.
+            var scale = Math.Max(Magnitude(valueA), Magnitude(valueB));
+            var separation = Magnitude(gap);
+            if (double.IsInfinity(scale) || double.IsInfinity(separation)) continue;
+            if (separation > RelativeTolerance * scale + AbsoluteTolerance) return false;
             usable++;
         }
 
@@ -117,8 +149,8 @@ internal static class Numeric
             var at = samples > 1 ? from + step * i : from;
             Entity point = at.ToString("R");
 
-            var valueA = AsDouble(a.Substitute(variable, point));
-            var valueB = AsDouble(b.Substitute(variable, point));
+            var valueA = Evaluate(a.Substitute(variable, point));
+            var valueB = Evaluate(b.Substitute(variable, point));
 
             // A point where either side is undefined says nothing about agreement, so it is
             // counted and skipped rather than scored as a mismatch.
@@ -127,16 +159,15 @@ internal static class Numeric
             // ln and even roots return principal-branch complex values on the negatives
             // rather than failing. Comparing their magnitudes is defensible, but a caller
             // asking about a physical quantity needs to know the reference left the reals.
-            if (Math.Abs(valueA.Value.Imaginary) > 1e-12 ||
-                Math.Abs(valueB.Value.Imaginary) > 1e-12) complex++;
+            if (Math.Abs(valueA.ImaginaryPart.EDecimal.ToDouble()) > 1e-12 ||
+                Math.Abs(valueB.ImaginaryPart.EDecimal.ToDouble()) > 1e-12) complex++;
 
-            var difference = Math.Sqrt(
-                Math.Pow(valueA.Value.Real - valueB.Value.Real, 2) +
-                Math.Pow(valueA.Value.Imaginary - valueB.Value.Imaginary, 2));
-
-            var magnitude = Math.Sqrt(
-                valueA.Value.Real * valueA.Value.Real +
-                valueA.Value.Imaginary * valueA.Value.Imaginary);
+            // Subtracted at the evaluator's precision and rounded after: two values within
+            // 1e-16 of each other are the same double, and their difference was 0.
+            var difference = Magnitude(valueA - valueB);
+            var magnitude = Magnitude(valueA);
+            if (double.IsInfinity(difference) || double.IsInfinity(magnitude) ||
+                double.IsInfinity(Magnitude(valueB))) { skipped++; continue; }
 
             if (difference > maxAbsolute)
             {
@@ -144,9 +175,9 @@ internal static class Numeric
                 maxAbsoluteAt = at.ToString("R");
             }
 
-            // Relative error is meaningless where the reference is ~0, so it is scored only
-            // where there is something to be relative to.
-            if (magnitude > 1e-12)
+            // Relative error is undefined where the reference is 0, and only there: a
+            // reference of 1e-13 is a value, and an approximation of 0 is wrong by all of it.
+            if (magnitude > AbsoluteTolerance)
             {
                 var relative = difference / magnitude;
                 if (relative > maxRelative)
@@ -226,6 +257,40 @@ internal static class Numeric
     {
         var bare = Strip(e).InnerSimplified;
         return bare.Stringize() is "0" or "0.0" or "-0";
+    }
+
+    /// <summary>The evaluator's value, unrounded, or null where there is no finite one.</summary>
+    private static Number.Complex? Evaluate(Entity e)
+    {
+        if (!e.EvaluableNumerical) return null;
+
+        try
+        {
+            var value = e.EvalNumerical();
+            var real = value.RealPart.EDecimal;
+            var imaginary = value.ImaginaryPart.EDecimal;
+            if (real.IsNaN() || imaginary.IsNaN() || real.IsInfinity() || imaginary.IsInfinity())
+                return null;
+            return value;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static double Magnitude(Number.Complex? value) =>
+        value is null ? 0 : Hypotenuse(value.RealPart.EDecimal.ToDouble(), value.ImaginaryPart.EDecimal.ToDouble());
+
+    // Scaled, so that a value past 1e154 does not square to infinity and make every tolerance
+    // infinite with it.
+    private static double Hypotenuse(double x, double y)
+    {
+        x = Math.Abs(x); y = Math.Abs(y);
+        var larger = Math.Max(x, y);
+        if (larger == 0 || double.IsInfinity(larger)) return larger;
+        var ratio = Math.Min(x, y) / larger;
+        return larger * Math.Sqrt(1 + ratio * ratio);
     }
 
     private static (double Real, double Imaginary)? AsDouble(Entity e)
