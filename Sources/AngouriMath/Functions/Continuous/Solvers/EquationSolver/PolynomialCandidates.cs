@@ -21,6 +21,34 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
     internal static class PolynomialCandidates
     {
         /// <summary>
+        /// The positive rational that the <paramref name="multipliers"/> of a sum of functions are
+        /// whole and coprime multiples of: the greatest common divisor of their numerators over the
+        /// least common multiple of their denominators. Dividing the sum by it changes no root, and
+        /// leaves the multipliers the equation means rather than the number it was written times:
+        /// <c>(ln(a) + ln(b)) 10^12 = 0</c> read each logarithm as raised to the 10^12th power, and
+        /// overflowed an <see cref="int"/> working out the degree.
+        /// </summary>
+        internal static ERational CommonFactor(IEnumerable<ERational> multipliers)
+        {
+            var numerator = EInteger.Zero;
+            var denominator = EInteger.One;
+            foreach (var multiplier in multipliers)
+            {
+                numerator = numerator.Gcd(multiplier.Numerator.Abs());
+                denominator = denominator.Multiply(multiplier.Denominator).Divide(denominator.Gcd(multiplier.Denominator));
+            }
+            return numerator.IsZero ? ERational.One : ERational.Create(numerator, denominator);
+        }
+
+        /// <summary>
+        /// <paramref name="multiplier"/> over <paramref name="factor"/>, a <see cref="CommonFactor"/>
+        /// it is a whole multiple of. In whole numbers: an <see cref="ERational"/> quotient is not
+        /// reduced, and (1/2) / (1/2) is 2/2, whose numerator is 2.
+        /// </summary>
+        internal static EInteger WholeMultiple(ERational multiplier, ERational factor)
+            => multiplier.Numerator.Multiply(factor.Denominator).Divide(multiplier.Denominator.Multiply(factor.Numerator));
+
+        /// <summary>
         /// The roots of <paramref name="product"/> = 0, a polynomial in <paramref name="x"/> of degree
         /// at most <paramref name="degree"/> with every root of <paramref name="expr"/> = 0 among its
         /// own, that are roots of <paramref name="expr"/> = 0; or <see langword="null"/> where that
