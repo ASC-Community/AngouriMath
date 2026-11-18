@@ -32,11 +32,23 @@ namespace AngouriMath.Tests.Algebra
             => Assert.IsType<ConditionalSet>(
                 StatementSolver.WithoutSpuriousRoots(new FiniteSet((Entity)5, (Entity)7), polynomial.ToEntity(), "x"));
 
-        /// <summary>The roots that hold are kept, as before.</summary>
+        /// <summary>
+        /// The roots that hold are not an answer either. A polynomial as written has no root a
+        /// rewrite could have added, so a candidate that fails it is the solver's number, and the
+        /// ones that pass are not known to be all: <c>{ 2 }</c> for <c>x^2 - 4</c> leaves out -2. This
+        /// asserted <c>{ 2 }</c> until a degree-twelve polynomial with roots near 1e-12 was answered
+        /// with one root of twelve that way.
+        /// </summary>
         [Fact]
-        public void TheRootsThatHoldAreKept()
-            => Assert.Equal("{ 2 }".ToEntity(),
-                StatementSolver.WithoutSpuriousRoots(new FiniteSet((Entity)2, (Entity)5), "x^2 - 4".ToEntity(), "x").InnerSimplified);
+        public void APolynomialWithSomeCandidatesFailingIsLeftUnsolved()
+            => Assert.IsType<ConditionalSet>(
+                StatementSolver.WithoutSpuriousRoots(new FiniteSet((Entity)2, (Entity)5), "x^2 - 4".ToEntity(), "x"));
+
+        /// <summary>The candidates that all hold are the answer, untouched.</summary>
+        [Fact]
+        public void CandidatesThatAllHoldAreKept()
+            => Assert.Equal("{ 2, -2 }".ToEntity(),
+                StatementSolver.WithoutSpuriousRoots(new FiniteSet((Entity)2, (Entity)(-2)), "x^2 - 4".ToEntity(), "x").InnerSimplified);
 
         /// <summary>
         /// An equation that is not a polynomial can have no root, and its empty set is an answer:

@@ -141,6 +141,20 @@ other names refused by name are ([#2182](https://github.com/asc-community/Angour
 | `"beta(x)".ToEntity()` | `beta * x` | throws `FunctionArgumentCountException` |
 | `"norm (x)".ToEntity()` | `norm * x` | `norm * x`, unchanged |
 
+### A polynomial with a candidate root that fails it is left unsolved
+
+**Silent: answers with wrong or missing roots become unsolved.** An equation that is a polynomial as written has no
+root that a rewrite could have added, so a candidate that fails it is the solver's error, and the candidates that pass
+are not known to be all of the roots. Only where every candidate failed was the equation left unsolved; where some
+passed, they were the answer. The check also read the polynomial through a condition it carries, which it could not
+before. A polynomial of degree twelve with roots near `1e-12`, which an equation in `sgn` with `x` written as
+`10^12 x` reaches, is now unsolved.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| The degree-twelve polynomial the real part of that `sgn` equation solves to | eleven decimal roots, ten of them not roots | unsolved |
+| `"2 + 3 * (10^12 * x) + (-3 - 10^12 * x) * (10^12 * x) * sgn(1 - 10^12 * x) = 0".ToEntity().Solve("x")` | unsolved (`{ }` on master since the residual is judged against its terms) | unsolved |
+
 ### A family of roots whose members carry a condition is listed inside a bounded interval
 
 **Silent.** Since 2.8.0 a family of roots met with a bounded interval is listed, but not where its members carry a
