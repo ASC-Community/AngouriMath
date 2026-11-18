@@ -156,6 +156,12 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (!compensateSolving && ArctangentSolver.Solve(expr, x) is { } byTheTangent)
                 return byTheTangent;
 
+            // And an equation between two inverse trigonometric functions, by their squared sines
+            // and cosines: arcsin(-2x) = arccos(3x + 2) is 13x^2 + 12x + 3 = 0, where Newton's
+            // method left its complex roots out.
+            if (!compensateSolving && InverseTrigonometricPairSolver.Solve(expr, x) is { } bySquares)
+                return bySquares;
+
             // Whether a candidate root really is one. The loose tolerance that guesses the
             // rational must not also be what decides this: at 1e-7, x^41 + 6x + 1 accepted
             // -1/6, whose residual is -1.25e-32 -- small, but the difference between an

@@ -185,6 +185,20 @@ where the roots are complex or there are none.
 | `"arctan(x) + arctan(2x) = 4".ToEntity().Solve("x")` | `{ x : arctan(x) + arctan(2 * x) = 4 }`, unsolved | `{ }` |
 | `"2 arctan(x) - arctan(x + 1) = 0".ToEntity().Solve("x")` | `{ 0.543689012692076367… }` | `{ -(1 + ((-34 + 6 * sqrt(33)) / 2) ^ (1/3) + (-2) / ((-34 + 6 * sqrt(33)) / 2) ^ (1/3)) / 3 }` |
 
+### An equation between two inverse trigonometric functions is solved by their squares
+
+**Silent: an incomplete answer becomes complete, decimals become exact, and unanswered equations are answered.**
+`f(u) = g(v)` or `f(u) = -g(v)`, for two of `arcsin`, `arccos`, `arctan`, `arccotan`, `arcsec` and `arccosec` of
+polynomials, is a polynomial equation in their squared sines and cosines. Each of that one's roots is put back into
+the equation as written, since it also has the roots where the two differ by a multiple of `pi`. Newton's method
+answered these before, with the roots it happened to find.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"arcsin(-2x) = arccos(3x + 2)".ToEntity().Solve("x")` | `{ -0.461538461538461619… - 0.133234677505298243…i }`, one root of two | `{ (-12 - sqrt(-12)) / 26, (-12 + sqrt(-12)) / 26 }` |
+| `"arcsin(x) = arccos(x)".ToEntity().Solve("x")` | `{ 0.707106781186547572… }` | `{ 1/2 * sqrt(2) }` |
+| `"arctan(x) = arccos(1 - 2x)".ToEntity().Solve("x")` | `{ x : arctan(x) = arccos(1 - 2 * x) }`, unsolved | `0` and the two complex roots of `4x^3 - 4x^2 + 5x - 4`, by Cardano |
+
 ## 2.8.0 — since 2.7.0
 
 **Read these first.**
