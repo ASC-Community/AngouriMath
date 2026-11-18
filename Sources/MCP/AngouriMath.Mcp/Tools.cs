@@ -1195,13 +1195,14 @@ internal static class Tools
 
             if (!exactlyZero)
             {
-                // Compare the DIFFERENCE against zero rather than the two sides against
-                // each other. Simplify has already collapsed any unevaluated derivative(…)
-                // or integral(…) node in the difference, whereas the raw sides may still
-                // contain one — and an unevaluated node is not numerically evaluable, so
-                // comparing the sides directly returns "inconclusive" for inputs that are
-                // in fact decidable.
-                try { numerically = Numeric.Equal(difference, 0); }
+                // Evaluate the DIFFERENCE rather than the two sides. Simplify has already
+                // collapsed any unevaluated derivative(…) or integral(…) node in the
+                // difference, whereas the raw sides may still contain one — and an
+                // unevaluated node is not numerically evaluable, so comparing the sides
+                // directly returns "inconclusive" for inputs that are in fact decidable.
+                // The sides still give the tolerance its scale: against 0 alone, x / 10^9
+                // and 2 * x / 10^9 were equal.
+                try { numerically = Numeric.DifferenceVanishes(difference, left, right); }
                 catch { numerically = null; }
 
                 // The positive-real points above cannot see a disagreement that only occurs
@@ -1211,7 +1212,7 @@ internal static class Tools
                 {
                     try
                     {
-                        wholeLine = Numeric.Equal(difference, 0,
+                        wholeLine = Numeric.DifferenceVanishes(difference, left, right,
                             ["-3.1", "-1.7", "-0.4", "0.8", "2.6"]);
                     }
                     catch { wholeLine = null; }

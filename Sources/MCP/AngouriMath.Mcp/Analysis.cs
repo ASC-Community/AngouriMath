@@ -184,7 +184,7 @@ internal static class Analysis
                 continue;
             }
 
-            var numerically = Numeric.Equal(difference, 0);
+            var numerically = Numeric.DifferenceVanishes(difference, from, to);
             checks.Add(new StepCheck(
                 i, from.Stringize(), to.Stringize(),
                 numerically,
