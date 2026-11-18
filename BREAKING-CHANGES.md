@@ -112,6 +112,19 @@ is now put back in, and kept where the equation is exactly zero. The roots Newto
 | `"sin(sqrt(x)) = x".ToEntity().Solve("x")` | `{ 0.76864885676094940… }` | `{ 0, 0.76864885676094940… }` |
 | `"cos(1 - sqrt(x)) - x = cos(1)".ToEntity().Solve("x")` | `{ 0.39003113021627860… }` | `{ 0, 0.39003113021627860… }` |
 
+### An antiderivative of a small integrand is checked at the integrand's size
+
+**Silent: wrong antiderivatives become right ones.** An antiderivative found by a rule is kept only where its derivative
+is the integrand at sampled points, to 1e-9 of their size, or of one where both are smaller. An integrand of size
+1e-12 therefore agreed with any derivative as small, and a rule that took a wrong candidate had its answer passed. The
+comparison's floor is now the integrand's own size where that is below one. Of 402 of Rubi's problems times `10^-12`,
+11 were answered wrongly, and now all 402 are answered as they are unscaled.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"10^(-12) * x * sqrt(sin(x)^2)".Integrate("x")` | `x * 1/352000000000 * cos(x) * (sin(x) ^ 2) ^ (3/2) - …`, whose derivative is not the integrand | `1/1000000000000 * sgn(sin(x)) * (x * -cos(x) + sin(x)) + C` |
+| `"10^(-12) * x * sqrt(cos(x)^2)".Integrate("x")` | `x * -3/1400000000000 * sin(x) * sqrt(cos(x) ^ 2) - …`, likewise | `10^-12` times the antiderivative of `x * sqrt(cos(x)^2)` |
+
 ### `norm(v)` and `beta(x)` with one argument are refused
 
 **Not silent: what parsed now throws.** A call of `norm` or `beta` with one argument was read as the product of a

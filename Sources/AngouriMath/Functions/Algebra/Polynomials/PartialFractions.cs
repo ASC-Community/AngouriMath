@@ -3386,10 +3386,20 @@ namespace AngouriMath.Functions
             // The decimal evaluations are made once for all the points, so that the subtrees free
             // of the point, which the substitutions share, are worked out once.
             var inDecimals = new System.Lazy<PreciseEvaluation>[] { new(() => PreciseEvaluation.In(40)), new(() => PreciseEvaluation.In(80)) };
+            // Agree's tolerance is of the values' size, or of one where both are smaller, so a right
+            // side of size 1e-12 agreed with anything as small: the antiderivative of 10^-12 x
+            // sqrt(sin(x)^2) that a wrong candidate made passed. Below one, the floor is the size
+            // of the right side itself, the largest it has at the points.
+            var largest = 0.0;
+            foreach (var at in points ?? DefaultSamplePoints)
+                if (IntervalEvaluation.Of(right.Substitute(x, Real.Create(EDecimal.FromString(at)))) is { } value
+                    && !double.IsNaN(value.Magnitude) && !double.IsInfinity(value.Magnitude))
+                    largest = System.Math.Max(largest, value.Magnitude);
+            var tolerance = largest is > 0 and < 1 ? 1e-9 * largest : 1e-9;
             foreach (var at in points ?? DefaultSamplePoints)
             {
                 var point = Real.Create(EDecimal.FromString(at));
-                switch (Agree(left.Substitute(x, point), right.Substitute(x, point), 1e-9, inDecimals))
+                switch (Agree(left.Substitute(x, point), right.Substitute(x, point), tolerance, inDecimals))
                 {
                     case false:
                         return false;
