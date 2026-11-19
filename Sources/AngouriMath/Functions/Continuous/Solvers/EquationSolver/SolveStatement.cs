@@ -69,15 +69,18 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             }
             if (survivors is null)
                 return roots;
-            var kept = survivors.ToSet();
-            // A polynomial of degree one or more has a root over the complex numbers, so where every
-            // candidate for one fails, what failed is the solver, and the empty set left would claim
-            // there is no root: (x + 1)^3 = 2 was { } while Cardano's C was 0 for a shifted cube, and
-            // 31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0 while a biquadratic quartic was shifted by -b a / 4.
-            // Left unsolved instead, which says only that the roots were not found.
-            if (kept.Count == 0 && IsAPolynomialWithARoot(equation, x))
+            // An equation that is a polynomial as written has no root a rewrite could have added, so a
+            // candidate that fails it is the solver's number, not a spurious root, and the roots that
+            // pass are not known to be all of them. Where every candidate fails, the empty set left
+            // would claim there is no root, which a polynomial of degree one or more always has over
+            // the complex numbers: (x + 1)^3 = 2 was { } while Cardano's C was 0 for a shifted cube,
+            // and 31x^4 - 62x^3 + 33x^2 - 2x - 1 = 0 while a biquadratic quartic was shifted by
+            // -b a / 4. And where some pass, they are an answer with roots missing: a degree-twelve
+            // polynomial with roots near 1e-12 had eleven numerical candidates fail and was answered
+            // with the twelfth alone. Left unsolved, which says only that the roots were not found.
+            if (IsAPolynomialWithARoot(equation, x))
                 return Unsolved(equation, x);
-            return kept;
+            return survivors.ToSet();
         }
 
         /// <summary><paramref name="equation"/> as a condition on <paramref name="x"/>: the roots were not found.</summary>
@@ -90,8 +93,9 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// polynomial has a root.
         /// </summary>
         private static bool IsAPolynomialWithARoot(Entity equation, Variable x)
+            // Read through a condition the equation carries, as a polynomial's does once simplified.
             => MathS.Settings.Codomain.Value != Core.Domain.Real
-                && TreeAnalyzer.TryGetPolynomial(equation, x, out var monomials)
+                && TreeAnalyzer.TryGetPolynomial(Functions.PartialFractions.Bare(equation), x, out var monomials)
                 && monomials.Keys.All(power => power.Sign >= 0)
                 && monomials.Where(monomial => monomial.Key.Sign > 0)
                     .Any(monomial => monomial.Value.Evaled is Number.Complex { IsZero: false })
