@@ -87,6 +87,21 @@ filtered as before.
 | `"x - 10^(-17) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000 }` |
 | `"x^2 - 10^(-40) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000000, -1/100000000000000000000 }` |
 
+### A rational root is found whatever the scale of the coefficients
+
+**Silent: radicals become the rationals they are, and an unsolved equation is solved.** A rational root is searched for
+over the divisors of the first and last coefficients, and only where both were below a million, to keep factoring them
+cheap. A polynomial whose roots are those of another times `10^k` has coefficients `10^(j k)` times the other's, so it
+passed that bound while its coefficients stayed as cheap to factor. Its rational roots were then written by Cardano's
+formula. Past the bound, each real root found numerically now gives one candidate: a rational root times the leading
+coefficient is a whole number, so the root found to the working precision, times it and rounded, is that number.
+Each candidate is checked exactly.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"x^3 + 1/10^12*x^2 + 5/(9*10^24)*x + 1/(9*10^36) = 0".ToEntity().Solve("x")` | three roots by Cardano's formula | `{ -1/3000000000000, (-1/1500000000000 ± sqrt(-1/1125000000000000000000000)) / 2 }` |
+| `"1 + 2*(10^12*x) + 3*(10^12*x)^2 - 2*Im(10^12*x) = 0".ToEntity().Solve("x")` | unsolved | its two roots, `10^-12` times those of the equation in `x` |
+
 ### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
 
 **Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the
