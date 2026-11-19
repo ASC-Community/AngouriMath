@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2022 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -46,7 +46,7 @@ namespace AngouriMath.Functions
         /// <summary>
         /// Rational roots are found by trying divisors of the first and last coefficients,
         /// so those have to be small enough to factor cheaply. A polynomial with a
-        /// coefficient past this is left alone rather than paid for.
+        /// coefficient past this has its candidates from its numerical roots instead.
         /// </summary>
         [ConstantField] private static readonly EInteger MaxCoefficientToFactor = EInteger.FromInt32(1000000);
 
@@ -403,16 +403,59 @@ namespace AngouriMath.Functions
 
             var constant = whole[0].Abs();
             var leading = whole[whole.Length - 1].Abs();
-            if (constant.IsZero || constant > MaxCoefficientToFactor || leading > MaxCoefficientToFactor)
+            if (constant.IsZero)
                 return Enumerable.Empty<ERational>();
+            if (constant > MaxCoefficientToFactor || leading > MaxCoefficientToFactor)
+                return NumericalCandidates(whole, leading);
+            var ofConstant = Divisors(constant);
+            var ofLeading = Divisors(leading).ToList();
 
             var candidates = new List<ERational>();
-            foreach (var p in Divisors(constant))
-                foreach (var q in Divisors(leading))
+            foreach (var p in ofConstant)
+                foreach (var q in ofLeading)
                 {
                     candidates.Add(ERational.Create(p, q));
                     candidates.Add(ERational.Create(p.Negate(), q));
                 }
+            return candidates.Distinct();
+        }
+
+        /// <summary>
+        /// The rational roots a polynomial with the whole <paramref name="coefficients"/>, lowest
+        /// power first, can have, where its first or last coefficient is too large to factor: one
+        /// for each of its real roots, found numerically.
+        /// </summary>
+        /// <remarks>
+        /// A rational root <c>p/q</c> in lowest terms has <c>q</c> dividing the leading coefficient
+        /// <c>c_n</c>, so it times <c>c_n</c> is a whole number, and the real root found to the
+        /// working precision, times <c>c_n</c> and rounded, is that number. Each candidate is still
+        /// checked exactly. A polynomial whose roots are those of another times <c>10^k</c> has
+        /// coefficients <c>10^(j k)</c> times the other's, past any bound on their size, so
+        /// <c>9x^3 + 9x^2 + 5x + 1</c> had its root <c>-1/3</c> found and the same cubic in
+        /// <c>10^12 x</c> had <c>-1/(3 10^12)</c> written by Cardano's formula; and the system for the
+        /// parts of x in <c>1 + 2x + 3x^2 - 2 Im(x) = 0</c> with x written as <c>10^12 x</c> could not
+        /// tell that such a root made a coefficient 0, and was declined. Searching the divisors of
+        /// coefficients that large instead was tens of thousands of candidates, and a solve that asked
+        /// for it in every case of a signum ran past twenty seconds.
+        /// </remarks>
+        private static IEnumerable<ERational> NumericalCandidates(EInteger[] coefficients, EInteger leading)
+        {
+            if (SquareFreeDecomposition.Decompose(IntegerPolynomial.Create(coefficients).PrimitivePart()) is not { } parts)
+                return Enumerable.Empty<ERational>();
+            var context = MathS.Settings.DecimalPrecisionContext.Value;
+            var whole = EDecimal.FromEInteger(leading);
+            var candidates = new List<ERational>();
+            foreach (var part in parts)
+            {
+                if (part.Factor.Degree < 1
+                    || Algebra.NumericalSolving.DurandKerner.Roots(part.Factor, context) is not { } roots)
+                    continue;
+                foreach (var root in roots)
+                    if (root.ImaginaryPart.EDecimal.IsZero)
+                        candidates.Add(ERational.Create(
+                            root.RealPart.EDecimal.Multiply(whole).RoundToIntegerNoRoundedFlag(EContext.Unlimited.WithRounding(ERounding.HalfEven)).ToEInteger(),
+                            leading));
+            }
             return candidates.Distinct();
         }
 
