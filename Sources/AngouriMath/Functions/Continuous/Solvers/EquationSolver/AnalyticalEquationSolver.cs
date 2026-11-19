@@ -260,7 +260,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 // roots are filtered by it anyway, and what holds under it can be stated by it.
                 // https://github.com/asc-community/AngouriMath/issues/212
                 case Providedf(var expression, var predicate):
-                    return TreeAnalyzer.Assuming(predicate, () => Solve(expression, x, compensateSolving)).Filter(predicate, x);
+                    return EquationSolver.FilterRoots(TreeAnalyzer.Assuming(predicate, () => Solve(expression, x, compensateSolving)), predicate, x);
                 case Piecewise p:
                     return EquationSolver.SolvePiecewise(p, x, (e, x) => Solve(e, x, compensateSolving));
                 // A quotient is zero exactly where its numerator is and its denominator is not

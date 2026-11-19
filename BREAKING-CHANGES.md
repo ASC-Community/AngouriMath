@@ -57,6 +57,20 @@ equation with no terms to cancel, such as one function's value.
 | `"(x * (2 - 4x + 2x^2)^(1/3) - 2) * 10^(-12) = 0".ToEntity().Solve("x")` | five roots, two of which leave 3.46e-12 | the three of `x * (2 - 4x + 2x^2)^(1/3) = 2` |
 | `"(sin(x) - x) * 10^12 = 0".ToEntity().Solve("x")` | `{ 0 }` | the nine of `sin(x) = x` |
 
+### An exact root is not dropped by its condition's rounding
+
+**Silent: answers that were `{ }` now have their roots.** A root found under a condition is kept where the condition
+holds at it, and an equality of two numbers is decided under a tolerance of `1e-16`
+([#1019](https://github.com/asc-community/AngouriMath/issues/1019) keeps that until a major version). `x^0` is 1
+where `x` is not 0, so an exact root below `1e-16` was read as 0 and dropped, and the answer said there was no
+root. The solver now decides an equality between exact numbers at an exact root exactly. A root in decimals is
+filtered as before.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"x - 10^(-17) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000 }` |
+| `"x^2 - 10^(-40) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000000, -1/100000000000000000000 }` |
+
 ### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
 
 **Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the

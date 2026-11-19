@@ -785,7 +785,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 // enough to list them. https://github.com/asc-community/AngouriMath/issues/1409
                 Congruentf(var left, var right, Integer modulus) when Congruence(left - right, modulus, x) is { } classes => classes,
                 
-                Providedf(var e, var predicate) => TreeAnalyzer.Assuming(predicate, () => Solve(e, x))?.Filter(predicate, x),
+                Providedf(var e, var predicate) => TreeAnalyzer.Assuming(predicate, () => Solve(e, x)) is { } solved ? EquationSolver.FilterRoots(solved, predicate, x) : null,
                 Piecewise p => EquationSolver.SolvePiecewiseOrNull(p, x, Solve),
 
                 // A statement the solver has no arm for is the set of x with the property, left

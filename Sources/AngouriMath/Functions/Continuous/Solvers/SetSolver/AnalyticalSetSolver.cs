@@ -18,8 +18,8 @@ namespace AngouriMath.Functions.Continuous.Solvers.SetSolver
         {
             switch (left, right)
             {
-                case (Providedf(var l, var predicate), _): return Solve(l, right, x).Filter(predicate, x);
-                case (_, Providedf(var r, var predicate)): return Solve(left, r, x).Filter(predicate, x);
+                case (Providedf(var l, var predicate), _): return EquationSolver.FilterRoots(Solve(l, right, x), predicate, x);
+                case (_, Providedf(var r, var predicate)): return EquationSolver.FilterRoots(Solve(left, r, x), predicate, x);
                 case (Piecewise p, _): return EquationSolver.SolvePiecewise(p, x, (e, x) => Solve(e, right, x));
                 case (_, Piecewise p): return EquationSolver.SolvePiecewise(p, x, (e, x) => Solve(left, e, x));
             }

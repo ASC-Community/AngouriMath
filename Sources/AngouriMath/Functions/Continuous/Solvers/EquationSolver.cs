@@ -10,6 +10,7 @@ using AngouriMath.Core.Exceptions;
 using AngouriMath.Extensions;
 using AngouriMath.Functions.Algebra.AnalyticalSolving;
 using System;
+using System.Linq;
 
 namespace AngouriMath.Functions.Algebra
 {
@@ -515,13 +516,59 @@ namespace AngouriMath.Functions.Algebra
                 }
             return result;
         }
+        /// <summary>
+        /// <paramref name="roots"/> where <paramref name="predicate"/> holds, as
+        /// <see cref="Set.Filter(Entity, Variable)"/>, with the condition at an exact root decided
+        /// exactly.
+        /// </summary>
+        /// <remarks>
+        /// An equality of two numbers is decided under a tolerance of <c>1e-16</c>, which a major
+        /// version is to change (https://github.com/asc-community/AngouriMath/issues/1019). A root is
+        /// a claim, though, and an exact one is not to be filtered by a rounding: <c>x^0</c> is 1 where
+        /// <c>x</c> is not 0, and <c>x - 10^-17 x^0 = 0</c> was <c>{ }</c>, its root <c>10^-17</c>
+        /// read as 0. So an equality between two sides that are exact numbers, and whose difference
+        /// evaluates to an exact rational, is decided by that rational being 0. A root in decimals,
+        /// or a side whose value is not a rational, is left to the filter.
+        /// </remarks>
+        internal static Set FilterRoots(Set roots, Entity predicate, Variable x)
+        {
+            if (roots is not FiniteSet finite)
+                return roots.Filter(predicate, x);
+            var kept = new List<Entity>(finite.Count);
+            foreach (var root in finite)
+            {
+                var condition = predicate.Substitute(x, root);
+                if (!IsExactNumber(root))
+                    kept.Add(root.Provided(condition));
+                else if (EqualitiesDecidedExactly(condition).Evaled is Boolean decided)
+                {
+                    if (decided)
+                        kept.Add(root);
+                }
+                else
+                    kept.Add(root.Provided(condition));
+            }
+            return kept.ToSet();
+
+            static bool IsExactNumber(Entity value)
+                => value.Vars.Count == 0 && !value.Nodes.Any(node => node is Number.Real and not Number.Rational
+                    || node is Number.Complex { RealPart: not Number.Rational } or Number.Complex { ImaginaryPart: not Number.Rational });
+
+            static Entity EqualitiesDecidedExactly(Entity condition)
+                => condition.Replace(node => node is Equalsf(var left, var right)
+                    && IsExactNumber(left) && IsExactNumber(right)
+                    && (left - right).Evaled is Number.Rational difference
+                        ? (difference.IsZero ? Boolean.True : Boolean.False)
+                        : node);
+        }
+
         internal static Set SolvePiecewise(Piecewise piecewise, Variable x, Func<Entity, Variable, Set> solve)
         {
             Entity cond = true;
             var res = new List<Set>();
             foreach (var c in piecewise.Cases)
             {
-                res.Add(solve(c.Expression, x).Filter(c.Predicate & cond, x));
+                res.Add(FilterRoots(solve(c.Expression, x), c.Predicate & cond, x));
                 cond &= !c.Predicate;
             }
             return res.Unite();
@@ -539,7 +586,7 @@ namespace AngouriMath.Functions.Algebra
             {
                 if (solve(c.Expression, x) is not { } solved)
                     return null;
-                res.Add(solved.Filter(c.Predicate & cond, x));
+                res.Add(FilterRoots(solved, c.Predicate & cond, x));
                 cond &= !c.Predicate;
             }
             return res.Unite();
