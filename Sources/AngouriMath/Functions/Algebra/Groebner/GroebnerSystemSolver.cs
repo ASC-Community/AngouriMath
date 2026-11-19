@@ -215,6 +215,19 @@ namespace AngouriMath.Functions.Algebra.Groebner
                         // the flushed decimals are not to be trusted either.
                         if (VanishesAtTheExactRoot(equation, variable, root))
                             return budget.Allow(false, "a root past the decimal range");
+                        // And an equation with a radical in it, from this root or one assigned before, is
+                        // put to a number by evaluating, where a large term cancels to what its digits
+                        // leave, which downcasting reads as a rational: the root
+                        // (-4 10^24 - sqrt(28 10^48)) / 6 of its own quartic, whose terms are near 1e96,
+                        // left 13/10000, and the one real root of 1 - 2x + x|-2 - 3x| = 0 with x written
+                        // as 10^-24 x was taken for no root, the answer { }. Only an interval leaving 0 out
+                        // shows such a root extends to nothing; an equation that is a polynomial over Q is
+                        // decided exactly.
+                        var exactly = equation.Substitute(variable, root);
+                        if (!root.Nodes.Any(IsADecimal)
+                            && MultivariatePolynomial.TryParse(exactly, new Dictionary<Variable, int>()) is null
+                            && !AnalyticalSolving.StatementSolver.IsShownNotZero(exactly))
+                            continue;
                         consistent = false;
                     }
                 }
