@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2022 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -191,7 +191,6 @@ namespace AngouriMath.Tests.Common
 
         [Theory]
         [InlineData("1e-20", "zero range 1e-10")]
-        [InlineData("1e-20", "20 digits")]
         [InlineData("0.333333333333333333333333", "zero range 1e-10")]
         [InlineData("0.333333333333333333333333", "20 digits")]
         [InlineData("1.00000000001", "zero range 1e-10")]

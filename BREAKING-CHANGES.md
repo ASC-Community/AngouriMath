@@ -88,6 +88,19 @@ the conversion from a string still throw it, with its own type
 | `Entity.TryParse("factorize(360)", null, out _)` | throws `UnrecognizedFunctionParseException` | `false` |
 | `"factorize(360)".ToEntity()` | throws `UnrecognizedFunctionParseException` | the same |
 
+### A decimal literal below `1e-50` is the number written
+
+**Silent: `0` becomes the number.** A decimal is made into a number under the tolerance that takes a value below half
+the working digits for what a cancellation left of 0, and a literal was made that way too, so `1.0E-51` was `0`. A
+literal is the number written; it is read as such. An equality with 0 is still decided under `1e-16`
+([#1019](https://github.com/asc-community/AngouriMath/issues/1019)).
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"1.0E-51".ToEntity()` | `0` | `1.0E-51` |
+| `"1.5E-60 * 10^70".ToEntity().Evaled` | `0` | `15000000000` |
+| `"x = 1.0E-60".ToEntity().Solve("x")` | `{ 0 }` | `{ 1.0E-60 }` |
+
 ### A sum of logarithms or arctangents times a number is solved as the sum
 
 **Silent where it was `{ }`; an exception becomes an answer.** The solvers for a sum of logarithms and for a sum of
