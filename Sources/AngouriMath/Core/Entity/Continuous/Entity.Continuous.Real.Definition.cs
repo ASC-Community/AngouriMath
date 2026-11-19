@@ -162,7 +162,11 @@ namespace AngouriMath
                     // that is not a number, and nothing else is caught.
                     try
                     {
-                        dst = EDecimal.FromString(s);
+                        // A literal is the number written, not what is left of a cancellation, so
+                        // the tolerance derived from the precision does not take it for a residual of
+                        // 0: 1.0E-51 was 0. A zero range set explicitly is honoured as it is set.
+                        var value = EDecimal.FromString(s);
+                        dst = MathS.Settings.PrecisionErrorZeroRange.IsOverriden ? Create(value) : CreateAtScale(value, EDecimal.Zero);
                         return true;
                     }
                     catch (System.FormatException)
