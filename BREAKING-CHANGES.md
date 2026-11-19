@@ -73,6 +73,21 @@ no longer reads a root whose decimals were flushed to `0` as extending to no sol
 | `"x^5 - 3*10^(-60)*x + 10^(-150) = 0".ToEntity().Solve("x")` | `0` among the roots, where the polynomial is `10^-150` | `3.33e-91` in its place |
 | `"(1 + i) + 2*(10^12*x) - 3*(10^12*x)^2 + 10^12*x*abs(3 - 10^12*x) = 0".ToEntity().Solve("x")` | `{ -1.87e-13 - 1.58e-13i }`, one root of two | both, `10^-12` times those of the equation in `x` |
 
+### A root with a radical in it is not dropped for what its evaluation leaves
+
+**Silent: `{ }` becomes the roots.** An equation in a modulus is solved for the real and imaginary parts of `x` as a
+system, and each root of the system's last equation is put into the others, a root that leaves one a nonzero number
+being dropped. A root with a radical in it is put in by evaluating, and where the terms are large they cancel to what
+their hundred digits leave, which downcasting reads as a rational: the root of its own polynomial left `13/10000`.
+So the real roots of equations whose roots are near `10^23` or more were dropped, and the answer was `{ }`. Such a
+root is now dropped only where an interval shows the equation is not 0 at it. Near `10^30` the evaluation rounds
+past what an interval can tell, and roots are still lost there.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"(1 - 2*(10^(-24)*x)) + 10^(-24)*x*abs(-2 - 3*(10^(-24)*x)) = 0".ToEntity().Solve("x")` | `{ }` | `{ -10^24/3 * sqrt(7) - 2 * 10^24/3 }` |
+| `"-2*(10^(-24)*x) + 3*(10^(-24)*x)^2 - 2*abs(-3 + 2*(10^(-24)*x)) = 0".ToEntity().Solve("x")` | `{ }` | its two roots, `10^24` times `-(1 + sqrt(19))/3` and `(sqrt(19) - 1)/3` |
+
 ### An exact root is not dropped by its condition's rounding
 
 **Silent: answers that were `{ }` now have their roots.** A root found under a condition is kept where the condition
