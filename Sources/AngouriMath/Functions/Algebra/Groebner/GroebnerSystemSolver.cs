@@ -209,7 +209,14 @@ namespace AngouriMath.Functions.Algebra.Groebner
                     if (substituted.Vars.Any())
                         narrowed.Add(substituted);
                     else if (substituted is Number.Rational { IsZero: false })
+                    {
+                        // Unless what is left is only the part the decimals did not flush to 0, where
+                        // the root is not shown to extend to nothing, and the equations narrowed by
+                        // the flushed decimals are not to be trusted either.
+                        if (VanishesAtTheExactRoot(equation, variable, root))
+                            return budget.Allow(false, "a root past the decimal range");
                         consistent = false;
+                    }
                 }
                 // A root that leaves an equation a nonzero number extends to no solution.
                 if (!consistent)
@@ -218,6 +225,48 @@ namespace AngouriMath.Functions.Algebra.Groebner
                     return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="root"/>, a number in decimals, makes <paramref name="equation"/>
+        /// in <paramref name="variable"/> alone negligible next to the largest of its terms when
+        /// the decimals are read as the exact rationals they are.
+        /// </summary>
+        /// <remarks>
+        /// A decimal below about <c>10^-200</c> is flushed to 0 by the decimal context, where a
+        /// rational is kept exactly. So a root near <c>10^-30</c> put into an eighth-degree
+        /// polynomial left the polynomial's rational constant term alone, every power of the root
+        /// gone, and each of the eight roots was read as extending to no solution: the system
+        /// solved for the parts of x in <c>(1 + i) + 2x - 3x^2 + x|3 - x| = 0</c> with x written as
+        /// <c>10^30 x</c> was answered <c>{ }</c>. Exactly, the root leaves a residual of the
+        /// size its hundred digits allow.
+        /// </remarks>
+        static bool VanishesAtTheExactRoot(Entity equation, Variable variable, Entity root)
+        {
+            if (!root.Nodes.Any(IsADecimal) || root.Evaled is not Number.Complex value
+                || !value.RealPart.EDecimal.IsFinite || !value.ImaginaryPart.EDecimal.IsFinite
+                || MultivariatePolynomial.TryParse(equation, new Dictionary<Variable, int> { [variable] = 0 }) is not { } polynomial)
+                return false;
+            var (re, im) = (ERational.FromEDecimal(value.RealPart.EDecimal), ERational.FromEDecimal(value.ImaginaryPart.EDecimal));
+            // Each term c z^k exactly, with z^k built up a power at a time.
+            var powers = new List<(ERational Re, ERational Im)> { (ERational.One, ERational.Zero) };
+            var (sumRe, sumIm) = (ERational.Zero, ERational.Zero);
+            var largest = ERational.Zero;
+            foreach (var term in polynomial.Terms)
+            {
+                var power = MultivariatePolynomial.PowerOf(term.Key, 0);
+                while (powers.Count <= power)
+                {
+                    var (pRe, pIm) = powers[powers.Count - 1];
+                    powers.Add((pRe.Multiply(re).Subtract(pIm.Multiply(im)), pRe.Multiply(im).Add(pIm.Multiply(re))));
+                }
+                var (tRe, tIm) = (powers[power].Re.Multiply(term.Value), powers[power].Im.Multiply(term.Value));
+                (sumRe, sumIm) = (sumRe.Add(tRe), sumIm.Add(tIm));
+                var size = tRe.Abs().Add(tIm.Abs());
+                if (size.CompareTo(largest) > 0)
+                    largest = size;
+            }
+            return sumRe.Abs().Add(sumIm.Abs()).CompareTo(largest.Multiply(ERational.FromEDecimal(NegligibleShare))) <= 0;
         }
 
         /// <summary>

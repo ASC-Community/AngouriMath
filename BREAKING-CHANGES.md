@@ -57,6 +57,22 @@ equation with no terms to cancel, such as one function's value.
 | `"(x * (2 - 4x + 2x^2)^(1/3) - 2) * 10^(-12) = 0".ToEntity().Solve("x")` | five roots, two of which leave 3.46e-12 | the three of `x * (2 - 4x + 2x^2)^(1/3) = 2` |
 | `"(sin(x) - x) * 10^12 = 0".ToEntity().Solve("x")` | `{ 0 }` | the nine of `sin(x) = x` |
 
+### A polynomial's numerical roots are found whatever their size
+
+**Silent: answers gain roots that were missing, and lose numbers that were not roots.** A polynomial whose roots
+have no closed form is solved numerically, and the iteration started on a circle of radius at least 1 and
+settled to an absolute tolerance. Roots near `10^-12` were not settled, and the answer was what a search found;
+roots near `10^-30` came out as NaN. A root far below the others in size was then rounded onto `0`. The iteration
+now runs on the roots scaled to about unit size. And a system solved for the real and imaginary parts of `x`
+no longer reads a root whose decimals were flushed to `0` as extending to no solution.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"x^8 - 7/4*10^(-12)*x^7 - 137/216*10^(-24)*x^6 + 869/432*10^(-36)*x^5 - 12377/23328*10^(-48)*x^4 - 2557/15552*10^(-60)*x^3 - 6815/93312*10^(-72)*x^2 + 961/23328*10^(-84)*x + 961/93312*10^(-96) = 0".ToEntity().Solve("x")` | `{ -1.87e-13 }`, one root of eight | its eight roots, from `-1.06e-12` to `1.45e-12` |
+| `"x^5 - 3*10^(-120)*x + 10^(-150) = 0".ToEntity().Solve("x")` | five numbers near `4.7e-24`, none of them a root | its five roots, `10^-30` times those of `x^5 - 3x + 1` |
+| `"x^5 - 3*10^(-60)*x + 10^(-150) = 0".ToEntity().Solve("x")` | `0` among the roots, where the polynomial is `10^-150` | `3.33e-91` in its place |
+| `"(1 + i) + 2*(10^12*x) - 3*(10^12*x)^2 + 10^12*x*abs(3 - 10^12*x) = 0".ToEntity().Solve("x")` | `{ -1.87e-13 - 1.58e-13i }`, one root of two | both, `10^-12` times those of the equation in `x` |
+
 ### An exact root is not dropped by its condition's rounding
 
 **Silent: answers that were `{ }` now have their roots.** A root found under a condition is kept where the condition
