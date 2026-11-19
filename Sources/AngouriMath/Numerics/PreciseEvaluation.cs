@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -442,6 +442,12 @@ namespace AngouriMath.Numerics
             }
         }
 
+        /// <summary>An interval holding <paramref name="part"/>, at the digits being worked to.</summary>
+        private PreciseInterval Part(Number.Real part)
+            => part is Number.Rational rational
+                ? new(rational.ERational.ToEDecimal(down), rational.ERational.ToEDecimal(up))
+                : new(part.EDecimal.RoundToPrecision(down), part.EDecimal.RoundToPrecision(up));
+
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private PreciseComplexInterval EvaluateOtherThanArithmetic(Entity expr)
         {
@@ -452,12 +458,14 @@ namespace AngouriMath.Numerics
                     var value = rational.ERational;
                     return Real(new(value.ToEDecimal(down), value.ToEDecimal(up)));
                 }
+                // Each part enclosed as the number it is: a rational part from its exact value, as a
+                // rational is above, and not from its decimal, which is rounded to the working digits
+                // and so enclosed only to them. Past them the interval left the value out: the root of
+                // cos(2x) - sin(x) - 1 = 0 with 23/108 + 1/24 i in it left the residual
+                // -3.7e-102 - 1.7e-102 i at 111 digits, an enclosure without 0 in it, and the equation
+                // times 10^7 was declined as solved by a root that is not one.
                 case Number.Complex number:
-                {
-                    var re = number.RealPart.EDecimal;
-                    var im = number.ImaginaryPart.EDecimal;
-                    return new(new(re.RoundToPrecision(down), re.RoundToPrecision(up)), new(im.RoundToPrecision(down), im.RoundToPrecision(up)));
-                }
+                    return new(Part(number.RealPart), Part(number.ImaginaryPart));
                 case Variable variable when variable == MathS.pi:
                     return Real(Pi());
                 case Variable variable when variable == MathS.e:

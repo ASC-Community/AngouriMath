@@ -101,6 +101,18 @@ whole, and the arctangent solver declined it. The multipliers are now divided by
 | `"(arctan(x) + arctan(2x) + 1) * 10^12 = 0".ToEntity().Solve("x")` | `{ }`, and `OverflowException` since the arctangent solver | the root of `arctan(x) + arctan(2x) = -1` |
 | `"(arctan(x) + arctan(2x)) / 2 = 1/2".ToEntity().Solve("x")` | `{ 0.373947426651419168… }` | `{ (-3 + sqrt(9 - 4 * 2 * tan(1) * -tan(1))) / (2 * 2 * tan(1)) }` |
 
+### A complex constant is enclosed exactly, and an equation times a large number keeps its roots
+
+**Silent where it was unsolved.** A root with only exact numbers in it is checked by an interval enclosing its
+residual, worked to more than the hundred digits evaluation uses when the equation's terms are large. A complex
+number with rational parts, `23/108 + 1/24 i`, was enclosed from its parts' hundred-digit decimals, so past those
+digits the interval left the value out, the root was shown not to be one, and the equation was declined. Each
+part is now enclosed from its exact value.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"(cos(2x) - sin(x) - 1) * 10^12 = 0".ToEntity().Solve("x")` | unsolved | the four families of `cos(2x) - sin(x) - 1 = 0` |
+
 ### An equation is not raised to clear a radical the rest of it still holds
 
 **Silent.** `Solve` raised an equation to clear a radical even where the rest of it held one too, inside a function:
