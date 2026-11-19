@@ -100,6 +100,18 @@ route, with a decimal root that differs in its last digits
 | `"sqrt(x) + x = cos(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ }` | `{ 0 }`, by the next entry; unsolved by this one alone |
 | `"x + sqrt(x) = e^(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ 0, 3.21586080818110353… }`, 8.7e-16 from the root | `{ 0, 3.21586080818110264… }`, 1.7e-17 from it |
 
+### A root smaller than 1e-7 is not rounded onto 0
+
+**Silent: answers that were missing a root have it.** Each root is offered as a simple rational guessed under a
+tolerance of 1e-7, and the guess is kept where the equation holds at it. A root below 1e-7 was guessed to be 0, and
+where 0 is also a root the equation holds there, so the two roots became one. A guess that moves a root by more than
+1e-7 of its own size is no longer taken.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"x^2 - 10^(-8) * x = 0".ToEntity().Solve("x")` | `{ 0 }` | `{ 0, 1/100000000 }` |
+| `"6 * 10^24 * x^2 - 4 * 10^12 * x = 0".ToEntity().Solve("x")` | `{ 0 }` | `{ 0, 1/1500000000000 }` |
+
 ### A root where a radicand is zero is found beside Newton's
 
 **Silent.** Newton's method does not converge to a root where a radicand is zero, since a radical's derivative is
