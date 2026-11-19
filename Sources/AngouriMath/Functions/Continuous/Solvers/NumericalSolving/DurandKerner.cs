@@ -110,10 +110,83 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
         /// <summary>
         /// The roots of the polynomial with real <paramref name="coefficients"/>, lowest power first,
         /// at the precision of <paramref name="context"/>, each approximation at least
-        /// <c>10^-separationDigits</c> from the others; <see langword="null"/> where they are not
-        /// settled or not that far apart.
+        /// <c>10^-separationDigits</c> of the size of the roots from the others;
+        /// <see langword="null"/> where they are not settled or not that far apart.
         /// </summary>
+        /// <remarks>
+        /// Solved for <c>w = z / 10^e</c>, with <c>10^e</c> the size of the roots, so that the
+        /// iteration below meets roots of about unit size whatever theirs is. Its starting circle,
+        /// the tolerance it settles to and the separation it holds the roots to are in absolute
+        /// terms, and a polynomial whose roots were all within <c>10^-12</c> of zero was started
+        /// <c>10^12</c> times as far out as they are and did not settle; with roots within
+        /// <c>10^-30</c>, the products the step divides by passed below the context's exponent
+        /// range and every root came out NaN. The system solved for the parts of x in
+        /// <c>(1 + i) + 2x - 3x^2 + x|3 - x| = 0</c> with x written as <c>10^12 x</c> kept one root
+        /// of its two. The scaling is by a power of ten, which is exact.
+        /// </remarks>
         private static IReadOnlyList<Complex>? Roots(EDecimal[] coefficients, EContext context, int separationDigits)
+        {
+            var exponent = ExponentOfTheRoots(coefficients);
+            if (exponent == 0)
+                return RootsOfUnitSize(coefficients, context, separationDigits);
+            // p(10^e w) has the coefficients c_k 10^(e k).
+            var scaled = new EDecimal[coefficients.Length];
+            for (var k = 0; k < scaled.Length; k++)
+                scaled[k] = coefficients[k].ScaleByPowerOfTen(EInteger.FromInt64(exponent * k));
+            if (RootsOfUnitSize(scaled, context, separationDigits) is not { } roots)
+                return null;
+            var power = EInteger.FromInt64(exponent);
+            var back = new List<Complex>(roots.Count);
+            foreach (var root in roots)
+                back.Add(AsARoot(
+                    root.RealPart.EDecimal.ScaleByPowerOfTen(power).RoundToPrecision(context),
+                    root.ImaginaryPart.EDecimal.ScaleByPowerOfTen(power).RoundToPrecision(context)));
+            return back;
+        }
+
+        /// <summary>A root with these parts, neither of them read as a residual of cancellation.</summary>
+        /// <remarks>
+        /// A root is a value the iteration has settled to the working precision of its own size,
+        /// not what is left of a difference. Made at the unit scale, a number smaller than half the
+        /// working digits is taken for such a residual and rounded onto 0: the root 3.3e-91 of
+        /// <c>x^5 - 3e-60 x + 1e-150</c>, beside four of size 1.3e-15, came out 0, where the
+        /// polynomial is 1e-150, and 0 was answered as a root. An imaginary part too small to be one
+        /// is already 0.
+        /// </remarks>
+        private static Complex AsARoot(EDecimal real, EDecimal imaginary)
+            => Complex.CreateAtScales(real, imaginary, EDecimal.Zero, EDecimal.Zero);
+
+        /// <summary>
+        /// The power of ten nearest below Fujiwara's bound on the roots of the polynomial with
+        /// <paramref name="coefficients"/>, <c>2 max_k |a_(n-k) / a_n|^(1/k)</c> with <c>a_0</c>
+        /// halved, read off the coefficients' decimal logarithms so that no quotient of them is
+        /// formed; 0 where the polynomial has only its leading term.
+        /// </summary>
+        private static long ExponentOfTheRoots(EDecimal[] coefficients)
+        {
+            var degree = coefficients.Length - 1;
+            var lead = Log10OfModulus(coefficients[degree]);
+            var largest = double.NegativeInfinity;
+            for (var k = 1; k <= degree; k++)
+            {
+                var coefficient = coefficients[degree - k];
+                if (coefficient.IsZero)
+                    continue;
+                var log = Log10OfModulus(coefficient) - lead - (k == degree ? Math.Log10(2) : 0);
+                largest = Math.Max(largest, log / k);
+            }
+            return double.IsNegativeInfinity(largest) ? 0 : (long)Math.Floor(largest + Math.Log10(2));
+        }
+
+        /// <summary>The decimal logarithm of <c>|value|</c>, to about a double's precision, for any exponent.</summary>
+        private static double Log10OfModulus(EDecimal value)
+        {
+            var rounded = value.Abs().RoundToPrecision(EContext.ForPrecision(17));
+            return Math.Log10(EDecimal.FromEInteger(rounded.Mantissa).ToDouble()) + EDecimal.FromEInteger(rounded.Exponent).ToDouble();
+        }
+
+        /// <summary><see cref="Roots(EDecimal[], EContext, int)"/>, for roots of about unit size.</summary>
+        private static IReadOnlyList<Complex>? RootsOfUnitSize(EDecimal[] coefficients, EContext context, int separationDigits)
         {
             var degree = coefficients.Length - 1;
             var digits = context.Precision.ToInt32Checked();
@@ -164,6 +237,9 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
                     im[i] = im[i].Subtract(stepIm, work);
                     largest = EDecimal.Max(largest, stepRe.Abs().Add(stepIm.Abs(), work));
                 }
+                // A step that is not a number has not settled, and NaN compares as anything.
+                if (!largest.IsFinite)
+                    return null;
                 settled = largest.CompareTo(tolerance) <= 0;
             }
             if (!settled)
@@ -180,7 +256,7 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
             for (var i = 0; i < degree; i++)
             {
                 var imaginary = im[i].Abs().CompareTo(half) < 0 ? EDecimal.Zero : im[i].RoundToPrecision(context);
-                roots.Add(Complex.Create(re[i].RoundToPrecision(context), imaginary));
+                roots.Add(AsARoot(re[i].RoundToPrecision(context), imaginary));
             }
             return roots;
         }
