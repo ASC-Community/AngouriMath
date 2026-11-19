@@ -73,6 +73,20 @@ no longer reads a root whose decimals were flushed to `0` as extending to no sol
 | `"x^5 - 3*10^(-60)*x + 10^(-150) = 0".ToEntity().Solve("x")` | `0` among the roots, where the polynomial is `10^-150` | `3.33e-91` in its place |
 | `"(1 + i) + 2*(10^12*x) - 3*(10^12*x)^2 + 10^12*x*abs(3 - 10^12*x) = 0".ToEntity().Solve("x")` | `{ -1.87e-13 - 1.58e-13i }`, one root of two | both, `10^-12` times those of the equation in `x` |
 
+### An exact root is not dropped by its condition's rounding
+
+**Silent: answers that were `{ }` now have their roots.** A root found under a condition is kept where the condition
+holds at it, and an equality of two numbers is decided under a tolerance of `1e-16`
+([#1019](https://github.com/asc-community/AngouriMath/issues/1019) keeps that until a major version). `x^0` is 1
+where `x` is not 0, so an exact root below `1e-16` was read as 0 and dropped, and the answer said there was no
+root. The solver now decides an equality between exact numbers at an exact root exactly. A root in decimals is
+filtered as before.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"x - 10^(-17) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000 }` |
+| `"x^2 - 10^(-40) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000000, -1/100000000000000000000 }` |
+
 ### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
 
 **Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the
