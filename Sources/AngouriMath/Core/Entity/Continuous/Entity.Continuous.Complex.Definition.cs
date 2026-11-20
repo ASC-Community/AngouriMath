@@ -45,8 +45,14 @@ namespace AngouriMath
                 /// on the instance: the first to ask decided it for everyone. A division by <c>i</c> with
                 /// the downcasting off left <c>0 - 1i</c>, in decimals, on <see cref="ImaginaryOne"/>, and
                 /// <c>conj(i)</c> was that from then on, in every thread.
+                /// <para>
+                /// A real number is its own conjugate, and otherwise the parts are kept as they are with the
+                /// imaginary one negated, so an exact part stays exact. Rebuilding from decimals made the
+                /// conjugate of <c>1/12345678901</c> a hundred-digit decimal, and of <c>10^-30</c> the decimal
+                /// <c>1E-30</c>, which no downcast reads back as a ratio.
+                /// </para>
                 /// </remarks>
-                public Complex Conjugate => Create(RealPart, -ImaginaryPart);
+                public Complex Conjugate => this is Real real ? real : new Complex(RealPart, -ImaginaryPart);
 
                 internal override Priority Priority =>
                     (RealPart, ImaginaryPart) switch
