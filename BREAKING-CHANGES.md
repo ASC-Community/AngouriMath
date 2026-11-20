@@ -117,6 +117,18 @@ Each candidate is checked exactly.
 | `"x^3 + 1/10^12*x^2 + 5/(9*10^24)*x + 1/(9*10^36) = 0".ToEntity().Solve("x")` | three roots by Cardano's formula | `{ -1/3000000000000, (-1/1500000000000 ± sqrt(-1/1125000000000000000000000)) / 2 }` |
 | `"1 + 2*(10^12*x) + 3*(10^12*x)^2 - 2*Im(10^12*x) = 0".ToEntity().Solve("x")` | unsolved | its two roots, `10^-12` times those of the equation in `x` |
 
+### The conjugate of an exact real number is that number
+
+**Silent: a decimal becomes the exact number.** A number's conjugate was rebuilt from its parts as decimals, so a ratio
+that no downcast reads back came out a decimal, and an equation in the conjugate of a small multiple of `x` was left
+unsolved. A real number is its own conjugate, and a non-real one keeps its parts with the imaginary one negated.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"conj(1/12345678901)".ToEntity().InnerSimplified` | `8.1000000730539006588…E-11` (100 digits) | `1/12345678901` |
+| `"conj(10^(-30) x)".ToEntity().InnerSimplified` | `1E-30 * conjugate(x)` | `1/1000000000000000000000000000000 * conjugate(x)` |
+| `"-i + 2 * 10^(-30) x + 3 * conj(10^(-30) x) = 0".ToEntity().Solve("x")` | left unsolved | `{ -1000000000000000000000000000000i }` |
+
 ### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
 
 **Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the
