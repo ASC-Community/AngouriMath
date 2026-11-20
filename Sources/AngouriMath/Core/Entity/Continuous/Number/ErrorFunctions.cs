@@ -83,6 +83,10 @@ namespace AngouriMath
                     return Integer.One;
                 var precision = context.Precision.ToInt32Checked();
                 (EDecimal Re, EDecimal Im) erfc;
+                // What is left of a cancellation is 0, below the working digits of what cancelled: nothing in the
+                // asymptotic series, 1 less erf(z) taken with the digits that loses on the right, 1 on the left.
+                // At 1 throughout, erfc(12), 1.36e-64, was 0.
+                EDecimal scale;
                 // The asymptotic series is erfc itself and cancels nothing, so it does without the
                 // digits 1 - erf(z) would lose. Those grow as Re(z^2): 4343 of them at z = 100,
                 // where erfc(100) took over 20 s. https://github.com/asc-community/AngouriMath/issues/1606
@@ -90,14 +94,19 @@ namespace AngouriMath
                 // the asymptotic series leaves out the 1 there, below its precision beside erfi(y),
                 // and answered erfc(20 i) with a real part of 0.
                 if (!re.IsNegative && !re.IsZero && SquaredModulus(re, im).CompareTo(Reach(precision)) > 0)
+                {
                     erfc = ErfcByTheAsymptoticSeries(re, im, Working(context, GuardDigits(re, im, precision)));
+                    scale = EDecimal.Zero;
+                }
                 else
                 {
-                    var work = Working(context, GuardDigits(re, im, precision) + (re.IsNegative ? 0 : Cancelled(re, im)));
+                    var cancelled = re.IsNegative ? 0 : Cancelled(re, im);
+                    scale = EDecimal.Create(EInteger.One, EInteger.FromInt32(-cancelled));
+                    var work = Working(context, GuardDigits(re, im, precision) + cancelled);
                     var (erfRe, erfIm) = Erf(re, im, work, extraDigits: 0);
                     erfc = (EDecimal.One.Subtract(erfRe, work), erfIm.Negate());
                 }
-                return Complex.Create(erfc.Re.RoundToPrecision(context), erfc.Im.RoundToPrecision(context));
+                return Complex.CreateAtScales(erfc.Re.RoundToPrecision(context), erfc.Im.RoundToPrecision(context), scale, scale);
             }
 
             /// <summary>
@@ -120,9 +129,11 @@ namespace AngouriMath
                     var context = MathS.Settings.DecimalPrecisionContext.Value;
                     return Real.CreateAtScale(ErfiOfAReal(x, context).RoundToPrecision(context), x);
                 }
-                var erf = Erf(Complex.Create(z.ImaginaryPart.EDecimal.Negate(), z.RealPart.EDecimal));
+                // i z and -i erf(i z) only exchange the parts, which were decided already: made again as residuals,
+                // erfi(1e-60 i) was 0.
+                var erf = Erf(Complex.CreateAtScales(z.ImaginaryPart.EDecimal.Negate(), z.RealPart.EDecimal, EDecimal.Zero, EDecimal.Zero));
                 // -i (a + i b) = b - i a
-                return Complex.Create(erf.ImaginaryPart.EDecimal, erf.RealPart.EDecimal.Negate());
+                return Complex.CreateAtScales(erf.ImaginaryPart.EDecimal, erf.RealPart.EDecimal.Negate(), EDecimal.Zero, EDecimal.Zero);
             }
 
             /// <summary>
