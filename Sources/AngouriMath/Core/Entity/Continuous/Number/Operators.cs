@@ -564,8 +564,11 @@ namespace AngouriMath
                 // From https://source.dot.net/#System.Runtime.Numerics/System/Numerics/Complex.cs,7dc9c2ee4f99814a
                 var cosImaginary = expReal.Multiply(imaginary.Cos(context), context);
                 var sinImaginary = expReal.Multiply(imaginary.Sin(context), context);
-                // The residual of a cosine or a sine is the modulus's: e^(i pi) leaves 1e-100 i of it.
-                return Complex.CreateAtScales(cosImaginary, sinImaginary, expReal, expReal);
+                // The residual of a cosine or a sine is its argument's, as on the real line, times the modulus:
+                // e^(i pi) leaves 1e-100 i of pi, and e^(1e-60 i) is 1 + 1e-60 i, whose sine was 0 at the
+                // modulus alone.
+                var scale = expReal.Multiply(imaginary.Abs(), context);
+                return Complex.CreateAtScales(cosImaginary, sinImaginary, scale, scale);
             }
 
             /// <summary>e.g. Pow(2, 5) = 32</summary>
@@ -775,12 +778,16 @@ namespace AngouriMath
                 EDecimal powerReal, EDecimal powerImaginary, EContext context)
             {
                 var theta = baseImaginary.Arctan2(baseReal, context);
-                var newRho = powerReal.MultiplyAndAdd(theta, powerImaginary.Multiply(rho.NaturalLogarithm(context), context), context);
+                var fromTheModulus = powerImaginary.Multiply(rho.NaturalLogarithm(context), context);
+                var newRho = powerReal.MultiplyAndAdd(theta, fromTheModulus, context);
+                var fromTheBase = powerReal.Multiply(theta, context);
                 var t = PowerOfReals(rho, powerReal, context).Multiply(powerImaginary.Multiply(-theta, context).Exponential(context), context);
 
-                // The residual of a cosine or a sine is the modulus's.
-                var modulusScale = t.Abs();
-                return Complex.CreateAtScales(t.Multiply(newRho.Cos(context), context), t.Multiply(newRho.Sin(context), context), modulusScale, modulusScale);
+                // The residual of a cosine or a sine is its argument's, as on the real line, and the argument is a
+                // sum that may itself cancel, so it is that of the larger term; times the modulus. At the modulus
+                // alone, e^(1e-60 i) was 1.
+                var scale = t.Abs().Multiply(fromTheBase.Abs().Add(fromTheModulus.Abs(), context), context);
+                return Complex.CreateAtScales(t.Multiply(newRho.Cos(context), context), t.Multiply(newRho.Sin(context), context), scale, scale);
             }
 
             /// <summary>
@@ -915,7 +922,35 @@ namespace AngouriMath
                 if (x is Real { EDecimal: { IsNegative: false } real })
                     return Real.CreateAtScale(real.NaturalLogarithm(context), real);
                 // From https://source.dot.net/#System.Runtime.Numerics/System/Numerics/Complex.cs,cf15f2e5cc49cef1
-                return Complex.Create(x.Abs().EDecimal.NaturalLogarithm(context), x.ImaginaryPart.EDecimal.Arctan2(x.RealPart.EDecimal, context));
+                // The real part is ln |x|, a residual of |x| as it is on the real line; the argument cancels
+                // nothing, and arg(1 + 1e-60 i) is 1e-60.
+                var modulus = x.Abs().EDecimal;
+                return Complex.CreateAtScales(modulus.NaturalLogarithm(context), x.ImaginaryPart.EDecimal.Arctan2(x.RealPart.EDecimal, context),
+                    modulus, EDecimal.Zero);
+            }
+
+            /// <summary>
+            /// sinh and cosh of <paramref name="y"/>, each to the digits of <paramref name="context"/>: sinh(y) is
+            /// the difference of e^y and e^(-y), which near 0 loses as many digits as y is below 1, so it is taken
+            /// with those digits more. sinh(1e-60) taken without them kept forty.
+            /// </summary>
+            private static (EDecimal Sinh, EDecimal Cosh) SinhAndCosh(EDecimal y, EContext context)
+            {
+                if (y.IsZero)
+                    return (EDecimal.Zero, EDecimal.One);
+                var work = context;
+                if (y.IsFinite && y.Abs().CompareTo(EDecimal.One) < 0)
+                {
+                    var below = -(y.Exponent + y.UnsignedMantissa.GetDigitCountAsEInteger());
+                    // Past the working digits sinh(y) is y and cosh(y) is 1, the next terms y^3/6 and y^2/2 being
+                    // below them.
+                    if (below.CompareTo(context.Precision) >= 0)
+                        return (y.RoundToPrecision(context), EDecimal.One);
+                    work = context.WithBigPrecision(context.Precision + below + 2);
+                }
+                var p = y.Exponential(work);
+                var q = EDecimal.One.Divide(p, work);
+                return (p.Subtract(q, work).Divide(2, work).RoundToPrecision(context), p.Add(q, work).Divide(2, work).RoundToPrecision(context));
             }
 
             /// <summary>Calculates the exact value of sine of num</summary>
@@ -926,16 +961,14 @@ namespace AngouriMath
                     return Real.CreateAtScale(real.Sin(context), real);
                 // From https://source.dot.net/#System.Runtime.Numerics/System/Numerics/Complex.cs,cf15f2e5cc49cef1
                 var (re, im) = (num.RealPart.EDecimal, num.ImaginaryPart.EDecimal);
-                // We need both sinh and cosh of imaginary part.
-                // To avoid multiple calls to Exp with the same value,
-                // we compute them both here from a single call to Exp.
-                var p = im.Exponential(context);
-                var q = EDecimal.One.Divide(p, context);
-                var sinh = p.Subtract(q, context).Divide(2, context);
-                var cosh = p.Add(q, context).Divide(2, context);
-                return Complex.Create(
+                var (sinh, cosh) = SinhAndCosh(im, context);
+                // Only sin(re) and cos(re) cancel, each a residual of re as it is on the real line, and each part
+                // is one of them times sinh(im) or cosh(im): sin(pi + 1e-60 i) is -1e-60 i, and was 0.
+                var reScale = re.Abs();
+                return Complex.CreateAtScales(
                     re.Sin(context).Multiply(cosh, context),
-                    re.Cos(context).Multiply(sinh, context));
+                    re.Cos(context).Multiply(sinh, context),
+                    reScale.Multiply(cosh, context), reScale.Multiply(sinh.Abs(), context));
             }
 
             /// <summary>Calculates the exact value of secant of num</summary>
@@ -990,13 +1023,13 @@ namespace AngouriMath
                     return Real.CreateAtScale(real.Cos(context), real);
                 // From https://source.dot.net/#System.Runtime.Numerics/System/Numerics/Complex.cs,cf15f2e5cc49cef1
                 var (re, im) = (num.RealPart.EDecimal, num.ImaginaryPart.EDecimal);
-                var p = im.Exponential(context);
-                var q = EDecimal.One.Divide(p, context);
-                var sinh = p.Subtract(q, context).Divide(2, context);
-                var cosh = p.Add(q, context).Divide(2, context);
-                return Complex.Create(
+                var (sinh, cosh) = SinhAndCosh(im, context);
+                // As for Sin: cos(pi/2 + 1e-60 i) is -1e-60 i, and was 0.
+                var reScale = re.Abs();
+                return Complex.CreateAtScales(
                     re.Cos(context).Multiply(cosh, context),
-                    -re.Sin(context).Multiply(sinh, context));
+                    -re.Sin(context).Multiply(sinh, context),
+                    reScale.Multiply(cosh, context), reScale.Multiply(sinh.Abs(), context));
             }
 
             /// <summary>Calculates the exact value of tangent of num</summary>
@@ -1016,23 +1049,24 @@ namespace AngouriMath
                 //   tan z = (sin(2x) / cosh(2y) + i \tanh(2y)) / (1 + cos(2x) / cosh(2y))
                 // which correctly computes the (tiny) real part and the (normal-sized) imaginary part.
 
+                // The real part is sin(2 re) over the rest, a residual of 2 re as on the real line; the imaginary
+                // part cancels nothing. tan(1e-60 (1 + i)) is 1e-60 (1 + i), and was 0.
                 var x2 = num.RealPart.EDecimal.Multiply(2, context);
                 var y2 = num.ImaginaryPart.EDecimal.Multiply(2, context);
-                var p = y2.Exponential(context);
-                var q = EDecimal.One.Divide(p, context);
-                var cosh = p.Add(q, context).Divide(2, context);
+                var (sinh, cosh) = SinhAndCosh(y2, context);
+                EDecimal ReScale(EDecimal divisor) => divisor.IsZero ? EDecimal.One : x2.Abs().Divide(divisor.Abs(), context);
                 if (num.ImaginaryPart.EDecimal.Abs().LessThanOrEquals(4))
                 {
-                    var sinh = p.Subtract(q, context).Divide(2, context);
                     var D = x2.Cos(context).Add(cosh, context);
-                    return Complex.Create(x2.Sin(context).Divide(D, context), sinh.Divide(D, context));
+                    return Complex.CreateAtScales(x2.Sin(context).Divide(D, context), sinh.Divide(D, context), ReScale(D), EDecimal.Zero);
                 }
                 else
                 {
                     var D = x2.Cos(context).Divide(cosh, context).Increment();
-                    return Complex.Create(
+                    return Complex.CreateAtScales(
                         x2.Sin(context).Divide(cosh, context).Divide(D, context),
-                        y2.Tanh(context).Divide(D, context));
+                        y2.Tanh(context).Divide(D, context),
+                        ReScale(cosh.Multiply(D, context)), EDecimal.Zero);
                 }
             }
 

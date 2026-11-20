@@ -170,6 +170,19 @@ literal is the number written; it is read as such. An equality with 0 is still d
 | `"1.5E-60 * 10^70".ToEntity().Evaled` | `0` | `15000000000` |
 | `"x = 1.0E-60".ToEntity().Solve("x")` | `{ 0 }` | `{ 1.0E-60 }` |
 
+### The sine, cosine, tangent and logarithm of a non-real number keep a small part
+
+**Silent: `0` becomes the part.** Each part of these was made as what a cancellation of terms near 1 left, which
+takes a value below about `1e-50` for 0. Only `sin(re)` and `cos(re)` cancel, as they do on the real line, where
+the value was already kept, and the argument of a logarithm cancels nothing. The difference of `e^y` and `e^(-y)`
+in each is also taken with the digits it loses near 0.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sin(pi + 10^(-60) * i)".ToEntity().Evaled` | `0` | `-1.000…E-60i` |
+| `"tan(10^(-60) * (1 + i))".ToEntity().Evaled` | `0` | `9.999…E-61 + 1E-60i` |
+| `"ln(1 + 10^(-60) * i)".ToEntity().Evaled` | `0` | `9.999…E-61i` |
+
 ### A sum of logarithms or arctangents times a number is solved as the sum
 
 **Silent where it was `{ }`; an exception becomes an answer.** The solvers for a sum of logarithms and for a sum of
