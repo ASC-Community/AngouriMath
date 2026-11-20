@@ -22,8 +22,10 @@ namespace AngouriMath.Tests.Convenience
     [Trait("Area", "Convenience")]
     public sealed class BetaTest
     {
+        // The number written, at a scale of zero: made as a cancellation residual, mpmath's 1.01e-147 was 0, and so
+        // was the error measured against it.
         private static Number.Complex Point(string re, string im)
-            => Number.Complex.Create(EDecimal.FromString(re), EDecimal.FromString(im));
+            => Number.Complex.CreateAtScales(EDecimal.FromString(re), EDecimal.FromString(im), EDecimal.Zero, EDecimal.Zero);
 
         private static void AssertClose(Entity expected, Entity actual, string tolerance, string what)
         {

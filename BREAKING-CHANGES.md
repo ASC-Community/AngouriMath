@@ -144,6 +144,19 @@ the conversion from a string still throw it, with its own type
 | `Entity.TryParse("factorize(360)", null, out _)` | throws `UnrecognizedFunctionParseException` | `false` |
 | `"factorize(360)".ToEntity()` | throws `UnrecognizedFunctionParseException` | the same |
 
+### The modulus of a small decimal is not 0
+
+**Silent: `0`, `NaN` and `{ }` become the answer.** The modulus of a real number was made as a cancellation
+residual, which takes a value below half the working digits for 0, so the modulus of a decimal below about `1e-50`
+was 0. A non-real number is divided through its divisor's modulus, so the quotient was `NaN`, and a root that passed
+through such a quotient was dropped as a pole.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"abs(2.08E-52)".ToEntity().Evaled` | `0` | `2.08E-52` |
+| `"i / 2.08E-52".ToEntity().Evaled` | `NaN` | `4807692307692307692307692307692307692307692307692307.69…i` |
+| `"2 + 10^26 x + (2 + 2i) * 10^26 x * Re(10^26 x) = 0".ToEntity().Solve("x")` | `{ }` | one root, about `(-0.42219 - 2.29079i) / 10^26` |
+
 ### A decimal literal below `1e-50` is the number written
 
 **Silent: `0` becomes the number.** A decimal is made into a number under the tolerance that takes a value below half
