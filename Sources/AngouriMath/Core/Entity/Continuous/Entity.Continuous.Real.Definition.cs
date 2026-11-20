@@ -153,7 +153,13 @@ namespace AngouriMath
                 }
 
                 /// <inheritdoc/>
-                public override Real Abs() => Create(EDecimal.Abs());
+                /// <remarks>
+                /// Made at a scale of zero, as <see cref="Complex.Abs"/> is: a number that is not 0 has a
+                /// modulus that is not 0, and a modulus is no residual of a cancellation. Made as a residual,
+                /// <c>abs(2.08E-52)</c> was 0, and a division of a non-real number by it, which goes through
+                /// the divisor's modulus, was <c>NaN</c>.
+                /// </remarks>
+                public override Real Abs() => CreateAtScale(EDecimal.Abs(), EDecimal.Zero);
 
                 internal static bool TryParse(string s,
                     [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Real? dst)
