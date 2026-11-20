@@ -102,10 +102,15 @@ namespace AngouriMath
                     var slope = Multiply(ew, wPlusOne, work);
                     var change = Divide(f, (slope.Re.Subtract(correction.Re, work), slope.Im.Subtract(correction.Im, work)), work);
                     w = (w.Re.Subtract(change.Re, work), isReal ? EDecimal.Zero : w.Im.Subtract(change.Im, work));
-                    if (Magnitude(change).CompareTo(tolerance.Multiply(EDecimal.Max(Magnitude(w), EDecimal.One), work)) <= 0)
+                    // Relative to w, which is not 0 for a z that is not: at max(|w|, 1) the step stopped at 1e-96
+                    // of a w near 1e-60, with a third of its digits.
+                    if (Magnitude(change).CompareTo(tolerance.Multiply(Magnitude(w), work)) <= 0)
                         break;
                 }
-                return Complex.Create(w.Re.RoundToPrecision(context), w.Im.RoundToPrecision(context));
+                // Each part is a residual of the iteration only below the working digits of w: W(1e-60 i), near
+                // 1e-60 i, was 0 as a residual of 1.
+                var size = Magnitude(w);
+                return Complex.CreateAtScales(w.Re.RoundToPrecision(context), w.Im.RoundToPrecision(context), size, size);
             }
 
             private static (EDecimal Re, EDecimal Im) Exp((EDecimal Re, EDecimal Im) w, EContext work)

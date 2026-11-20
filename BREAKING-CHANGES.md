@@ -129,6 +129,19 @@ unsolved. A real number is its own conjugate, and a non-real one keeps its parts
 | `"conj(10^(-30) x)".ToEntity().InnerSimplified` | `1E-30 * conjugate(x)` | `1/1000000000000000000000000000000 * conjugate(x)` |
 | `"-i + 2 * 10^(-30) x + 3 * conj(10^(-30) x) = 0".ToEntity().Solve("x")` | left unsolved | `{ -1000000000000000000000000000000i }` |
 
+### `erfc`, `erfi` and `lambertw` keep a small value
+
+**Silent: `0` becomes the value.** Each was made as what a cancellation of terms near 1 left, which takes a value
+below about `1e-50` for 0. `erfc` is taken with the digits its `1 - erf` loses, and its asymptotic series cancels
+nothing; `erfi` only exchanges the parts of `erf`; `lambertw` is found to its own size, where it stopped at
+`1e-96` of a value near `1e-60`.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"erfc(12)".ToEntity().Evaled` | `0` | `1.356…E-64` |
+| `"erfi(10^(-60) * i)".ToEntity().Evaled` | `0` | `1.128…E-60i` |
+| `"lambertw(10^(-60) * i)".ToEntity().Evaled` | `0` | `1.000…E-60i` |
+
 ### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
 
 **Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the
