@@ -201,6 +201,18 @@ the conversion from a string still throw it, with its own type
 | `Entity.TryParse("factorize(360)", null, out _)` | throws `UnrecognizedFunctionParseException` | `false` |
 | `"factorize(360)".ToEntity()` | throws `UnrecognizedFunctionParseException` | the same |
 
+### The gamma function of a real number keeps a small value
+
+**Silent: `0` becomes the value.** It was made against 1, so a value below about `1e-50` read as a residual of a
+cancellation and became 0, while the same value with an imaginary part kept it. The gamma function has no zero, so
+its value is never such a residual.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"gamma(-60.5)".ToEntity().Evaled` | `0` | `-4.843…E-83` |
+| `"(-61.5)!".ToEntity().Evaled` | `0` | `-4.843…E-83` |
+| `"gamma(-100.5)".ToEntity().Evaled` | `0` | `-3.353…E-159` |
+
 ### The modulus of a small decimal is not 0
 
 **Silent: `0`, `NaN` and `{ }` become the answer.** The modulus of a real number was made as a cancellation
