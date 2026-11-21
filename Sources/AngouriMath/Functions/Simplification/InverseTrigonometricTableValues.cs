@@ -6,6 +6,7 @@
 //
 
 using System.Diagnostics.CodeAnalysis;
+using PeterO.Numbers;
 
 namespace AngouriMath.Functions
 {
@@ -156,7 +157,7 @@ namespace AngouriMath.Functions
                 // value at the precision the caller asked for.
                 if (value.Evaled is not Real { EDecimal: var exact })
                     return false;
-                if (!Number.IsZero(negative ? exact + given : exact - given))
+                if (!TrigonometryTableValues.AgreesToTheWorkingDigits(exact, negative ? given.Negate() : given, exact.Abs().Add(EDecimal.One)))
                     return false;
                 // Both functions in the table are odd, so a negative argument is the same angle
                 // the other way round.

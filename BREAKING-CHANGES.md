@@ -348,6 +348,20 @@ route, with a decimal root that differs in its last digits
 | `"sqrt(x) + x = cos(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ }` | `{ 0 }`, by the next entry; unsolved by this one alone |
 | `"x + sqrt(x) = e^(sqrt(x)) - 1".ToEntity().Solve("x")` | `{ 0, 3.21586080818110353… }`, 8.7e-16 from the root | `{ 0, 3.21586080818110264… }`, 1.7e-17 from it |
 
+### A trigonometric table value is only for its own argument
+
+**Wrong answer: an exact value becomes no value.** The tables of exact values matched an argument within an absolute
+`1e-16` of a table entry, so a nearby argument simplified to the entry's exact value. They now match to all but ten of
+the working digits, relative to the argument, which is what evaluating an exact argument leaves; a nearby one is left
+as written.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sin(pi/6 + 10^(-20))".ToEntity().Simplify()` | `1/2` | `sin(pi / 6 + 1/100000000000000000000)` |
+| `"tan(pi/4 + 10^(-18))".ToEntity().Simplify()` | `1` | `tan(pi / 4 + 1/1000000000000000000)` |
+| `"sin(10^(-20))".ToEntity().Simplify()` | `0` | `sin(1/100000000000000000000)` |
+| `"arcsin(1/2 + 10^(-20))".ToEntity().Simplify()` | `pi / 6` | `arcsin(50000000000000000001/100000000000000000000)` |
+
 ### A root smaller than 1e-7 is not rounded onto 0
 
 **Silent: answers that were missing a root have it.** Each root is offered as a simple rational guessed under a

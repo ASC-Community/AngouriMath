@@ -24,6 +24,8 @@ namespace AngouriMath.Functions
             }
             // arg in [0; 2pi]
             var twoPi = Number.CtxMultiply(2, MathS.DecimalConst.pi);
+            // What the reduction and the evaluation leave is relative to the argument and the period.
+            var scale = dArg.Abs().Add(twoPi);
             dArg = Number.CtxMod(
                 Number.CtxAdd(           // (
                     Number.CtxMod(dArg, twoPi)         //     dArg % 2pi
@@ -52,7 +54,7 @@ namespace AngouriMath.Functions
 
             for (var j = begin; j <= end; j++)
             {
-                if (Number.IsZero(table[j].arg - dArg) && !IsWrittenThroughTheComplexNumbers(table[j].res))
+                if (AgreesToTheWorkingDigits(table[j].arg, dArg, scale) && !IsWrittenThroughTheComplexNumbers(table[j].res))
                 {
                     res = table[j].res;
                     return true;
@@ -61,6 +63,15 @@ namespace AngouriMath.Functions
             res = null;
             return false;
         }
+
+        /// <summary>
+        /// Whether two evaluations agree to all but ten of the working digits, relative to <paramref name="scale"/>: what
+        /// evaluating an exact argument leaves. It was an absolute 1e-16, so <c>sin(pi/6 + 10^(-20))</c> was exactly
+        /// <c>1/2</c> and <c>tan(pi/4 + 10^(-18))</c> exactly 1. Farther apart, the table is not asked, which leaves the
+        /// value unanswered rather than wrong. https://github.com/asc-community/AngouriMath/issues/1944
+        /// </summary>
+        internal static bool AgreesToTheWorkingDigits(EDecimal a, EDecimal b, EDecimal scale)
+            => a.Subtract(b).Abs().CompareTo(scale.ScaleByPowerOfTen(10 - MathS.Settings.DecimalPrecisionContext.Value.Precision.ToInt32Checked())) <= 0;
 
         /// <summary>
         /// Whether a value is written through numbers that are not real: <c>i</c>, or a square root
