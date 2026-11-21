@@ -265,6 +265,22 @@ in each is also taken with the digits it loses near 0.
 | `"tan(10^(-60) * (1 + i))".ToEntity().Evaled` | `0` | `9.999…E-61 + 1E-60i` |
 | `"ln(1 + 10^(-60) * i)".ToEntity().Evaled` | `0` | `9.999…E-61i` |
 
+### `arcsin`, `arccos` and `arctan` keep a small part, and `arccos` near 1 its value
+
+**Silent: `0` becomes the value.** For a non-real argument the formulas cancelled digits at the working precision
+and each part was then taken against 1; they are now taken with the digits they cancel, and each part is a residual
+only against the terms that cancelled, less those digits. The last digit of some ordinary values moves to the
+correctly rounded one. On the real line `arcsin` answered `pi/2` anywhere within `1e-16` of 1, and `arccos` was
+`pi/2 - arcsin`, so near 1 it was 0 or kept few digits; past a half it is now `arctan(sqrt((1 - x)(1 + x))/x)`.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"arcsin(10^(-60) * (1 + i))".ToEntity().Evaled` | `0` | `1E-60 + 1E-60i` |
+| `"arctan(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.7853…` | `0.7853… + 5E-61i` |
+| `"arcsin(1/2 + 10^(-60) * i)".ToEntity().Evaled` | `0.5235…` | `0.5235… + 1.154…E-60i` |
+| `"arccos(1 - 10^(-20))".ToEntity().Evaled` | `0` | `1.414…E-10` |
+| `"arcsin(i)".ToEntity().Evaled`, the 100th digit | `…2560430i` | `…2560429i` |
+
 ### A sum of logarithms or arctangents times a number is solved as the sum
 
 **Silent where it was `{ }`; an exception becomes an answer.** The solvers for a sum of logarithms and for a sum of
