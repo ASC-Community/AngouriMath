@@ -1071,13 +1071,38 @@ namespace AngouriMath
             }
 
             /// <summary>Calculates the exact value of cotangent of num</summary>
+            /// <remarks>
+            /// <c>cos x/sin x</c> on the real line, a residual of <c>cos x</c>, which is known to <c>|x|</c> times the working
+            /// digits as on the real line everywhere; and off it
+            /// <c>(sin x cos x sech^2 y - i tanh y)/(sin^2 x sech^2 y + tanh^2 y)</c>, which neither cancels nor overflows. It
+            /// was <c>1/tan z</c> made 0 wherever both parts were below <c>1e-16</c>, so <c>cot(pi/2 + 10^(-20))</c>, about
+            /// <c>-10^(-20)</c>, was 0. https://github.com/asc-community/AngouriMath/issues/1944
+            /// </remarks>
             public static Complex Cotan(Complex num)
             {
-                var cotan = Integer.One / Tan(num);
-                if (cotan.RealPart.EDecimal.Abs().LessThan(MathS.Settings.PrecisionErrorZeroRange)
-                    && cotan.ImaginaryPart.EDecimal.Abs().LessThan(MathS.Settings.PrecisionErrorZeroRange))
-                    return Integer.Zero;
-                else return cotan;
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                var (x, y) = (num.RealPart.EDecimal, num.ImaginaryPart.EDecimal);
+                if (!x.IsFinite || !y.IsFinite)
+                    return Integer.One / Tan(num);
+                var (sin, cos) = (x.Sin(context), x.Cos(context));
+                // sin x is a residual of x as on the real line, and 0 at a pole: cot of pi to the working digits is NaN.
+                if (y.IsZero)
+                    return Real.CreateAtScale(sin, x).IsZero ? Integer.One / Tan(num)
+                        : Real.CreateAtScale(cos.Divide(sin, context), x.Abs().Divide(sin.Abs(), context));
+                var (sinh, cosh) = SinhAndCosh(y, context);
+                // Past the context's exponents cosh y is infinite, tanh y its sign and sech y 0: cot(1 - 3000 i) is i.
+                var (tanh, sech) = cosh.IsFinite
+                    ? (sinh.Divide(cosh, context), EDecimal.One.Divide(cosh, context))
+                    : (EDecimal.FromInt32(y.Sign), EDecimal.Zero);
+                var sechSquared = sech.Multiply(sech, context);
+                var denominator = sin.Multiply(sin, context).Multiply(sechSquared, context).Add(tanh.Multiply(tanh, context), context);
+                if (denominator.IsZero)
+                    return Integer.One / Tan(num);
+                var re = sin.Multiply(cos, context).Multiply(sechSquared, context).Divide(denominator, context);
+                var im = tanh.Negate().Divide(denominator, context);
+                // sin x cos x is a residual of x through whichever of the two is small.
+                var reScale = x.Abs().Multiply(sin.Abs().Add(cos.Abs(), context), context).Multiply(sechSquared, context).Divide(denominator, context);
+                return Complex.CreateAtScales(re, im, reScale, EDecimal.Zero);
             }
 
             // From https://source.dot.net/#System.Runtime.Numerics/System/Numerics/Complex.cs,cf15f2e5cc49cef1
