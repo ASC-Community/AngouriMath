@@ -1101,7 +1101,7 @@ namespace AngouriMath
             //   arccos(w) = arccos(beta) - i sign(y) log(alpha + sqrt(alpha^2 - 1))
             // So alpha and beta together give us arcsin(w) and arccos(w).
 
-            static (EDecimal beta, EDecimal v) ArcSinCosInner(Complex num, EContext context)
+            static (EDecimal beta, EDecimal v, EDecimal alpha) ArcSinCosInner(Complex num, EContext context)
             {
                 var (x, y) = (num.RealPart.EDecimal, num.ImaginaryPart.EDecimal);
                 var xp1 = x.Increment();
@@ -1118,7 +1118,39 @@ namespace AngouriMath
                 else if (beta.LessThan(-EDecimal.One))
                     beta = -EDecimal.One;
                 return (beta,
-                    alpha.MultiplyAndSubtract(alpha, EDecimal.One, context).SqrtByIntegerRoot(context).Add(alpha, context).NaturalLogarithm(context).Multiply((y.IsNegative || y.IsZero) ? -1 : 1, context));
+                    alpha.MultiplyAndSubtract(alpha, EDecimal.One, context).SqrtByIntegerRoot(context).Add(alpha, context).NaturalLogarithm(context).Multiply((y.IsNegative || y.IsZero) ? -1 : 1, context),
+                    alpha);
+            }
+
+            /// <summary>
+            /// The digits below 1 of the smaller nonzero part of <c>x + i y</c>, which the inverse trigonometric
+            /// functions' formulas cancel: <c>arctan(1 + 10^(-60) i)</c> is a difference of two logarithms near
+            /// <c>ln 2/2</c> that agree to 60 digits. At most 1000, past which a part is left to its scale.
+            /// </summary>
+            private static int DigitsBelowOne(EDecimal x, EDecimal y)
+            {
+                var below = 0;
+                foreach (var part in new[] { x, y })
+                    if (part.IsFinite && !part.IsZero && part.Abs().CompareTo(EDecimal.One) < 0)
+                        below = Math.Max(below, -(part.Exponent + part.UnsignedMantissa.GetDigitCountAsEInteger()).ToInt32Checked());
+                return Math.Min(below, 1000);
+            }
+
+            /// <summary>
+            /// <c>arcsin</c> or <c>arccos</c> of a non-real number from <see cref="ArcSinCosInner"/>, taken with the digits
+            /// its <c>rho - sigma</c> and <c>alpha^2 - 1</c> cancel, twice those of the smaller part, and ten more, and
+            /// each part a residual only against <c>alpha</c> less those digits: <c>arcsin(10^(-60) (1 + i))</c> was 0,
+            /// and the imaginary part of <c>arcsin(1/2 + 10^(-60) i)</c> was dropped.
+            /// https://github.com/asc-community/AngouriMath/issues/1944
+            /// </summary>
+            private static Complex ArcSinOrCos(Complex num, EContext context, bool cosine)
+            {
+                var (x, y) = (num.RealPart.EDecimal, num.ImaginaryPart.EDecimal);
+                var work = Working(context, 10 + 2 * DigitsBelowOne(x, y));
+                var (beta, v, alpha) = ArcSinCosInner(num, work);
+                var (re, im) = cosine ? (beta.Acos(work), v.Negate()) : (beta.Arcsin(work), v);
+                var scale = alpha.ScaleByPowerOfTen(context.Precision.ToInt32Checked() - work.Precision.ToInt32Checked());
+                return Complex.CreateAtScales(re.RoundToPrecision(context), im.RoundToPrecision(context), scale, scale);
             }
 
             /// <summary>Calculates the exact value of arcsine of num</summary>
@@ -1127,8 +1159,7 @@ namespace AngouriMath
                 var context = MathS.Settings.DecimalPrecisionContext;
                 if (num is Real { EDecimal: var real } && !(real.GreaterThan(EDecimal.One) || real.LessThan(-EDecimal.One)))
                     return Real.CreateAtScale(real.Arcsin(context), real);
-                var (beta, v) = ArcSinCosInner(num, context);
-                return Complex.Create(beta.Arcsin(context), v);
+                return ArcSinOrCos(num, context, cosine: false);
             }
 
             /// <summary>Calculates the exact value of arccosine of num</summary>
@@ -1137,8 +1168,7 @@ namespace AngouriMath
                 var context = MathS.Settings.DecimalPrecisionContext;
                 if (num is Real { EDecimal: var real } && !(real.GreaterThan(EDecimal.One) || real.LessThan(-EDecimal.One)))
                     return Real.CreateAtScale(real.Acos(context), real);
-                var (beta, v) = ArcSinCosInner(num, context);
-                return Complex.Create(beta.Acos(context), -v);
+                return ArcSinOrCos(num, context, cosine: true);
             }
 
             /// <summary>Calculates the exact value of arctangent of num</summary>
@@ -1151,7 +1181,27 @@ namespace AngouriMath
                 var one = Integer.One;
                 var two = Integer.Create(2);
                 var i = Complex.ImaginaryOne;
-                return i / two * (Ln(one - i * num) - Ln(one + i * num));
+                var (x, y) = (num.RealPart.EDecimal, num.ImaginaryPart.EDecimal);
+                if (x.IsZero && y.Abs().CompareTo(EDecimal.One) == 0)
+                    return i / two * (Ln(one - i * num) - Ln(one + i * num));
+                // i/2 (ln(1 - i z) - ln(1 + i z)), the two logarithms taken with the digits they agree to and ten more,
+                // and each part a residual only against the parts it is the difference of less those digits:
+                // arctan(1 + 10^(-60) i) has the imaginary part 5e-61, and arctan(10^(-60) (1 + i)) kept 40 of its digits
+                // and no imaginary part. https://github.com/asc-community/AngouriMath/issues/1944
+                EContext ctx = context;
+                var work = Working(ctx, 10 + DigitsBelowOne(x, y));
+                Complex minus, plus;
+                using (MathS.Settings.DowncastingEnabled.Set(false))
+                using (MathS.Settings.DecimalPrecisionContext.Set(work))
+                    (minus, plus) = (Ln(one - i * num), Ln(one + i * num));
+                var (a, b) = ((Re: minus.RealPart.EDecimal, Im: minus.ImaginaryPart.EDecimal), (Re: plus.RealPart.EDecimal, Im: plus.ImaginaryPart.EDecimal));
+                // i/2 (a - b) = (b.Im - a.Im)/2 + i (a.Re - b.Re)/2
+                var re = b.Im.Subtract(a.Im, work).Divide(2, work);
+                var im = a.Re.Subtract(b.Re, work).Divide(2, work);
+                var beyond = ctx.Precision.ToInt32Checked() - work.Precision.ToInt32Checked();
+                var reScale = a.Im.Abs().Add(b.Im.Abs(), work).Divide(2, work).ScaleByPowerOfTen(beyond);
+                var imScale = a.Re.Abs().Add(b.Re.Abs(), work).Divide(2, work).ScaleByPowerOfTen(beyond);
+                return Complex.CreateAtScales(re.RoundToPrecision(ctx), im.RoundToPrecision(ctx), reScale, imScale);
             }
 
             /// <summary>Calculates the exact value of arccotangent of num</summary>
