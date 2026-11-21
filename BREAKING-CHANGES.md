@@ -148,7 +148,8 @@ unsolved. A real number is its own conjugate, and a non-real one keeps its parts
 **Silent: `0` becomes the value.** `e^u - e^v` was evaluated by rounding both powers and subtracting, which loses every
 digit of `u - v` below half the working ones, and `sinh(x)` is `(e^x - e^(-x))/2`. It is now evaluated as
 `e^v (e^(u - v) - 1)`, with `u - v` taken before either power is rounded and `e^d - 1` with the digits it would
-cancel; a bare `1` is read as `e^0`.
+cancel; `1`, `e` and `1/e^u` are read as powers of `e`. Each part is still a residual against the two powers, so
+`sinh(pi i)` stays 0.
 
 | Input | Was (2.8.0) | Now |
 |---|---|---|
@@ -156,6 +157,7 @@ cancel; a bare `1` is read as `e^0`.
 | `"tanh(10^(-60))".ToEntity().Evaled` | `0` | `1.000…E-60` |
 | `"e^(10^(-60)) - 1".ToEntity().Evaled` | `0` | `1.000…0005E-60` |
 | `"sinh(10^(-20))".ToEntity().Evaled` | 80 digits | 100 digits |
+| `"(e - 1/e) / 2".ToEntity().Evaled` | `1.175…233915` | `1.175…23392`, rounded correctly |
 
 ### A part of the gamma function below the exponent range is the number 0
 

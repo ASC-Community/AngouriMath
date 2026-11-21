@@ -1148,27 +1148,32 @@ namespace AngouriMath
             }
 
             /// <summary>
-            /// <c>e^d - 1</c>, taken with the digits <c>e^d</c> has in common with 1 and ten more, so that a small <c>d</c>
-            /// keeps all of its: at <c>d = 2 * 10^(-60)</c> it is <c>2 * 10^(-60)</c>, where <c>e^d</c> rounded and less 1 kept
-            /// forty digits. It is 0 only for <c>d = 0</c>, which is answered exactly, so no part of it is a residual.
+            /// <c>e^(v + d) - e^v</c>, taken as <c>e^v (e^d - 1)</c> with the digits <c>e^d</c> has in common with 1 and ten
+            /// more, and rounded once: subtracting the two powers rounded lost every digit of <c>d</c> below the working
+            /// ones, so <c>sinh(10^(-60))</c> was 0. Each part is a residual against <c>|e^(v + d)| + |e^v|</c> less the
+            /// digits taken in addition, so <c>sinh(pi i)</c>, whose <c>e^(2 pi i) - 1</c> is only rounding, is still 0.
             /// https://github.com/asc-community/AngouriMath/issues/2074
             /// </summary>
-            /// <summary><paramref name="context"/> with ten more digits and no bound on the exponent, made once per precision.</summary>
-            internal static EContext WithTenMoreDigits(EContext context) => Working(context, 10);
-
-            internal static Complex ExpMinusOne(Complex d)
+            internal static Complex ExpDifference(Complex v, Complex d)
             {
                 if (d.IsZero)
                     return Integer.Zero;
                 var context = MathS.Settings.DecimalPrecisionContext.Value;
                 var (x, y) = (d.RealPart.EDecimal, d.ImaginaryPart.EDecimal);
-                var work = Working(context, 10 + DigitsBelowOne(x, y));
-                Complex power;
+                var extra = 10 + DigitsBelowOne(x, y);
+                var work = Working(context, extra);
+                Complex power, lower, product;
+                // With the downcasting off: e^(-10^(-60)) is within it of 1 and was the integer 1 there.
                 using (MathS.Settings.DowncastingEnabled.Set(false))
                 using (MathS.Settings.DecimalPrecisionContext.Set(work))
+                {
                     power = Exp(Complex.Create(x, y));
-                var (re, im) = (power.RealPart.EDecimal.Subtract(EDecimal.One, work), power.ImaginaryPart.EDecimal);
-                return Complex.CreateAtScales(re.RoundToPrecision(context), im.RoundToPrecision(context), EDecimal.Zero, EDecimal.Zero);
+                    lower = Exp(v);
+                    product = lower * Complex.CreateAtScales(power.RealPart.EDecimal.Subtract(EDecimal.One, work), power.ImaginaryPart.EDecimal, EDecimal.Zero, EDecimal.Zero);
+                }
+                static EDecimal Size(Complex z) => z.RealPart.EDecimal.Abs().Add(z.ImaginaryPart.EDecimal.Abs());
+                var scale = Size(lower).Multiply(Size(power).Add(EDecimal.One), work).ScaleByPowerOfTen(-extra);
+                return Complex.CreateAtScales(product.RealPart.EDecimal.RoundToPrecision(context), product.ImaginaryPart.EDecimal.RoundToPrecision(context), scale, scale);
             }
 
             /// <summary>

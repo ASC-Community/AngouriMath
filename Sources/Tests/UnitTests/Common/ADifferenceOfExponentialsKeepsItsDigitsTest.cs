@@ -28,8 +28,12 @@ namespace AngouriMath.Tests.Common
         [InlineData("e^(10^(-60)) - 1", "1.0000000000000000000000000000000000000000000000000000000000005E-60", "0")]
         [InlineData("(e^(2 * 10^(-60)) - 1) / (2 * e^(10^(-60)))", "1E-60", "0")]
         [InlineData("sinh(10^(-60) * (1 + i))", "1E-60", "1E-60")]
-        // Controls: an exact cancellation, and none.
+        [InlineData("sinh(10^(-60) + 10^(-130) * i)", "1E-60", "1E-130")]
+        [InlineData("sinh(10^(-60) * i) / i", "1E-60", "0")]
+        // Controls: an exact cancellation, one that is only rounding (e^(2 pi i) - 1), and none.
         [InlineData("e^2 - e^2", "0", "0")]
+        [InlineData("sinh(pi * i)", "0", "0")]
+        [InlineData("sinh(-200 + pi * i)", "361298688406287462908873852109465284867843721426365964201634894561610954680736945830780.9632945312853", "0")]
         [InlineData("sinh(1/2)", "0.5210953054937473616224256264114915591059289826114805279460935764528022508902335923170644542741885935", "0")]
         public void TheValueKeepsItsDigits(string expression, string real, string imaginary)
         {
@@ -44,6 +48,7 @@ namespace AngouriMath.Tests.Common
         // sinh(10^(-20)) = 10^(-20) + 10^(-60)/6 + ..., which kept eighty digits; and a difference that cancels
         // nothing keeps its last digit.
         [InlineData("sinh(10^(-20))", "1.000000000000000000000000000000000000000016666666666666666666666666666666666666666750000000000000000E-20")]
+        [InlineData("(e - 1/e) / 2", "1.175201193643801456882381850595600815155717981334095870229565413013307567304323895607117452089623392")]
         [InlineData("e^3 - e^2", "12.69648082425701751369810219400671008380759226800230282029180640717627208201291596782018467517389591")]
         public void EveryDigitIsKept(string expression, string expected)
             => AssertNear(expected, Assert.IsAssignableFrom<Number.Real>(expression.ToEntity().Evaled).EDecimal, "1E-98");

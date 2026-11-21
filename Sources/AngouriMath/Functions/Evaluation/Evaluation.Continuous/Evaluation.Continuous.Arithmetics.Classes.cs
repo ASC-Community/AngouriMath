@@ -202,21 +202,14 @@ namespace AngouriMath
                     return null;
                 if ((u - v).Evaled is not Complex d || v.Evaled is not Complex exponent || !d.IsFinite || !exponent.IsFinite)
                     return null;
-                // Both factors and their product with ten more digits, rounded once, and with the downcasting off:
-                // e^(-10^(-60)) is within it of 1 and was the integer 1 there, leaving a relative error of 10^(-60).
-                var context = MathS.Settings.DecimalPrecisionContext.Value;
-                Complex product;
-                using (MathS.Settings.DowncastingEnabled.Set(false))
-                using (MathS.Settings.DecimalPrecisionContext.Set(Number.WithTenMoreDigits(context)))
-                    product = Number.Exp(exponent) * Number.ExpMinusOne(d);
-                // A product, which cancels nothing, of a factor that is 0 only where d is.
-                return Complex.CreateAtScales(product.RealPart.EDecimal.RoundToPrecision(context), product.ImaginaryPart.EDecimal.RoundToPrecision(context),
-                    PeterO.Numbers.EDecimal.Zero, PeterO.Numbers.EDecimal.Zero);
+                return Number.ExpDifference(exponent, d);
 
                 static Entity? ExponentOfE(Entity power) => power switch
                 {
                     Powf(var @base, var exponent) when @base == MathS.e => exponent,
+                    Divf(Integer(1), var divisor) when ExponentOfE(divisor) is { } exponent => -exponent,
                     Integer(1) => Integer.Zero,
+                    _ when power == MathS.e => Integer.One,
                     _ => null
                 };
             }
