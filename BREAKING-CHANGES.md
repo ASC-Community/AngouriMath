@@ -265,6 +265,20 @@ whole, and the arctangent solver declined it. The multipliers are now divided by
 | `"(arctan(x) + arctan(2x) + 1) * 10^12 = 0".ToEntity().Solve("x")` | `{ }`, and `OverflowException` since the arctangent solver | the root of `arctan(x) + arctan(2x) = -1` |
 | `"(arctan(x) + arctan(2x)) / 2 = 1/2".ToEntity().Solve("x")` | `{ 0.373947426651419168… }` | `{ (-3 + sqrt(9 - 4 * 2 * tan(1) * -tan(1))) / (2 * 2 * tan(1)) }` |
 
+### `cot` keeps a small value, and a value far off the real line
+
+**Silent: `0` or `NaN` becomes the value.** It was `1/tan z`, made 0 wherever both parts were below `1e-16`. It is
+now `cos x/sin x` on the real line, a residual of `cos x` as `cos` is, and off it
+`(sin x cos x sech^2 y - i tanh y)/(sin^2 x sech^2 y + tanh^2 y)`, which neither cancels nor overflows. `cot` of `pi`
+to the working digits is still `NaN`, and the last digit of some ordinary values moves to the correctly rounded one.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"cot(pi/2 + 10^(-20))".ToEntity().Evaled` | `0` | `-1.000…E-20` |
+| `"cot(3 * pi/2 - 10^(-30))".ToEntity().Evaled` | `0` | `1.000…E-30` |
+| `"cot(pi/2 + 10^(-20) * i)".ToEntity().Evaled` | `0` | `-9.999…E-21i` |
+| `"cot(1 - 3000 * i)".ToEntity().Evaled` | `NaN` | `i` |
+
 ### A complex constant is enclosed exactly, and an equation times a large number keeps its roots
 
 **Silent where it was unsolved.** A root with only exact numbers in it is checked by an interval enclosing its
