@@ -158,6 +158,20 @@ nothing; `erfi` only exchanges the parts of `erf`; `lambertw` is found to its ow
 | `"erfi(10^(-60) * i)".ToEntity().Evaled` | `0` | `1.128…E-60i` |
 | `"lambertw(10^(-60) * i)".ToEntity().Evaled` | `0` | `1.000…E-60i` |
 
+### `Ei` and `li` keep a small value
+
+**Silent: `0` becomes the value.** Each part was taken against 1, so a part below about `1e-50` read as 0. The
+series is now a residual only against its terms less the digits it is taken with beyond the working ones, which
+cover what it cancels, and the asymptotic series against the products added to make each part.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"Ei(-130)".ToEntity().Evaled` | `0` | `-2.657…E-59` |
+| `"Ei(1 + 10^(-60) * i)".ToEntity().Evaled` | `1.8951…` | `1.8951… + 2.718…E-60i` |
+| `"Ei(-300 + 10^(-60) * i)".ToEntity().Evaled` | `3.1415…i` | `-1.710…E-133 + 3.1415…i` |
+| `"li(10^(-60))".ToEntity().Evaled` | `0` | `-7.186…E-63` |
+| `"li(2 + 10^(-60) * i)".ToEntity().Evaled` | `1.0451…` | `1.0451… + 1.442…E-60i` |
+
 ### `MathS.Parse` and `Entity.TryParse` return a refused call rather than throw it
 
 **Not silent: what threw now returns.** `MathS.Parse` is the parser that does not throw, and `Entity.TryParse` the
