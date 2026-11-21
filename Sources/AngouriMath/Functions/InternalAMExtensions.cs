@@ -675,8 +675,8 @@ namespace AngouriMath
             if (x.IsZero) return x;
             if (x.Equals(EDecimal.One)) return consts.HalfPi;
             if (x.Equals(-EDecimal.One)) return -consts.HalfPi;
-            if ((x - EDecimal.One).Abs().LessThan(MathS.Settings.PrecisionErrorZeroRange))
-                return consts.HalfPi;
+            // No tolerance about 1: arcsin(1 - 10^(-20)) is pi/2 - 1.4e-10, and was pi/2 because 10^(-20) is below
+            // PrecisionErrorZeroRange. https://github.com/asc-community/AngouriMath/issues/1944
             //asin function is odd function
             if (x.IsNegative) return -Arcsin(-x, context);
 
@@ -742,13 +742,23 @@ namespace AngouriMath
             return sum;
         }
         /// <summary>Analogy of <see cref="Math.Acos(double)"/></summary>
+        /// <remarks>
+        /// <c>pi/2 - arcsin(x)</c> up to a half, and <c>arctan(sqrt((1 - x)(1 + x))/x)</c> past it, where the difference
+        /// would cancel: <c>arccos(1 - 10^(-20))</c> is 1.4e-10, and was 0.
+        /// https://github.com/asc-community/AngouriMath/issues/1944
+        /// </remarks>
         public static EDecimal Acos(this EDecimal x, EContext context)
         {
             var consts = ConstantCache.Lookup(context);
             if (x.IsZero) return consts.HalfPi;
             if (x.Equals(EDecimal.One)) return EDecimal.Zero;
+            if (x.GreaterThan(EDecimal.One) || x.LessThan(-EDecimal.One)) return EDecimal.NaN;
             if (x.IsNegative) return consts.Pi.Subtract(Acos(-x, context), context);
-            return consts.HalfPi.Subtract(Arcsin(x, context), context);
+            if (x.CompareTo(EDecimal.FromString("0.5")) <= 0)
+                return consts.HalfPi.Subtract(Arcsin(x, context), context);
+            var working = WithGuardDigits(context, 5);
+            var oneMinusSquare = EDecimal.One.Subtract(x, working).Multiply(EDecimal.One.Add(x, working), working);
+            return Arctan(oneMinusSquare.SqrtByIntegerRoot(working).Divide(x, working), working).RoundToPrecision(context);
         }
 
         /// <summary>

@@ -226,6 +226,19 @@ through such a quotient was dropped as a pole.
 | `"i / 2.08E-52".ToEntity().Evaled` | `NaN` | `4807692307692307692307692307692307692307692307692307.69…i` |
 | `"2 + 10^26 x + (2 + 2i) * 10^26 x * Re(10^26 x) = 0".ToEntity().Solve("x")` | `{ }` | one root, about `(-0.42219 - 2.29079i) / 10^26` |
 
+### `Si`, `Ci`, `Shi` and `Chi` keep a small part
+
+**Silent: `0` becomes the value.** Each part was taken against 1, or for `Si` and `Shi` against the argument, so a
+part below about `1e-50` of that read as 0. The series is now a residual only against its terms less the digits it
+is taken with beyond the working ones, and the form through `Ei` against the scales of the two values it adds.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"Si(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.9460…` | `0.9460… + 8.414…E-61i` |
+| `"Ci(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.3374…` | `0.3374… + 5.403…E-61i` |
+| `"Shi(1 + 10^(-60) * i)".ToEntity().Evaled` | `1.0572…` | `1.0572… + 1.175…E-60i` |
+| `"Chi(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.8378…` | `0.8378… + 1.543…E-60i` |
+
 ### A decimal literal below `1e-50` is the number written
 
 **Silent: `0` becomes the number.** A decimal is made into a number under the tolerance that takes a value below half
@@ -251,6 +264,22 @@ in each is also taken with the digits it loses near 0.
 | `"sin(pi + 10^(-60) * i)".ToEntity().Evaled` | `0` | `-1.000…E-60i` |
 | `"tan(10^(-60) * (1 + i))".ToEntity().Evaled` | `0` | `9.999…E-61 + 1E-60i` |
 | `"ln(1 + 10^(-60) * i)".ToEntity().Evaled` | `0` | `9.999…E-61i` |
+
+### `arcsin`, `arccos` and `arctan` keep a small part, and `arccos` near 1 its value
+
+**Silent: `0` becomes the value.** For a non-real argument the formulas cancelled digits at the working precision
+and each part was then taken against 1; they are now taken with the digits they cancel, and each part is a residual
+only against the terms that cancelled, less those digits. The last digit of some ordinary values moves to the
+correctly rounded one. On the real line `arcsin` answered `pi/2` anywhere within `1e-16` of 1, and `arccos` was
+`pi/2 - arcsin`, so near 1 it was 0 or kept few digits; past a half it is now `arctan(sqrt((1 - x)(1 + x))/x)`.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"arcsin(10^(-60) * (1 + i))".ToEntity().Evaled` | `0` | `1E-60 + 1E-60i` |
+| `"arctan(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.7853…` | `0.7853… + 5E-61i` |
+| `"arcsin(1/2 + 10^(-60) * i)".ToEntity().Evaled` | `0.5235…` | `0.5235… + 1.154…E-60i` |
+| `"arccos(1 - 10^(-20))".ToEntity().Evaled` | `0` | `1.414…E-10` |
+| `"arcsin(i)".ToEntity().Evaled`, the 100th digit | `…2560430i` | `…2560429i` |
 
 ### A sum of logarithms or arctangents times a number is solved as the sum
 
