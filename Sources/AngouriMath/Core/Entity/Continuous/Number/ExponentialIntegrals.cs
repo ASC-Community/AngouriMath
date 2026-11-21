@@ -56,8 +56,10 @@ namespace AngouriMath
                     return im.IsZero && re.IsInfinity() ? (re.IsNegative ? Integer.Zero : Real.PositiveInfinity) : Real.NaN;
                 if (re.IsZero && im.IsZero)
                     return Real.NegativeInfinity;
-                var (eiRe, eiIm) = Ei(re, im, context, extraDigits: 0);
-                return Complex.Create(eiRe.RoundToPrecision(context), eiIm.RoundToPrecision(context));
+                var ei = Ei(re, im, context, extraDigits: 0);
+                // A part is a residual only against what was added to make it, not against 1: Ei(-130) is about
+                // -2.7 * 10^(-59). https://github.com/asc-community/AngouriMath/issues/1944
+                return Complex.CreateAtScales(ei.Re.RoundToPrecision(context), ei.Im.RoundToPrecision(context), ei.ReScale, ei.ImScale);
             }
 
             /// <summary>
@@ -86,15 +88,16 @@ namespace AngouriMath
                 var work = Working(context, 10);
                 var modulus = re.Multiply(re, work).Add(im.Multiply(im, work), work).Sqrt(work);
                 var (lnRe, lnIm) = (modulus.Log(work), im.Arctan2(re, work));
-                var (liRe, liIm) = Ei(lnRe, lnIm, context, extraDigits: 10);
-                return Complex.Create(liRe.RoundToPrecision(context), liIm.RoundToPrecision(context));
+                var li = Ei(lnRe, lnIm, context, extraDigits: 10);
+                return Complex.CreateAtScales(li.Re.RoundToPrecision(context), li.Im.RoundToPrecision(context), li.ReScale, li.ImScale);
             }
 
             /// <summary>
             /// <c>Ei(re + i im)</c> in a context of <paramref name="context"/>'s precision and
-            /// <paramref name="extraDigits"/> more, before any rounding back.
+            /// <paramref name="extraDigits"/> more, before any rounding back, and for each part the scale it is a
+            /// residual against at <paramref name="context"/>'s precision.
             /// </summary>
-            private static (EDecimal Re, EDecimal Im) Ei(EDecimal re, EDecimal im, EContext context, int extraDigits)
+            private static (EDecimal Re, EDecimal Im, EDecimal ReScale, EDecimal ImScale) Ei(EDecimal re, EDecimal im, EContext context, int extraDigits)
             {
                 var precision = context.Precision.ToInt32Checked() + extraDigits;
                 var modulus = Math.Sqrt(Math.Pow(re.ToDouble(), 2) + Math.Pow(im.ToDouble(), 2));
@@ -102,15 +105,22 @@ namespace AngouriMath
                     return EiByTheAsymptoticSeries(re, im, Working(context, extraDigits + 10));
                 // The digits the terms cancel off the positive axis, and ten over.
                 var cancelled = (int)Math.Ceiling((modulus - re.ToDouble()) / Math.Log(10));
-                return EiByTheSeries(re, im, Working(context, extraDigits + cancelled + 10));
+                var work = Working(context, extraDigits + cancelled + 10);
+                var (value, scale) = EiByTheSeries(re, im, work);
+                // The sum is taken with the digits it cancels and more, so what it leaves is a residual only against
+                // its terms less those digits: Ei(-130), about -2.7 * 10^(-59), out of terms near 10^54.
+                var beyond = context.Precision.ToInt32Checked() - work.Precision.ToInt32Checked();
+                return (value.Re, value.Im, scale.Re.ScaleByPowerOfTen(beyond), scale.Im.ScaleByPowerOfTen(beyond));
             }
 
             /// <summary>
             /// <c>gamma + (ln z - ln(1/z))/2 + sum_(k >= 1) z^k/(k k!)</c>, summed until a term is below
-            /// the working precision of the sum once the terms have begun to fall.
+            /// the working precision of the sum once the terms have begun to fall, and for each part the sum of the
+            /// sizes of what was added to make it.
             /// </summary>
-            private static (EDecimal Re, EDecimal Im) EiByTheSeries(EDecimal re, EDecimal im, EContext work)
+            private static ((EDecimal Re, EDecimal Im) Value, (EDecimal Re, EDecimal Im) Scale) EiByTheSeries(EDecimal re, EDecimal im, EContext work)
             {
+                var scale = (Re: EDecimal.Zero, Im: EDecimal.Zero);
                 var epsilon = EDecimal.Create(EInteger.One, EInteger.FromInt32(-work.Precision.ToInt32Checked()));
                 var peak = EDecimal.FromDouble(Math.Sqrt(Math.Pow(re.ToDouble(), 2) + Math.Pow(im.ToDouble(), 2)));
                 // z^k/k!, and the sum of those over k.
@@ -123,6 +133,7 @@ namespace AngouriMath
                     power = (power.Re.Divide(divisor, work), power.Im.Divide(divisor, work));
                     var term = (Re: power.Re.Divide(divisor, work), Im: power.Im.Divide(divisor, work));
                     sum = (sum.Re.Add(term.Re, work), sum.Im.Add(term.Im, work));
+                    scale = (scale.Re.Add(term.Re.Abs(), work), scale.Im.Add(term.Im.Abs(), work));
                     if (divisor.CompareTo(peak) > 0
                         && Magnitude(term).CompareTo(Magnitude(sum).Add(EDecimal.One, work).Multiply(epsilon, work)) < 0)
                         break;
@@ -130,13 +141,16 @@ namespace AngouriMath
                 // (ln z - ln(1/z))/2: ln |z| on the negative axis, where both logarithms add i pi.
                 var modulus = re.Multiply(re, work).Add(im.Multiply(im, work), work).Sqrt(work);
                 var logarithm = (Re: modulus.Log(work), Im: im.IsZero && re.IsNegative ? EDecimal.Zero : im.Arctan2(re, work));
-                return (sum.Re.Add(logarithm.Re, work).Add(EulerGamma(work), work), sum.Im.Add(logarithm.Im, work));
+                var gamma = EulerGamma(work);
+                return ((sum.Re.Add(logarithm.Re, work).Add(gamma, work), sum.Im.Add(logarithm.Im, work)),
+                    (scale.Re.Add(logarithm.Re.Abs(), work).Add(gamma, work), scale.Im.Add(logarithm.Im.Abs(), work)));
             }
 
             /// <summary>
-            /// <c>e^z/z sum_k k!/z^k + i pi sgn(Im z)</c>, cut at its smallest term.
+            /// <c>e^z/z sum_k k!/z^k + i pi sgn(Im z)</c>, cut at its smallest term, and for each part the sizes of the
+            /// products added to make it.
             /// </summary>
-            private static (EDecimal Re, EDecimal Im) EiByTheAsymptoticSeries(EDecimal re, EDecimal im, EContext work)
+            private static (EDecimal Re, EDecimal Im, EDecimal ReScale, EDecimal ImScale) EiByTheAsymptoticSeries(EDecimal re, EDecimal im, EContext work)
             {
                 var epsilon = EDecimal.Create(EInteger.One, EInteger.FromInt32(-work.Precision.ToInt32Checked()));
                 // 1/z = (re - i im)/|z|^2
@@ -157,12 +171,26 @@ namespace AngouriMath
                     (term, previous) = (next, size);
                 }
                 // e^z/z = e^re (cos im + i sin im) (re - i im)/|z|^2
-                var scale = re.Exponential(work);
-                var exponential = (scale.Multiply(im.Cos(work), work), scale.Multiply(im.Sin(work), work));
-                var (valueRe, valueIm) = Multiply(Multiply(exponential, reciprocal, work), sum, work);
+                var growth = re.Exponential(work);
+                var (cos, sin) = (im.Cos(work), im.Sin(work));
+                var exponential = (growth.Multiply(cos, work), growth.Multiply(sin, work));
+                var factor = Multiply(exponential, reciprocal, work);
+                var (valueRe, valueIm) = Multiply(factor, sum, work);
+                // Each part of e^z/z is a sum of two products, and cos im and sin im are known to |im| times the
+                // working digits, as on the real line; the value's parts add those parts times the sum's.
+                var (absRe, absIm) = (re.Abs(), im.Abs());
+                var trigonometric = absIm.Multiply(absRe.Add(absIm, work), work);
+                var factorReScale = growth.Multiply(cos.Abs().Multiply(absRe, work).Add(sin.Abs().Multiply(absIm, work), work).Add(trigonometric, work), work).Divide(squaredModulus, work);
+                var factorImScale = growth.Multiply(sin.Abs().Multiply(absRe, work).Add(cos.Abs().Multiply(absIm, work), work).Add(trigonometric, work), work).Divide(squaredModulus, work);
+                var reScale = factorReScale.Multiply(sum.Re.Abs(), work).Add(factorImScale.Multiply(sum.Im.Abs(), work), work);
+                var imScale = factorReScale.Multiply(sum.Im.Abs(), work).Add(factorImScale.Multiply(sum.Re.Abs(), work), work);
                 if (!im.IsZero)
-                    valueIm = valueIm.Add(im.IsNegative ? EDecimal.PI(work).Negate() : EDecimal.PI(work), work);
-                return (valueRe, valueIm);
+                {
+                    var pi = EDecimal.PI(work);
+                    valueIm = valueIm.Add(im.IsNegative ? pi.Negate() : pi, work);
+                    imScale = imScale.Add(pi, work);
+                }
+                return (valueRe, valueIm, reScale, imScale);
             }
 
             /// <summary>

@@ -170,8 +170,8 @@ namespace AngouriMath
                     return (valueRe, valueIm.Add(pastAQuarterTurn ? pi.Multiply(3).Divide(2) : pi.Divide(-2)));
                 }
                 var work = Working(context, 10);
-                var (plusRe, plusIm) = Ei(re, im, context, extraDigits: 10);
-                var (minusRe, minusIm) = Ei(re.Negate(), im.Negate(), context, extraDigits: 10);
+                var (plusRe, plusIm, _, _) = Ei(re, im, context, extraDigits: 10);
+                var (minusRe, minusIm, _, _) = Ei(re.Negate(), im.Negate(), context, extraDigits: 10);
                 var half = EDecimal.FromString("0.5");
                 var (sumRe, sumIm) = odd
                     ? (plusRe.Subtract(minusRe, work).Multiply(half, work), plusIm.Subtract(minusIm, work).Multiply(half, work))
