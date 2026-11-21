@@ -294,6 +294,20 @@ whole, and the arctangent solver declined it. The multipliers are now divided by
 | `"(arctan(x) + arctan(2x) + 1) * 10^12 = 0".ToEntity().Solve("x")` | `{ }`, and `OverflowException` since the arctangent solver | the root of `arctan(x) + arctan(2x) = -1` |
 | `"(arctan(x) + arctan(2x)) / 2 = 1/2".ToEntity().Solve("x")` | `{ 0.373947426651419168… }` | `{ (-3 + sqrt(9 - 4 * 2 * tan(1) * -tan(1))) / (2 * 2 * tan(1)) }` |
 
+### `cot` keeps a small value, and a value far off the real line
+
+**Silent: `0` or `NaN` becomes the value.** It was `1/tan z`, made 0 wherever both parts were below `1e-16`. It is
+now `cos x/sin x` on the real line, a residual of `cos x` as `cos` is, and off it
+`(sin x cos x sech^2 y - i tanh y)/(sin^2 x sech^2 y + tanh^2 y)`, which neither cancels nor overflows. `cot` of `pi`
+to the working digits is still `NaN`, and the last digit of some ordinary values moves to the correctly rounded one.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"cot(pi/2 + 10^(-20))".ToEntity().Evaled` | `0` | `-1.000…E-20` |
+| `"cot(3 * pi/2 - 10^(-30))".ToEntity().Evaled` | `0` | `1.000…E-30` |
+| `"cot(pi/2 + 10^(-20) * i)".ToEntity().Evaled` | `0` | `-9.999…E-21i` |
+| `"cot(1 - 3000 * i)".ToEntity().Evaled` | `NaN` | `i` |
+
 ### A complex constant is enclosed exactly, and an equation times a large number keeps its roots
 
 **Silent where it was unsolved.** A root with only exact numbers in it is checked by an interval enclosing its
@@ -305,6 +319,19 @@ part is now enclosed from its exact value.
 | Input | Was (2.8.0) | Now |
 |---|---|---|
 | `"(cos(2x) - sin(x) - 1) * 10^12 = 0".ToEntity().Solve("x")` | unsolved | the four families of `cos(2x) - sin(x) - 1 = 0` |
+
+### Two constants are equal only when their difference is zero
+
+**Silent: `True` becomes `False`.** An equality of two constants was True when their evaluated difference was below
+an absolute `1e-16`, so two different small numbers were equal. It is True when the difference is zero, which the
+number factory makes of a residual of the cancellation, so one number written two ways and rounded apart is still
+equal to itself: `sqrt(i) = (1 + i)/sqrt(2)` is True.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"10^(-20) = 2 * 10^(-20)".ToEntity().Evaled` | `True` | `False` |
+| `"pi / 10^20 = 2 * pi / 10^20".ToEntity().Evaled` | `True` | `False` |
+| `"1/3 = 0.3333333333333333333333".ToEntity().Evaled` | `True` | `False` |
 
 ### An equation is not raised to clear a radical the rest of it still holds
 
