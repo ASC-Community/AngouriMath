@@ -1238,15 +1238,17 @@ namespace AngouriMath
                 {
                     case Integer { EInteger: var value } when value.Sign >= 0:
                         return value.Factorial();
+                    // The gamma function has no zero, so its value is never a residual of a cancellation: (-61.5)!,
+                    // about -4.8e-83, was 0. https://github.com/asc-community/AngouriMath/issues/1944
                     case Real { EDecimal: var value }:
-                        return value.Factorial(mathContext);
+                        return Real.CreateAtScale(value.Factorial(mathContext), EDecimal.Zero);
                 }
 
                 if (!mathContext.Precision.CanFitInInt32())
                     throw new CannotEvalException($"The precision of the {nameof(mathContext)} is outside the int32 range");
                 // With no imaginary part it is a real number, and its poles are the real line's.
                 if (x.ImaginaryPart.EDecimal.IsZero)
-                    return x.RealPart.EDecimal.Factorial(mathContext);
+                    return Real.CreateAtScale(x.RealPart.EDecimal.Factorial(mathContext), EDecimal.Zero);
 
                 var precision = mathContext.Precision.ToInt32Checked();
                 var working = InternalAMExtensions.FactorialWorkingContext(precision);

@@ -79,7 +79,7 @@ namespace AngouriMath
                 }
                 if (re.IsZero && im.IsZero)
                     return odd ? Integer.Zero : Real.NegativeInfinity;
-                var (valueRe, valueIm) = TrigonometricIntegral(re, im, hyperbolic, odd, context);
+                var (valueRe, valueIm, reScale, imScale) = TrigonometricIntegral(re, im, hyperbolic, odd, context);
                 // On the axes, what is known exactly is given so: Si and Shi are real on the real line
                 // and imaginary on the imaginary axis; Ci and Chi are real on the positive real axis, i pi
                 // more on the negative, and i pi/2 sgn(y) more than a real value on the imaginary axis.
@@ -93,18 +93,18 @@ namespace AngouriMath
                     else
                         valueIm = im.IsNegative ? pi.Divide(-2, context) : pi.Divide(2, context);
                 }
-                // Si and Shi vanish at 0 like their argument, and their residual is its: Si(1e-60) is 1e-60.
-                // https://github.com/asc-community/AngouriMath/issues/2074
-                if (odd)
-                {
-                    var scale = im.IsZero ? re : re.IsZero ? im : Magnitude((re, im));
-                    return Complex.CreateAtScales(valueRe.RoundToPrecision(context), valueIm.RoundToPrecision(context), scale, scale);
-                }
-                return Complex.Create(valueRe.RoundToPrecision(context), valueIm.RoundToPrecision(context));
+                // A part is a residual only against what was added to make it, not against 1: Si(1e-60) is 1e-60
+                // (https://github.com/asc-community/AngouriMath/issues/2074), and the imaginary parts of
+                // Si(1 + 10^(-60) i) and Chi(1 + 10^(-60) i) are about 10^(-60).
+                // https://github.com/asc-community/AngouriMath/issues/1944
+                return Complex.CreateAtScales(valueRe.RoundToPrecision(context), valueIm.RoundToPrecision(context), reScale, imScale);
             }
 
-            /// <summary>One of the four at <c>re + i im</c>, before any rounding back.</summary>
-            private static (EDecimal Re, EDecimal Im) TrigonometricIntegral(EDecimal re, EDecimal im, bool hyperbolic, bool odd, EContext context)
+            /// <summary>
+            /// One of the four at <c>re + i im</c>, before any rounding back, and for each part the scale it is a
+            /// residual against at <paramref name="context"/>'s precision.
+            /// </summary>
+            private static (EDecimal Re, EDecimal Im, EDecimal ReScale, EDecimal ImScale) TrigonometricIntegral(EDecimal re, EDecimal im, bool hyperbolic, bool odd, EContext context)
             {
                 var precision = context.Precision.ToInt32Checked();
                 var modulus = Math.Sqrt(Math.Pow(re.ToDouble(), 2) + Math.Pow(im.ToDouble(), 2));
@@ -113,27 +113,34 @@ namespace AngouriMath
                 // The digits the terms cancel away from the axis the function grows along, and ten over.
                 var growth = hyperbolic ? Math.Abs(re.ToDouble()) : Math.Abs(im.ToDouble());
                 var work = Working(context, (int)Math.Ceiling((modulus - growth) / Math.Log(10)) + 10);
-                var (sumRe, sumIm) = TheSeries(re, im, alternating: !hyperbolic, odd, modulus, work);
+                var ((sumRe, sumIm), (scaleRe, scaleIm)) = TheSeries(re, im, alternating: !hyperbolic, odd, modulus, work);
+                // The series is taken with the digits it cancels and more, so a part is a residual only against the
+                // terms added to make it less those digits.
+                var beyond = precision - work.Precision.ToInt32Checked();
                 if (odd)
-                    return (sumRe, sumIm);
+                    return (sumRe, sumIm, scaleRe.ScaleByPowerOfTen(beyond), scaleIm.ScaleByPowerOfTen(beyond));
                 // gamma + ln z, with the principal logarithm.
                 var logarithmRe = re.Multiply(re, work).Add(im.Multiply(im, work), work).Sqrt(work).Log(work);
                 var logarithmIm = im.Arctan2(re, work);
-                return (sumRe.Add(logarithmRe, work).Add(EulerGamma(work), work), sumIm.Add(logarithmIm, work));
+                var gamma = EulerGamma(work);
+                return (sumRe.Add(logarithmRe, work).Add(gamma, work), sumIm.Add(logarithmIm, work),
+                    scaleRe.Add(logarithmRe.Abs(), work).Add(gamma, work).ScaleByPowerOfTen(beyond),
+                    scaleIm.Add(logarithmIm.Abs(), work).ScaleByPowerOfTen(beyond));
             }
 
             /// <summary>
             /// <c>sum s^k z^(2k + 1)/((2k + 1) (2k + 1)!)</c> from <c>k = 0</c>, or
             /// <c>sum s^k z^(2k)/(2k (2k)!)</c> from <c>k = 1</c>, with <c>s = -1</c> where
             /// <paramref name="alternating"/>, summed until a term is below the working precision of
-            /// the sum once the terms have begun to fall.
+            /// the sum once the terms have begun to fall, and for each part the sum of the sizes of the terms.
             /// </summary>
-            private static (EDecimal Re, EDecimal Im) TheSeries(EDecimal re, EDecimal im, bool alternating, bool odd, double modulus, EContext work)
+            private static ((EDecimal Re, EDecimal Im) Sum, (EDecimal Re, EDecimal Im) Scale) TheSeries(EDecimal re, EDecimal im, bool alternating, bool odd, double modulus, EContext work)
             {
                 var epsilon = EDecimal.Create(EInteger.One, EInteger.FromInt32(-work.Precision.ToInt32Checked()));
                 // z^n/n!, and the sum of the terms of the parity asked.
                 var power = (Re: EDecimal.One, Im: EDecimal.Zero);
                 var sum = (Re: EDecimal.Zero, Im: EDecimal.Zero);
+                var scale = (Re: EDecimal.Zero, Im: EDecimal.Zero);
                 for (var n = 1; ; n++)
                 {
                     var divisor = EDecimal.FromInt32(n);
@@ -146,46 +153,55 @@ namespace AngouriMath
                     sum = negative
                         ? (sum.Re.Subtract(term.Re, work), sum.Im.Subtract(term.Im, work))
                         : (sum.Re.Add(term.Re, work), sum.Im.Add(term.Im, work));
+                    scale = (scale.Re.Add(term.Re.Abs(), work), scale.Im.Add(term.Im.Abs(), work));
                     if (n > modulus && Magnitude(term).CompareTo(Magnitude(sum).Add(EDecimal.One, work).Multiply(epsilon, work)) < 0)
                         break;
                 }
-                return sum;
+                return (sum, scale);
             }
 
             /// <summary>
             /// The four past the series' reach, from the exponential integral: see <see cref="Si(Complex)"/>.
             /// </summary>
-            private static (EDecimal Re, EDecimal Im) ByTheExponentialIntegral(EDecimal re, EDecimal im, bool hyperbolic, bool odd, EContext context)
+            private static (EDecimal Re, EDecimal Im, EDecimal ReScale, EDecimal ImScale) ByTheExponentialIntegral(EDecimal re, EDecimal im, bool hyperbolic, bool odd, EContext context)
             {
                 if (!hyperbolic)
                 {
                     // Si(z) = -i Shi(i z), and Ci(z) = Chi(i z) + ln z - ln(i z): i z = -im + i re.
-                    var (valueRe, valueIm) = ByTheExponentialIntegral(im.Negate(), re, hyperbolic: true, odd, context);
+                    var (valueRe, valueIm, reScale, imScale) = ByTheExponentialIntegral(im.Negate(), re, hyperbolic: true, odd, context);
                     if (odd)
                         // -i (a + i b) = b - i a
-                        return (valueIm, valueRe.Negate());
+                        return (valueIm, valueRe.Negate(), imScale, reScale);
                     // ln z - ln(i z) is -i pi/2 where arg z <= pi/2, and 3 i pi/2 past it.
                     var pi = EDecimal.PI(Working(context, 10));
                     var pastAQuarterTurn = re.IsNegative && !im.IsNegative;
-                    return (valueRe, valueIm.Add(pastAQuarterTurn ? pi.Multiply(3).Divide(2) : pi.Divide(-2)));
+                    var branchTerm = pastAQuarterTurn ? pi.Multiply(3).Divide(2) : pi.Divide(-2);
+                    return (valueRe, valueIm.Add(branchTerm), reScale, imScale.Add(branchTerm.Abs()));
                 }
                 var work = Working(context, 10);
-                var (plusRe, plusIm, _, _) = Ei(re, im, context, extraDigits: 10);
-                var (minusRe, minusIm, _, _) = Ei(re.Negate(), im.Negate(), context, extraDigits: 10);
+                var (plusRe, plusIm, plusReScale, plusImScale) = Ei(re, im, context, extraDigits: 10);
+                var (minusRe, minusIm, minusReScale, minusImScale) = Ei(re.Negate(), im.Negate(), context, extraDigits: 10);
                 var half = EDecimal.FromString("0.5");
                 var (sumRe, sumIm) = odd
                     ? (plusRe.Subtract(minusRe, work).Multiply(half, work), plusIm.Subtract(minusIm, work).Multiply(half, work))
                     : (plusRe.Add(minusRe, work).Multiply(half, work), plusIm.Add(minusIm, work).Multiply(half, work));
+                // Half of Ei(z) and Ei(-z) each, so a residual against half the scales of both.
+                var sumReScale = plusReScale.Add(minusReScale, work).Multiply(half, work);
+                var sumImScale = plusImScale.Add(minusImScale, work).Multiply(half, work);
                 var halfPi = EDecimal.PI(work).Multiply(half, work);
                 // The branch terms of (ln z - ln(1/z))/2 in Ei(z) and Ei(-z).
                 if (!im.IsZero)
                 {
                     var branch = im.IsNegative ? halfPi.Negate() : halfPi;
                     sumIm = odd ? sumIm.Subtract(branch, work) : sumIm.Add(branch, work);
+                    sumImScale = sumImScale.Add(halfPi, work);
                 }
                 else if (!odd && re.IsNegative)
+                {
                     sumIm = sumIm.Add(EDecimal.PI(work), work);
-                return (sumRe, sumIm);
+                    sumImScale = sumImScale.Add(EDecimal.PI(work), work);
+                }
+                return (sumRe, sumIm, sumReScale, sumImScale);
             }
         }
     }

@@ -201,6 +201,18 @@ the conversion from a string still throw it, with its own type
 | `Entity.TryParse("factorize(360)", null, out _)` | throws `UnrecognizedFunctionParseException` | `false` |
 | `"factorize(360)".ToEntity()` | throws `UnrecognizedFunctionParseException` | the same |
 
+### The gamma function of a real number keeps a small value
+
+**Silent: `0` becomes the value.** It was made against 1, so a value below about `1e-50` read as a residual of a
+cancellation and became 0, while the same value with an imaginary part kept it. The gamma function has no zero, so
+its value is never such a residual.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"gamma(-60.5)".ToEntity().Evaled` | `0` | `-4.843…E-83` |
+| `"(-61.5)!".ToEntity().Evaled` | `0` | `-4.843…E-83` |
+| `"gamma(-100.5)".ToEntity().Evaled` | `0` | `-3.353…E-159` |
+
 ### The modulus of a small decimal is not 0
 
 **Silent: `0`, `NaN` and `{ }` become the answer.** The modulus of a real number was made as a cancellation
@@ -213,6 +225,19 @@ through such a quotient was dropped as a pole.
 | `"abs(2.08E-52)".ToEntity().Evaled` | `0` | `2.08E-52` |
 | `"i / 2.08E-52".ToEntity().Evaled` | `NaN` | `4807692307692307692307692307692307692307692307692307.69…i` |
 | `"2 + 10^26 x + (2 + 2i) * 10^26 x * Re(10^26 x) = 0".ToEntity().Solve("x")` | `{ }` | one root, about `(-0.42219 - 2.29079i) / 10^26` |
+
+### `Si`, `Ci`, `Shi` and `Chi` keep a small part
+
+**Silent: `0` becomes the value.** Each part was taken against 1, or for `Si` and `Shi` against the argument, so a
+part below about `1e-50` of that read as 0. The series is now a residual only against its terms less the digits it
+is taken with beyond the working ones, and the form through `Ei` against the scales of the two values it adds.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"Si(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.9460…` | `0.9460… + 8.414…E-61i` |
+| `"Ci(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.3374…` | `0.3374… + 5.403…E-61i` |
+| `"Shi(1 + 10^(-60) * i)".ToEntity().Evaled` | `1.0572…` | `1.0572… + 1.175…E-60i` |
+| `"Chi(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.8378…` | `0.8378… + 1.543…E-60i` |
 
 ### A decimal literal below `1e-50` is the number written
 
