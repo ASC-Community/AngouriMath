@@ -258,15 +258,18 @@ namespace AngouriMath
             /// enough. sqrt(i) and (1 + i) / sqrt(2) are the same number, but evaluating
             /// each of them rounds independently, so the results disagree in the last few
             /// digits and the comparison used to answer False. Their difference, on the
-            /// other hand, cancels, and <see cref="Number.Real"/>'s factory maps anything
-            /// below <see cref="MathS.Settings.PrecisionErrorZeroRange"/> onto an exact
-            /// zero -- so testing the difference is both more robust and consistent with
-            /// how the rest of the library already decides what counts as zero.
+            /// other hand, cancels, and <see cref="Number.Real"/>'s factory maps a residual of
+            /// that cancellation -- below half the working digits of the two sides -- onto an
+            /// exact zero, so the difference is tested for being zero.
+            /// <para>
+            /// It was tested against <see cref="MathS.Settings.PrecisionErrorZeroRange"/>, an
+            /// absolute 1e-16, so <c>10^(-20) = 2 * 10^(-20)</c> was True: two exact numbers
+            /// differing by 10^(-20). https://github.com/asc-community/AngouriMath/issues/1944
+            /// </para>
             /// </remarks>
             private static bool ConstantsAreEqual(Entity left, Entity right)
                 => left.Evaled == right.Evaled
-                    || (left - right).Evaled is Number.Complex difference
-                        && Number.IsZero(difference);
+                    || (left - right).Evaled is Number.Complex { IsZero: true };
 
             /// <summary>
             /// Whether a size that is not a number is inside a constant, which is then not compared
