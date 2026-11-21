@@ -143,6 +143,20 @@ unsolved. A real number is its own conjugate, and a non-real one keeps its parts
 | `"conj(10^(-30) x)".ToEntity().InnerSimplified` | `1E-30 * conjugate(x)` | `1/1000000000000000000000000000000 * conjugate(x)` |
 | `"-i + 2 * 10^(-30) x + 3 * conj(10^(-30) x) = 0".ToEntity().Solve("x")` | left unsolved | `{ -1000000000000000000000000000000i }` |
 
+### `sinh`, `tanh` and a difference of powers of `e` keep a small value
+
+**Silent: `0` becomes the value.** `e^u - e^v` was evaluated by rounding both powers and subtracting, which loses every
+digit of `u - v` below half the working ones, and `sinh(x)` is `(e^x - e^(-x))/2`. It is now evaluated as
+`e^v (e^(u - v) - 1)`, with `u - v` taken before either power is rounded and `e^d - 1` with the digits it would
+cancel; a bare `1` is read as `e^0`.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sinh(10^(-60))".ToEntity().Evaled` | `0` | `1.000…E-60` |
+| `"tanh(10^(-60))".ToEntity().Evaled` | `0` | `1.000…E-60` |
+| `"e^(10^(-60)) - 1".ToEntity().Evaled` | `0` | `1.000…0005E-60` |
+| `"sinh(10^(-20))".ToEntity().Evaled` | 80 digits | 100 digits |
+
 ### A part of the gamma function below the exponent range is the number 0
 
 **Printed: a decimal zero becomes `0`.** The gamma function of a non-real number was made with the downcasting off, so

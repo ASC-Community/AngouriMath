@@ -159,6 +159,8 @@ namespace AngouriMath
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
             {
+                if (!isExact && DifferenceOfExponentials(Minuend, Subtrahend) is { } difference)
+                    return difference;
                 SimplifyALongLeftSpineFirst(this, isExact);
                 return ExpandOnTwoArguments(Minuend, Subtrahend,
                     (augend, addend) => (augend, addend) switch
@@ -184,6 +186,42 @@ namespace AngouriMath
                     (@this, a, b) => ((Minusf)@this).New(a, b), isExact);
             }
         }
+        partial record Minusf
+        {
+            /// <summary>
+            /// <c>e^u - e^v</c>, or <c>e^u - 1</c>, evaluated as <c>e^v (e^(u - v) - 1)</c>, with <c>u - v</c> taken before
+            /// either power is rounded and <c>e^d - 1</c> with the digits it would cancel: subtracting the two powers
+            /// rounded lost every digit of <c>u - v</c> below half the working ones, so <c>sinh(10^(-60))</c>, which is
+            /// <c>(e^(10^(-60)) - e^(-10^(-60)))/2</c>, was 0, and <c>sinh(10^(-20))</c> kept 80 of its digits.
+            /// <see langword="null"/> where the two are not powers of <c>e</c> with numeric exponents.
+            /// https://github.com/asc-community/AngouriMath/issues/2074
+            /// </summary>
+            private static Entity? DifferenceOfExponentials(Entity minuend, Entity subtrahend)
+            {
+                if (ExponentOfE(minuend) is not { } u || ExponentOfE(subtrahend) is not { } v)
+                    return null;
+                if ((u - v).Evaled is not Complex d || v.Evaled is not Complex exponent || !d.IsFinite || !exponent.IsFinite)
+                    return null;
+                // Both factors and their product with ten more digits, rounded once, and with the downcasting off:
+                // e^(-10^(-60)) is within it of 1 and was the integer 1 there, leaving a relative error of 10^(-60).
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                Complex product;
+                using (MathS.Settings.DowncastingEnabled.Set(false))
+                using (MathS.Settings.DecimalPrecisionContext.Set(Number.WithTenMoreDigits(context)))
+                    product = Number.Exp(exponent) * Number.ExpMinusOne(d);
+                // A product, which cancels nothing, of a factor that is 0 only where d is.
+                return Complex.CreateAtScales(product.RealPart.EDecimal.RoundToPrecision(context), product.ImaginaryPart.EDecimal.RoundToPrecision(context),
+                    PeterO.Numbers.EDecimal.Zero, PeterO.Numbers.EDecimal.Zero);
+
+                static Entity? ExponentOfE(Entity power) => power switch
+                {
+                    Powf(var @base, var exponent) when @base == MathS.e => exponent,
+                    Integer(1) => Integer.Zero,
+                    _ => null
+                };
+            }
+        }
+
         public partial record Mulf
         {
             private protected override Entity IntrinsicCondition => Boolean.True;

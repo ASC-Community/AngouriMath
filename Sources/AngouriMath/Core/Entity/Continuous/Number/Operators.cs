@@ -1148,6 +1148,30 @@ namespace AngouriMath
             }
 
             /// <summary>
+            /// <c>e^d - 1</c>, taken with the digits <c>e^d</c> has in common with 1 and ten more, so that a small <c>d</c>
+            /// keeps all of its: at <c>d = 2 * 10^(-60)</c> it is <c>2 * 10^(-60)</c>, where <c>e^d</c> rounded and less 1 kept
+            /// forty digits. It is 0 only for <c>d = 0</c>, which is answered exactly, so no part of it is a residual.
+            /// https://github.com/asc-community/AngouriMath/issues/2074
+            /// </summary>
+            /// <summary><paramref name="context"/> with ten more digits and no bound on the exponent, made once per precision.</summary>
+            internal static EContext WithTenMoreDigits(EContext context) => Working(context, 10);
+
+            internal static Complex ExpMinusOne(Complex d)
+            {
+                if (d.IsZero)
+                    return Integer.Zero;
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                var (x, y) = (d.RealPart.EDecimal, d.ImaginaryPart.EDecimal);
+                var work = Working(context, 10 + DigitsBelowOne(x, y));
+                Complex power;
+                using (MathS.Settings.DowncastingEnabled.Set(false))
+                using (MathS.Settings.DecimalPrecisionContext.Set(work))
+                    power = Exp(Complex.Create(x, y));
+                var (re, im) = (power.RealPart.EDecimal.Subtract(EDecimal.One, work), power.ImaginaryPart.EDecimal);
+                return Complex.CreateAtScales(re.RoundToPrecision(context), im.RoundToPrecision(context), EDecimal.Zero, EDecimal.Zero);
+            }
+
+            /// <summary>
             /// The digits below 1 of the smaller nonzero part of <c>x + i y</c>, which the inverse trigonometric
             /// functions' formulas cancel: <c>arctan(1 + 10^(-60) i)</c> is a difference of two logarithms near
             /// <c>ln 2/2</c> that agree to 60 digits. At most 1000, past which a part is left to its scale.
