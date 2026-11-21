@@ -226,6 +226,19 @@ through such a quotient was dropped as a pole.
 | `"i / 2.08E-52".ToEntity().Evaled` | `NaN` | `4807692307692307692307692307692307692307692307692307.69…i` |
 | `"2 + 10^26 x + (2 + 2i) * 10^26 x * Re(10^26 x) = 0".ToEntity().Solve("x")` | `{ }` | one root, about `(-0.42219 - 2.29079i) / 10^26` |
 
+### `Si`, `Ci`, `Shi` and `Chi` keep a small part
+
+**Silent: `0` becomes the value.** Each part was taken against 1, or for `Si` and `Shi` against the argument, so a
+part below about `1e-50` of that read as 0. The series is now a residual only against its terms less the digits it
+is taken with beyond the working ones, and the form through `Ei` against the scales of the two values it adds.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"Si(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.9460…` | `0.9460… + 8.414…E-61i` |
+| `"Ci(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.3374…` | `0.3374… + 5.403…E-61i` |
+| `"Shi(1 + 10^(-60) * i)".ToEntity().Evaled` | `1.0572…` | `1.0572… + 1.175…E-60i` |
+| `"Chi(1 + 10^(-60) * i)".ToEntity().Evaled` | `0.8378…` | `0.8378… + 1.543…E-60i` |
+
 ### A decimal literal below `1e-50` is the number written
 
 **Silent: `0` becomes the number.** A decimal is made into a number under the tolerance that takes a value below half
