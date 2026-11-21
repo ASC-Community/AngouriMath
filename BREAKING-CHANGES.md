@@ -143,6 +143,20 @@ unsolved. A real number is its own conjugate, and a non-real one keeps its parts
 | `"conj(10^(-30) x)".ToEntity().InnerSimplified` | `1E-30 * conjugate(x)` | `1/1000000000000000000000000000000 * conjugate(x)` |
 | `"-i + 2 * 10^(-30) x + 3 * conj(10^(-30) x) = 0".ToEntity().Solve("x")` | left unsolved | `{ -1000000000000000000000000000000i }` |
 
+### A part of the gamma function below the exponent range is the number 0
+
+**Printed: a decimal zero becomes `0`.** The gamma function of a non-real number was made with the downcasting off, so
+a part below the context's exponents, which rounds to zero, kept its exponent and sign, and a part that is a whole
+number stayed a hundred-digit decimal. It is made under the caller's downcasting, at scale 0 since the gamma function
+has no zero, so no part is ever read as a residual.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"gamma(316 * i)".ToEntity().Evaled` | `0E-199 - -0E-199i` | `0` |
+| `"gamma(-150.5 + i)".ToEntity().Evaled` | `-0E-199 - -0E-199i` | `0` |
+| `"(-120.5 + i)!".ToEntity().Evaled` | `0E-199 - 4E-199i` | `-4E-199i` |
+| `"gamma(1 + 10^(-60) * i)".ToEntity().Evaled` | `1.000…000 - 5.772…E-61i` | `1 - 5.772…E-61i` |
+
 ### `polygamma` keeps a small value, and is defined next to a pole
 
 **Silent: `0` becomes the value, and `NaN` becomes a number.** Each part was taken against 1, so a part below about

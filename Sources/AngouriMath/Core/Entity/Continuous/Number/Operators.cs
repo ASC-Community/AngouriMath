@@ -1277,20 +1277,25 @@ namespace AngouriMath
 
                 var precision = mathContext.Precision.ToInt32Checked();
                 var working = InternalAMExtensions.FactorialWorkingContext(precision);
-                using var _ = MathS.Settings.DowncastingEnabled.Set(false);
+                Complex result;
                 // Twice the digits, and no bound on the exponent, which the caller's context put on
                 // every intermediate: up the imaginary axis the value falls as e^(-pi |y|/2), and
                 // near that context's floor (280i)! lost its imaginary part and (316i)! came out 1e-190,
                 // where it is 8e-215. Left of zero the reflection formula, as on the real line.
                 // https://github.com/asc-community/AngouriMath/issues/1614
-                using var __ = MathS.Settings.DecimalPrecisionContext.Set(working);
-                var result = x.RealPart.EDecimal.IsNegative
-                    ? Real.Create(InternalAMExtensions.ConstantCache.Lookup(working).Pi) * x
-                        / (Sin(Real.Create(InternalAMExtensions.ConstantCache.Lookup(working).Pi) * x) * SpougeFactorial(-x, precision))
-                    : SpougeFactorial(x, precision);
+                using (MathS.Settings.DowncastingEnabled.Set(false))
+                using (MathS.Settings.DecimalPrecisionContext.Set(working))
+                    result = x.RealPart.EDecimal.IsNegative
+                        ? Real.Create(InternalAMExtensions.ConstantCache.Lookup(working).Pi) * x
+                            / (Sin(Real.Create(InternalAMExtensions.ConstantCache.Lookup(working).Pi) * x) * SpougeFactorial(-x, precision))
+                        : SpougeFactorial(x, precision);
 
-                return Complex.Create(result.RealPart.EDecimal.RoundToPrecision(mathContext),
-                                        result.ImaginaryPart.EDecimal.RoundToPrecision(mathContext));
+                // Made outside the scope, under the caller's downcasting, and at scale 0, since the gamma function has
+                // no zero: a part below the caller's exponents rounds to zero, which was kept as a decimal zero with
+                // its sign, and (-151.5 + i)!, about 1e-265 in each part, printed as "0 - -0i".
+                // https://github.com/asc-community/AngouriMath/issues/1944
+                return Complex.CreateAtScales(result.RealPart.EDecimal.RoundToPrecision(mathContext),
+                                        result.ImaginaryPart.EDecimal.RoundToPrecision(mathContext), EDecimal.Zero, EDecimal.Zero);
             }
 
             /// <summary>
