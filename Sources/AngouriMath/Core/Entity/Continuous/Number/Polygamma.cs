@@ -55,8 +55,10 @@ namespace AngouriMath
                 if (im.IsZero && re.Sign <= 0 && re.IsInteger())
                     return Real.NaN;
                 var work = Working(context, 10 + n.ToString().Length + context.Precision.ToString().Length);
-                var (valueRe, valueIm) = Polygamma(n, re, im, work);
-                return Complex.Create(valueRe.RoundToPrecision(context), valueIm.RoundToPrecision(context));
+                var value = Polygamma(n, re, im, work);
+                // A part is a residual only against the terms that were added to make it, not against 1:
+                // polygamma(1, 10^60) is 10^-60. https://github.com/asc-community/AngouriMath/issues/1944
+                return Complex.CreateAtScales(value.Re.RoundToPrecision(context), value.Im.RoundToPrecision(context), value.ReScale, value.ImScale);
             }
 
             /// <summary>
@@ -170,19 +172,28 @@ namespace AngouriMath
                 }
             }
 
-            private static (EDecimal Re, EDecimal Im) Polygamma(int n, EDecimal re, EDecimal im, EContext work)
+            /// <summary>
+            /// <c>psi^(n)(re + i im)</c>, and for each part the sum of the sizes of the terms added to make it, which
+            /// is what a cancellation in that part leaves its residual against.
+            /// </summary>
+            private static (EDecimal Re, EDecimal Im, EDecimal ReScale, EDecimal ImScale) Polygamma(int n, EDecimal re, EDecimal im, EContext work)
             {
                 if (re.CompareTo(EDecimal.FromString("0.5")) < 0)
                 {
                     // psi^(n)(z) = (-1)^n psi^(n)(1 - z) - pi^(n + 1) Q_n(cot(pi z))
                     var reflected = Polygamma(n, EDecimal.One.Subtract(re, work), im.Negate(), work);
                     if (n % 2 == 1)
-                        reflected = (reflected.Re.Negate(), reflected.Im.Negate());
+                        reflected = (reflected.Re.Negate(), reflected.Im.Negate(), reflected.ReScale, reflected.ImScale);
                     var pi = EDecimal.PI(work);
-                    var cot = Cot(pi.Multiply(re, work), pi.Multiply(im, work), work);
+                    // cot(pi z) has period 1 in z, so re's whole part is dropped exactly before pi multiplies it:
+                    // pi 10^60 to the working digits leaves only 50 of them in cot(pi (-10^60 + i/2)).
+                    var fraction = re.Exponent.Sign >= 0 ? EDecimal.Zero : re.Subtract(EDecimal.FromEInteger(re.ToEInteger()));
+                    var cot = Cot(pi.Multiply(fraction, work), pi.Multiply(im, work), work);
                     var q = Evaluate(CotangentDerivative(n), cot, work);
                     var piPower = pi.Pow(n + 1, work);
-                    return (reflected.Re.Subtract(piPower.Multiply(q.Re, work), work), reflected.Im.Subtract(piPower.Multiply(q.Im, work), work));
+                    var (fromCotRe, fromCotIm) = (piPower.Multiply(q.Re, work), piPower.Multiply(q.Im, work));
+                    return (reflected.Re.Subtract(fromCotRe, work), reflected.Im.Subtract(fromCotIm, work),
+                        reflected.ReScale.Add(fromCotRe.Abs(), work), reflected.ImScale.Add(fromCotIm.Abs(), work));
                 }
                 var radius = work.Precision.ToInt32Checked() + n;
                 var shift = Math.Max(0, (int)Math.Ceiling(radius - re.ToDouble()));
@@ -198,9 +209,10 @@ namespace AngouriMath
                 // psi^(n)(z) = psi^(n)(z + shift) - (-1)^n n! sum
                 var factorial = EDecimal.FromEInteger(Factorial(n));
                 var scaled = (Re: sum.Re.Multiply(factorial, work), Im: sum.Im.Multiply(factorial, work));
+                var (reScale, imScale) = (tail.Re.Abs().Add(scaled.Re.Abs(), work), tail.Im.Abs().Add(scaled.Im.Abs(), work));
                 return n % 2 == 0
-                    ? (tail.Re.Subtract(scaled.Re, work), tail.Im.Subtract(scaled.Im, work))
-                    : (tail.Re.Add(scaled.Re, work), tail.Im.Add(scaled.Im, work));
+                    ? (tail.Re.Subtract(scaled.Re, work), tail.Im.Subtract(scaled.Im, work), reScale, imScale)
+                    : (tail.Re.Add(scaled.Re, work), tail.Im.Add(scaled.Im, work), reScale, imScale);
             }
 
             /// <summary>The asymptotic series of <c>psi^(n)(w)</c>, for <c>Re w</c> at least the working digits.</summary>
@@ -334,18 +346,19 @@ namespace AngouriMath
                 return value;
             }
 
-            /// <summary><c>cot(x + i y) = (sin 2x - i sinh 2y)/(cosh 2y - cos 2x)</c>.</summary>
+            /// <summary>
+            /// <c>cot(x + i y) = (sin x cos x - i sinh y cosh y)/(sin^2 x + sinh^2 y)</c>, which is
+            /// <c>(sin 2x - i sinh 2y)/(cosh 2y - cos 2x)</c> without the subtraction: near a pole that one is 0 to the
+            /// working digits, and <c>polygamma(0, -3 + 10^(-60) i)</c>, about <c>10^60 i</c>, was <c>NaN</c>.
+            /// </summary>
             private static (EDecimal Re, EDecimal Im) Cot(EDecimal x, EDecimal y, EContext work)
             {
-                var (twoX, twoY) = (x.Multiply(2, work), y.Multiply(2, work));
-                if (twoY.IsZero)
-                    return (twoX.Sin(work).Divide(EDecimal.One.Subtract(twoX.Cos(work), work), work), EDecimal.Zero);
-                var exponential = twoY.Exponential(work);
-                var inverseExponential = EDecimal.One.Divide(exponential, work);
-                var sinh = exponential.Subtract(inverseExponential, work).Divide(2, work);
-                var cosh = exponential.Add(inverseExponential, work).Divide(2, work);
-                var denominator = cosh.Subtract(twoX.Cos(work), work);
-                return (twoX.Sin(work).Divide(denominator, work), sinh.Negate().Divide(denominator, work));
+                var (sin, cos) = (x.Sin(work), x.Cos(work));
+                if (y.IsZero)
+                    return (cos.Divide(sin, work), EDecimal.Zero);
+                var (sinh, cosh) = SinhAndCosh(y, work);
+                var denominator = sin.Multiply(sin, work).Add(sinh.Multiply(sinh, work), work);
+                return (sin.Multiply(cos, work).Divide(denominator, work), sinh.Multiply(cosh, work).Negate().Divide(denominator, work));
             }
 
             private static (EDecimal Re, EDecimal Im) Reciprocal((EDecimal Re, EDecimal Im) a, EContext work)

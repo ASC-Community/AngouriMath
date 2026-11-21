@@ -143,6 +143,22 @@ unsolved. A real number is its own conjugate, and a non-real one keeps its parts
 | `"conj(10^(-30) x)".ToEntity().InnerSimplified` | `1E-30 * conjugate(x)` | `1/1000000000000000000000000000000 * conjugate(x)` |
 | `"-i + 2 * 10^(-30) x + 3 * conj(10^(-30) x) = 0".ToEntity().Solve("x")` | left unsolved | `{ -1000000000000000000000000000000i }` |
 
+### `polygamma` keeps a small value, and is defined next to a pole
+
+**Silent: `0` becomes the value, and `NaN` becomes a number.** Each part was taken against 1, so a part below about
+`1e-50` read as 0; it is now taken against the terms added to make it. Left of `Re z = 1/2`, the cotangent of the
+reflection divided by `cosh 2y - cos 2x`, which is 0 to the working digits close enough to a pole, as at
+`-3 + 10^(-60) i`, and it multiplied `re` by `pi` before dropping its whole part, which left about 50 digits of
+`cot(pi z)` at `re = -10^60`.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"polygamma(1, 10^60)".ToEntity().Evaled` | `0` | `1.000…E-60` |
+| `"polygamma(3, 10^20 * i)".ToEntity().Evaled` | `0` | `3E-80 + 1.999…E-60i` |
+| `"polygamma(0, 1 + 10^(-60) * i)".ToEntity().Evaled` | `-0.5772…` | `-0.5772… + 1.6449…E-60i` |
+| `"polygamma(1, -10^60 + i / 2)".ToEntity().Evaled` | `-1.8636…` | `-1.8636… - 5.000…E-121i` |
+| `"polygamma(0, -3 + 10^(-60) * i)".ToEntity().Evaled` | `NaN` | `1.2561… + 1E60i` |
+
 ### `erfc`, `erfi` and `lambertw` keep a small value
 
 **Silent: `0` becomes the value.** Each was made as what a cancellation of terms near 1 left, which takes a value
