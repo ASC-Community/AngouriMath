@@ -306,6 +306,19 @@ part is now enclosed from its exact value.
 |---|---|---|
 | `"(cos(2x) - sin(x) - 1) * 10^12 = 0".ToEntity().Solve("x")` | unsolved | the four families of `cos(2x) - sin(x) - 1 = 0` |
 
+### Two constants are equal only when their difference is zero
+
+**Silent: `True` becomes `False`.** An equality of two constants was True when their evaluated difference was below
+an absolute `1e-16`, so two different small numbers were equal. It is True when the difference is zero, which the
+number factory makes of a residual of the cancellation, so one number written two ways and rounded apart is still
+equal to itself: `sqrt(i) = (1 + i)/sqrt(2)` is True.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"10^(-20) = 2 * 10^(-20)".ToEntity().Evaled` | `True` | `False` |
+| `"pi / 10^20 = 2 * pi / 10^20".ToEntity().Evaled` | `True` | `False` |
+| `"1/3 = 0.3333333333333333333333".ToEntity().Evaled` | `True` | `False` |
+
 ### An equation is not raised to clear a radical the rest of it still holds
 
 **Silent.** `Solve` raised an equation to clear a radical even where the rest of it held one too, inside a function:
