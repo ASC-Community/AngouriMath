@@ -53,21 +53,24 @@ namespace AngouriMath
                     return Real.NaN;
                 var digits = context.Precision.ToInt32Checked();
                 var riemann = ai.IsZero && ar.CompareTo(EDecimal.One) == 0;
-                (EDecimal Re, EDecimal Im)? value;
+                ((EDecimal Re, EDecimal Im) Value, EDecimal Scale)? value;
                 if (riemann && sr.Sign < 0)
                     value = ReflectedRiemannZeta((sr, si), context, digits);
                 else
                     value = ZetaBySummation((sr, si), (ar, ai), context, digits);
-                if (value is not var (re, im))
+                if (value is not var ((re, im), scale))
                     return null;
-                return Complex.Create(re.RoundToPrecision(context), im.RoundToPrecision(context));
+                // A part is a residual only against what the value is known to, not against 1: zeta(-2 + 10^(-60) i)
+                // is about -3 * 10^(-62) i. https://github.com/asc-community/AngouriMath/issues/1944
+                return Complex.CreateAtScales(re.RoundToPrecision(context), im.RoundToPrecision(context), scale, scale);
             }
 
             /// <summary>
             /// <c>zeta(s, a)</c> by the Euler–Maclaurin formula, taken again with more digits while the cancellation
-            /// in it leaves fewer than <paramref name="digits"/>.
+            /// in it leaves fewer than <paramref name="digits"/>, and the scale a part of it is a residual against: its
+            /// largest term, less the digits it was taken with beyond <paramref name="digits"/>.
             /// </summary>
-            private static (EDecimal Re, EDecimal Im)? ZetaBySummation((EDecimal Re, EDecimal Im) s, (EDecimal Re, EDecimal Im) a,
+            private static ((EDecimal Re, EDecimal Im) Value, EDecimal Scale)? ZetaBySummation((EDecimal Re, EDecimal Im) s, (EDecimal Re, EDecimal Im) a,
                 EContext context, int digits)
             {
                 var modulus = Math.Sqrt(s.Re.ToDouble() * s.Re.ToDouble() + s.Im.ToDouble() * s.Im.ToDouble());
@@ -82,19 +85,21 @@ namespace AngouriMath
                     return null;
                 var guard = 20 + (int)(2 * Math.Log10(2 + modulus)) + (int)expectedLoss;
                 (EDecimal Re, EDecimal Im) value = (EDecimal.Zero, EDecimal.Zero);
+                var scale = EDecimal.Zero;
                 for (var attempt = 0; attempt < 4; attempt++)
                 {
                     var work = Working(context, guard);
-                    var (sum, lost) = EulerMaclaurinZeta(s, a, Terms(work.Precision.ToInt32Checked()), work);
+                    var (sum, lost, largest) = EulerMaclaurinZeta(s, a, Terms(work.Precision.ToInt32Checked()), work);
                     value = sum;
+                    scale = largest.ScaleByPowerOfTen(digits - work.Precision.ToInt32Checked());
                     if (lost <= guard - 10 || guard > 4 * digits + 2000)
                         break;
                     guard = lost + 20;
                 }
-                return value;
+                return (value, scale);
             }
 
-            private static ((EDecimal Re, EDecimal Im) Value, int Lost) EulerMaclaurinZeta(
+            private static ((EDecimal Re, EDecimal Im) Value, int Lost, EDecimal Largest) EulerMaclaurinZeta(
                 (EDecimal Re, EDecimal Im) s, (EDecimal Re, EDecimal Im) a, int terms, EContext work)
             {
                 (EDecimal Re, EDecimal Im) minusS = (s.Re.Negate(), s.Im.Negate());
@@ -147,7 +152,7 @@ namespace AngouriMath
                 var lost = largest.IsZero ? 0
                     : result.IsZero ? int.MaxValue / 2
                     : Math.Max(0, DecimalOrder(largest) - DecimalOrder(result));
-                return (sum, lost);
+                return (sum, lost, largest);
 
                 void Note((EDecimal Re, EDecimal Im) part)
                 {
@@ -178,13 +183,17 @@ namespace AngouriMath
             }
             [ConcurrentField] private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, List<EDecimal>> bernoulliOverFactorial = new();
 
-            /// <summary><c>zeta(s) = 2^s pi^(s - 1) sin(pi s/2) Gamma(1 - s) zeta(1 - s)</c>, for <c>Re s &lt; 0</c>.</summary>
-            private static (EDecimal Re, EDecimal Im)? ReflectedRiemannZeta((EDecimal Re, EDecimal Im) s, EContext context, int digits)
+            /// <summary>
+            /// <c>zeta(s) = 2^s pi^(s - 1) sin(pi s/2) Gamma(1 - s) zeta(1 - s)</c>, for <c>Re s &lt; 0</c>, a product
+            /// that cancels nothing, and so a residual only against its own size less the digits it was taken with beyond
+            /// <paramref name="digits"/>.
+            /// </summary>
+            private static ((EDecimal Re, EDecimal Im) Value, EDecimal Scale)? ReflectedRiemannZeta((EDecimal Re, EDecimal Im) s, EContext context, int digits)
             {
                 var guard = 20 + (int)(2 * Math.Log10(2 + Math.Abs(s.Re.ToDouble()) + Math.Abs(s.Im.ToDouble())));
                 var work = Working(context, guard);
                 var reflected = (Re: EDecimal.One.Subtract(s.Re, work), Im: s.Im.Negate());
-                if (ZetaBySummation(reflected, (EDecimal.One, EDecimal.Zero), work, work.Precision.ToInt32Checked()) is not { } zeta)
+                if (ZetaBySummation(reflected, (EDecimal.One, EDecimal.Zero), work, work.Precision.ToInt32Checked()) is not var (zeta, _))
                     return null;
                 var pi = InternalAMExtensions.ConstantCache.Lookup(work).Pi;
                 var twoToTheS = ComplexExp(Multiply(s, (EDecimal.FromInt32(2).Log(work), EDecimal.Zero), work), work);
@@ -196,15 +205,13 @@ namespace AngouriMath
                     sine = (sin, EDecimal.Zero);
                 else
                 {
-                    var y = pi.Multiply(s.Im, work).Divide(2, work);
-                    var exponential = y.Exponential(work);
-                    var inverse = EDecimal.One.Divide(exponential, work);
-                    var cosh = exponential.Add(inverse, work).Divide(2, work);
-                    var sinh = exponential.Subtract(inverse, work).Divide(2, work);
+                    // sinh with its own digits: e^y - e^(-y) leaves only half of them at y = 10^(-60).
+                    var (sinh, cosh) = SinhAndCosh(pi.Multiply(s.Im, work).Divide(2, work), work);
                     sine = (sin.Multiply(cosh, work), cos.Multiply(sinh, work));
                 }
                 var gamma = GammaOf(reflected, work);
-                return Multiply(Multiply(Multiply(twoToTheS, piToTheSLessOne, work), Multiply(sine, gamma, work), work), zeta, work);
+                var value = Multiply(Multiply(Multiply(twoToTheS, piToTheSLessOne, work), Multiply(sine, gamma, work), work), zeta, work);
+                return (value, Magnitude(value).ScaleByPowerOfTen(digits - work.Precision.ToInt32Checked()));
             }
 
             /// <summary>

@@ -117,6 +117,20 @@ Each candidate is checked exactly.
 | `"x^3 + 1/10^12*x^2 + 5/(9*10^24)*x + 1/(9*10^36) = 0".ToEntity().Solve("x")` | three roots by Cardano's formula | `{ -1/3000000000000, (-1/1500000000000 ± sqrt(-1/1125000000000000000000000)) / 2 }` |
 | `"1 + 2*(10^12*x) + 3*(10^12*x)^2 - 2*Im(10^12*x) = 0".ToEntity().Solve("x")` | unsolved | its two roots, `10^-12` times those of the equation in `x` |
 
+### `zeta` keeps a small part
+
+**Silent: `0` becomes the value.** Each part was taken against 1, so a part below about `1e-50` read as 0. It is now
+taken against what the value is known to: the largest term of the sum, or the size of the reflected product, less
+the digits it was taken with beyond the working ones. Near a zero the sum is already taken again until it keeps all
+the working digits, so zeta at a decimal near a zero is now its value there rather than 0.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"zeta(-2 + 10^(-60) * i)".ToEntity().Evaled` | `0` | `3.288…E-122 - 3.044…E-62i` |
+| `"zeta(1/2 + 10^(-60) * i)".ToEntity().Evaled` | `-1.4603…` | `-1.4603… - 3.922…E-60i` |
+| `"zeta(10^(-60) * i)".ToEntity().Evaled` | `-1/2` | `-1/2 - 9.189…E-61i` |
+| `zeta(1/2 + t i)`, `t` the first zero's ordinate to 100 digits | `0` | `3.465…E-100 - 2.176…E-99i` |
+
 ### The conjugate of an exact real number is that number
 
 **Silent: a decimal becomes the exact number.** A number's conjugate was rebuilt from its parts as decimals, so a ratio
