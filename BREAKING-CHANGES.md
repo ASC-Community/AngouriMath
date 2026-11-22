@@ -113,6 +113,19 @@ filtered as before.
 | `"x - 10^(-17) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000 }` |
 | `"x^2 - 10^(-40) * x^0 = 0".ToEntity().Solve("x")` | `{ }` | `{ 1/100000000000000000000, -1/100000000000000000000 }` |
 
+### An equation with a modulus keeps its roots at any scale
+
+**Silent: a missing root is found.** An equation with a modulus in it is solved as a system in the real and
+imaginary parts of `x`, a variable at a time. A radical root put into the equations left their constant terms as
+what evaluating terms near `1e120` rounded to, read as a rational, and a later root that left that rational was
+decided exactly to be no root. Such a leftover is now decided against the equation before any root was put into it.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"3*(10^(-30)*x)^2 - 2*(10^(-30)*x) - 2*abs(2*(10^(-30)*x) - 3) = 0".ToEntity().Solve("x")` | `{ }` | `{ -10^30/3 (1 + sqrt(19)), 10^30/3 (sqrt(19) - 1) }` |
+| `"-2 + 10^(-30)*x - (10^(-30)*x)^2 + 2*abs((10^(-30)*x)^2 - 2*(10^(-30)*x) - 3) = 0".ToEntity().Solve("x")` | one root, `10^30 (3 + sqrt(41)) / 2` | the four, `10^30 (5 +- sqrt(73)) / 6` and `10^30 (3 +- sqrt(41)) / 2` |
+| `"((10^(-30)*x)^2 - 2) / abs(1 + 3*(10^(-30)*x) - 2*(10^(-30)*x)^2) = 3".ToEntity().Solve("x")` | `{ }` | `10^30 (9 + sqrt(101)) / 10` and `10^30 (9 + sqrt(221)) / 14` |
+
 ### A rational root is found whatever the scale of the coefficients
 
 **Silent: radicals become the rationals they are, and an unsolved equation is solved.** A rational root is searched for
