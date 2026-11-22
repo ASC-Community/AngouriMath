@@ -139,7 +139,7 @@ namespace AngouriMath.Functions.Algebra.Groebner
 
             var found = new List<Entity[]>();
             var assignment = new Entity[variables.Count];
-            if (!BackSubstitute(triangular, variables, variables.Count - 1, assignment, found, budget))
+            if (!BackSubstitute(triangular, triangular, variables, variables.Count - 1, assignment, found, budget))
                 return false;
 
             foreach (var candidate in found)
@@ -165,10 +165,12 @@ namespace AngouriMath.Functions.Algebra.Groebner
         /// Walks the triangular system from the last variable back. Answers
         /// <see langword="false"/> where the shape it needs is not there — a variable with no
         /// equation of its own means the system does not have finitely many solutions in the
-        /// way this can enumerate.
+        /// way this can enumerate. <paramref name="originals"/> are the equations of the
+        /// triangular system that <paramref name="equations"/> were narrowed from, in the same
+        /// order, before any root was put into them.
         /// </summary>
         static bool BackSubstitute(
-            IReadOnlyList<Entity> equations, IReadOnlyList<Variable> variables,
+            IReadOnlyList<Entity> equations, IReadOnlyList<Entity> originals, IReadOnlyList<Variable> variables,
             int at, Entity[] assignment, List<Entity[]> found, GroebnerBudget budget)
         {
             if (at < 0)
@@ -202,12 +204,17 @@ namespace AngouriMath.Functions.Algebra.Groebner
             {
                 assignment[at] = root;
                 var narrowed = new List<Entity>(equations.Count);
+                var narrowedFrom = new List<Entity>(equations.Count);
                 var consistent = true;
-                foreach (var equation in equations)
+                for (var e = 0; e < equations.Count; e++)
                 {
+                    var equation = equations[e];
                     var substituted = Canonical(equation.Substitute(variable, root).InnerSimplified, remaining, still);
                     if (substituted.Vars.Any())
+                    {
                         narrowed.Add(substituted);
+                        narrowedFrom.Add(originals[e]);
+                    }
                     else if (substituted is Number.Rational { IsZero: false })
                     {
                         // Unless what is left is only the part the decimals did not flush to 0, where
@@ -222,8 +229,14 @@ namespace AngouriMath.Functions.Algebra.Groebner
                         // left 13/10000, and the one real root of 1 - 2x + x|-2 - 3x| = 0 with x written
                         // as 10^-24 x was taken for no root, the answer { }. Only an interval leaving 0 out
                         // shows such a root extends to nothing; an equation that is a polynomial over Q is
-                        // decided exactly.
-                        var exactly = equation.Substitute(variable, root);
+                        // decided exactly. Asked of the equation before any root was put into it, with
+                        // every root assigned so far: one narrowed by a radical root keeps what its
+                        // evaluation left as a rational, and 3x^2 - 2x - 2|2x - 3| = 0 with x written as
+                        // 10^-30 x lost the root (sqrt(19) - 1) 10^30 / 3 to a constant 2 10^21 left
+                        // where its terms are near 1e120, read exactly once the imaginary part 0 was put in.
+                        var exactly = originals[e];
+                        for (var assigned = at; assigned < variables.Count; assigned++)
+                            exactly = exactly.Substitute(variables[assigned], assignment[assigned]);
                         if (!root.Nodes.Any(IsADecimal)
                             && MultivariatePolynomial.TryParse(exactly, new Dictionary<Variable, int>()) is null
                             && !AnalyticalSolving.StatementSolver.IsShownNotZero(exactly))
@@ -234,7 +247,7 @@ namespace AngouriMath.Functions.Algebra.Groebner
                 // A root that leaves an equation a nonzero number extends to no solution.
                 if (!consistent)
                     continue;
-                if (!BackSubstitute(narrowed, variables, at - 1, assignment, found, budget))
+                if (!BackSubstitute(narrowed, narrowedFrom, variables, at - 1, assignment, found, budget))
                     return false;
             }
             return true;
