@@ -106,7 +106,7 @@ namespace AngouriMath.Functions
             {
                 if (!TryReadOffset(exponent!, index, out var offset))
                     return null;
-                if (@base.Evaled is Complex value && IsZero(value))
+                if (@base.Evaled is Complex value && value.IsZero)
                     return null;
                 // Not c^0: that would attach `provided not c = 0` for a series whose value at
                 // c = 0 is the constant term, which the formula gives without help.

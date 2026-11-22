@@ -316,7 +316,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 switch (expr.Substitute(x, root).Evaled)
                 {
                     case Rational { IsZero: true }:
-                    case Complex { IsFinite: true } residual when residual is not Rational && Number.IsZero(residual):
+                    case Complex { IsFinite: true } residual when residual is not Rational && residual.IsZero:
                         roots.Add(root);
                         break;
                     case Real { IsNaN: true }:
