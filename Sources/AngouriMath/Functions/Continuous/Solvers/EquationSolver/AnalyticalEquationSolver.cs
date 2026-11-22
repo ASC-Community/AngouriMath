@@ -149,19 +149,23 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             // since over the complex numbers ln(u) + ln(v) is ln(u v) only up to 2 pi i:
             // ln(x) + ln(x + 1) = 0 is { (sqrt(5) - 1) / 2 }, which Newton's method found in
             // decimals. Asked of the equation as it was asked, as the route above is.
-            if (!compensateSolving && LogarithmSolver.Solve(expr, x) is { } byExponentiating)
+            // Each reads rational multipliers only, so a constant the sum is written times is divided out
+            // first: sqrt(2) ln(x) + sqrt(2) ln(x + 1) = 0 went to Newton's method.
+            var gathered = !compensateSolving && expr.Nodes.Any(node => node is Logf or Arcsinf or Arccosf or Arctanf or Arccotanf or Arcsecantf or Arccosecantf)
+                ? PolynomialCandidates.DividedByACommonConstant(expr, x) ?? expr : expr;
+            if (!compensateSolving && LogarithmSolver.Solve(gathered, x) is { } byExponentiating)
                 return byExponentiating;
 
             // So is a sum of integer multiples of arctangents of polynomials, by taking the tangent:
             // arctan(x) + arctan(2x) = pi/4 is { (sqrt(17) - 3) / 4 }, where Newton's method answered
             // a decimal, and arctan(x) - arctan(2x) = 1, whose roots are complex, was not answered.
-            if (!compensateSolving && ArctangentSolver.Solve(expr, x) is { } byTheTangent)
+            if (!compensateSolving && ArctangentSolver.Solve(gathered, x) is { } byTheTangent)
                 return byTheTangent;
 
             // And an equation between two inverse trigonometric functions, by their squared sines
             // and cosines: arcsin(-2x) = arccos(3x + 2) is 13x^2 + 12x + 3 = 0, where Newton's
             // method left its complex roots out.
-            if (!compensateSolving && InverseTrigonometricPairSolver.Solve(expr, x) is { } bySquares)
+            if (!compensateSolving && InverseTrigonometricPairSolver.Solve(gathered, x) is { } bySquares)
                 return bySquares;
 
             // Whether a candidate root really is one. The loose tolerance that guesses the
