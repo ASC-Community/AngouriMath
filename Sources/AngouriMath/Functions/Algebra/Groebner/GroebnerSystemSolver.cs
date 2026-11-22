@@ -273,26 +273,53 @@ namespace AngouriMath.Functions.Algebra.Groebner
                 || !value.RealPart.EDecimal.IsFinite || !value.ImaginaryPart.EDecimal.IsFinite
                 || MultivariatePolynomial.TryParse(equation, new Dictionary<Variable, int> { [variable] = 0 }) is not { } polynomial)
                 return false;
-            var (re, im) = (ERational.FromEDecimal(value.RealPart.EDecimal), ERational.FromEDecimal(value.ImaginaryPart.EDecimal));
-            // Each term c z^k exactly, with z^k built up a power at a time.
-            var powers = new List<(ERational Re, ERational Im)> { (ERational.One, ERational.Zero) };
-            var (sumRe, sumIm) = (ERational.Zero, ERational.Zero);
-            var largest = ERational.Zero;
+            // In integers: the root as (a + b i) 10^shift, and every term c z^k times one positive
+            // number -- the coefficients' common denominator, and the power of ten that makes the
+            // root's powers whole -- which scales the residual and the largest term alike. In
+            // rationals the denominators were multiplied together at every addition, so their
+            // digits doubled with each power of the root: the parts of x in an equation with a
+            // sign in it, with x written as 10^-12 x, spent longer than twenty seconds here.
+            var (re, im) = (value.RealPart.EDecimal, value.ImaginaryPart.EDecimal);
+            var shift = EInteger.Min(re.Exponent, im.Exponent);
+            if (!re.Exponent.Subtract(shift).CanFitInInt32() || !im.Exponent.Subtract(shift).CanFitInInt32())
+                return false;
+            var ten = EInteger.FromInt32(10);
+            var (a, b) = (re.Mantissa.Multiply(ten.Pow(re.Exponent.Subtract(shift).ToInt32Unchecked())),
+                          im.Mantissa.Multiply(ten.Pow(im.Exponent.Subtract(shift).ToInt32Unchecked())));
+            var degree = 0;
+            var common = EInteger.One;
+            foreach (var term in polynomial.Terms)
+            {
+                degree = System.Math.Max(degree, MultivariatePolynomial.PowerOf(term.Key, 0));
+                var denominator = term.Value.Denominator;
+                common = common.Divide(common.Gcd(denominator)).Multiply(denominator);
+            }
+            // The power of ten each term carries: 10^(shift k) times 10^(-shift degree) where the
+            // shift is negative, so that the least of them is 10^0.
+            var lowest = shift.Sign < 0 ? shift.Multiply(degree) : EInteger.Zero;
+            if (!shift.Abs().Multiply(degree).CanFitInInt32())
+                return false;
+            var powers = new List<(EInteger Re, EInteger Im)> { (EInteger.One, EInteger.Zero) };
+            var (sumRe, sumIm) = (EInteger.Zero, EInteger.Zero);
+            var largest = EInteger.Zero;
             foreach (var term in polynomial.Terms)
             {
                 var power = MultivariatePolynomial.PowerOf(term.Key, 0);
                 while (powers.Count <= power)
                 {
                     var (pRe, pIm) = powers[powers.Count - 1];
-                    powers.Add((pRe.Multiply(re).Subtract(pIm.Multiply(im)), pRe.Multiply(im).Add(pIm.Multiply(re))));
+                    powers.Add((pRe.Multiply(a).Subtract(pIm.Multiply(b)), pRe.Multiply(b).Add(pIm.Multiply(a))));
                 }
-                var (tRe, tIm) = (powers[power].Re.Multiply(term.Value), powers[power].Im.Multiply(term.Value));
+                var coefficient = term.Value.Numerator.Multiply(common.Divide(term.Value.Denominator))
+                    .Multiply(ten.Pow(shift.Multiply(power).Subtract(lowest).ToInt32Unchecked()));
+                var (tRe, tIm) = (powers[power].Re.Multiply(coefficient), powers[power].Im.Multiply(coefficient));
                 (sumRe, sumIm) = (sumRe.Add(tRe), sumIm.Add(tIm));
                 var size = tRe.Abs().Add(tIm.Abs());
                 if (size.CompareTo(largest) > 0)
                     largest = size;
             }
-            return sumRe.Abs().Add(sumIm.Abs()).CompareTo(largest.Multiply(ERational.FromEDecimal(NegligibleShare))) <= 0;
+            return ERational.FromEInteger(sumRe.Abs().Add(sumIm.Abs()))
+                .CompareTo(ERational.FromEInteger(largest).Multiply(ERational.FromEDecimal(NegligibleShare))) <= 0;
         }
 
         /// <summary>
