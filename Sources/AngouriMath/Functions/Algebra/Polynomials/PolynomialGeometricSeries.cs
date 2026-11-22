@@ -88,7 +88,7 @@ namespace AngouriMath.Functions
             var degree = monomials.Keys.Max()!.ToInt32Checked();
             if (degree < 1 || degree > 12)
                 return null;
-            if (@base.Evaled is Complex value && IsZero(value))
+            if (@base.Evaled is Complex value && value.IsZero)
                 return null;
 
             if (offset != Integer.Zero)

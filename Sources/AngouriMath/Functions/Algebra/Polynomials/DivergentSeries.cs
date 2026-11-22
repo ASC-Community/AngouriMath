@@ -82,7 +82,7 @@ namespace AngouriMath.Functions
                 // Tends to +oo or -oo: the terms pass every bound, so the sums do.
                 Real { IsFinite: false, IsNaN: false } infinite => infinite,
                 // Tends to a non-zero L: eventually every term has L's sign and half its size.
-                Real { IsFinite: true } value when !IsZero(value) =>
+                Real { IsFinite: true } value when !value.IsZero =>
                     value.IsNegative ? Real.NegativeInfinity : Real.PositiveInfinity,
                 // A zero limit says nothing, and anything else was not settled.
                 _ => null
@@ -111,7 +111,7 @@ namespace AngouriMath.Functions
                 Powf(var @base, Integer { IsNegative: false }) => Go(@base),
                 // 2 ^ k: a base that does not vary and is not zero.
                 Powf(var @base, var exponent) when !@base.ContainsNode(index)
-                    && @base.Evaled is Complex value && !IsZero(value) => Go(exponent),
+                    && @base.Evaled is Complex value && !value.IsZero => Go(exponent),
                 // n ^ n: the base is the index, which over a range starting at 1 or above is
                 // positive, so the power exists at every term of it.
                 Powf(var @base, var exponent) when @base == index && start.EInteger.Sign > 0

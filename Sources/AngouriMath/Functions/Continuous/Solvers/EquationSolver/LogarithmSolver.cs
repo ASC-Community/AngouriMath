@@ -89,7 +89,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (candidates.Count == 0 && degree > 0 && MathS.Settings.Codomain.Value != Core.Domain.Real)
                 return null;
             foreach (var candidate in candidates)
-                if (candidate.Vars.Any() || polynomial.Substitute(x, candidate).Evaled is not Complex { IsFinite: true } residual || !IsZero(residual))
+                if (candidate.Vars.Any() || polynomial.Substitute(x, candidate).Evaled is not Complex { IsFinite: true } residual || !residual.IsZero)
                     return null;
 
             // Over the reals a logarithm has a value only of a positive number, which the evaluation
@@ -120,7 +120,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 switch (expr.Substitute(x, candidate).Evaled)
                 {
                     case Rational { IsZero: true }:
-                    case Complex { IsFinite: true } residual when residual is not Rational && IsZero(residual):
+                    case Complex { IsFinite: true } residual when residual is not Rational && residual.IsZero:
                         roots.Add(candidate);
                         break;
                     // A candidate on another branch is off by a multiple of 2 pi i, and one where a

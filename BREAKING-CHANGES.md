@@ -143,6 +143,20 @@ unsolved. A real number is its own conjugate, and a non-real one keeps its parts
 | `"conj(10^(-30) x)".ToEntity().InnerSimplified` | `1E-30 * conjugate(x)` | `1/1000000000000000000000000000000 * conjugate(x)` |
 | `"-i + 2 * 10^(-30) x + 3 * conj(10^(-30) x) = 0".ToEntity().Solve("x")` | left unsolved | `{ -1000000000000000000000000000000i }` |
 
+### A series with a small ratio is summed
+
+**Silent: an unsummed series becomes its value.** A geometric, exponential or polynomial-geometric series asked
+whether its ratio was zero, and the divergence test whether a term's limit was, by `Number.IsZero`, which takes
+anything below `1e-16` for zero. They now ask whether it is zero; a ratio that is zero still leaves the sum as it
+is. The candidate checks of the logarithm, inverse-trigonometric and modulus solvers ask the same.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sum((sqrt(2) * 10^(-20))^n, n, 0, +oo)".Simplify()` | unchanged | `1 / (1 - sqrt(2) / 10^20)` |
+| `"sum((sqrt(2) * 10^(-20))^n / n!, n, 0, +oo)".Simplify()` | unchanged | `e ^ (sqrt(2) / 10^20)` |
+| `"sum(sqrt(2) * 10^(-20) + 1/n^2, n, 1, +oo)".Simplify()` | unchanged | `+oo` |
+| `"ln(-4 - 2 * (10^(-30) * x) + 4 * (10^(-30) * x)^2) + ln(-4 - 3 * (10^(-30) * x)) = ln(2)".Solve("x")` | two roots, the second (about `1.249 * 10^30`) none: both logarithms' arguments are negative there, and their sum is `ln(2) + 2 pi i` | the root about `-1.428 * 10^30` alone |
+
 ### `sinh`, `tanh` and a difference of powers of `e` keep a small value
 
 **Silent: `0` becomes the value.** `e^u - e^v` was evaluated by rounding both powers and subtracting, which loses every
