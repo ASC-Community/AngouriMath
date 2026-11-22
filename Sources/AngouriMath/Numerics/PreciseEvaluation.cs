@@ -378,11 +378,9 @@ namespace AngouriMath.Numerics
         }
 
         private PreciseInterval Pi()
-        {
-            var pi = EDecimal.FromString(
-                "3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196");
-            return new(pi.RoundToPrecision(down), pi.RoundToPrecision(up));
-        }
+            => Constant(
+                "3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196",
+                context => AngouriMath.InternalAMExtensions.ConstantCache.Lookup(context).Pi);
 
         private PreciseInterval HalfPi()
         {
@@ -392,17 +390,33 @@ namespace AngouriMath.Numerics
         }
 
         private PreciseInterval E()
-        {
-            var e = EDecimal.FromString(
-                "2.71828182845904523536028747135266249775724709369995957496696762772407663035354759457138217852516642742746639193200305992181741359662904357290033429526059563073813232862794349076323382988075319525101901");
-            return new(e.RoundToPrecision(down), e.RoundToPrecision(up));
-        }
+            => Constant(
+                "2.71828182845904523536028747135266249775724709369995957496696762772407663035354759457138217852516642742746639193200305992181741359662904357290033429526059563073813232862794349076323382988075319525101901",
+                context => AngouriMath.InternalAMExtensions.ConstantCache.Lookup(context).E);
 
         private PreciseInterval EulerGamma()
+            => Constant(
+                "0.57721566490153286060651209008240243104215933593992359880576723488486772677766467093694706329174674951463144724980708248096050401448654283622417399764492353625350033374293733773767394279259525824709491",
+                Number.EulerGamma);
+
+        /// <summary>
+        /// A constant as an interval: the <paramref name="known"/> digits of it rounded each way, where they
+        /// are more than the working precision; otherwise <paramref name="compute"/>d to ten digits
+        /// past it and widened as a function's value is. The digits held are about two hundred, and
+        /// rounding them to more reads them as exact, so each bound was the same number, a unit in
+        /// their last place from the constant: the residual of a Cardano root of
+        /// <c>x^3 - 2.75 10^60 x - 1.5 10^90</c> in its own cubic, about <c>10^-309</c> in 400 digits,
+        /// was enclosed as the point <c>-5.4 10^-112 + 9.0 10^-112 i</c>, and the root, shown not to
+        /// be one, was dropped from <c>i x + x^2 - 2 conj(x) = 0</c> with x written as <c>10^-30 x</c>.
+        /// </summary>
+        private PreciseInterval Constant(string known, Func<EContext, EDecimal> compute)
         {
-            var gamma = EDecimal.FromString(
-                "0.57721566490153286060651209008240243104215933593992359880576723488486772677766467093694706329174674951463144724980708248096050401448654283622417399764492353625350033374293733773767394279259525824709491");
-            return new(gamma.RoundToPrecision(down), gamma.RoundToPrecision(up));
+            var value = EDecimal.FromString(known);
+            if (value.UnsignedMantissa.GetDigitCountAsEInteger().CompareTo(digits + 10) > 0)
+                return new(value.RoundToPrecision(down), value.RoundToPrecision(up));
+            value = compute(near);
+            var slack = value.Abs().Multiply(unit, up).Add(least, up);
+            return new(value.Subtract(slack, down), value.Add(slack, up));
         }
 
         private PreciseComplexInterval Evaluate(Entity expr)

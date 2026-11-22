@@ -73,6 +73,17 @@ no longer reads a root whose decimals were flushed to `0` as extending to no sol
 | `"x^5 - 3*10^(-60)*x + 10^(-150) = 0".ToEntity().Solve("x")` | `0` among the roots, where the polynomial is `10^-150` | `3.33e-91` in its place |
 | `"(1 + i) + 2*(10^12*x) - 3*(10^12*x)^2 + 10^12*x*abs(3 - 10^12*x) = 0".ToEntity().Solve("x")` | `{ -1.87e-13 - 1.58e-13i }`, one root of two | both, `10^-12` times those of the equation in `x` |
 
+### A root is not shown to be none by the digits held of `pi`
+
+**Silent: an unsolved equation is solved, with all its roots.** Whether a root's residual leaves out zero is decided
+by enclosing it in an interval, at as many digits as its terms need. `pi`, `e` and Euler's constant were held to about
+two hundred digits, and past that each was read as exact, so an interval enclosed a true zero as a point beside it,
+and a root was dropped as no root. Past their digits they are now worked out to the precision asked for.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"i*(10^(-30)*x) + (10^(-30)*x)^2 - 2*conj(10^(-30)*x) = 0".ToEntity().Solve("x")` | unsolved, the equation returned | the four roots, `0` and three in Cardano radicals, `10^30` times those of `i x + x^2 - 2 conj(x) = 0` |
+
 ### A root with a radical in it is not dropped for what its evaluation leaves
 
 **Silent: `{ }` becomes the roots.** An equation in a modulus is solved for the real and imaginary parts of `x` as a
