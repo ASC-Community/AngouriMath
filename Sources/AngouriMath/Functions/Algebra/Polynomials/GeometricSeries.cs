@@ -80,7 +80,7 @@ namespace AngouriMath.Functions
             }
             if (@base is null || !TryReadLinear(exponent!, index, out var slope, out var offset))
                 return null;
-            if (@base.Evaled is Complex value && IsZero(value))
+            if (@base.Evaled is Complex value && value.IsZero)
                 return null;
 
             // C b^(m k + s) = (C b^s) r^k with r = b^m. Not b^0: that would attach
