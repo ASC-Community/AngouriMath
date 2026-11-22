@@ -49,6 +49,43 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             => multiplier.Numerator.Multiply(factor.Denominator).Divide(multiplier.Denominator.Multiply(factor.Numerator));
 
         /// <summary>
+        /// <paramref name="expr"/>, a sum, divided by the constant its first term in <paramref name="x"/>
+        /// is written times where that constant is not rational, each term's constant divided apart
+        /// from its function of <paramref name="x"/>; or <see langword="null"/>. Dividing by a constant
+        /// that is not zero changes no root, and the solvers here read only rational multipliers:
+        /// <c>sqrt(2) ln(x) + sqrt(2) ln(x + 1) = 0</c> went to Newton's method and came back as a
+        /// double, right to sixteen digits, where <c>sqrt(2) (ln(x) + ln(x + 1)) = 0</c> is
+        /// <c>{ (sqrt(5) - 1) / 2 }</c>.
+        /// </summary>
+        internal static Entity? DividedByACommonConstant(Entity expr, Variable x)
+        {
+            var terms = Sumf.LinearChildren(expr);
+            if (terms.Count < 2 || terms.FirstOrDefault(term => term.ContainsNode(x)) is not { } first)
+                return null;
+            var (constant, _) = Split(first);
+            if (constant is Rational || constant.Evaled is not Complex { IsFinite: true, IsZero: false })
+                return null;
+            Entity divided = Integer.Zero;
+            foreach (var term in terms)
+            {
+                var (factor, rest) = Split(term);
+                divided += (factor / constant).Simplify() * rest;
+            }
+            return divided.InnerSimplified;
+
+            (Entity Constant, Entity Function) Split(Entity term)
+            {
+                Entity factor = Integer.One, rest = Integer.One;
+                foreach (var child in Mulf.LinearChildren(term))
+                    if (child.ContainsNode(x))
+                        rest *= child;
+                    else
+                        factor *= child;
+                return (factor.InnerSimplified, rest.InnerSimplified);
+            }
+        }
+
+        /// <summary>
         /// The roots of <paramref name="product"/> = 0, a polynomial in <paramref name="x"/> of degree
         /// at most <paramref name="degree"/> with every root of <paramref name="expr"/> = 0 among its
         /// own, that are roots of <paramref name="expr"/> = 0; or <see langword="null"/> where that

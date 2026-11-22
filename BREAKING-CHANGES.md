@@ -117,6 +117,18 @@ Each candidate is checked exactly.
 | `"x^3 + 1/10^12*x^2 + 5/(9*10^24)*x + 1/(9*10^36) = 0".ToEntity().Solve("x")` | three roots by Cardano's formula | `{ -1/3000000000000, (-1/1500000000000 ± sqrt(-1/1125000000000000000000000)) / 2 }` |
 | `"1 + 2*(10^12*x) + 3*(10^12*x)^2 - 2*Im(10^12*x) = 0".ToEntity().Solve("x")` | unsolved | its two roots, `10^-12` times those of the equation in `x` |
 
+### A sum of logarithms or arctangents times a constant is solved exactly
+
+**Silent: a decimal root becomes the exact one.** The logarithm and inverse-trigonometric solvers read only rational
+multipliers, so a sum of those functions written each times the same irrational constant went to Newton's method. The
+equation is now divided by that constant first, which changes no root.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"sqrt(2) * ln(x) + sqrt(2) * ln(x + 1) = 0".ToEntity().Solve("x")` | `{ 0.6180339887498947915... }` | `{ (-1 + sqrt(5)) / 2 }` |
+| `"sqrt(2) * ln(x) + sqrt(2) * ln(x + 1) = sqrt(2)".ToEntity().Solve("x")` | `{ 1.2228702297210447547... }` | `{ (-1 + sqrt(1 - 4 * -e)) / 2 }` |
+| `"e^(-50) * arctan(x) + e^(-50) * arctan(2x) = e^(-50) * 3 * pi / 4".ToEntity().Solve("x")` | `{ 1.7807764064044142582... }` | `{ (-3 - sqrt(17)) / (-4) }` |
+
 ### `zeta` keeps a small part
 
 **Silent: `0` becomes the value.** Each part was taken against 1, so a part below about `1e-50` read as 0. It is now
