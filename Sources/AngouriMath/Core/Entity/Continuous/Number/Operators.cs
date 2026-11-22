@@ -1148,6 +1148,35 @@ namespace AngouriMath
             }
 
             /// <summary>
+            /// <c>e^(v + d) - e^v</c>, taken as <c>e^v (e^d - 1)</c> with the digits <c>e^d</c> has in common with 1 and ten
+            /// more, and rounded once: subtracting the two powers rounded lost every digit of <c>d</c> below the working
+            /// ones, so <c>sinh(10^(-60))</c> was 0. Each part is a residual against <c>|e^(v + d)| + |e^v|</c> less the
+            /// digits taken in addition, so <c>sinh(pi i)</c>, whose <c>e^(2 pi i) - 1</c> is only rounding, is still 0.
+            /// https://github.com/asc-community/AngouriMath/issues/2074
+            /// </summary>
+            internal static Complex ExpDifference(Complex v, Complex d)
+            {
+                if (d.IsZero)
+                    return Integer.Zero;
+                var context = MathS.Settings.DecimalPrecisionContext.Value;
+                var (x, y) = (d.RealPart.EDecimal, d.ImaginaryPart.EDecimal);
+                var extra = 10 + DigitsBelowOne(x, y);
+                var work = Working(context, extra);
+                Complex power, lower, product;
+                // With the downcasting off: e^(-10^(-60)) is within it of 1 and was the integer 1 there.
+                using (MathS.Settings.DowncastingEnabled.Set(false))
+                using (MathS.Settings.DecimalPrecisionContext.Set(work))
+                {
+                    power = Exp(Complex.Create(x, y));
+                    lower = Exp(v);
+                    product = lower * Complex.CreateAtScales(power.RealPart.EDecimal.Subtract(EDecimal.One, work), power.ImaginaryPart.EDecimal, EDecimal.Zero, EDecimal.Zero);
+                }
+                static EDecimal Size(Complex z) => z.RealPart.EDecimal.Abs().Add(z.ImaginaryPart.EDecimal.Abs());
+                var scale = Size(lower).Multiply(Size(power).Add(EDecimal.One), work).ScaleByPowerOfTen(-extra);
+                return Complex.CreateAtScales(product.RealPart.EDecimal.RoundToPrecision(context), product.ImaginaryPart.EDecimal.RoundToPrecision(context), scale, scale);
+            }
+
+            /// <summary>
             /// The digits below 1 of the smaller nonzero part of <c>x + i y</c>, which the inverse trigonometric
             /// functions' formulas cancel: <c>arctan(1 + 10^(-60) i)</c> is a difference of two logarithms near
             /// <c>ln 2/2</c> that agree to 60 digits. At most 1000, past which a part is left to its scale.

@@ -159,6 +159,8 @@ namespace AngouriMath
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact)
             {
+                if (!isExact && DifferenceOfExponentials(Minuend, Subtrahend) is { } difference)
+                    return difference;
                 SimplifyALongLeftSpineFirst(this, isExact);
                 return ExpandOnTwoArguments(Minuend, Subtrahend,
                     (augend, addend) => (augend, addend) switch
@@ -184,6 +186,35 @@ namespace AngouriMath
                     (@this, a, b) => ((Minusf)@this).New(a, b), isExact);
             }
         }
+        partial record Minusf
+        {
+            /// <summary>
+            /// <c>e^u - e^v</c>, or <c>e^u - 1</c>, evaluated as <c>e^v (e^(u - v) - 1)</c>, with <c>u - v</c> taken before
+            /// either power is rounded and <c>e^d - 1</c> with the digits it would cancel: subtracting the two powers
+            /// rounded lost every digit of <c>u - v</c> below half the working ones, so <c>sinh(10^(-60))</c>, which is
+            /// <c>(e^(10^(-60)) - e^(-10^(-60)))/2</c>, was 0, and <c>sinh(10^(-20))</c> kept 80 of its digits.
+            /// <see langword="null"/> where the two are not powers of <c>e</c> with numeric exponents.
+            /// https://github.com/asc-community/AngouriMath/issues/2074
+            /// </summary>
+            private static Entity? DifferenceOfExponentials(Entity minuend, Entity subtrahend)
+            {
+                if (ExponentOfE(minuend) is not { } u || ExponentOfE(subtrahend) is not { } v)
+                    return null;
+                if ((u - v).Evaled is not Complex d || v.Evaled is not Complex exponent || !d.IsFinite || !exponent.IsFinite)
+                    return null;
+                return Number.ExpDifference(exponent, d);
+
+                static Entity? ExponentOfE(Entity power) => power switch
+                {
+                    Powf(var @base, var exponent) when @base == MathS.e => exponent,
+                    Divf(Integer(1), var divisor) when ExponentOfE(divisor) is { } exponent => -exponent,
+                    Integer(1) => Integer.Zero,
+                    _ when power == MathS.e => Integer.One,
+                    _ => null
+                };
+            }
+        }
+
         public partial record Mulf
         {
             private protected override Entity IntrinsicCondition => Boolean.True;
