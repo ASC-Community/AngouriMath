@@ -7,7 +7,6 @@
 
 using System;
 using System.Threading.Tasks;
-using AngouriMath.Core.Budgets;
 using AngouriMath.Extensions;
 using Xunit;
 using static AngouriMath.Entity;
@@ -30,20 +29,9 @@ namespace AngouriMath.Tests.Algebra
         public void TheRootsAreThoseInXTimesTheScale()
         {
             const string equation = "(-3) + (-3) * x + (2 + i) * x^2 + (i - x) * x * sgn((-3 + i) - x)";
-            // The Gröbner basis bounds itself by five seconds of wall clock, which a loaded
-            // runner can spend on the equation as written; a budget of two minutes keeps the
-            // answer from depending on the machine, and the scaled solve is still bounded below.
-            // The setting is thread-static, so the task sets its own.
-            var budget = new WorkBudget { Time = TimeSpan.FromMinutes(2) };
-            FiniteSet asWritten;
-            using (MathS.Settings.Budget.Set(budget))
-                asWritten = Assert.IsType<FiniteSet>($"{equation} = 0".ToEntity().Solve("x"));
+            var asWritten = Assert.IsType<FiniteSet>($"{equation} = 0".ToEntity().Solve("x"));
             Assert.Equal(2, asWritten.Count);
-            var solving = Task.Run(() =>
-            {
-                using var _ = MathS.Settings.Budget.Set(budget);
-                return $"{equation.Replace("x", "(10^(-12) * x)")} = 0".ToEntity().Solve("x");
-            });
+            var solving = Task.Run(() => $"{equation.Replace("x", "(10^(-12) * x)")} = 0".ToEntity().Solve("x"));
             Assert.True(solving.Wait(TimeSpan.FromMinutes(2)), "the scaled equation is solved");
             var scaled = Assert.IsType<FiniteSet>(solving.Result);
             Assert.Equal(2, scaled.Count);

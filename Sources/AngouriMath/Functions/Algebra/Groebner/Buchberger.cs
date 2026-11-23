@@ -43,13 +43,27 @@ namespace AngouriMath.Functions.Algebra.Groebner
         internal const int MaxQuotientDimension = 512;
 
         /// <summary>
-        /// What this algorithm bounds itself by when the caller has expressed no opinion.
-        /// The clock and no step ceiling, which is what it has always done — a step ceiling
-        /// here would be a different answer on the systems that currently finish just inside
-        /// five seconds, and picking one is a measurement rather than a default.
+        /// What this algorithm bounds itself by when the caller has expressed no opinion:
+        /// steps, with the clock as a backstop, as <see cref="EquationSolver.SystemSolveBudget"/>
+        /// is bounded.
         /// </summary>
+        /// <remarks>
+        /// A clock of five seconds was the bound, and it made the answer depend on the machine:
+        /// the equation (-3) - 3x + (2 + i) x^2 + (i - x) x sgn(-3 + i - x) = 0 is answered on a
+        /// desktop and spent the five seconds on the Windows and macOS runners, where it came
+        /// back as a conditional set. Measured over 4800 solves of generated equations
+        /// in conj, Re, abs and sgn, as written and with x written as 10^-12 x and 10^20 x, and
+        /// over the unit suite, no computation that finishes takes more than 2638 steps, and
+        /// cyclic-5 declines for its roots after 5523. 20 000 admits all of them with room to
+        /// spare and is about what five seconds allowed on a desktop: cyclic-6 stopped at
+        /// 13 643 steps and 3.6 s, and stops at the ceiling now. Most of the time those computations
+        /// take is not in steps at all but in finding and checking the roots back-substituted,
+        /// which have their own bounds; a step here, a reduction of polynomials no wider than
+        /// the ceilings above, is tens of microseconds. The clock stays for what is not
+        /// measured, set where it cannot decide a computation that answers.
+        /// </remarks>
         [ConstantField]
-        internal static readonly WorkBudget Default = new() { Time = TimeSpan.FromSeconds(5) };
+        internal static readonly WorkBudget Default = new() { Steps = 20_000, Time = TimeSpan.FromSeconds(60) };
 
         // An allowance: a set MathS.Settings.Budget replaces Default, so a caller can raise it.
         private readonly BudgetLedger ledger = BudgetLedger.For("Gröbner", Default, BudgetRole.Allowance);
