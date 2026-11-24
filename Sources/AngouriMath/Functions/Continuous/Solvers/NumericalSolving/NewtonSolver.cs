@@ -113,6 +113,15 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
                 }
             foreach (var start in RealSignChanges(f, settings))
                 IterateFrom(start);
+            // An equation in real numbers has its non-real roots in conjugate pairs, wherever its
+            // functions are their own conjugates off their cuts, as the elementary ones are; but
+            // the grid can reach one of a pair and not the other. 2^x = x^2 came back with
+            // 7.6545 + 11.9537i and without 7.6545 - 11.9537i. So each conjugate is iterated from,
+            // and kept, like any other candidate, only where the equation holds there: across a
+            // cut the pair can fail to be one. https://github.com/asc-community/AngouriMath/issues/2546
+            if (HasOnlyRealNumbers(expr))
+                foreach (var root in res.Where(root => !root.ImaginaryPart.IsZero).ToList())
+                    IterateFrom(NumericsComplex.Conjugate(root.ToNumerics()));
             // Rounded and collapsed first, then verified: both cut down the duplicates the
             // grid search produces, so there is less to verify, and what gets verified is
             // the values actually handed back.
@@ -129,6 +138,10 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
                 return null;
             return distinct;
         }
+
+        /// <summary>Whether every number written in <paramref name="expr"/> is real.</summary>
+        private static bool HasOnlyRealNumbers(Entity expr)
+            => expr.Nodes.All(node => node is not Complex number || number.ImaginaryPart.IsZero);
 
         /// <summary>
         /// Whether no two of the real <paramref name="roots"/> that are more than a thousandth

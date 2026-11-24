@@ -57,6 +57,21 @@ equation with no terms to cancel, such as one function's value.
 | `"(x * (2 - 4x + 2x^2)^(1/3) - 2) * 10^(-12) = 0".ToEntity().Solve("x")` | five roots, two of which leave 3.46e-12 | the three of `x * (2 - 4x + 2x^2)^(1/3) = 2` |
 | `"(sin(x) - x) * 10^12 = 0".ToEntity().Solve("x")` | `{ 0 }` | the nine of `sin(x) = x` |
 
+### A non-real root of a real equation comes with its conjugate
+
+**More roots in the same finite set.** An equation in real numbers has its non-real roots in conjugate pairs, and
+Newton's method, started from points of a box, could reach one of a pair and not the other. The conjugate of each
+non-real root it finds is now tried as well, and kept where the equation holds there
+([#2546](https://github.com/asc-community/AngouriMath/issues/2546)). The answer can still be short of roots: that is
+the search, and not this.
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"2^x = x^2".ToEntity().Solve("x")` | `{ -0.7667, 2, 4, 7.6545 + 11.9537i }` | and `7.6545 - 11.9537i` |
+| `"cosh(x) = x".ToEntity().Solve("x")` | 7 roots, `-3.1068 + 10.7144i` without `-3.1068 - 10.7144i` | 8, with it |
+| `"5^x = x^4 + 2".ToEntity().Solve("x")` | 8 roots | 9, with `6.1928 - 10.3744i` |
+| `"x^x = 2".ToEntity().Solve("x")` | 10 roots | 11, with `5.0679 - 10.4842i` |
+
 ### A polynomial's numerical roots are found whatever their size
 
 **Silent: answers gain roots that were missing, and lose numbers that were not roots.** A polynomial whose roots
