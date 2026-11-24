@@ -35,7 +35,9 @@
 # per-commit, so every column compiles the same file and runs the same file. Measured: v2.1.0 and
 # v2.2.0 build and run under it.
 
-d2eaa257f07b271901bd2a8527e1aea6c1f292a8
-8987b77d88809c35aa270278641fb2a186d4206f
-d2eaa257f07b271901bd2a8527e1aea6c1f292a8
-8987b77d88809c35aa270278641fb2a186d4206f
+v2.1.0
+v2.2.0
+v2.3.0
+v2.4.0
+v2.5.0
+master
