@@ -446,7 +446,8 @@ namespace AngouriMath
         {
             // The factorial is the gamma function one along, and the gamma function has no
             // zeros anywhere in the complex plane, so x! = 0 has no roots. Every other value
-            // has some -- x! = 6 at 3 -- and no node here writes them.
+            // has some -- x! = 6 at 3 -- and no node here writes them. An equation solved for x
+            // has its whole roots from FactorialSolver before it is inverted.
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
                 value is Integer { IsZero: true } ? Enumerable.Empty<Entity>() : null;
         }

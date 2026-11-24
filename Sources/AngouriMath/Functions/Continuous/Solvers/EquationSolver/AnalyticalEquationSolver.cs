@@ -168,6 +168,13 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (!compensateSolving && InverseTrigonometricPairSolver.Solve(gathered, x) is { } bySquares)
                 return bySquares;
 
+            // And a factorial or gamma function beside a polynomial, which has infinitely many roots,
+            // by its whole roots and the equation for the rest: x + x! = x^3 is 5 and the rest, where
+            // Newton's method answered 13 decimals as though they were all of them.
+            // https://github.com/asc-community/AngouriMath/issues/2538
+            if (!compensateSolving && FactorialSolver.Solve(expr, x) is { } byWholeNumbers)
+                return byWholeNumbers;
+
             // Whether a candidate root really is one. The loose tolerance that guesses the
             // rational must not also be what decides this: at 1e-7, x^41 + 6x + 1 accepted
             // -1/6, whose residual is -1.25e-32 -- small, but the difference between an
@@ -462,9 +469,6 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             if (FractionedPolynoms.TrySolve(expr, x, out var fractioned) && fractioned is FiniteSet elsFracs)
                 return (Set)elsFracs.Select(ent => TryDowncast(expr, x, ent)).ToSet().InnerSimplified;
             // // //
-
-            // TODO: Solve factorials (Needs Lambert W function)
-            // https://mathoverflow.net/a/28977
 
             // A polynomial with rational coefficients that no route above writes in closed form has
             // all its roots by the Durand-Kerner iteration, which settles every root of each square-free
