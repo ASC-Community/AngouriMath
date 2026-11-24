@@ -40,7 +40,32 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
-## Unreleased — since 2.8.0
+## 2.9.0 — since 2.8.0
+
+**Read these first.**
+
+- **An equation in a factorial or the gamma function is answered as a union with a set builder, not a `FiniteSet`.**
+  `x + x! = x^3` is `{ 5 } \/ { x : x + x! = x ^ 3 and not x = 5 }`, where it was a finite set of decimals that was short
+  of roots. Code that takes the answer apart as a `FiniteSet` sees another node. See *An equation in a factorial is
+  answered with its whole roots and the equation for the rest*.
+- **Calls that change from throwing to returning, or the reverse.**
+  - `MathS.Parse` and `Entity.TryParse` return a refused call where they threw. See *`MathS.Parse` and
+    `Entity.TryParse` return a refused call rather than throw it*.
+  - `norm(v)` and `beta(x)` with one argument throw, where they parsed as products. See *`norm(v)` and `beta(x)` with
+    one argument are refused*.
+- **Silent: an equality of two constants is `False` where it was `True`** whenever their difference is below `1e-16`
+  and not zero, such as `10^(-20) = 2 * 10^(-20)`. See *Two constants are equal only when their difference is zero*.
+- **Silent: a small value is the value, not `0`.** The special functions, `sinh` and `tanh`, the trigonometric
+  functions and the logarithm of a non-real number, the modulus of a decimal, and a decimal literal below `1e-50`
+  keep a value or part of a value that read as 0. Code that compared such a value with 0 gets another answer. Most of
+  the entries from *`zeta` keeps a small part* to *`cot` keeps a small value, and a value far off the real line* are
+  these.
+- **Silent: `arcosh` and `arsech` take their principal values.** `arcosh(z)` came out negated wherever `Re z < 0`:
+  `arcosh(-2)` was `-1.317… + πi`, and is `1.317… + πi`. Their printed forms change everywhere. See *`arcosh` and
+  `arsech` take their principal values*.
+- **Silent: `Solve` answers more equations, exactly, and with the roots they were missing.** Most of this release's
+  entries are of this kind; one also leaves a polynomial unsolved where a candidate root fails it, rather than answer
+  wrong or missing roots. See *A polynomial with a candidate root that fails it is left unsolved*.
 
 ### An equation multiplied by a number has the roots it had
 
