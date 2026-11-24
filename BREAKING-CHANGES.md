@@ -153,6 +153,21 @@ equation is now divided by that constant first, which changes no root.
 | `"sqrt(2) * ln(x) + sqrt(2) * ln(x + 1) = sqrt(2)".ToEntity().Solve("x")` | `{ 1.2228702297210447547... }` | `{ (-1 + sqrt(1 - 4 * -e)) / 2 }` |
 | `"e^(-50) * arctan(x) + e^(-50) * arctan(2x) = e^(-50) * 3 * pi / 4".ToEntity().Solve("x")` | `{ 1.7807764064044142582... }` | `{ (-3 - sqrt(17)) / (-4) }` |
 
+### An equation in a factorial is answered with its whole roots and the equation for the rest
+
+**A set of another type: a finite set of decimals becomes a union with a set builder.** An equation in a factorial,
+or a gamma function, and a polynomial has infinitely many roots, two between some pairs of the poles at the negative
+whole numbers, and Newton's method answered the few it found in its box as a finite set, short of roots inside the box
+as well. Its whole roots are now found exactly, by a search that ends with a proof that no larger one is a root, and
+the rest are left as the equation. An equation with no whole root is left unsolved
+([#2538](https://github.com/asc-community/AngouriMath/issues/2538)).
+
+| Input | Was (2.8.0) | Now |
+|---|---|---|
+| `"x + x! = x^3".ToEntity().Solve("x")` | 13 decimals, the real ones -3.9972, 1.3744 and 5, without -3.0200 | `{ 5 } \/ { x : x + x! = x ^ 3 and not x = 5 }` |
+| `"gamma(x) = 1".ToEntity().Solve("x")` | `{ 1, 2, ... }` and complex decimals, no negative root | `{ 1, 2 } \/ { x : (x - 1)! = 1 and not x = 1 and not x = 2 }` |
+| `"x! = 24".ToEntity().Solve("x")` | `{ x : x! = 24 }` | `{ 4 } \/ { x : x! = 24 and not x = 4 }` |
+
 ### `zeta` keeps a small part
 
 **Silent: `0` becomes the value.** Each part was taken against 1, so a part below about `1e-50` read as 0. It is now
