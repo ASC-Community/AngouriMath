@@ -44,10 +44,10 @@ namespace AngouriMath.Functions.Algebra.Groebner
 
         /// <summary>
         /// What this algorithm bounds itself by when the caller has expressed no opinion:
-        /// steps, with the clock as a backstop, as <see cref="EquationSolver.SystemSolveBudget"/>
-        /// is bounded.
+        /// steps, and no clock.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// A clock of five seconds was the bound, and it made the answer depend on the machine:
         /// the equation (-3) - 3x + (2 + i) x^2 + (i - x) x sgn(-3 + i - x) = 0 is answered on a
         /// desktop and spent the five seconds on the Windows and macOS runners, where it came
@@ -56,14 +56,21 @@ namespace AngouriMath.Functions.Algebra.Groebner
         /// over the unit suite, no computation that finishes takes more than 2638 steps, and
         /// cyclic-5 declines for its roots after 5523. 20 000 admits all of them with room to
         /// spare and is about what five seconds allowed on a desktop: cyclic-6 stopped at
-        /// 13 643 steps and 3.6 s, and stops at the ceiling now. Most of the time those computations
-        /// take is not in steps at all but in finding and checking the roots back-substituted,
-        /// which have their own bounds; a step here, a reduction of polynomials no wider than
-        /// the ceilings above, is tens of microseconds. The clock stays for what is not
-        /// measured, set where it cannot decide a computation that answers.
+        /// 13 643 steps and 3.6 s, and stops at the ceiling now.
+        /// </para>
+        /// <para>
+        /// No clock, not even a generous one, because the clock was never timing the steps. A
+        /// step, a reduction of polynomials no wider than the ceilings above, is tens of
+        /// microseconds. Most of the time is spent between two steps, in solving the univariate
+        /// equations back-substituted and deciding their roots exactly, which have bounds of their
+        /// own, and the clock is read only at the next step, after that work is done. A
+        /// backstop of 60 s threw a finished computation away on the macOS runner: the equation
+        /// above with x written as 10^-12 x took 175 steps and 93 s there, and about 8 s on a
+        /// desktop.
+        /// </para>
         /// </remarks>
         [ConstantField]
-        internal static readonly WorkBudget Default = new() { Steps = 20_000, Time = TimeSpan.FromSeconds(60) };
+        internal static readonly WorkBudget Default = new() { Steps = 20_000 };
 
         // An allowance: a set MathS.Settings.Budget replaces Default, so a caller can raise it.
         private readonly BudgetLedger ledger = BudgetLedger.For("Gröbner", Default, BudgetRole.Allowance);
