@@ -465,6 +465,35 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         }
 
         /// <summary>
+        /// A repeated factor in more than one variable, past the substitution's reach: the
+        /// lifts need an image with no repeated factor, so the square-free part
+        /// <c>p / gcd(p, ∂p/∂x)</c> is factored and each factor is divided out as often as it
+        /// goes.
+        /// </summary>
+        /// <remarks>
+        /// Every row was refused before. Checked by value, by the number of distinct factors in
+        /// <c>x</c>, and by the highest power, which is where the multiplicities show.
+        /// </remarks>
+        [Theory]
+        [InlineData("(x + y + z) ^ 2 * (x - y)", 2, 2)]
+        [InlineData("(x ^ 2 + y * z + 1) ^ 3", 1, 3)]
+        [InlineData("(x ^ 3 - 4 * y ^ 9) ^ 2 * (x + 2 * y ^ 2)", 2, 2)]
+        [InlineData("(x - y) ^ 2 * (x + y) ^ 3", 2, 3)]
+        [InlineData("(x + y + z + w) ^ 2 * (x - y * w) ^ 2", 2, 2)]
+        [InlineData("(x ^ 2 - y ^ 2) ^ 4", 2, 4)]
+        public void ARepeatedFactorIsFactoredThroughTheSquareFreePart(
+            string input, int distinct, int highest)
+        {
+            var factored = MathS.Polynomials.Factor(input.ToEntity(), "x");
+            Assert.NotNull(factored);
+            AgreeAtWholePoints(input.ToEntity(), factored!);
+            var pieces = (factored is Mulf ? Mulf.LinearChildren(factored).ToList() : new System.Collections.Generic.List<Entity> { factored! })
+                .Where(piece => piece.ContainsNode("x")).ToList();
+            Assert.Equal(distinct, pieces.Count);
+            Assert.Equal(highest, pieces.Max(piece => piece is Powf(_, Integer power) ? (int)power : 1));
+        }
+
+        /// <summary>
         /// A polynomial in three variables that the lift shows does not factor is handed back,
         /// which is an answer: a factorisation would survive the substitution, each factor
         /// keeping its degree in <c>x</c>, so an image that does not factor is a proof.
