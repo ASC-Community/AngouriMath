@@ -999,9 +999,11 @@ In the other order each value computed at the defaults came back inside the scop
 
 **Not silent: what was refused now parses.** `dot(a, b)` and `cross(a, b)` threw `InvalidArgumentParseException`
 where an operand was not a vector written out. Now they are the nodes `DotProductf` and `CrossProductf`. Each is
-computed once both operands are vectors: when they are substituted, by `Simplify`, `Evaled`, or a compiled delegate
-taking `double[]`, `double[,]` or `Complex[]`. Of vectors written out each is still computed as it is parsed, and prints
-as before. Vectors of different lengths, or a `cross` of vectors without three components, leave the node as it is.
+computed once both operands are vectors, by `Simplify`, `Evaled`, or a compiled delegate taking `double[]`, `double[,]`
+or `Complex[]`. Substituting vectors for the names puts them in and computes nothing, as in every node:
+`dot([0, 0, 1], v)` with `v = [x, y, z]` substituted is `dot([0, 0, 1], [x, y, z])` until it is simplified or
+evaluated. Of vectors written out each is still computed as it is parsed, and prints as before. Vectors of different
+lengths, or a `cross` of vectors without three components, leave the node as it is.
 A number, or a written vector that cannot fit, is refused as before. The operands of `cross` are kept in their order, and
 so is a product with a `cross` in it. A name beside a written vector, as in `dot(x * [1, 2], [3, 4])`, may stand for a
 matrix, so the operand is no longer multiplied into the components as a number

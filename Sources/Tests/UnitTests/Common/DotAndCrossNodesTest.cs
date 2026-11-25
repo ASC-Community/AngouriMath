@@ -17,8 +17,9 @@ namespace AngouriMath.Tests.Common
 {
     /// <summary>
     /// <c>dot(a, b)</c> and <c>cross(a, b)</c> of a name that stands for a vector: nodes, computed once both operands are
-    /// vectors, by substitution, simplification, evaluation or a compiled delegate. Every value is checked against one
-    /// computed here from the components, at real, negative and non-real vectors.
+    /// vectors, by simplification, evaluation or a compiled delegate. Substitution puts the vectors in and computes
+    /// nothing, as in every other node. Every value is checked against one computed here from the components, at real,
+    /// negative and non-real vectors.
     /// <a href="https://github.com/asc-community/AngouriMath/issues/105">#105</a>
     /// </summary>
     [Trait("Area", "Common")]
@@ -116,6 +117,21 @@ namespace AngouriMath.Tests.Common
                     // A row is a vector too, as it is written out.
                     Near(expected, Value("dot(a, b)".ToEntity().Substitute("a", Row(a)).Substitute("b", Column(b)).Simplify()));
                 }
+        }
+
+        // Substitution computes nothing, in these nodes as in a determinant or a sine: the vectors put in are multiplied
+        // out by Simplify, Evaled or a compiled delegate.
+        [Fact]
+        public void SubstitutionPutsTheVectorsInAndLeavesTheProductToSimplification()
+        {
+            var dot = "dot([0, 0, 1], v)".ToEntity().Substitute("v", "[x, y, z]");
+            Assert.Equal(new Entity.DotProductf("[0, 0, 1]", "[x, y, z]"), dot);
+            Assert.Equal("z".ToEntity(), dot.Simplify());
+            Assert.Equal("z".ToEntity(), dot.InnerSimplified);
+            var cross = "cross(W, r)".ToEntity().Substitute("W", "[0, 0, w]").Substitute("r", "[x, y, z]");
+            Assert.Equal(new Entity.CrossProductf("[0, 0, w]", "[x, y, z]"), cross);
+            Assert.Equal("[-w * y, w * x, 0]".ToEntity(), cross.Simplify());
+            Assert.Equal(new Entity.Determinantf("[[1, 2], [3, 4]]"), "det(A)".ToEntity().Substitute("A", "[[1, 2], [3, 4]]"));
         }
 
         [Fact]
