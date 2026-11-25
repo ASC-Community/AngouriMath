@@ -191,7 +191,7 @@ namespace AngouriMath.Functions
         /// <c>Σ a_i · L^(n-1-i) · x^i</c> — the same polynomial with a leading coefficient of
         /// one, in a variable that stands for <c>x·L</c>.
         /// </summary>
-        private static MultivariatePolynomial? MonicIn(
+        internal static MultivariatePolynomial? MonicIn(
             MultivariatePolynomial poly, int main, MultivariatePolynomial leading, int degreeInMain)
         {
             var result = MultivariatePolynomial.Zero(poly.VariableCount);
@@ -230,7 +230,7 @@ namespace AngouriMath.Functions
         /// <c><paramref name="main"/> · <paramref name="by"/></c> — so the coefficient of
         /// <c>x^j</c> is multiplied by <c>by^j</c>.
         /// </summary>
-        private static MultivariatePolynomial? Substitute(
+        internal static MultivariatePolynomial? Substitute(
             MultivariatePolynomial poly, int main, MultivariatePolynomial by)
         {
             var result = MultivariatePolynomial.Zero(poly.VariableCount);

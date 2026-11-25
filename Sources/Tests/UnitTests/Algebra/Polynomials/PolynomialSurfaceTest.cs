@@ -423,18 +423,17 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         }
 
         /// <summary>
-        /// Three or more variables, past the substitution's reach: the ones other than
-        /// <c>x</c> are substituted into one, in mixed radix, and the lift in two variables
-        /// factors what that leaves.
+        /// Three or more variables, past the substitution's reach. Each variable other than
+        /// <c>x</c> is lifted in turn from a factorisation at a point, and where that declines
+        /// the others are substituted into one, in mixed radix, and lifted as two.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Every row was refused before. <c>x ^ 3 - (y + z) ^ 3</c> stood in a test of its own
-        /// whose remark said a row that starts factoring belongs in a theory like this one, and
-        /// the two products of linear factors stood in <c>PastTheSubstitutionsCeilingItRefuses</c>.
-        /// The substitution there took in <c>x</c> as well and over-factored; here <c>x</c> is
-        /// left alone, so the image is a polynomial in <c>x</c> and one other variable, and an
-        /// evaluation image of that has the factors the answer has.
+        /// Every row was refused before
+        /// https://github.com/asc-community/AngouriMath/pull/2552. <c>x ^ 3 - (y + z) ^ 3</c> stood in a test of
+        /// its own whose remark said a row that starts factoring belongs in a theory like this
+        /// one, and the two products of linear factors stood in a test of the substitution's
+        /// ceiling.
         /// </para>
         /// <para>
         /// Checked by value and by the number of pieces, as the two-variable rows above are:
@@ -454,11 +453,66 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         [InlineData("(x ^ 3 + y ^ 2 * z + w) * (x ^ 2 - y * z ^ 2 + 1)", 2)]
         [InlineData("(x ^ 5 + y ^ 4 * z ^ 4 + y + z) * (x ^ 3 - y ^ 3 * z ^ 3 + 2)", 2)]
         [InlineData("(2 * x + y) * (3 * x - z * w) * (x + y * w)", 3)]
-        public void ThreeOrMoreVariablesAreLiftedAsTwo(string input, int pieces)
+        public void ThreeOrMoreVariablesAreFactored(string input, int pieces)
         {
             var factored = MathS.Polynomials.Factor(input.ToEntity(), "x");
             Assert.NotNull(factored);
             Assert.IsType<Mulf>(factored);
+            AgreeAtWholePoints(input.ToEntity(), factored!);
+            Assert.Equal(pieces,
+                Mulf.LinearChildren(factored!).Count(piece => piece.ContainsNode("x")));
+        }
+
+        /// <summary>
+        /// Past what the substitution into one variable holds: lifting one variable at a time
+        /// costs the sum of their degrees where the substitution costs the product.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Every row was refused on 2.9.0 and after
+        /// https://github.com/asc-community/AngouriMath/pull/2552. <c>x ^ 7 - (y + z ^ 3) ^ 7</c> has degree 7
+        /// in <c>y</c> and 21 in <c>z</c>, so the substituted image has degree
+        /// <c>8 · 22 - 1 = 175</c>, past the 127 one exponent holds; lifted in turn, the deepest
+        /// lift is 21.
+        /// </para>
+        /// <para>
+        /// The fourth row is <c>x ^ 3 + w ^ 3</c> at <c>z = 1</c>, a slice with a factor the
+        /// polynomial lacks, which the lift cannot follow; it is answered from another point.
+        /// </para>
+        /// </remarks>
+        [Theory]
+        [InlineData("x ^ 7 - (y + z ^ 3) ^ 7", 2)]
+        [InlineData("x ^ 6 - (y * z * w) ^ 6", 4)]
+        [InlineData("(x + 4 * y * z ^ 3 * w ^ 2) * (x ^ 2 + 4 * y ^ 3 * z ^ 3 * w)", 2)]
+        [InlineData("(x - 1 - 5 * z ^ 2 * w - 4 * y ^ 2) * (x ^ 3 + z * w ^ 3) * (x + 4 * z ^ 2 * w ^ 3 - 4 * y * z ^ 2)", 3)]
+        [InlineData("(x ^ 2 + y ^ 7 * z ^ 5 + 1) * (x ^ 3 - y ^ 9 + z ^ 8 * w)", 2)]
+        public void EachVariableIsLiftedInTurn(string input, int pieces)
+        {
+            var factored = MathS.Polynomials.Factor(input.ToEntity(), "x");
+            Assert.NotNull(factored);
+            AgreeAtWholePoints(input.ToEntity(), factored!);
+            Assert.Equal(pieces,
+                Mulf.LinearChildren(factored!).Count(piece => piece.ContainsNode("x")));
+        }
+
+        /// <summary>
+        /// A leading coefficient in <c>x</c> that is a polynomial in the others: the lift is
+        /// asked about the monic <c>L ^ (n - 1) · f(z / L, …)</c>, and each factor of that is
+        /// mapped back.
+        /// </summary>
+        /// <remarks>
+        /// Every row was refused on 2.9.0 and after
+        /// https://github.com/asc-community/AngouriMath/pull/2552.
+        /// </remarks>
+        [Theory]
+        [InlineData("(y * x ^ 2 + z * w) * (x - y - w) * (z * x + 1)", 3)]
+        [InlineData("(y * z * x ^ 3 + w) * (x ^ 2 - w ^ 5 * z ^ 4 + y ^ 3)", 2)]
+        [InlineData("(y ^ 2 * z ^ 2 * x ^ 6 + w) * (x ^ 6 + y + z)", 2)]
+        [InlineData("(y * x ^ 2 + z) * (z * x ^ 2 + w) * (w * x ^ 2 + y) * (y * x + w + 1)", 4)]
+        public void ALeadingCoefficientInTheOthersIsMadeMonic(string input, int pieces)
+        {
+            var factored = MathS.Polynomials.Factor(input.ToEntity(), "x");
+            Assert.NotNull(factored);
             AgreeAtWholePoints(input.ToEntity(), factored!);
             Assert.Equal(pieces,
                 Mulf.LinearChildren(factored!).Count(piece => piece.ContainsNode("x")));
@@ -502,6 +556,9 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         [InlineData("x ^ 2 + y ^ 2 + z ^ 2")]
         [InlineData("x ^ 2 * y ^ 2 * z ^ 2 + 1")]
         [InlineData("x ^ 3 + y * z + w")]
+        [InlineData("x ^ 4 + y ^ 3 * z + w ^ 5 + 1")]
+        [InlineData("y * x ^ 2 + z + w")]
+        [InlineData("y * z * x ^ 3 + w ^ 2 + y")]
         public void ThreeVariablesThatDoNotFactorAreAnswered(string input)
         {
             var answered = MathS.Polynomials.Factor(input.ToEntity(), "x");
@@ -533,14 +590,14 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         }
 
         /// <summary>
-        /// The bound on that substitution: its image's degree in the variable standing for the
-        /// others is the product of their radices less one, and one exponent of the
-        /// representation holds 127. <c>x ^ 7 - (y + z ^ 3) ^ 7</c> has degree 7 in <c>y</c>
-        /// and 21 in <c>z</c>, so the image's degree is <c>8 * 22 - 1 = 175</c>.
+        /// What is still refused: a repeated factor whose square-free part the gcd does not
+        /// reach. <c>x ^ 2</c> divides this, so no image is square-free and the lifts cannot
+        /// start; the square-free part is <c>p / gcd(p, ∂p/∂x)</c>, and the subresultant
+        /// sequence for that gcd runs past the intermediate size the gcd allows.
         /// </summary>
         [Theory]
-        [InlineData("x ^ 7 - (y + z ^ 3) ^ 7")]
-        public void PastTheSubstitutionsCeilingItRefuses(string input)
+        [InlineData("(x ^ 3 - 5 * x ^ 2 * y ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2)")]
+        public void ARepeatedFactorTheGcdDoesNotReachIsRefused(string input)
             => Assert.Null(MathS.Polynomials.Factor(input.ToEntity(), "x"));
 
         /// <summary>
