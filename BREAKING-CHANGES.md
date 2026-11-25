@@ -40,6 +40,27 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
+## Unreleased — since 2.9.0
+
+### A polynomial in three or more variables is factored past the substitution's reach
+
+**Silent: a factorisation where there was a refusal, and a finer one where there was a partial one.**
+`MathS.Polynomials.Factor` factored a polynomial in three or more variables only while Kronecker's substitution reached
+it, an image of degree at most 32, and returned `null` past that. The variables other than the main one are now
+substituted into one, so the image is in two variables, and the evaluation-point lift that already factors two
+variables factors it. `Entity.Factorize` asks the same layer, so its answers change with it. Every factor is still
+checked by exact division of the input.
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `MathS.Polynomials.Factor("x ^ 3 - (y + z) ^ 3", "x")` | `null` | `(x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)` |
+| `MathS.Polynomials.Factor("(x + y) * (x + z) * (x + w) * (x + v)", "x")` | `null` | `(v + x) * (x + z) * (w + x) * (x + y)` |
+| `"x^3 - y^3 - 3 y^2 z - 3 y z^2 - z^3".Factorize()` | the input | `(x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)` |
+| `"x^4 + x^3*y + x^3*z + x^2*y*z + x^3*w + x^2*y*w + x^2*z*w + x*y*z*w".Factorize()` | `(w * x ^ 2 + w * x * z + x ^ 3 + x ^ 2 * z) * (x + y)` | `x * (x + z) * (w + x) * (x + y)` |
+| `"x ^ 3 - (y + z) ^ 3".Factorize()` | `-1 * (y + z - x) * ((y + z) ^ 2 + (y + z) * x + x ^ 2)` | `(x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)` |
+
+---
+
 ## 2.9.0 — since 2.8.0
 
 **Read these first.**

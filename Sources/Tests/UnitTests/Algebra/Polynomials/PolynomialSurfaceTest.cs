@@ -282,34 +282,6 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         }
 
         /// <summary>
-        /// The other reason a factorisation is declined, and it is not the degree ceiling: the
-        /// substitution's image <b>over-factors</b>, so the recombination is exponential in a
-        /// count the substitution itself inflates.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// Every row here factors mathematically and has an image well inside the degree the
-        /// machinery affords — 34 to 56, against a <c>PrimeFieldFactorization.MaxDegree</c> of
-        /// 64. Raising <c>IntegerPolynomial.MaxDegree</c> from 32 to 64 was measured and changes
-        /// none of them, which is why that is not the lever.
-        /// </para>
-        /// <para>
-        /// <c>x ^ 7 - y ^ 7</c> maps to <c>t ^ 7 * (1 - t ^ 49)</c>, whose factors are
-        /// cyclotomic: a two-factor bivariate becomes a one-variable polynomial with many
-        /// irreducibles. Not inflating that count is Hensel lifting with an evaluation
-        /// homomorphism, a different algorithm rather than a larger bound.
-        /// </para>
-        /// <para>
-        /// This test pins the <i>refusal</i>, not the limit. If one of these starts factoring,
-        /// something got better and the row belongs in the theory above.
-        /// </para>
-        /// </remarks>
-        [Theory]
-        [InlineData("x ^ 3 - (y + z) ^ 3")]
-        public void AnImageThatOverFactorsIsRefused(string input)
-            => Assert.Null(MathS.Polynomials.Factor(input.ToEntity(), "x"));
-
-        /// <summary>
         /// The rows that used to sit above, moved here because they factor now — which is what
         /// that test's remark asked for when it said it pins the refusal and not the limit.
         /// </summary>
@@ -450,9 +422,95 @@ namespace AngouriMath.Tests.Algebra.Polynomials
             Assert.Equal(Integer.Zero, (factored - input.ToEntity()).Simplify());
         }
 
+        /// <summary>
+        /// Three or more variables, past the substitution's reach: the ones other than
+        /// <c>x</c> are substituted into one, in mixed radix, and the lift in two variables
+        /// factors what that leaves.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Every row was refused before. <c>x ^ 3 - (y + z) ^ 3</c> stood in a test of its own
+        /// whose remark said a row that starts factoring belongs in a theory like this one, and
+        /// the two products of linear factors stood in <c>PastTheSubstitutionsCeilingItRefuses</c>.
+        /// The substitution there took in <c>x</c> as well and over-factored; here <c>x</c> is
+        /// left alone, so the image is a polynomial in <c>x</c> and one other variable, and an
+        /// evaluation image of that has the factors the answer has.
+        /// </para>
+        /// <para>
+        /// Checked by value and by the number of pieces, as the two-variable rows above are:
+        /// the product has to be the polynomial, and it has to be a product of as many
+        /// irreducible factors as the polynomial has.
+        /// </para>
+        /// </remarks>
         [Theory]
-        [InlineData("(x + y + z + w) * (x - y)")]
-        [InlineData("(x + y) * (x + z) * (x + w) * (x + v)")]
+        [InlineData("x ^ 3 - (y + z) ^ 3", 2)]
+        [InlineData("x ^ 6 - (y + z) ^ 6", 4)]
+        [InlineData("x ^ 10 - (y + z) ^ 10", 4)]
+        [InlineData("x ^ 4 - (y * z) ^ 4", 3)]
+        [InlineData("x ^ 8 - (y * z) ^ 8", 4)]
+        [InlineData("(x + y + z + w) * (x - y)", 2)]
+        [InlineData("(x + y) * (x + z) * (x + w) * (x + v)", 4)]
+        [InlineData("(x + y + z) * (x - y + 2 * z) * (x + w)", 3)]
+        [InlineData("(x ^ 3 + y ^ 2 * z + w) * (x ^ 2 - y * z ^ 2 + 1)", 2)]
+        [InlineData("(x ^ 5 + y ^ 4 * z ^ 4 + y + z) * (x ^ 3 - y ^ 3 * z ^ 3 + 2)", 2)]
+        [InlineData("(2 * x + y) * (3 * x - z * w) * (x + y * w)", 3)]
+        public void ThreeOrMoreVariablesAreLiftedAsTwo(string input, int pieces)
+        {
+            var factored = MathS.Polynomials.Factor(input.ToEntity(), "x");
+            Assert.NotNull(factored);
+            Assert.IsType<Mulf>(factored);
+            AgreeAtWholePoints(input.ToEntity(), factored!);
+            Assert.Equal(pieces,
+                Mulf.LinearChildren(factored!).Count(piece => piece.ContainsNode("x")));
+        }
+
+        /// <summary>
+        /// A polynomial in three variables that the lift shows does not factor is handed back,
+        /// which is an answer: a factorisation would survive the substitution, each factor
+        /// keeping its degree in <c>x</c>, so an image that does not factor is a proof.
+        /// </summary>
+        [Theory]
+        [InlineData("x ^ 2 + y ^ 2 + z ^ 2")]
+        [InlineData("x ^ 2 * y ^ 2 * z ^ 2 + 1")]
+        [InlineData("x ^ 3 + y * z + w")]
+        public void ThreeVariablesThatDoNotFactorAreAnswered(string input)
+        {
+            var answered = MathS.Polynomials.Factor(input.ToEntity(), "x");
+            Assert.NotNull(answered);
+            Assert.IsNotType<Mulf>(answered);
+            AgreeAtWholePoints(input.ToEntity(), answered!);
+        }
+
+        /// <summary>
+        /// Two polynomials agreeing exactly at whole-number points, which is how a product of
+        /// degree ten is compared with its expansion: <c>Simplify</c> of the difference does not
+        /// come back as <c>0</c> at that size, and exact evaluation does not round.
+        /// </summary>
+        private static void AgreeAtWholePoints(Entity expected, Entity actual)
+        {
+            var variables = expected.Vars.Concat(actual.Vars).Distinct().ToArray();
+            var random = new Random(20261125);
+            for (var trial = 0; trial < 8; trial++)
+            {
+                Entity left = expected, right = actual;
+                foreach (var variable in variables)
+                {
+                    Entity value = random.Next(-9, 10);
+                    left = left.Substitute(variable, value);
+                    right = right.Substitute(variable, value);
+                }
+                Assert.Equal(left.Evaled, right.Evaled);
+            }
+        }
+
+        /// <summary>
+        /// The bound on that substitution: its image's degree in the variable standing for the
+        /// others is the product of their radices less one, and one exponent of the
+        /// representation holds 127. <c>x ^ 7 - (y + z ^ 3) ^ 7</c> has degree 7 in <c>y</c>
+        /// and 21 in <c>z</c>, so the image's degree is <c>8 * 22 - 1 = 175</c>.
+        /// </summary>
+        [Theory]
+        [InlineData("x ^ 7 - (y + z ^ 3) ^ 7")]
         public void PastTheSubstitutionsCeilingItRefuses(string input)
             => Assert.Null(MathS.Polynomials.Factor(input.ToEntity(), "x"));
 
