@@ -82,8 +82,9 @@ namespace AngouriMath
             /// substituted into one, in mixed radix again, and lifted as two, while that image's
             /// degree is at most 127. The lifts need an image with no repeated factor, so a
             /// polynomial with one has its square-free part factored instead and the
-            /// multiplicities put back by division; where the greatest common divisor that part
-            /// needs is not reached, the answer is a refusal.
+            /// multiplicities put back by division. The greatest common divisor that part needs is
+            /// taken by evaluation at a large integer, after Char, Geddes and Gonnet, and by the
+            /// subresultant sequence where that declines.
             /// </para>
             /// <para>
             /// <b>A refusal is possible and a wrong answer is not.</b> Every candidate factor is

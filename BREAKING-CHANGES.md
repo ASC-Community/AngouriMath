@@ -89,6 +89,20 @@ layer. Every factor is still checked by exact division of the input.
 | `MathS.Polynomials.Factor("(y * x ^ 2 + z * w) * (x - y - w) * (z * x + 1)", "x")` | `null` | `-1 * (w - x + y) * (x * z + 1) * (w * z + x ^ 2 * y)` |
 | `"x ^ 4 * y * z + x ^ 3 * y + -x ^ 3 * y ^ 2 * z + -x ^ 2 * y ^ 2 + -w * x ^ 3 * y * z + -w * x ^ 2 * y + w * x ^ 2 * z ^ 2 + w * x * z + -w * x * y * z ^ 2 + -w * y * z + -w ^ 2 * x * z ^ 2 + -w ^ 2 * z".Factorize()` | `w ^ 2 * (-x * z ^ 2 + -z) + w * (x * (z + -y * z ^ 2) + (x * z) ^ 2 + -y * z) + y * (z * (x ^ 4 + -w * x ^ 3) + x ^ 3 + -w * x ^ 2) + y ^ 2 * (-x ^ 3 * z + -x ^ 2)` | `(x * z + 1) * -1 * (w * z + x ^ 2 * y) * (w - x + y)` |
 
+### The square-free part of a larger polynomial is reached
+
+**Silent: a factorisation where there was a refusal, or a finer one where there was a partial one.** Factoring a
+polynomial with a repeated factor goes through its square-free part, `p / gcd(p, ∂p/∂x)`, and the subresultant
+sequence that computed that gcd multiplies through by leading coefficients that are polynomials, so on a product of
+three factors in three variables it ran out of room and the factorisation was refused. The gcd is now taken first by
+evaluating at a large integer and reading the answer back from its digits (Char, Geddes and Gonnet's GCDHEU), and
+checked by exact division. `Entity.Factorize` asks the same layer.
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `MathS.Polynomials.Factor("(x ^ 3 - 5 * x ^ 2 * y ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2)", "x")` | `null` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
+| `"3 * x ^ 6 + (-3) * x ^ 5 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y * z ^ 2 + x ^ 5 * y ^ 3 * z ^ 3 + -x ^ 4 * y ^ 6 * z ^ 5 + (-5) * x ^ 4 * y ^ 4 * z ^ 5 + (-3) * x ^ 4 * y ^ 2 + 3 * x ^ 3 * y ^ 5 * z ^ 2 + 15 * x ^ 3 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y ^ 2 + 15 * x ^ 4 * y ^ 5 * z ^ 2 + 75 * x ^ 4 * y ^ 3 * z ^ 2 + (-5) * x ^ 4 * y ^ 5 * z ^ 3 + 5 * x ^ 3 * y ^ 8 * z ^ 5 + 25 * x ^ 3 * y ^ 6 * z ^ 5 + 15 * x ^ 3 * y ^ 4 + (-15) * x ^ 2 * y ^ 7 * z ^ 2 + (-75) * x ^ 2 * y ^ 5 * z ^ 2".Factorize()` | `x ^ 2 * z ^ 2 * ((-15) * y ^ 7 + (-75) * y ^ 5) + x ^ 3 * (z ^ 5 * (5 * y ^ 8 + 25 * y ^ 6) + z ^ 2 * (3 * y ^ 5 + 15 * y ^ 3) + 15 * y ^ 4) + x ^ 4 * (z ^ 2 * (15 * y ^ 5 + 75 * y ^ 3) + z ^ 5 * (-y ^ 6 + (-5) * y ^ 4) + (-3) * y ^ 2 + (-5) * y ^ 5 * z ^ 3) + x ^ 5 * (z ^ 2 * ((-3) * y ^ 3 + (-15) * y) + (y * z) ^ 3 + (-15) * y ^ 2) + 3 * x ^ 6` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
+
 ---
 
 ## 2.9.0 — since 2.8.0

@@ -535,6 +535,10 @@ namespace AngouriMath.Tests.Algebra.Polynomials
         [InlineData("(x - y) ^ 2 * (x + y) ^ 3", 2, 3)]
         [InlineData("(x + y + z + w) ^ 2 * (x - y * w) ^ 2", 2, 2)]
         [InlineData("(x ^ 2 - y ^ 2) ^ 4", 2, 4)]
+        // Refused until the gcd behind the square-free part was asked by evaluation at a large
+        // integer: the subresultant sequence ran out of room on both.
+        [InlineData("(x ^ 3 - 5 * x ^ 2 * y ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2)", 4, 2)]
+        [InlineData("(3 * x + 4 * z ^ 3 + 4 * y ^ 3 * z ^ 2 - 3 * y ^ 2 * z * w) * (2 * x - 4 * w - 4 * z * w ^ 2 + y ^ 2 * z * w ^ 2) * (x + z ^ 3 - 2 * z * w ^ 3) ^ 2", 3, 2)]
         public void ARepeatedFactorIsFactoredThroughTheSquareFreePart(
             string input, int distinct, int highest)
         {
@@ -588,17 +592,6 @@ namespace AngouriMath.Tests.Algebra.Polynomials
                 Assert.Equal(left.Evaled, right.Evaled);
             }
         }
-
-        /// <summary>
-        /// What is still refused: a repeated factor whose square-free part the gcd does not
-        /// reach. <c>x ^ 2</c> divides this, so no image is square-free and the lifts cannot
-        /// start; the square-free part is <c>p / gcd(p, ∂p/∂x)</c>, and the subresultant
-        /// sequence for that gcd runs past the intermediate size the gcd allows.
-        /// </summary>
-        [Theory]
-        [InlineData("(x ^ 3 - 5 * x ^ 2 * y ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2)")]
-        public void ARepeatedFactorTheGcdDoesNotReachIsRefused(string input)
-            => Assert.Null(MathS.Polynomials.Factor(input.ToEntity(), "x"));
 
         /// <summary>
         /// The main variable is a parameter and not a convention: the same polynomial factored

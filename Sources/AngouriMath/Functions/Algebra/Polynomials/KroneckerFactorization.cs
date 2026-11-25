@@ -147,7 +147,12 @@ namespace AngouriMath.Functions
             var variables = new int[poly.VariableCount];
             for (var i = 0; i < variables.Length; i++)
                 variables[i] = i;
-            if (PolynomialGcd.Gcd(poly, derivative, variables, 0) is not { } common
+            // The evaluation at a large integer first: the subresultant sequence multiplies
+            // through by leading coefficients that are polynomials, and on a product of three
+            // factors in three variables it spent 172 ms running out of room where this took
+            // 4 ms. Either is checked by division, so the order costs nothing in soundness.
+            if ((HeuristicGcd.Gcd(poly, derivative)
+                    ?? PolynomialGcd.Gcd(poly, derivative, variables, 0)) is not { } common
                 || common.DegreeIn(main) < 1)
                 return null;
             if (poly.DivideExact(common) is not { } distinct)
