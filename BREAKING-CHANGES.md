@@ -54,9 +54,9 @@ checked by exact division of the input.
 | Input | Was (2.9.0) | Now |
 |---|---|---|
 | `MathS.Polynomials.Factor("x ^ 3 - (y + z) ^ 3", "x")` | `null` | `(x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)` |
-| `MathS.Polynomials.Factor("(x + y) * (x + z) * (x + w) * (x + v)", "x")` | `null` | `(v + x) * (x + z) * (w + x) * (x + y)` |
+| `MathS.Polynomials.Factor("(x + y) * (x + z) * (x + w) * (x + v)", "x")` | `null` | `(w + x) * (x + z) * (x + y) * (v + x)` |
 | `"x^3 - y^3 - 3 y^2 z - 3 y z^2 - z^3".Factorize()` | the input | `(x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)` |
-| `"x^4 + x^3*y + x^3*z + x^2*y*z + x^3*w + x^2*y*w + x^2*z*w + x*y*z*w".Factorize()` | `(w * x ^ 2 + w * x * z + x ^ 3 + x ^ 2 * z) * (x + y)` | `x * (x + z) * (w + x) * (x + y)` |
+| `"x^4 + x^3*y + x^3*z + x^2*y*z + x^3*w + x^2*y*w + x^2*z*w + x*y*z*w".Factorize()` | `(w * x ^ 2 + w * x * z + x ^ 3 + x ^ 2 * z) * (x + y)` | `x * (x + y) * (x + z) * (w + x)` |
 | `"x ^ 3 - (y + z) ^ 3".Factorize()` | `-1 * (y + z - x) * ((y + z) ^ 2 + (y + z) * x + x ^ 2)` | `(x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)` |
 
 ### A repeated factor in more than one variable is factored
@@ -72,6 +72,22 @@ goes. `Entity.Factorize` asks the same layer.
 | `MathS.Polynomials.Factor("(x^2 + y z + 1)^3", "x")` | `null` | `(x ^ 2 + y * z + 1) ^ 3` |
 | `MathS.Polynomials.Factor("(x^2 - y^2)^4", "x")` | `null` | `(x + y) ^ 4 * (x - y) ^ 4` |
 | `"x^8 - 4*x^6*y^2 + 6*x^4*y^4 - 4*x^2*y^6 + y^8".Factorize()` | the input | `(x + y) ^ 4 * (x - y) ^ 4` |
+
+### Three or more variables are lifted one at a time
+
+**Silent: a factorisation where there was a refusal, or where there was a partial one.** Substituting the other
+variables into one costs an image whose degree is the *product* of theirs, and past 127 that was refused. They are
+now lifted one at a time from a factorisation at a point, after Wang, each to its own degree, so the cost is a sum;
+the substitution is still asked where this declines. A leading coefficient in the main variable that is a polynomial
+in the others is first made monic, which neither route did in three variables. `Entity.Factorize` asks the same
+layer. Every factor is still checked by exact division of the input.
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `MathS.Polynomials.Factor("x ^ 6 - (y * z * w) ^ 6", "x")` | `null` | `-1 * (w * y * z + x) * (w * y * z - x) * (w ^ 2 * y ^ 2 * z ^ 2 + w * x * y * z + x ^ 2) * (w ^ 2 * y ^ 2 * z ^ 2 - w * x * y * z + x ^ 2)` |
+| `MathS.Polynomials.Factor("x ^ 7 - (y + z ^ 3) ^ 7", "x")` | `null` | `(x - y - z ^ 3) * (x ^ 6 + x ^ 5 * y + …)` |
+| `MathS.Polynomials.Factor("(y * x ^ 2 + z * w) * (x - y - w) * (z * x + 1)", "x")` | `null` | `-1 * (w - x + y) * (x * z + 1) * (w * z + x ^ 2 * y)` |
+| `"x ^ 4 * y * z + x ^ 3 * y + -x ^ 3 * y ^ 2 * z + -x ^ 2 * y ^ 2 + -w * x ^ 3 * y * z + -w * x ^ 2 * y + w * x ^ 2 * z ^ 2 + w * x * z + -w * x * y * z ^ 2 + -w * y * z + -w ^ 2 * x * z ^ 2 + -w ^ 2 * z".Factorize()` | `w ^ 2 * (-x * z ^ 2 + -z) + w * (x * (z + -y * z ^ 2) + (x * z) ^ 2 + -y * z) + y * (z * (x ^ 4 + -w * x ^ 3) + x ^ 3 + -w * x ^ 2) + y ^ 2 * (-x ^ 3 * z + -x ^ 2)` | `(x * z + 1) * -1 * (w * z + x ^ 2 * y) * (w - x + y)` |
 
 ---
 

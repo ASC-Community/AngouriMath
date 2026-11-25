@@ -99,8 +99,15 @@ namespace AngouriMath.Functions
                 if (BivariateHenselFactorization.Factor(poly, main, other) is { } lifted)
                     return lifted;
             }
-            else if (ByLiftingTheOthersAsOne(poly, main) is { } collapsed)
-                return collapsed;
+            else
+            {
+                // One variable at a time costs a sum of the degrees; the collapse below costs
+                // their product, so it is asked second.
+                if (MultivariateHenselFactorization.Factor(poly, main) is { } lifted)
+                    return lifted;
+                if (ByLiftingTheOthersAsOne(poly, main) is { } collapsed)
+                    return collapsed;
+            }
             // The substitution gave up -- on the image's degree, on how far it split, or on the
             // arithmetic. An *evaluation* image has the degree of the polynomial in the main
             // variable however many other variables there are, so it is still there to be asked,
