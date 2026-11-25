@@ -68,13 +68,18 @@ namespace AngouriMath
             /// the input before they are returned. The degree bound is 32.
             /// </para>
             /// <para>
-            /// <b>In more than one, two things are tried in order.</b> First the content in
-            /// <paramref name="variable"/> — the common divisor of the coefficients, which is a
-            /// polynomial in the other variables — is taken out. Then whatever remains is
-            /// factored by <b>Kronecker's substitution</b>, which writes the exponent vector as a
-            /// numeral in mixed radix and reads a one-variable factorisation back. Its ceiling is
-            /// a degree budget rather than a variable count: the image has degree the product of
-            /// the radices less one, so three variables of degree 2 fit and four do not.
+            /// <b>In more than one,</b> the content in <paramref name="variable"/> — the common
+            /// divisor of the coefficients, which is a polynomial in the other variables — is
+            /// taken out first. What remains is factored by <b>Kronecker's substitution</b>,
+            /// which writes the exponent vector as a numeral in mixed radix and reads a
+            /// one-variable factorisation back, while the image's degree, the product of the
+            /// radices less one, is at most 32. Past that, <b>Hensel lifting along an evaluation
+            /// homomorphism</b>: the polynomial is factored at a point and the factorisation
+            /// lifted back. In three or more variables the ones other than
+            /// <paramref name="variable"/> are first substituted into one, in mixed radix again,
+            /// so that the lift is in two; the bound is then that image's degree in the
+            /// substituted variable, at most 127. A repeated factor is outside the lift, which
+            /// needs a square-free image.
             /// </para>
             /// <para>
             /// <b>A refusal is possible and a wrong answer is not.</b> Every candidate factor is
@@ -99,8 +104,11 @@ namespace AngouriMath
             /// Console.WriteLine(MathS.Polynomials.Factor("x ^ 2 - y ^ 2", "x"));
             /// // (x + y) * (x - y)
             ///
-            /// Console.WriteLine(MathS.Polynomials.Factor("x ^ 12 - y ^ 12", "x") is null);
-            /// // True             -- past the substitution's degree budget
+            /// Console.WriteLine(MathS.Polynomials.Factor("x ^ 3 - (y + z) ^ 3", "x"));
+            /// // (x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)
+            ///
+            /// Console.WriteLine(MathS.Polynomials.Factor("x ^ 7 - (y + z ^ 3) ^ 7", "x") is null);
+            /// // True             -- an image of degree 8 * 22 - 1 = 175 in the substituted variable
             /// </code>
             /// </example>
             public static Entity? Factor(Entity expr, Variable variable)

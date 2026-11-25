@@ -89,9 +89,13 @@ namespace AngouriMath.Functions
             // whose factors are cyclotomic -- so its recombination is exponential in a count it
             // inflated itself. Lifting an *evaluation* image inflates nothing, and reaches the
             // shapes the remark above names as refused.
-            if (OnlyOther(poly, main) is { } other
-                && BivariateHenselFactorization.Factor(poly, main, other) is { } lifted)
-                return lifted;
+            if (OnlyOther(poly, main) is { } other)
+            {
+                if (BivariateHenselFactorization.Factor(poly, main, other) is { } lifted)
+                    return lifted;
+            }
+            else if (ByLiftingTheOthersAsOne(poly, main) is { } collapsed)
+                return collapsed;
             // The substitution gave up -- on the image's degree, on how far it split, or on the
             // arithmetic. An *evaluation* image has the degree of the polynomial in the main
             // variable however many other variables there are, so it is still there to be asked,
@@ -119,6 +123,177 @@ namespace AngouriMath.Functions
                 only = variable;
             }
             return only;
+        }
+
+        /// <summary>
+        /// The most the image's degree in the variable standing for all the others may be:
+        /// what one exponent of <see cref="MultivariatePolynomial"/> holds. The lift goes that
+        /// deep, and measured at the top of it the cost is milliseconds — <c>x^10 - (y+z)^10</c>,
+        /// an image of degree 120, factors in 60 ms and <c>x^8 - (y z)^8</c>, at 80, in 170 ms —
+        /// so the representation is the bound and nothing smaller is needed.
+        /// </summary>
+        private const int MaxCollapsedDegree = MultivariatePolynomial.MaxDegree;
+
+        /// <summary>
+        /// The factorisation of a polynomial in three or more variables, by Kronecker's
+        /// substitution among the variables other than <paramref name="main"/> and the lift in
+        /// two variables on what that leaves — or <see langword="null"/> where it could not be
+        /// settled. A single factor means the polynomial does not factor, which is an answer.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The substitution over-factors when it takes in the main variable, which is why the
+        /// whole of it is refused past a small degree. Taken over the others only, it leaves the
+        /// main variable alone: <c>y -> t</c>, <c>z -> t^(d_y + 1)</c>, and so on in mixed radix,
+        /// is a ring homomorphism into polynomials in the main variable and <c>t</c>, and it is
+        /// injective on every monomial a factor can have, since a factor's degree in each
+        /// variable is at most the polynomial's. The image is then a polynomial in two
+        /// variables, which <see cref="BivariateHenselFactorization"/> factors by lifting an
+        /// evaluation image — and an evaluation image does not over-factor the way a substituted
+        /// one does.
+        /// </para>
+        /// <para>
+        /// A factorisation of the polynomial maps to one of the image, each factor keeping its
+        /// degree in the main variable; so an image that does not factor is a proof that the
+        /// polynomial does not either, its content in the other variables having been taken
+        /// out by the caller and checked again by the lift. The converse does not hold — the
+        /// image may split further — so the image's factors are recombined, read back digit by
+        /// digit, and each candidate is kept only if it divides the original exactly.
+        /// </para>
+        /// </remarks>
+        private static IReadOnlyList<MultivariatePolynomial>? ByLiftingTheOthersAsOne(
+            MultivariatePolynomial poly, int main)
+        {
+            var others = new List<int>();
+            for (var variable = 0; variable < poly.VariableCount; variable++)
+                if (variable != main && poly.DegreeIn(variable) > 0)
+                    others.Add(variable);
+            if (others.Count < 2)
+                return null;
+
+            var degrees = new int[others.Count];
+            var places = new int[others.Count];
+            long size = 1;
+            for (var i = 0; i < others.Count; i++)
+            {
+                degrees[i] = poly.DegreeIn(others[i]);
+                places[i] = (int)size;
+                size *= degrees[i] + 1;
+                if (size - 1 > MaxCollapsedDegree)
+                    return null;
+            }
+
+            // The first of the others stands for all of them, so the image lives in the same
+            // number of variables and the lift needs nothing new.
+            var collapsed = others[0];
+            var image = MultivariatePolynomial.Zero(poly.VariableCount);
+            foreach (var term in poly.Terms)
+            {
+                var power = 0;
+                for (var i = 0; i < others.Count; i++)
+                    power += MultivariatePolynomial.PowerOf(term.Key, others[i]) * places[i];
+                if (Monomial(poly.VariableCount, term.Value,
+                        (main, MultivariatePolynomial.PowerOf(term.Key, main)), (collapsed, power))
+                    is not { } monomial)
+                    return null;
+                image = image.Add(monomial);
+            }
+
+            if (BivariateHenselFactorization.Factor(image, main, collapsed) is not { } lifted)
+                return null;
+            if (lifted.Count < 2)
+                return new[] { poly };
+            if (lifted.Count > MaxImageFactors)
+                return null;
+
+            var found = new List<MultivariatePolynomial>();
+            var remaining = poly;
+            var used = 0;
+            var count = lifted.Count;
+            var masks = new List<int>();
+            for (var mask = 1; mask < (1 << count) - 1; mask++)
+                masks.Add(mask);
+            masks.Sort((left, right) => PopCount(left).CompareTo(PopCount(right)));
+
+            foreach (var mask in masks)
+            {
+                if ((mask & used) != 0)
+                    continue;
+                var product = MultivariatePolynomial.One(poly.VariableCount);
+                for (var i = 0; i < count && product is not null; i++)
+                    if ((mask & (1 << i)) != 0)
+                        product = product.Multiply(lifted[i], MultivariatePolynomial.MaxIntermediateTerms);
+                if (product is null)
+                    return null;
+                if (ReadBack(product, main, collapsed, others, degrees, places) is not { } candidate)
+                    continue;
+                if (candidate.DegreeIn(main) < 1)
+                    continue;
+                if (remaining.DivideExact(candidate) is not { } quotient)
+                    continue;
+                found.Add(candidate.Normalized());
+                remaining = quotient;
+                used |= mask;
+            }
+
+            // Nothing divided: the image split where the polynomial may not have, and no
+            // grouping of its factors read back to one that divides. That settles nothing.
+            if (found.Count == 0)
+                return null;
+            if (!remaining.IsConstant)
+                found.Add(remaining.Normalized());
+            return found.Count < 2 ? new[] { poly } : found;
+        }
+
+        /// <summary>
+        /// A polynomial in the main variable and the collapsed one, with each power of the
+        /// collapsed variable read back as the monomial in the others whose mixed-radix numeral
+        /// it is — or <see langword="null"/> where a power is past what the polynomial's own
+        /// degrees allow, so that it is not the image of anything that could divide it.
+        /// </summary>
+        private static MultivariatePolynomial? ReadBack(
+            MultivariatePolynomial image, int main, int collapsed,
+            IReadOnlyList<int> others, IReadOnlyList<int> degrees, IReadOnlyList<int> places)
+        {
+            var result = MultivariatePolynomial.Zero(image.VariableCount);
+            var digits = new (int Variable, int Power)[others.Count + 1];
+            foreach (var term in image.Terms)
+            {
+                var power = MultivariatePolynomial.PowerOf(term.Key, collapsed);
+                digits[0] = (main, MultivariatePolynomial.PowerOf(term.Key, main));
+                for (var i = others.Count - 1; i >= 0; i--)
+                {
+                    var digit = power / places[i];
+                    if (digit > degrees[i])
+                        return null;
+                    digits[i + 1] = (others[i], digit);
+                    power -= digit * places[i];
+                }
+                if (Monomial(image.VariableCount, term.Value, digits) is not { } monomial)
+                    return null;
+                result = result.Add(monomial);
+            }
+            return result;
+        }
+
+        private static MultivariatePolynomial? Monomial(
+            int variableCount, ERational coefficient, params (int Variable, int Power)[] powers)
+        {
+            var result = MultivariatePolynomial.Constant(variableCount, coefficient);
+            foreach (var (variable, power) in powers)
+                if (result.ShiftedBy(variable, power) is not { } shifted)
+                    return null;
+                else
+                    result = shifted;
+            return result;
+        }
+
+        private static int PopCount(int value)
+        {
+            var count = 0;
+            for (; value != 0; value >>= 1)
+                count += value & 1;
+            return count;
         }
 
         /// <summary>
