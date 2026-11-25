@@ -1090,6 +1090,12 @@ namespace AngouriMath.Core
                         varNamespace[varName] = id++;
                 foreach (var constant in Variable.NamedConstants.Values)
                     func = func.Substitute(constant, constant.Value);
+                // Every variable here is a number, so a scalar product, a determinant and the rest of a name beside a
+                // written matrix are carried out, and one still left cannot be a number and is refused. Left as nodes,
+                // they were refused for want of a compiled form, or read as numbers by the simplification below.
+                // https://github.com/asc-community/AngouriMath/issues/105
+                func = Compilation.MatrixOperationsOverNumbers.Rewritten(func, varNamespace.ContainsKey);
+                Compilation.MatrixOperationsOverNumbers.Check(func, varNamespace.ContainsKey, anyLeft: true);
                 // An expression built out of matrices often has a number for its value -- [1, 0]T * [[a, b], [c, d]] * [0, 1]
                 // is b -- and the LINQ compiler simplifies such an expression first, for that reason. This one did not, and
                 // refused it. https://github.com/asc-community/AngouriMath/issues/425

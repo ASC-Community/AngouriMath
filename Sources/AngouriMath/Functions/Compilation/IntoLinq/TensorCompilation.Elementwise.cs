@@ -320,6 +320,19 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             return (left, right);
         }
 
+        /// <summary>
+        /// A matrix beside a number of a wider type, widened to that type, as <see cref="Widened"/> widens the narrower of
+        /// two matrices. The number was converted to the entries' type instead, which truncated it: over a double
+        /// <c>x</c> and a matrix argument <c>A</c> over long, <c>det(x * A)</c> was 0 at <c>x = 0.5</c>, and a complex
+        /// number beside a matrix over double was refused. Unchanged where the number is not wider than the entries.
+        /// https://github.com/asc-community/AngouriMath/issues/105
+        /// </summary>
+        internal static Expression WidenedBeside(Expression tensor, Type number, Func<Expression, Type, Expression> convert)
+        {
+            var element = ElementOf(tensor.Type);
+            return element != number && mapKits.ContainsKey((element, number)) ? Widen(tensor, number, convert) : tensor;
+        }
+
         private static Expression Widen(Expression tensor, Type to, Func<Expression, Type, Expression> convert)
         {
             var element = ElementOf(tensor.Type);

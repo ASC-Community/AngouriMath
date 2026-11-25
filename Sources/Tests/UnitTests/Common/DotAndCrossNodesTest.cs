@@ -299,6 +299,9 @@ namespace AngouriMath.Tests.Common
             // Of a matrix argument and a vector written out, and of a name beside one, read as a number by the delegate.
             Assert.Equal(10, "dot(M * a, a)".ToEntity().Compile<double[,], double[], double>("M", "a")(new double[,] { { 1, 2 }, { 3, 4 } }, new double[] { 1, 1 }), 12);
             Assert.Equal(22, "dot(x * [1, 2], [3, 4])".ToEntity().Compile<double, double>("x")(2), 12);
+            // And at a number that is not whole, which the written vector's whole numbers truncated to 0.
+            Assert.Equal(5.5, "dot(x * [1, 2], [3, 4])".ToEntity().Compile<double, double>("x")(0.5), 12);
+            Assert.Equal(new Complex(5.5, 0), "dot(x * [1, 2], [3, 4])".ToEntity().Compile("x").Call(0.5));
         }
 
         [Fact]
