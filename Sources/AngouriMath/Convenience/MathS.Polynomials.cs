@@ -75,12 +75,15 @@ namespace AngouriMath
             /// one-variable factorisation back, while the image's degree, the product of the
             /// radices less one, is at most 32. Past that, <b>Hensel lifting along an evaluation
             /// homomorphism</b>: the polynomial is factored at a point and the factorisation
-            /// lifted back. In three or more variables the ones other than
-            /// <paramref name="variable"/> are first substituted into one, in mixed radix again,
-            /// so that the lift is in two; the bound is then that image's degree in the
-            /// substituted variable, at most 127. The lift needs an image with no repeated
-            /// factor, so a polynomial with one has its square-free part factored instead and the
-            /// multiplicities put back by division.
+            /// lifted back. In three or more variables the lift brings back one variable at a
+            /// time, each to its own degree, after Wang; a leading coefficient that is a
+            /// polynomial in the others is first made monic, by <c>L ^ (n - 1) · f(x / L)</c>.
+            /// Where that declines, the variables other than <paramref name="variable"/> are
+            /// substituted into one, in mixed radix again, and lifted as two, while that image's
+            /// degree is at most 127. The lifts need an image with no repeated factor, so a
+            /// polynomial with one has its square-free part factored instead and the
+            /// multiplicities put back by division; where the greatest common divisor that part
+            /// needs is not reached, the answer is a refusal.
             /// </para>
             /// <para>
             /// <b>A refusal is possible and a wrong answer is not.</b> Every candidate factor is
@@ -108,8 +111,8 @@ namespace AngouriMath
             /// Console.WriteLine(MathS.Polynomials.Factor("x ^ 3 - (y + z) ^ 3", "x"));
             /// // (x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)
             ///
-            /// Console.WriteLine(MathS.Polynomials.Factor("x ^ 7 - (y + z ^ 3) ^ 7", "x") is null);
-            /// // True             -- an image of degree 8 * 22 - 1 = 175 in the substituted variable
+            /// Console.WriteLine(MathS.Polynomials.Factor("(y * x ^ 2 + z * w) * (x - y - w) * (z * x + 1)", "x"));
+            /// // -1 * (w - x + y) * (x * z + 1) * (w * z + x ^ 2 * y)
             /// </code>
             /// </example>
             public static Entity? Factor(Entity expr, Variable variable)

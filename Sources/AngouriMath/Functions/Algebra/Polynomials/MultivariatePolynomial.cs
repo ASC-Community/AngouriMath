@@ -396,6 +396,25 @@ namespace AngouriMath.Functions
             return root.Multiply(root) is { } last && Subtract(last).IsZero ? root : null;
         }
 
+        /// <summary>
+        /// Every term whose power of some variable <c>v</c> exceeds <c>bounds[v]</c> dropped:
+        /// the image modulo the ideal <c>(v ^ (bounds[v] + 1))</c>, which is a ring
+        /// homomorphism, so products may be reduced as they are built.
+        /// </summary>
+        internal MultivariatePolynomial Truncated(IReadOnlyList<int> bounds)
+        {
+            var result = new Dictionary<ulong, ERational>(terms.Count);
+            foreach (var term in terms)
+            {
+                var keep = true;
+                for (var variable = 0; variable < VariableCount && keep; variable++)
+                    keep = PowerOf(term.Key, variable) <= bounds[variable];
+                if (keep)
+                    result[term.Key] = term.Value;
+            }
+            return new(VariableCount, result);
+        }
+
         internal MultivariatePolynomial LeadingCoefficientIn(int variable)
         {
             var degree = DegreeIn(variable);
