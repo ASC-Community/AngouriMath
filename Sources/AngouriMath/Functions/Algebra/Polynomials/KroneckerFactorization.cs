@@ -85,6 +85,11 @@ namespace AngouriMath.Functions
                 return null;
             if (BySubstitution(poly, main) is { } factors)
                 return factors;
+            // The lifts below need an image without a repeated factor, and a polynomial with
+            // one has none: so its square-free part is factored instead, and the multiplicities
+            // are put back by division.
+            if (BySquareFreePart(poly, main) is { } repeated)
+                return repeated;
             // The substitution's image over-factors -- `x^7 - y^7` maps to `t^7 (1 - t^49)`,
             // whose factors are cyclotomic -- so its recombination is exponential in a count it
             // inflated itself. Lifting an *evaluation* image inflates nothing, and reaches the
@@ -104,6 +109,68 @@ namespace AngouriMath.Functions
             return EvaluationHomomorphism.CertifiesIrreducible(poly, main)
                 ? new[] { poly }
                 : null;
+        }
+
+        /// <summary>
+        /// The factors of a polynomial with a repeated factor in <paramref name="main"/>, each as
+        /// many times as it divides it, or <see langword="null"/> where it has none or where that
+        /// could not be settled.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>p / gcd(p, ∂p/∂x)</c> is the square-free part in any coefficient ring: a factor
+        /// repeated <c>k</c> times appears <c>k - 1</c> times in the derivative, so dividing by
+        /// the common part leaves each distinct factor once. That part has no repeated factor,
+        /// so it is what the lifts can take; and an irreducible factor of <c>p</c> is one of it,
+        /// so dividing <c>p</c> by each as often as it goes recovers the multiplicities.
+        /// </para>
+        /// <para>
+        /// The content in the other variables has been taken out by the caller, so a common
+        /// part of positive degree in <paramref name="main"/> is the only kind there is to find;
+        /// one of degree zero means the polynomial has no repeated factor, and the question
+        /// goes on to the lifts unchanged.
+        /// </para>
+        /// </remarks>
+        private static IReadOnlyList<MultivariatePolynomial>? BySquareFreePart(
+            MultivariatePolynomial poly, int main)
+        {
+            var derivative = poly.DerivativeIn(main);
+            if (derivative.IsZero)
+                return null;
+            var variables = new int[poly.VariableCount];
+            for (var i = 0; i < variables.Length; i++)
+                variables[i] = i;
+            if (PolynomialGcd.Gcd(poly, derivative, variables, 0) is not { } common
+                || common.DegreeIn(main) < 1)
+                return null;
+            if (poly.DivideExact(common) is not { } distinct)
+                return null;
+            // The square-free part has a constant common part with its derivative, so this
+            // does not come back here; and it is of lower degree, so it terminates either way.
+            if (Factor(distinct, main) is not { } pieces)
+                return null;
+
+            var found = new List<MultivariatePolynomial>();
+            var remaining = poly;
+            foreach (var piece in pieces)
+            {
+                if (piece.DegreeIn(main) < 1)
+                    continue;
+                var times = 0;
+                while (remaining.DivideExact(piece) is { } quotient)
+                {
+                    found.Add(piece);
+                    remaining = quotient;
+                    times++;
+                }
+                // Each piece divides the square-free part and so the polynomial; one that does
+                // not divide it once means something above is not what it claims.
+                if (times == 0)
+                    return null;
+            }
+            // What is left has no factor of positive degree in main, or one of the pieces
+            // above would have divided it again.
+            return remaining.DegreeIn(main) == 0 ? found : null;
         }
 
         /// <summary>

@@ -78,8 +78,9 @@ namespace AngouriMath
             /// lifted back. In three or more variables the ones other than
             /// <paramref name="variable"/> are first substituted into one, in mixed radix again,
             /// so that the lift is in two; the bound is then that image's degree in the
-            /// substituted variable, at most 127. A repeated factor is outside the lift, which
-            /// needs a square-free image.
+            /// substituted variable, at most 127. The lift needs an image with no repeated
+            /// factor, so a polynomial with one has its square-free part factored instead and the
+            /// multiplicities put back by division.
             /// </para>
             /// <para>
             /// <b>A refusal is possible and a wrong answer is not.</b> Every candidate factor is

@@ -59,6 +59,20 @@ checked by exact division of the input.
 | `"x^4 + x^3*y + x^3*z + x^2*y*z + x^3*w + x^2*y*w + x^2*z*w + x*y*z*w".Factorize()` | `(w * x ^ 2 + w * x * z + x ^ 3 + x ^ 2 * z) * (x + y)` | `x * (x + z) * (w + x) * (x + y)` |
 | `"x ^ 3 - (y + z) ^ 3".Factorize()` | `-1 * (y + z - x) * ((y + z) ^ 2 + (y + z) * x + x ^ 2)` | `(x - y - z) * (x ^ 2 + x * y + x * z + y ^ 2 + 2 * y * z + z ^ 2)` |
 
+### A repeated factor in more than one variable is factored
+
+**Silent: a factorisation where there was a refusal.** The lift that factors more than one variable needs an image
+with no repeated factor, so a polynomial with one was refused wherever Kronecker's substitution did not reach it. Its
+square-free part, `p / gcd(p, ∂p/∂x)`, is now factored instead, and each factor is divided out of `p` as often as it
+goes. `Entity.Factorize` asks the same layer.
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `MathS.Polynomials.Factor("(x + y + z)^2 * (x - y)", "x")` | `null` | `(x + y + z) ^ 2 * (x - y)` |
+| `MathS.Polynomials.Factor("(x^2 + y z + 1)^3", "x")` | `null` | `(x ^ 2 + y * z + 1) ^ 3` |
+| `MathS.Polynomials.Factor("(x^2 - y^2)^4", "x")` | `null` | `(x + y) ^ 4 * (x - y) ^ 4` |
+| `"x^8 - 4*x^6*y^2 + 6*x^4*y^4 - 4*x^2*y^6 + y^8".Factorize()` | the input | `(x + y) ^ 4 * (x - y) ^ 4` |
+
 ---
 
 ## 2.9.0 — since 2.8.0
