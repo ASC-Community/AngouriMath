@@ -765,10 +765,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     if (!kitsByTensor.ContainsKey(operand.Type))
                         throw new UncompilableNodeException(
                             $"`{node.Stringize()}` is taken of vectors, and an operand compiles to {operand.Type.Name}: compile it with a vector or a matrix type, such as double[] or double[,], for the operands");
-                if (operands[0].Type != operands[1].Type)
-                    throw new UncompilableNodeException($"Two vectors over different element types, {ElementOf(operands[0].Type)} and {ElementOf(operands[1].Type)}, cannot be combined");
-                var vectors = kitsByTensor[operands[0].Type];
-                return Expression.Call(node is Entity.DotProductf ? vectors.Dot : vectors.Cross, operands[0], operands[1]);
+                // The narrower of two vectors widened to the other, as a sum of two matrices is: a written vector of whole
+                // numbers beside one over double was refused. https://github.com/asc-community/AngouriMath/issues/105
+                var (left, right) = Widened(operands[0], operands[1], convert);
+                if (left.Type != right.Type)
+                    throw new UncompilableNodeException($"Two vectors over different element types, {ElementOf(left.Type)} and {ElementOf(right.Type)}, cannot be combined");
+                var vectors = kitsByTensor[left.Type];
+                return Expression.Call(node is Entity.DotProductf ? vectors.Dot : vectors.Cross, left, right);
             }
             if (node is not (Entity.Transposef or Entity.Determinantf or Entity.Tracef or Entity.MatrixEntryf))
                 return null;
@@ -826,6 +829,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             {
                 if (node is Entity.Powf)
                     return Expression.Call(leftKit!.Power, left, Exponent(right, convert));
+                left = WidenedBeside(left, right.Type, convert);
+                leftKit = kitsByTensor[left.Type];
                 var scalar = convert(right, ElementOf(left.Type));
                 return node switch
                 {
@@ -836,6 +841,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     _ => null,
                 };
             }
+            right = WidenedBeside(right, left.Type, convert);
+            rightKit = kitsByTensor[right.Type];
             var value = convert(left, ElementOf(right.Type));
             return node switch
             {

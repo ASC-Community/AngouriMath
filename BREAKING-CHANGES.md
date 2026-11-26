@@ -103,6 +103,40 @@ checked by exact division. `Entity.Factorize` asks the same layer.
 | `MathS.Polynomials.Factor("(x ^ 3 - 5 * x ^ 2 * y ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2)", "x")` | `null` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
 | `"3 * x ^ 6 + (-3) * x ^ 5 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y * z ^ 2 + x ^ 5 * y ^ 3 * z ^ 3 + -x ^ 4 * y ^ 6 * z ^ 5 + (-5) * x ^ 4 * y ^ 4 * z ^ 5 + (-3) * x ^ 4 * y ^ 2 + 3 * x ^ 3 * y ^ 5 * z ^ 2 + 15 * x ^ 3 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y ^ 2 + 15 * x ^ 4 * y ^ 5 * z ^ 2 + 75 * x ^ 4 * y ^ 3 * z ^ 2 + (-5) * x ^ 4 * y ^ 5 * z ^ 3 + 5 * x ^ 3 * y ^ 8 * z ^ 5 + 25 * x ^ 3 * y ^ 6 * z ^ 5 + 15 * x ^ 3 * y ^ 4 + (-15) * x ^ 2 * y ^ 7 * z ^ 2 + (-75) * x ^ 2 * y ^ 5 * z ^ 2".Factorize()` | `x ^ 2 * z ^ 2 * ((-15) * y ^ 7 + (-75) * y ^ 5) + x ^ 3 * (z ^ 5 * (5 * y ^ 8 + 25 * y ^ 6) + z ^ 2 * (3 * y ^ 5 + 15 * y ^ 3) + 15 * y ^ 4) + x ^ 4 * (z ^ 2 * (15 * y ^ 5 + 75 * y ^ 3) + z ^ 5 * (-y ^ 6 + (-5) * y ^ 4) + (-3) * y ^ 2 + (-5) * y ^ 5 * z ^ 3) + x ^ 5 * (z ^ 2 * ((-3) * y ^ 3 + (-15) * y) + (y * z) ^ 3 + (-15) * y ^ 2) + 3 * x ^ 6` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
 
+### A scalar product, a determinant or a transpose of a name compiled as a number is compiled
+
+**Not silent where it was refused: it compiles, or is refused saying why. Silent where it compiled: a truncated value
+or a 0 is the value.** `dot`, `cross`, `det`, `transpose`, `trace` and an entry `A[k, l]` of an expression with a name
+beside a written matrix, as in `dot([0, 0, 1], cos(p) * [x, y, z])`, are nodes that simplification leaves as written,
+since the name may stand for a matrix. A variable compiled as a number is one, so both compilers now carry each of them
+out on the vector or the matrix the expression is with its names as numbers. `Compile(params Variable[])`, whose
+variables are all numbers, had no form for these nodes and refused them, asking for a bug report. `Compile<...>`
+converted a `double` beside a written matrix of whole numbers, or beside a matrix argument over `long`, to `long`, and
+so truncated it; it now widens the matrix instead, as it already widened the narrower of two matrices, and `dot` and
+`cross` of vectors over two element types widen the same way. Both compilers read a transpose beside a written matrix
+as a number, and multiplied it out to 0, and refused a vector product beside one; a transpose or a product taken of a
+number has no value, and is now refused for that reason. A name
+compiled as a matrix is not read as a number: the operation is compiled on the matrix passed in, as before
+([#105](https://github.com/asc-community/AngouriMath/issues/105)).
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `"dot([0, 0, 1], cos(p) * [x, y, z] + sin(p) / abs([a, b, c]) * cross([a, b, c], [x, y, z]))".Compile("a", "b", "c", "p", "x", "y", "z")` | throws `UncompilableNodeException`: `DotProductf` does not support compilation | the third component, `cos(p) z + sin(p) (a y - b x) / abs([a, b, c])` |
+| the same, `.Compile<double, double, double, double, double, double, double, double>` | throws `UncompilableNodeException`: vectors over `Int64` and `Double` | the same; `-3.9818867534572675` at `(0.3, 1, 1.7, 2.4, 3.1, 3.8, 4.5)` |
+| `"dot(x * [1, 2], [3, 4])".Compile("x")` | throws `UncompilableNodeException` | `11 x` |
+| `"dot(x * [1, 2], [3, 4])".Compile<double, double>("x")` at `x = 0.5` | `0` | `5.5` |
+| `"det(x * [[1, 2], [3, 4]])".Compile("x")` | throws `UncompilableNodeException` | `-2 x ^ 2` |
+| `"det(x * [[1, 2], [3, 4]])".Compile<double, double>("x")` at `x = 0.5` | `0` | `-0.5` |
+| `"[1, 0]T * transpose(x * [[1, 2], [3, 4]]) * [0, 1]"`, either compiler, at `x = 0.3` | `0` | `3 x`: `0.8999999999999999` |
+| `"[1, 0]T * transpose(A) * [0, 1]"` over a number `A`, either compiler | `0` | throws `UncompilableNodeException`: the transpose is taken of a number |
+| `"[0, 0, 1]T * cross(x * [1, 0, 0], [0, y, 0])"`, either compiler | throws `UncompilableNodeException` | `x y` |
+| `"det(x * A)".Compile<double, long[,], double>("x", "A")` at `x = 0.5`, `A = [[1, 2], [3, 4]]` | `0` | `-0.5` |
+| `"trace(A / x)".Compile<double, long[,], double>("x", "A")` at `x = 2`, the same `A` | `2` | `2.5` |
+| `"x * A".Compile<double, long[,], double[,]>("x", "A")` at `x = 0.5`, the same `A` | throws `UncompilableNodeException`: a matrix over `Int64` | `[[0.5, 1], [1.5, 2]]` |
+| `"dot(z * a, [1, 2])".Compile<Complex, double[], Complex>("z", "a")` at `z = i`, `a = [1, 2]` | throws `UncompilableNodeException`: no coercion from `Complex` to `Double` | `5i` |
+| `"dot(a, b)".Compile<double[], Complex[], Complex>("a", "b")` | throws `UncompilableNodeException`: vectors over `Double` and `Complex` | the scalar product |
+| `"dot(a, b)".Compile("a", "b")` | throws `UncompilableNodeException`, asking for a bug report | throws `UncompilableNodeException`: an operand is a number, and `Compile<..., double[]>` takes vectors |
+
 ---
 
 ## 2.9.0 — since 2.8.0
@@ -999,9 +1033,11 @@ In the other order each value computed at the defaults came back inside the scop
 
 **Not silent: what was refused now parses.** `dot(a, b)` and `cross(a, b)` threw `InvalidArgumentParseException`
 where an operand was not a vector written out. Now they are the nodes `DotProductf` and `CrossProductf`. Each is
-computed once both operands are vectors: when they are substituted, by `Simplify`, `Evaled`, or a compiled delegate
-taking `double[]`, `double[,]` or `Complex[]`. Of vectors written out each is still computed as it is parsed, and prints
-as before. Vectors of different lengths, or a `cross` of vectors without three components, leave the node as it is.
+computed once both operands are vectors, by `Simplify`, `Evaled`, or a compiled delegate taking `double[]`, `double[,]`
+or `Complex[]`. Substituting vectors for the names puts them in and computes nothing, as in every node:
+`dot([0, 0, 1], v)` with `v = [x, y, z]` substituted is `dot([0, 0, 1], [x, y, z])` until it is simplified or
+evaluated. Of vectors written out each is still computed as it is parsed, and prints as before. Vectors of different
+lengths, or a `cross` of vectors without three components, leave the node as it is.
 A number, or a written vector that cannot fit, is refused as before. The operands of `cross` are kept in their order, and
 so is a product with a `cross` in it. A name beside a written vector, as in `dot(x * [1, 2], [3, 4])`, may stand for a
 matrix, so the operand is no longer multiplied into the components as a number

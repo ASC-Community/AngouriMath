@@ -269,7 +269,10 @@ numbers and it is `x ^ 2 - 2`
 `dot(a, b)` and `cross(a, b)` of a name are nodes too, carried out once both operands are vectors:
 `dot(a, b)` with `a` and `b` substituted by `[1, 2, 3]` and `[4, 5, 6]` simplifies to `32`, and
 `cross(W, r)` with `[0, 0, w]` and `[x, y, z]` to `[-w * y, w * x, 0]`. A compiled delegate takes
-the vectors as `double[]` or `double[,]`, and `cross` returns a column. `cross` is not commutative,
+the vectors as `double[]` or `double[,]`, and `cross` returns a column. A name compiled as a number is
+one, so these and the matrix nodes above are carried out on it when compiling: over a number `x`,
+`dot(x * [1, 2], [3, 4])` compiles to `11 x` and `det(x * [[1, 2], [3, 4]])` to `-2 x ^ 2`, the same
+in `Compile(params Variable[])`, whose variables are all numbers. `cross` is not commutative,
 and its operands are kept in their order, as is a product with a `cross` in it: `cross(a, b) + cross(b, a)`
 is left as it is. Vectors of different lengths, or a `cross` of vectors that do not have three
 components, have no value, and the node is left as it is; where the vector is written out, as in

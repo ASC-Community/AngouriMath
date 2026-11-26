@@ -582,12 +582,17 @@ namespace AngouriMath
         /// <param name="ofMatrix">The value at a matrix, or null where the matrix has none, as a matrix that is not square has no determinant.</param>
         /// <param name="ofOther">The value at anything else, a rewrite such as det(transpose(A)) = det(A), or null.</param>
         /// <param name="unevaluated">The node, over the simplified argument.</param>
+        /// <param name="namesAreNumbers">
+        /// Whether every name in <paramref name="argument"/> is known to be a number, as a compiler knows of a variable
+        /// it compiles as one. The operation is then carried out on the matrix simplification makes of the argument.
+        /// </param>
         private static Entity OnMatrixArgument(Entity argument, bool isExact, Func<Matrix, Entity?> ofMatrix,
-            Func<Entity, Entity?> ofOther, Func<Entity, Entity> unevaluated)
+            Func<Entity, Entity?> ofOther, Func<Entity, Entity> unevaluated, bool namesAreNumbers = false)
         {
             // A name beside a written matrix may stand for a matrix, and simplification reads it as a number:
             // A [[2, 0], [0, 3]] simplifies to [[2 A, 0], [0, 3 A]], whose determinant 6 A^2 is not det(A) det(...).
-            var readsANameAsANumber = argument is not Matrix && HasANameOutsideAWrittenMatrix(argument);
+            // Where every name is known to be a number, that reading is the right one.
+            var readsANameAsANumber = !namesAreNumbers && argument is not Matrix && HasANameOutsideAWrittenMatrix(argument);
             Entity Over(Entity simplified) => simplified switch
             {
                 Matrix matrix => (readsANameAsANumber ? null : ofMatrix(matrix)) ?? unevaluated(readsANameAsANumber ? argument : matrix),
@@ -610,11 +615,12 @@ namespace AngouriMath
         /// <param name="isExact">Whether to keep the answer exact, as for simplification against evaluation.</param>
         /// <param name="ofMatrices">The value at two matrices, or null where they have none, as vectors of different lengths have no scalar product.</param>
         /// <param name="unevaluated">The node, over the simplified operands.</param>
+        /// <param name="namesAreNumbers">Whether every name in either operand is known to be a number, as for <see cref="OnMatrixArgument"/>.</param>
         private static Entity OnTwoMatrixArguments(Entity left, Entity right, bool isExact,
-            Func<Matrix, Matrix, Entity?> ofMatrices, Func<Entity, Entity, Entity> unevaluated)
+            Func<Matrix, Matrix, Entity?> ofMatrices, Func<Entity, Entity, Entity> unevaluated, bool namesAreNumbers = false)
         {
-            var leftReadsANameAsANumber = left is not Matrix && HasANameOutsideAWrittenMatrix(left);
-            var rightReadsANameAsANumber = right is not Matrix && HasANameOutsideAWrittenMatrix(right);
+            var leftReadsANameAsANumber = !namesAreNumbers && left is not Matrix && HasANameOutsideAWrittenMatrix(left);
+            var rightReadsANameAsANumber = !namesAreNumbers && right is not Matrix && HasANameOutsideAWrittenMatrix(right);
             Entity Simplified(Entity operand)
                 => operand is Matrix written ? written.Elementwise(e => e.InnerSimplified(isExact)) : operand.InnerSimplified(isExact);
             Entity Over(Entity l, Entity r) => (l, r) switch
@@ -654,35 +660,49 @@ namespace AngouriMath
             // Whether there is a determinant depends on the shape alone, which no condition on the entries can say.
             private protected override Entity IntrinsicCondition => Boolean.True;
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact)
+            protected override Entity InnerSimplify(bool isExact) => CarriedOut(isExact, namesAreNumbers: false);
+
+            /// <summary>
+            /// What <see cref="InnerSimplify"/> gives, or, with <paramref name="namesAreNumbers"/>, the operation carried out
+            /// on the matrix simplification makes of an argument whose every name is known to be a number. The compilers
+            /// ask for the second for the variables they compile as numbers. The same holds of the transpose, the trace, an
+            /// entry, and the scalar and the vector product.
+            /// </summary>
+            internal Entity CarriedOut(bool isExact, bool namesAreNumbers)
                 => OnMatrixArgument(Argument, isExact,
                     matrix => matrix.IsSquare ? matrix.Determinant?.InnerSimplified(isExact) : null,
                     // det(A^T) = det(A), the one being defined exactly where the other is.
                     other => other is Transposef(var inner) ? new Determinantf(inner).InnerSimplified(isExact) : null,
-                    New);
+                    New, namesAreNumbers);
         }
 
         partial record Transposef
         {
             private protected override Entity IntrinsicCondition => Boolean.True;
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact)
+            protected override Entity InnerSimplify(bool isExact) => CarriedOut(isExact, namesAreNumbers: false);
+
+            /// <inheritdoc cref="Determinantf.CarriedOut"/>
+            internal Entity CarriedOut(bool isExact, bool namesAreNumbers)
                 => OnMatrixArgument(Argument, isExact,
                     matrix => matrix.T.InnerSimplified(isExact),
                     other => other is Transposef(var inner) ? inner : null,
-                    New);
+                    New, namesAreNumbers);
         }
 
         partial record Tracef
         {
             private protected override Entity IntrinsicCondition => Boolean.True;
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact)
+            protected override Entity InnerSimplify(bool isExact) => CarriedOut(isExact, namesAreNumbers: false);
+
+            /// <inheritdoc cref="Determinantf.CarriedOut"/>
+            internal Entity CarriedOut(bool isExact, bool namesAreNumbers)
                 => OnMatrixArgument(Argument, isExact,
                     matrix => matrix.IsSquare ? matrix.Trace.InnerSimplified(isExact) : null,
                     // The transpose has the same diagonal.
                     other => other is Transposef(var inner) ? new Tracef(inner).InnerSimplified(isExact) : null,
-                    New);
+                    New, namesAreNumbers);
         }
 
         partial record MatrixEntryf
@@ -696,7 +716,10 @@ namespace AngouriMath
                     : null;
 
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact)
+            protected override Entity InnerSimplify(bool isExact) => CarriedOut(isExact, namesAreNumbers: false);
+
+            /// <inheritdoc cref="Determinantf.CarriedOut"/>
+            internal Entity CarriedOut(bool isExact, bool namesAreNumbers)
             {
                 var row = Row.InnerSimplified(isExact);
                 var column = Column.InnerSimplified(isExact);
@@ -706,7 +729,7 @@ namespace AngouriMath
                         : null,
                     // The (i, j) entry of the transpose is the (j, i) entry of the matrix.
                     other => other is Transposef(var inner) ? new MatrixEntryf(inner, column, row).InnerSimplified(isExact) : null,
-                    argument => New(argument, row, column));
+                    argument => New(argument, row, column), namesAreNumbers);
             }
         }
 
@@ -715,16 +738,22 @@ namespace AngouriMath
             // Whether there is a scalar product depends on the shapes alone, which no condition on the entries can say.
             private protected override Entity IntrinsicCondition => Boolean.True;
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact)
-                => OnTwoMatrixArguments(Left, Right, isExact, (a, b) => Of(a, b)?.InnerSimplified(isExact), New);
+            protected override Entity InnerSimplify(bool isExact) => CarriedOut(isExact, namesAreNumbers: false);
+
+            /// <inheritdoc cref="Determinantf.CarriedOut"/>
+            internal Entity CarriedOut(bool isExact, bool namesAreNumbers)
+                => OnTwoMatrixArguments(Left, Right, isExact, (a, b) => Of(a, b)?.InnerSimplified(isExact), New, namesAreNumbers);
         }
 
         partial record CrossProductf
         {
             private protected override Entity IntrinsicCondition => Boolean.True;
             /// <inheritdoc/>
-            protected override Entity InnerSimplify(bool isExact)
-                => OnTwoMatrixArguments(Left, Right, isExact, (a, b) => Of(a, b)?.InnerSimplified(isExact), New);
+            protected override Entity InnerSimplify(bool isExact) => CarriedOut(isExact, namesAreNumbers: false);
+
+            /// <inheritdoc cref="Determinantf.CarriedOut"/>
+            internal Entity CarriedOut(bool isExact, bool namesAreNumbers)
+                => OnTwoMatrixArguments(Left, Right, isExact, (a, b) => Of(a, b)?.InnerSimplified(isExact), New, namesAreNumbers);
         }
 
         partial record Matrix

@@ -30,6 +30,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             // before compiling, so those failed along with the ones that genuinely cannot
             // be compiled (https://github.com/asc-community/AngouriMath/issues/425).
             // Only expressions that mention a matrix pay for this.
+            // A scalar product, a determinant and the rest of a name compiled as a number beside a written matrix are
+            // carried out first, as simplification will not, and one taken of a number is refused before simplification
+            // reads it as a number. https://github.com/asc-community/AngouriMath/issues/105
+            bool IsNumberArgument(Variable variable) => typesAndNames.Any(c => c.variable == variable && !TensorCompilation.IsMatrixType(c.type));
+            expr = MatrixOperationsOverNumbers.Rewritten(expr, IsNumberArgument);
+            MatrixOperationsOverNumbers.Check(expr, IsNumberArgument, anyLeft: false);
             if (expr.Nodes.Any(node => node is Entity.Matrix))
                 expr = TensorCompilation.SimplifiedAroundMatrixArguments(expr, IsMatrixArgument);
             expr = CompiledMembership.Rewritten(expr);
