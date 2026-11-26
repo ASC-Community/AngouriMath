@@ -175,6 +175,21 @@ truncated; a matrix power whose exponent is not whole has no value, as over `dou
 | `"A / B".Compile<long[,], long[,], double[,]>("A", "B")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | `[[16, 11], [34, 27]] / 29` to rounding |
 | `"1 / A".Compile<long[,], long[,]>("A")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | throws `UncompilableNodeException`: a matrix over `Double` |
 
+### The trace of a matrix that is not square is null
+
+**Silent: a number for a trace that does not exist is now `null`.** `Matrix.Trace` summed the main diagonal of any
+matrix, so a 2 by 3 matrix had the trace `1 + 5`, and a vector had the trace of its first entry. The trace is defined
+for a square matrix only, as the sum of its eigenvalues, and `trace(...)` already refused any other. The property is now
+`Entity?`, `null` for a matrix that is not square, as `Determinant`, `Inverse` and `Adjugate` are
+([#2565](https://github.com/asc-community/AngouriMath/issues/2565)).
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `((Matrix)"[[1, 2, 3], [4, 5, 6]]").Trace` | `1 + 5` | `null` |
+| `((Matrix)"[1, 2, 3]").Trace` | `1` | `null` |
+| `((Matrix)"[[1, 2], [3, 4]]").Trace` | `1 + 4` | unchanged |
+| `"trace([[1, 2, 3], [4, 5, 6]])"` | throws `InvalidArgumentParseException` | unchanged |
+
 ### A transpose or a vector product beside a written matrix is a matrix, not an entry
 
 **Silent: a wrong answer, most often `0`, is now the expression left as written.** `InnerSimplified` and `Evaled`

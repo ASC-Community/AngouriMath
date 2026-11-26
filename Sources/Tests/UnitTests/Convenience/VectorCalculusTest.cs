@@ -154,7 +154,7 @@ namespace AngouriMath.Tests.Convenience
             AssertSameWhereDefined(jacobian[2, 1] - jacobian[1, 2], curl[0, 0]);
             AssertSameWhereDefined(jacobian[0, 2] - jacobian[2, 0], curl[1, 0]);
             AssertSameWhereDefined(jacobian[1, 0] - jacobian[0, 1], curl[2, 0]);
-            AssertSameWhereDefined(jacobian.Trace, $"divergence({field}, {x})".ToEntity());
+            AssertSameWhereDefined(Assert.IsAssignableFrom<Entity>(jacobian.Trace), $"divergence({field}, {x})".ToEntity());
             AssertSameMatricesWhereDefined($"transpose(jacobian({scalar}, {x}))", $"gradient({scalar}, {x})");
 
             var divergenceOfCurl = $"divergence(curl({field}, {x}), {x})".ToEntity().InnerSimplified;
