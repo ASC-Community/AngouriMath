@@ -219,6 +219,46 @@ namespace AngouriMath.Tests.Common
                 Near(expected, Components(At(form)));
         }
 
+        // A vector product is a vector beside a written matrix too, and not a number to multiply into its entries:
+        // [0, 0, 1]T * cross(a, b) was [[0, 0, cross(a, b)]] once simplified or evaluated, a row with a vector for an
+        // entry, where it is the third component of cross(a, b). A sum was spread over the entries the same way, by
+        // Simplify as well. https://github.com/asc-community/AngouriMath/issues/2557
+        [Theory]
+        [InlineData("[0, 0, 1]T * cross(a, b)")]
+        [InlineData("[0, 0, 1]T * (2 * cross(a, b))")]
+        [InlineData("[[1, 0, 0], [0, 2, 0], [0, 0, 3]] * cross(a, b)")]
+        [InlineData("[0, 0, 1]T * (cross(a, b) + c)")]
+        [InlineData("[1, 2, 3] + cross(a, b)")]
+        [InlineData("cross(a, b) - [1, 2, 3]")]
+        public void AVectorProductBesideAWrittenMatrixIsNotReadAsANumber(string input)
+        {
+            var expr = input.ToEntity();
+            foreach (var (u, v) in new[] { (Vectors[0], Vectors[1]), (Vectors[2], Vectors[3]) })
+            {
+                Entity At(Entity e) => e.Substitute("a", Column(u)).Substitute("b", Column(v)).Substitute("c", Column(Vectors[1])).Evaled;
+                var expected = At(expr);
+                foreach (var form in new[] { expr.InnerSimplified, expr.Simplify(), expr.Evaled })
+                {
+                    var actual = At(form);
+                    if (expected is Entity.Matrix)
+                        Near(Components(expected), Components(actual));
+                    else
+                        Near(Value(expected), Value(actual));
+                }
+            }
+        }
+
+        // The row [0, 0, 1] picks out the third component.
+        [Fact]
+        public void AComponentPickedOutOfAVectorProductByAUnitRowIsThatComponent()
+        {
+            var expr = "[0, 0, 1]T * cross(a, b)".ToEntity();
+            foreach (var u in Vectors)
+                foreach (var v in Vectors)
+                    foreach (var form in new[] { expr.InnerSimplified, expr.Simplify(), expr.Evaled })
+                        Near(Cross(u, v)[2], Value(form.Substitute("a", Column(u)).Substitute("b", Column(v)).Evaled));
+        }
+
         // Linear in each operand: the product rule, the operands kept in their order.
         [Fact]
         public void TheProductsAreDifferentiatedByTheProductRule()

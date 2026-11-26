@@ -103,6 +103,36 @@ checked by exact division. `Entity.Factorize` asks the same layer.
 | `MathS.Polynomials.Factor("(x ^ 3 - 5 * x ^ 2 * y ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2)", "x")` | `null` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
 | `"3 * x ^ 6 + (-3) * x ^ 5 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y * z ^ 2 + x ^ 5 * y ^ 3 * z ^ 3 + -x ^ 4 * y ^ 6 * z ^ 5 + (-5) * x ^ 4 * y ^ 4 * z ^ 5 + (-3) * x ^ 4 * y ^ 2 + 3 * x ^ 3 * y ^ 5 * z ^ 2 + 15 * x ^ 3 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y ^ 2 + 15 * x ^ 4 * y ^ 5 * z ^ 2 + 75 * x ^ 4 * y ^ 3 * z ^ 2 + (-5) * x ^ 4 * y ^ 5 * z ^ 3 + 5 * x ^ 3 * y ^ 8 * z ^ 5 + 25 * x ^ 3 * y ^ 6 * z ^ 5 + 15 * x ^ 3 * y ^ 4 + (-15) * x ^ 2 * y ^ 7 * z ^ 2 + (-75) * x ^ 2 * y ^ 5 * z ^ 2".Factorize()` | `x ^ 2 * z ^ 2 * ((-15) * y ^ 7 + (-75) * y ^ 5) + x ^ 3 * (z ^ 5 * (5 * y ^ 8 + 25 * y ^ 6) + z ^ 2 * (3 * y ^ 5 + 15 * y ^ 3) + 15 * y ^ 4) + x ^ 4 * (z ^ 2 * (15 * y ^ 5 + 75 * y ^ 3) + z ^ 5 * (-y ^ 6 + (-5) * y ^ 4) + (-3) * y ^ 2 + (-5) * y ^ 5 * z ^ 3) + x ^ 5 * (z ^ 2 * ((-3) * y ^ 3 + (-15) * y) + (y * z) ^ 3 + (-15) * y ^ 2) + 3 * x ^ 6` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
 
+### A transpose or a vector product beside a written matrix is a matrix, not an entry
+
+**Silent: a wrong answer, most often `0`, is now the expression left as written.** `InnerSimplified` and `Evaled`
+spread anything that was not a written matrix over a written matrix's entries, so a transpose or a vector product
+not yet carried out was read as a number: `[1, 0]T * transpose(A) * [0, 1]` became `[[transpose(A), 0]] * [0, 1]`,
+and so `0`, where it is the entry `A[2, 1]`. `Simplify` set that product aside and kept it, but it sorted a product
+whose factor was a sum with a transpose in it, as `transpose(A) + B` is, as though matrices commuted, and answered `0`
+there too; and it spread a sum of a written matrix and a transpose over the entries as well. Such an operand is now
+left beside the written matrix, by all three, until it is one. Anything built from one counts, a function of it
+included, as `conj(transpose(A))`; a determinant, a trace, an entry, a scalar product or a norm of one is a number, as
+before. A bare name is still read as a number beside a written matrix, so `[1, 0]T * A * [0, 1]` is still `0` and
+`x * [1, 2]` still `[x, 2 * x]` ([#2557](https://github.com/asc-community/AngouriMath/issues/2557); the nodes
+are those of [#2147](https://github.com/asc-community/AngouriMath/issues/2147) and
+[#105](https://github.com/asc-community/AngouriMath/issues/105)).
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `"[1, 0]T * transpose(A) * [0, 1]".ToEntity().InnerSimplified`, and `.Evaled` | `0` | `[[1, 0]] * transpose(A) * [0, 1]`, which is `3` at `A = [[1, 2], [3, 4]]` |
+| `"[1, 0]T * transpose(A)".ToEntity().InnerSimplified` | `[[transpose(A), 0]]` | `[[1, 0]] * transpose(A)` |
+| `"[0, 0, 1]T * cross(a, b)".ToEntity().InnerSimplified`, and `.Evaled` | `[[0, 0, cross(a, b)]]` | `[[0, 0, 1]] * cross(a, b)` |
+| `"[1, 0] + transpose(A)".ToEntity().Simplify()`, and `.InnerSimplified`, `.Evaled` | `[1 + transpose(A), transpose(A)]` | `[1, 0] + transpose(A)` |
+| `"transpose(A) / [[1, 2], [3, 4]]".ToEntity().InnerSimplified` | `[[transpose(A) * (-2), transpose(A)], [transpose(A) * 3/2, transpose(A) * -1/2]]` | `transpose(A) * [[-2, 1], [3/2, -1/2]]` |
+| `"[1, 0]T * (transpose(A) + B) * [0, 1]".ToEntity().Simplify()`, and `.InnerSimplified`, `.Evaled` | `0` | `[[1, 0]] * (transpose(A) + B) * [0, 1]` |
+| `"[1, 0]T * conj(transpose(A)) * [0, 1]".ToEntity().Simplify()`, and `.InnerSimplified`, `.Evaled` | `0` | `[[1, 0]] * conjugate(transpose(A)) * [0, 1]` |
+| `"[1, 0]T * derivative(transpose(x * A), x) * [0, 1]".ToEntity().InnerSimplified` | `0` | `[[1, 0]] * transpose(A) * [0, 1]` |
+| the same with `A = [[1, 2], [3, 4]]` substituted, `.Evaled` | `0` | `[[1, 0]] * transpose(1 * [[1, 2], [3, 4]] + [[0, 0], [0, 0]] * x) * [0, 1]`, left: it is `3`, and the transpose is not carried out while a name stands beside its written matrix |
+| `"(transpose(A) + B) * x * y".ToEntity().Simplify()` | `x * y * (transpose(A) + B)` | `(transpose(A) + B) * x * y`: the factors keep their order |
+| `"[1, 0]T * A * [0, 1]".ToEntity().InnerSimplified` | `0` | unchanged |
+| `"[1, 2] * det(A)".ToEntity().InnerSimplified` | `[det(A), 2 * det(A)]` | unchanged |
+
 ---
 
 ## 2.9.0 — since 2.8.0

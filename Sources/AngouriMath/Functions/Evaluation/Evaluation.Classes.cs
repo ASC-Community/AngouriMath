@@ -191,6 +191,12 @@ namespace AngouriMath
                 (Piecewise a, var b) => a.ApplyToValues(a => ops(a, b)),
                 (var a, Piecewise b) => b.ApplyToValues(b => ops(a, b)),
                 (Matrix a, Matrix b) => a.InnerMatrix.Shape == b.InnerMatrix.Shape ? a.Elementwise(b, ops) : defaultCtor(this, left, right),
+                // A matrix that is not written out is not an entry: spread over a written matrix's entries, it was
+                // read as a number, so [1, 0]T * transpose(A) * [0, 1] was [[transpose(A), 0]] * [0, 1] and so 0,
+                // where it is the entry A[2, 1]. Left as written, as Simplify leaves it.
+                // https://github.com/asc-community/AngouriMath/issues/2557
+                (Matrix, var b) when Functions.ProductsOfMatrices.IsAMatrixNotWrittenOut(b) => defaultCtor(this, left, right),
+                (var a, Matrix) when Functions.ProductsOfMatrices.IsAMatrixNotWrittenOut(a) => defaultCtor(this, left, right),
                 (Matrix a, var b) => a.Elementwise(a => ops(a, b)),
                 (var a, Matrix b) => b.Elementwise(b => ops(a, b)),
                 _ => propagateSet ? (left, right) switch

@@ -259,7 +259,9 @@ counts from 0, as C# does: `M[k, l]` in an expression is `matrix[k - 1, l - 1]` 
 in a compiled delegate taking `double[,]` or `Complex[,]`. Nothing else knows that the name is a
 matrix, since a name carries no type
 ([#1237](https://github.com/asc-community/AngouriMath/issues/1237)), but a product with a transpose in
-it is kept in the order it is written. A non-square matrix has no determinant and no trace, and an
+it is kept in the order it is written. Nor is a transpose beside a written matrix multiplied into its
+entries as a number, and neither is a `cross` of names: `[1, 0]T * transpose(A) * [0, 1]` is left until
+`A` is known. A non-square matrix has no determinant and no trace, and an
 index out of range names no entry: the node is left as it is. A number, a statement or a set is not a
 matrix, and `det(5)` is refused. A name beside a written matrix may stand for a matrix too, so
 `det(x * [[1, 2], [3, 4]])` is left until `x` is known, where the entries of `det([[x, 1], [2, x]])` are
