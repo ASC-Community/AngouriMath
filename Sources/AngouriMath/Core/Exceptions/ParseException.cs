@@ -58,6 +58,8 @@ namespace AngouriMath.Core.Exceptions
     {
         internal CannotParseInstanceException(Type type, string expr)
             : base($"Cannot parse an instance of {type.Name} from `{expr}`") { }
+        internal CannotParseInstanceException(Type type, string expr, string why)
+            : base($"Cannot parse an instance of {type.Name} from `{expr}`: {why}") { }
     }
 
     /// <summary>

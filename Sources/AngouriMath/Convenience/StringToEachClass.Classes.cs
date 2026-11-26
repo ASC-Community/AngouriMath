@@ -12,12 +12,22 @@ namespace AngouriMath
 {
     partial record Entity
     {
+        /// <remarks>
+        /// The exception says what the string parsed to instead, and for a name with a digit against it, which parses
+        /// as a power, which spelling is the variable: <c>Entity.Variable v0 = "v0"</c> said only that it could not
+        /// parse a variable from <c>v0</c>, which is <c>v ^ 0</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2567
+        /// </remarks>
         private static T FromString<T>(string expr) where T : Entity
         {
             var ent = expr.ToEntity();
             if (ent is T tEnt)
                 return tEnt;
-            throw new CannotParseInstanceException(typeof(T), expr);
+            var why = $"it parses as `{ent.Stringize()}`";
+            if (typeof(T) == typeof(Variable) && ent is Powf(Variable(var name), Number.Integer power)
+                && expr.Trim() == name + power.Stringize())
+                why += $": a digit written against a name is its power, and `{name}_{power.Stringize()}` is the variable with that index";
+            throw new CannotParseInstanceException(typeof(T), expr, why);
         }
 
 #pragma warning disable SealedOrAbstract // Constant derives from it, as Real does from Complex

@@ -476,6 +476,26 @@ namespace AngouriMath.Tests.Convenience
             Assert.Contains(off.Nodes, node => node is Real and not Rational);
             Assert.DoesNotContain(on.Nodes, node => node is Real and not Rational);
         }
+
+        // A string that parses to something else said only that it was not a variable; v0 is v ^ 0, and the
+        // message says so, and that v_0 is the variable. https://github.com/asc-community/AngouriMath/issues/2567
+        [Theory]
+        [InlineData("v0", "Cannot parse an instance of Variable from `v0`: it parses as `v ^ 0`: a digit written against a name is its power, and `v_0` is the variable with that index")]
+        [InlineData("alpha1", "Cannot parse an instance of Variable from `alpha1`: it parses as `alpha ^ 1`: a digit written against a name is its power, and `alpha_1` is the variable with that index")]
+        [InlineData("x + 1", "Cannot parse an instance of Variable from `x + 1`: it parses as `x + 1`")]
+        [InlineData("x^2", "Cannot parse an instance of Variable from `x^2`: it parses as `x ^ 2`")]
+        public void AStringThatIsNotAVariableSaysWhatItIs(string text, string message)
+            => Assert.Equal(message, Assert.Throws<CannotParseInstanceException>(() => { Entity.Variable v = text; }).Message);
+
+        [Theory]
+        [InlineData("v_0")]
+        [InlineData("alpha_1")]
+        [InlineData("x")]
+        public void TheIndexedSpellingIsAVariable(string text)
+        {
+            Entity.Variable v = text;
+            Assert.Equal(text, v.Name);
+        }
     }
 }
 

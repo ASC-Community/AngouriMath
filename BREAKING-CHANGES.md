@@ -137,6 +137,22 @@ compiled as a matrix is not read as a number: the operation is compiled on the m
 | `"dot(a, b)".Compile<double[], Complex[], Complex>("a", "b")` | throws `UncompilableNodeException`: vectors over `Double` and `Complex` | the scalar product |
 | `"dot(a, b)".Compile("a", "b")` | throws `UncompilableNodeException`, asking for a bug report | throws `UncompilableNodeException`: an operand is a number, and `Compile<..., double[]>` takes vectors |
 
+### A string that is not a variable says what it parses to
+
+**Not silent: a message says more.** `Entity.Variable v0 = "v0"` threw `CannotParseInstanceException` saying only that
+no variable could be parsed from `v0`. `v0` is `v ^ 0`, since a digit written against a name is its power
+([#1503](https://github.com/asc-community/AngouriMath/issues/1503)), and a formula with `v0` in it silently loses the
+`v0`. The message now says what the string parses to and, for a name with a digit against it, that the variable is
+spelled `v_0`. The same holds for each conversion from a string to a kind of entity, `Matrix`, `Set` and the rest
+([#2567](https://github.com/asc-community/AngouriMath/issues/2567)).
+
+| `Entity.Variable v = ...` | Was (2.9.0) | Now |
+|---|---|---|
+| `"v0"` | `` Cannot parse an instance of Variable from `v0` `` | `` Cannot parse an instance of Variable from `v0`: it parses as `v ^ 0`: a digit written against a name is its power, and `v_0` is the variable with that index `` |
+| `"alpha1"` | `` ... from `alpha1` `` | `` ...: it parses as `alpha ^ 1`: ..., and `alpha_1` is the variable with that index `` |
+| `"x + 1"` | `` ... from `x + 1` `` | `` ...: it parses as `x + 1` `` |
+| `"v_0"` | the variable `v_0` | unchanged |
+
 ### Over a matrix argument of whole numbers, a constant and a quotient are not whole numbers
 
 **Silent: a truncated value is the value.** `Compile<...>` with a matrix argument over `long`, `int` or `BigInteger`
