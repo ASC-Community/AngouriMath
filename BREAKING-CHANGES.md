@@ -175,6 +175,36 @@ truncated; a matrix power whose exponent is not whole has no value, as over `dou
 | `"A / B".Compile<long[,], long[,], double[,]>("A", "B")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | `[[16, 11], [34, 27]] / 29` to rounding |
 | `"1 / A".Compile<long[,], long[,]>("A")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | throws `UncompilableNodeException`: a matrix over `Double` |
 
+### A transpose or a vector product beside a written matrix is a matrix, not an entry
+
+**Silent: a wrong answer, most often `0`, is now the expression left as written.** `InnerSimplified` and `Evaled`
+spread anything that was not a written matrix over a written matrix's entries, so a transpose or a vector product
+not yet carried out was read as a number: `[1, 0]T * transpose(A) * [0, 1]` became `[[transpose(A), 0]] * [0, 1]`,
+and so `0`, where it is the entry `A[2, 1]`. `Simplify` set that product aside and kept it, but it sorted a product
+whose factor was a sum with a transpose in it, as `transpose(A) + B` is, as though matrices commuted, and answered `0`
+there too; and it spread a sum of a written matrix and a transpose over the entries as well. Such an operand is now
+left beside the written matrix, by all three, until it is one. Anything built from one counts, a function of it
+included, as `conj(transpose(A))`; a determinant, a trace, an entry, a scalar product or a norm of one is a number, as
+before. A bare name is still read as a number beside a written matrix, so `[1, 0]T * A * [0, 1]` is still `0` and
+`x * [1, 2]` still `[x, 2 * x]` ([#2557](https://github.com/asc-community/AngouriMath/issues/2557); the nodes
+are those of [#2147](https://github.com/asc-community/AngouriMath/issues/2147) and
+[#105](https://github.com/asc-community/AngouriMath/issues/105)).
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `"[1, 0]T * transpose(A) * [0, 1]".ToEntity().InnerSimplified`, and `.Evaled` | `0` | `[[1, 0]] * transpose(A) * [0, 1]`, which is `3` at `A = [[1, 2], [3, 4]]` |
+| `"[1, 0]T * transpose(A)".ToEntity().InnerSimplified` | `[[transpose(A), 0]]` | `[[1, 0]] * transpose(A)` |
+| `"[0, 0, 1]T * cross(a, b)".ToEntity().InnerSimplified`, and `.Evaled` | `[[0, 0, cross(a, b)]]` | `[[0, 0, 1]] * cross(a, b)` |
+| `"[1, 0] + transpose(A)".ToEntity().Simplify()`, and `.InnerSimplified`, `.Evaled` | `[1 + transpose(A), transpose(A)]` | `[1, 0] + transpose(A)` |
+| `"transpose(A) / [[1, 2], [3, 4]]".ToEntity().InnerSimplified` | `[[transpose(A) * (-2), transpose(A)], [transpose(A) * 3/2, transpose(A) * -1/2]]` | `transpose(A) * [[-2, 1], [3/2, -1/2]]` |
+| `"[1, 0]T * (transpose(A) + B) * [0, 1]".ToEntity().Simplify()`, and `.InnerSimplified`, `.Evaled` | `0` | `[[1, 0]] * (transpose(A) + B) * [0, 1]` |
+| `"[1, 0]T * conj(transpose(A)) * [0, 1]".ToEntity().Simplify()`, and `.InnerSimplified`, `.Evaled` | `0` | `[[1, 0]] * conjugate(transpose(A)) * [0, 1]` |
+| `"[1, 0]T * derivative(transpose(x * A), x) * [0, 1]".ToEntity().InnerSimplified` | `0` | `[[1, 0]] * transpose(A) * [0, 1]` |
+| the same with `A = [[1, 2], [3, 4]]` substituted, `.Evaled` | `0` | `[[1, 0]] * transpose(1 * [[1, 2], [3, 4]] + [[0, 0], [0, 0]] * x) * [0, 1]`, left: it is `3`, and the transpose is not carried out while a name stands beside its written matrix |
+| `"(transpose(A) + B) * x * y".ToEntity().Simplify()` | `x * y * (transpose(A) + B)` | `(transpose(A) + B) * x * y`: the factors keep their order |
+| `"[1, 0]T * A * [0, 1]".ToEntity().InnerSimplified` | `0` | unchanged |
+| `"[1, 2] * det(A)".ToEntity().InnerSimplified` | `[det(A), 2 * det(A)]` | unchanged |
+
 ---
 
 ## 2.9.0 — since 2.8.0

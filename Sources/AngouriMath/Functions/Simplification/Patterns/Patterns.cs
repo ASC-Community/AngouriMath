@@ -35,7 +35,8 @@ namespace AngouriMath.Functions
 
         /// <summary>
         /// The factors of a product sorted and grouped, unless one of them is a transpose, which is a matrix, or a vector
-        /// product, which is a vector (https://github.com/asc-community/AngouriMath/issues/105). Matrices do not commute:
+        /// product, which is a vector (https://github.com/asc-community/AngouriMath/issues/105), or is built from one, as
+        /// transpose(A) + B is. Matrices do not commute:
         /// AᵀA is not AAᵀ, and M cross(a, b) is not cross(a, b) M. The product is then left in the order it is written,
         /// its other factors included, since a name beside a transpose may stand for a matrix too; a name carries no type to say which
         /// (https://github.com/asc-community/AngouriMath/issues/1237).
@@ -45,8 +46,7 @@ namespace AngouriMath.Functions
         {
             var factors = Mulf.LinearChildren(original);
             for (var i = 0; i < factors.Count; i++)
-                if (factors[i] is Transposef or Powf(Transposef, _) || ProductsOfMatrices.IsAVectorProduct(factors[i])
-                    || factors[i] is Powf(var powered, _) && ProductsOfMatrices.IsAVectorProduct(powered))
+                if (factors[i] is Transposef or Powf(Transposef, _) || ProductsOfMatrices.IsAMatrixNotWrittenOut(factors[i]))
                     return original;
             return SortAndGroup(original, factors, level, static (a, b) => a * b);
         }

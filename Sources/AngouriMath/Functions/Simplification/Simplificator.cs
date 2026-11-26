@@ -205,10 +205,10 @@ namespace AngouriMath.Functions
                 return product;
             var factors = new System.Collections.Generic.List<Entity>();
             Gather(product, factors);
-            // A product with a transpose or a vector product in it is a product of matrices, which do not commute.
-            // https://github.com/asc-community/AngouriMath/issues/2147
+            // A product with a transpose or a vector product in it, or a factor built from one, is a product of
+            // matrices, which do not commute. https://github.com/asc-community/AngouriMath/issues/2147
             if (factors.Exists(static factor => factor is Entity.Transposef or Entity.Powf(Entity.Transposef, _)
-                    || ProductsOfMatrices.IsAVectorProduct(factor) || factor is Entity.Powf(var powered, _) && ProductsOfMatrices.IsAVectorProduct(powered)))
+                    || ProductsOfMatrices.IsAMatrixNotWrittenOut(factor)))
                 return product;
             var ordered = new System.Collections.Generic.List<Entity>(factors.Count);
             for (var rank = 0; rank <= 2; rank++)
