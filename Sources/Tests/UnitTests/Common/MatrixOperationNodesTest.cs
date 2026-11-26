@@ -270,6 +270,52 @@ namespace AngouriMath.Tests.Common
             Assert.Equal(6 * Det(Squares[1]), Value("det(A * [[2, 0], [0, 3]])".ToEntity().Substitute("A", AsEntity(Squares[1])).Evaled));
         }
 
+        // A transpose is a matrix, beside a written matrix as anywhere, and not a number to multiply into its entries:
+        // [1, 0]T * transpose(A) * [0, 1] was [[transpose(A), 0]] * [0, 1] and so 0 once simplified or evaluated, where
+        // it is the entry A[2, 1]. Simplify set the product aside and kept it, but spread a sum over the entries as
+        // well, and a product with a sum of matrices in it came out 0 there too.
+        // https://github.com/asc-community/AngouriMath/issues/2557
+        [Theory]
+        [InlineData("[1, 0]T * transpose(A) * [0, 1]")]
+        [InlineData("[1, 0]T * transpose(A)")]
+        [InlineData("transpose(A) * [0, 1]")]
+        [InlineData("[1, 0]T * (2 * transpose(A)) * [0, 1]")]
+        [InlineData("[1, 0]T * transpose(A) ^ 2 * [0, 1]")]
+        [InlineData("[1, 0]T * (transpose(A) * B) * [0, 1]")]
+        [InlineData("[1, 0]T * (transpose(A) + B) * [0, 1]")]
+        [InlineData("[[1, 2], [3, 4]] / transpose(A)")]
+        [InlineData("transpose(A) / [[1, 2], [3, 4]]")]
+        [InlineData("[[1, 2], [3, 4]] + transpose(A)")]
+        [InlineData("transpose(A) - [[1, 2], [3, 4]]")]
+        [InlineData("[1, 0]T * transpose(k * [[1, 2], [3, 4]]) * [0, 1]")]
+        public void AMatrixBesideAWrittenMatrixIsNotReadAsANumber(string input)
+        {
+            var expr = input.ToEntity();
+            foreach (var a in Squares.Where(m => m.GetLength(0) == 2))
+            {
+                Entity At(Entity e) => e.Substitute("A", AsEntity(a)).Substitute("B", AsEntity(Squares[2])).Substitute("k", 3).Evaled;
+                var expected = At(expr);
+                foreach (var form in new[] { expr.InnerSimplified, expr.Simplify(), expr.Evaled })
+                {
+                    var actual = At(form);
+                    if (expected is Entity.Matrix)
+                        Near(Entries(expected), Entries(actual));
+                    else
+                        Near(Value(expected), Value(actual));
+                }
+            }
+        }
+
+        // The row picks the first row of the transpose, and the column its second entry: the entry A[2, 1].
+        [Fact]
+        public void AnEntryPickedOutOfATransposeByUnitVectorsIsThatEntry()
+        {
+            var expr = "[1, 0]T * transpose(A) * [0, 1]".ToEntity();
+            foreach (var a in Squares.Where(m => m.GetLength(0) == 2))
+                foreach (var form in new[] { expr.InnerSimplified, expr.Simplify(), expr.Evaled })
+                    Near(a[1, 0], Value(form.Substitute("A", AsEntity(a)).Evaled));
+        }
+
         [Fact]
         public void AProductWrittenTwiceStillCancels()
             => Assert.Equal(0, "transpose(A) * B - transpose(A) * B".ToEntity().Simplify());
