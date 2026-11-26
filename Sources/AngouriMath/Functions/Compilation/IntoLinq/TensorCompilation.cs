@@ -809,6 +809,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
         /// </summary>
         internal static Expression? Binary(Entity node, Expression left, Expression right, Func<Expression, Type, Expression> convert)
         {
+            // A quotient of whole numbers is computed over double, of matrices as of numbers, and a matrix to a negative
+            // power is a quotient: over long, A / 2 divided each entry with truncation, and 1 / A and A ^ (-1) were refused
+            // for want of an inverse. A power whose exponent arrives only at the call is compiled over the whole numbers,
+            // where a negative one is refused then. https://github.com/asc-community/AngouriMath/issues/2556
+            if (node is Entity.Divf || node is Entity.Powf { Exponent: var exponent } && IsNegativeConstant(exponent))
+                (left, right) = (OverAField(left, convert), OverAField(right, convert));
             var leftTensor = kitsByTensor.TryGetValue(left.Type, out var leftKit);
             var rightTensor = kitsByTensor.TryGetValue(right.Type, out var rightKit);
             if (leftTensor && rightTensor)
@@ -856,6 +862,13 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 _ => null,
             };
         }
+
+        // A matrix over the whole numbers, which have no quotients, widened to double, which has them; anything else as it is.
+        private static Expression OverAField(Expression operand, Func<Expression, Type, Expression> convert)
+            => kitsByTensor.TryGetValue(operand.Type, out var kit) && kit.Inverse is null ? Widen(operand, typeof(double), convert) : operand;
+
+        private static bool IsNegativeConstant(Entity exponent)
+            => exponent.Vars.Count == 0 && exponent.Evaled is Entity.Number.Real { IsNegative: true };
 
         // The exponent of a matrix power as the whole number it must be, checked when the delegate is called: over the
         // complex numbers a constant is complex too, and it was refused for want of a conversion to int.
