@@ -91,21 +91,25 @@ namespace AngouriMath.Functions.Compilation.IntoSource
 
         // The rewrites Compile makes before compiling, so that the shader computes what it
         // computes. A membership in an interval, a finite set or a union of them is the comparisons
-        // it stands for. A matrix operation on matrices written out is reduced to the number it gives,
-        // as Compile reduces it, since a shader output is a number. A quotient of one exponential
+        // it stands for. A matrix operation is carried out wherever its names are numbers, which every
+        // variable of a shader is, as Compile carries it out: dot(x [1, 2], [3, 4]) is 11 x. A product of
+        // matrices written out that is left then is reduced to the number it gives, as Compile reduces it
+        // (#425), since a shader output is a number. A quotient of one exponential
         // plus a constant by the same exponential plus another, which is how tanh is spelled, is
         // taken as 1 + (c1 - c2) / (b^v + c2), which does not divide an overflow by an overflow:
         // in single precision e^(2x) overflows from x = 45 on.
         // https://github.com/asc-community/AngouriMath/issues/2254
         private static Entity Prepared(Entity expression)
         {
+            // https://github.com/asc-community/AngouriMath/issues/2561
             if (expression.Nodes.Any(node => node is Matrix))
-                expression = expression.Replace(node => node switch
-                {
-                    DotProductf(Matrix, Matrix) or CrossProductf(Matrix, Matrix) or Transposef(Matrix)
-                        or Determinantf(Matrix) or Tracef(Matrix) or MatrixEntryf(Matrix, _, _) => node.InnerSimplified,
-                    _ => node,
-                });
+            {
+                expression = MatrixOperationsOverNumbers.Rewritten(expression, static _ => true);
+                // With an operation still left, simplification would read it as a number beside the written
+                // matrices (#2557); it is refused as it stands instead.
+                if (expression.Nodes.Any(node => node is Matrix) && !expression.Nodes.Any(MatrixOperationsOverNumbers.IsMatrixOperation))
+                    expression = expression.InnerSimplified;
+            }
             return ExponentialQuotients.Rewritten(CompiledMembership.Rewritten(expression));
         }
 

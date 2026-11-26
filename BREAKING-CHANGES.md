@@ -175,6 +175,27 @@ truncated; a matrix power whose exponent is not whole has no value, as over `dou
 | `"A / B".Compile<long[,], long[,], double[,]>("A", "B")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | `[[16, 11], [34, 27]] / 29` to rounding |
 | `"1 / A".Compile<long[,], long[,]>("A")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | throws `UncompilableNodeException`: a matrix over `Double` |
 
+### A shader carries out a scalar product, a determinant or a transpose of a name beside a written matrix
+
+**Not silent: what was refused is printed.** `MathS.Shaders.Hlsl` and `Glsl` refused `dot`, `cross`, `det`,
+`transpose`, `trace` and an entry `A[k, l]` of an expression with a name beside a written matrix. Simplification
+leaves these as written, since the name may stand for a matrix, but every variable of a shader is a number. Each is now
+carried out as `Compile` carries it out, and a product of written matrices left after that is reduced to the number it
+gives, as `Compile` reduces it. An operation that has no value, such as vectors of different lengths or a transpose of
+a name, is still refused ([#2561](https://github.com/asc-community/AngouriMath/issues/2561)).
+
+| `MathS.Shaders.Hlsl` of the output `o` | Was (2.9.0) | Now |
+|---|---|---|
+| `dot(x * [1, 2], [3, 4])` | refused at `dot(x * [1, 2], [3, 4])` | `o = ((x * 3.0) + ((x * 2.0) * 4.0));` |
+| `dot([1, 0], cos(y) * [x, y])` | refused at `dot([1, 0], cos(y) * [x, y])` | `o = (cos(y) * x);` |
+| `det(x * [[1, 2], [3, 4]])` | refused at `det(x * [[1, 2], [3, 4]])` | `o = (-(2.0 * (x * x)));` |
+| `trace(y * [[1, 2], [3, 4]]) + x` | refused at `trace(y * [[1, 2], [3, 4]])` | `o = ((y + (y * 4.0)) + x);` |
+| `[0, 0, 1]T * cross(x * [1, 0, 0], [0, y, 0])` | refused at `[[0, 0, 1]]` | `o = (x * y);` |
+| `[1, 0]T * transpose(x * [[1, 2], [3, y]]) * [0, 1]` | refused at `[[1, 0]]` | `o = (x * 3.0);` |
+| `(x * [[1, 2], [3, 4]])[2, 1] + y` | refused at `(x * [[1, 2], [3, 4]])[2, 1]` | `o = ((x * 3.0) + y);` |
+| `[1, 0]T * [[x, y], [1, 2]] * [0, 1]` | refused at `[[1, 0]]` | `o = y;` |
+| `x + dot(x * [1, 2], [3, 4, 5])` | refused at `dot(x * [1, 2], [3, 4, 5])` | refused at `dot([x, x * 2], [3, 4, 5])` |
+
 ---
 
 ## 2.9.0 — since 2.8.0

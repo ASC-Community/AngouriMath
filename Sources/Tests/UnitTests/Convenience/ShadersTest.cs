@@ -139,6 +139,17 @@ namespace AngouriMath.Tests.Convenience
             new Determinantf(MathS.Matrix(new Entity[,] { { "x", "y" }, { "1", "x" } })),
             new Tracef(MathS.Matrix(new Entity[,] { { "x", "y" }, { "1", "x" } })),
             (Entity)"sin(x)" + new DotProductf(new CrossProductf(MathS.Vector("x", "y", "1"), MathS.Vector("1", "y", "x")), MathS.Vector("1", "1", "1")),
+            // A name beside a written matrix, which simplification keeps in case the name is a matrix: every variable of
+            // a shader is a number. https://github.com/asc-community/AngouriMath/issues/2561
+            "dot(x * [1, 2], [3, 4])",
+            "dot([1, 0], cos(y) * [x, y])",
+            "det(x * [[1, 2], [3, 4]])",
+            "trace(y * [[1, 2], [3, 4]]) + x",
+            "[0, 0, 1]T * cross(x * [1, 0, 0], [0, y, 0])",
+            "[1, 0]T * transpose(x * [[1, 2], [3, y]]) * [0, 1]",
+            "det(transpose(x * [[1, y], [2, 3]])) - y",
+            "(x * [[1, 2], [3, 4]])[2, 1] + y",
+            "[1, 0]T * [[x, y], [1, 2]] * [0, 1]",
         };
 
         [Theory]
@@ -220,6 +231,8 @@ namespace AngouriMath.Tests.Convenience
         [InlineData("det(x)", "det(x)")]
         [InlineData("transpose(x)", "transpose(x)")]
         [InlineData("[x, y]", "[x, y]")]
+        [InlineData("x + dot(x * [1, 2], [3, 4, 5])", "dot([x, x * 2], [3, 4, 5])")]
+        [InlineData("[1, 0]T * transpose(x) * [0, 1]", "[[1, 0]]")]
         [InlineData("iverson(x in RR)", "x in RR")]
         [InlineData("beta(x, y) + 1", "beta(x, y)")]
         [InlineData("x + {1, 2}", "{ 1, 2 }")]
