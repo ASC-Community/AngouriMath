@@ -699,7 +699,7 @@ namespace AngouriMath
             /// <inheritdoc cref="Determinantf.CarriedOut"/>
             internal Entity CarriedOut(bool isExact, bool namesAreNumbers)
                 => OnMatrixArgument(Argument, isExact,
-                    matrix => matrix.IsSquare ? matrix.Trace.InnerSimplified(isExact) : null,
+                    matrix => matrix.Trace?.InnerSimplified(isExact),
                     // The transpose has the same diagonal.
                     other => other is Transposef(var inner) ? new Tracef(inner).InnerSimplified(isExact) : null,
                     New, namesAreNumbers);

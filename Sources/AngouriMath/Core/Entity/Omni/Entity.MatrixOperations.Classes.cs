@@ -56,8 +56,8 @@ namespace AngouriMath
         /// The trace <c>trace(A)</c> of a square matrix, the sum of its diagonal entries.
         /// </summary>
         /// <remarks>
-        /// Only of a square matrix: <see cref="Matrix.Trace"/> sums the diagonal of any matrix,
-        /// but the trace is defined for the square ones, as it is the sum of the eigenvalues.
+        /// Only of a square matrix, as <see cref="Matrix.Trace"/> is: the trace is defined for the
+        /// square ones, as it is the sum of the eigenvalues.
         /// </remarks>
         public sealed partial record Tracef(Entity Argument) : Function
         {

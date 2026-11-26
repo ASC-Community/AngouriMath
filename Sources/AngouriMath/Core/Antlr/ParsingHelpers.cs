@@ -99,8 +99,8 @@ namespace AngouriMath.Core.Antlr
         {
             if (MatrixOrUnknown("trace", argument, "trace([[1, 2], [3, 4]])") is not { } matrix)
                 return new Tracef(argument);
-            return matrix.IsSquare
-                ? matrix.Trace
+            return matrix.Trace is { } trace
+                ? trace
                 : throw new InvalidArgumentParseException(
                     $"trace is taken of a square matrix, and {matrix} is {matrix.RowCount} by {matrix.ColumnCount}");
         }

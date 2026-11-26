@@ -242,8 +242,8 @@ namespace AngouriMath.Core.Operations
             static m => m.ReducedRowEchelonForm);
 
         /// <summary><see cref="Matrix.Trace"/>.</summary>
-        public static Query<Func<Matrix, Entity>> Trace { get; } = new(
-            "trace", "The trace of a square matrix.",
+        public static Query<Func<Matrix, Entity?>> Trace { get; } = new(
+            "trace", "The trace of a square matrix, or null for any other.",
             static m => m.Trace);
 
         /// <summary><see cref="Matrix.TensorProduct(Matrix, Matrix)"/>.</summary>
