@@ -222,7 +222,9 @@ exponent happens to be whole.
 
 **Nothing is simplified.** What is printed is the expression you give, so `Simplify` it first if
 you want a smaller one. The only rewrites are the ones `Compile` makes as well, and each keeps the
-value: an operation on matrices written out is the number it gives; a membership in an interval
+value: a scalar product, a determinant, a transpose, a trace or an entry is carried out with every
+variable a number, so `dot(x * [1, 2], [3, 4])` is `11 x`, and a product of matrices written out
+whose value is a number is that number; a membership in an interval
 or a finite set is the comparisons it stands for; and `(b^v + c1) / (b^v + c2)`, which is how
 `tanh` is spelled, is taken as `1 + (c1 - c2) / (b^v + c2)`, so that `tanh(x)` is 1 for a large
 `x` rather than infinity over infinity — in single precision `e^(2x)` overflows from `x = 45` on.
@@ -238,6 +240,8 @@ or a finite set is the comparisons it stands for; and `(b^v + c1) / (b^v + c2)`,
   functions, and `gcd` and `lcm`, which need a loop;
 - sets and memberships in a set of numbers, and matrices: each output is one number, so assign a
   vector's entries one by one;
+- a matrix operation with no value where every variable is a number, such as `dot` of two vectors
+  of different lengths or the transpose of a variable;
 - whatever `Compile` refuses — a derivative, an integral, a limit, a sum or a product left
   unevaluated, or a statement where a number is expected — with the message `Compile` gives.
 
