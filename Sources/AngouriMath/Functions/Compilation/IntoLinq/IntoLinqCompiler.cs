@@ -30,6 +30,12 @@ namespace AngouriMath.Core.Compilation.IntoLinq
             // before compiling, so those failed along with the ones that genuinely cannot
             // be compiled (https://github.com/asc-community/AngouriMath/issues/425).
             // Only expressions that mention a matrix pay for this.
+            // A scalar product, a determinant and the rest of a name compiled as a number beside a written matrix are
+            // carried out first, as simplification will not, and one taken of a number is refused before simplification
+            // reads it as a number. https://github.com/asc-community/AngouriMath/issues/105
+            bool IsNumberArgument(Variable variable) => typesAndNames.Any(c => c.variable == variable && !TensorCompilation.IsMatrixType(c.type));
+            expr = MatrixOperationsOverNumbers.Rewritten(expr, IsNumberArgument);
+            MatrixOperationsOverNumbers.Check(expr, IsNumberArgument, anyLeft: false);
             if (expr.Nodes.Any(node => node is Entity.Matrix))
                 expr = TensorCompilation.SimplifiedAroundMatrixArguments(expr, IsMatrixArgument);
             expr = CompiledMembership.Rewritten(expr);
@@ -76,7 +82,8 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                 static bool IsComplex(Type? type)
                     => type == typeof(System.Numerics.Complex) || (type is not null && TensorCompilation.ElementOfMatrixType(type) == typeof(System.Numerics.Complex));
                 // Over a matrix argument of one element type, a written matrix beside it is over that type too, so that
-                // the two combine: [[1, 0]] * A over double is not a matrix of long times a matrix of double.
+                // the two combine: [[1, 0]] * A over double is not a matrix of long times a matrix of double. A constant
+                // that type does not hold keeps its own (see Holds).
                 var matrixElements = typesAndNames.Select(c => TensorCompilation.ElementOfMatrixType(c.type)).OfType<Type>().Distinct().ToList();
                 var constantType = typesAndNames.Any(c => IsComplex(c.type)) || IsComplex(returnType)
                     ? typeof(System.Numerics.Complex)
@@ -143,6 +150,21 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                     $"`{expr.Stringize()}` is a matrix of {shape.Columns} columns, not a column vector, and cannot be compiled as {returnType}");
         }
 
+        /// <summary>
+        /// Whether an entry of <paramref name="type"/> holds <paramref name="number"/>: the whole numbers hold an
+        /// integer, the reals a real, and the complex numbers any number. A constant is converted to the element type of
+        /// the matrix arguments only where it does: over a matrix of whole numbers 0.5 was 0 and pi was 3, so
+        /// <c>trace(A * 0.5)</c> was 0. One that is not held keeps its own type, and a matrix it meets is widened to that.
+        /// https://github.com/asc-community/AngouriMath/issues/2556
+        /// </summary>
+        private static bool Holds(Type type, Number number)
+            => number switch
+            {
+                Number.Integer => true,
+                Number.Real => type == typeof(double) || type == typeof(float) || type == typeof(System.Numerics.Complex),
+                _ => type == typeof(System.Numerics.Complex),
+            };
+
         private static bool IsRealType(Type type)
             => type == typeof(double) || type == typeof(float) || type == typeof(int) || type == typeof(long)
                || type == typeof(System.Numerics.BigInteger);
@@ -188,7 +210,7 @@ namespace AngouriMath.Core.Compilation.IntoLinq
                             ? $", which are {string.Join(", ", over)}"
                             : ", which are none")),
 
-                Number when constantType is { } type => protocol.ConvertType(protocol.ConvertConstant(expr), type),
+                Number number when constantType is { } type && Holds(type, number) => protocol.ConvertType(protocol.ConvertConstant(expr), type),
                 Entity.Boolean or Number => protocol.ConvertConstant(expr),
 
                 IUnaryNode oneArg
