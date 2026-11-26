@@ -53,6 +53,30 @@ namespace AngouriMath.Tests.Common
         public void EveryDigitIsKept(string expression, string expected)
             => AssertNear(expected, Assert.IsAssignableFrom<Number.Real>(expression.ToEntity().Evaled).EDecimal, "1E-98");
 
+        [Theory]
+        // Past the exponent range, where 1 added exactly to e^(10^7) was an integer of four million digits: each of
+        // these took seconds or never returned, and did not stop when cancelled.
+        // https://github.com/asc-community/AngouriMath/issues/2563
+        [InlineData("tanh(10^7)", "1")]
+        [InlineData("tanh(-10^8)", "-1")]
+        [InlineData("coth(10^8)", "1")]
+        [InlineData("coth(-10^7)", "-1")]
+        [InlineData("1 - e^(-10^7)", "1")]
+        [InlineData("sinh(10^7)", "Infinity")]
+        [InlineData("sinh(-10^8)", "-Infinity")]
+        [InlineData("e^(10^7) - 1", "Infinity")]
+        [InlineData("e^(10^7) - e^(-10^7)", "Infinity")]
+        public void ALargeArgumentReturns(string expression, string expected)
+        {
+            var evaluation = System.Threading.Tasks.Task.Run(() => expression.ToEntity().Evaled);
+            Assert.True(evaluation.Wait(System.TimeSpan.FromSeconds(60)), $"{expression} did not return");
+            var value = Assert.IsAssignableFrom<Number.Real>(evaluation.Result).EDecimal;
+            if (expected.EndsWith("Infinity"))
+                Assert.Equal(EDecimal.FromString(expected), value);
+            else
+                AssertNear(expected, value, "1E-98");
+        }
+
         private static void AssertNear(string expectedText, EDecimal actual, string tolerance)
         {
             var expected = EDecimal.FromString(expectedText);
