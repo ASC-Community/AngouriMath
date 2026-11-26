@@ -212,9 +212,9 @@ matrix, went to GenericTensor's inverse. The adjugate of a matrix larger than 2 
 so did the `Inverse` built from it. Both took determinants by elimination, which divides by the first pivot and
 multiplies it back. `Simplify` read that as a condition that the pivot is not 0, so at a point where the pivot is 0
 the answer had no value, though the inverse exists wherever the determinant is not 0, and the adjugate everywhere.
-A negative power is now a power of `Inverse`. The adjugate of a matrix with an entry that is not a number is made of
-cofactors, each an exact determinant; a matrix of numbers has no pivot that may be 0, and is computed as before. A
-singular matrix to a negative power throws `InvalidMatrixOperationException`, the library's own exception, where it
+The adjugate of a matrix with an entry that is not a number is now made of cofactors, each an exact determinant, and a
+negative power of such a matrix is a power of that adjugate over the determinant. A matrix of numbers has no pivot
+that may be 0, and is computed as before. A singular matrix to a negative power throws `InvalidMatrixOperationException`, the library's own exception, where it
 threw GenericTensor's `InvalidDeterminantException` ([#2564](https://github.com/asc-community/AngouriMath/issues/2564),
 which takes [#2346](https://github.com/asc-community/AngouriMath/issues/2346)'s fix of `Inverse` to the other routes).
 
