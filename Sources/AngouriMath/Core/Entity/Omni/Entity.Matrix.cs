@@ -806,13 +806,19 @@ namespace AngouriMath
             private LazyPropertyA<Matrix> mainDiagonal;
 
             /// <summary>
-            /// The trace of a matrix. It is a sum of
-            /// all elements on the main diagonal
+            /// The trace of a square matrix, the sum of the entries on its main diagonal, or
+            /// <see langword="null"/> for any other matrix, as <see cref="Determinant"/> is.
             /// </summary>
-            public Entity Trace => trace.GetValue(static @this =>
-                TreeAnalyzer.MultiHangBinary(@this.MainDiagonal.ToList(), (a, b) => a + b),
+            /// <remarks>
+            /// It summed the diagonal of any matrix, so the trace of <c>[[1, 2, 3], [4, 5, 6]]</c> was
+            /// <c>1 + 5</c>, where <c>trace(...)</c> refuses it: the trace is defined for a square
+            /// matrix, as the sum of its eigenvalues.
+            /// https://github.com/asc-community/AngouriMath/issues/2565
+            /// </remarks>
+            public Entity? Trace => trace.GetValue(static @this =>
+                @this.IsSquare ? TreeAnalyzer.MultiHangBinary(@this.MainDiagonal.ToList(), (a, b) => a + b) : null,
                 this);
-            private LazyPropertyA<Entity> trace;
+            private LazyPropertyA<Entity?> trace;
 
             /// <summary>
             /// Creates a new vector with the specified element being

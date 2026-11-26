@@ -1171,8 +1171,10 @@ namespace AngouriMath
                     lower = Exp(v);
                     product = lower * Complex.CreateAtScales(power.RealPart.EDecimal.Subtract(EDecimal.One, work), power.ImaginaryPart.EDecimal, EDecimal.Zero, EDecimal.Zero);
                 }
-                static EDecimal Size(Complex z) => z.RealPart.EDecimal.Abs().Add(z.ImaginaryPart.EDecimal.Abs());
-                var scale = Size(lower).Multiply(Size(power).Add(EDecimal.One), work).ScaleByPowerOfTen(-extra);
+                // Each sum rounded: taken exactly, 1 added to e^(10^7) was an integer of four million digits, and
+                // tanh(10^7) did not return. https://github.com/asc-community/AngouriMath/issues/2563
+                EDecimal Size(Complex z) => z.RealPart.EDecimal.Abs().Add(z.ImaginaryPart.EDecimal.Abs(), work);
+                var scale = Size(lower).Multiply(Size(power).Add(EDecimal.One, work), work).ScaleByPowerOfTen(-extra);
                 return Complex.CreateAtScales(product.RealPart.EDecimal.RoundToPrecision(context), product.ImaginaryPart.EDecimal.RoundToPrecision(context), scale, scale);
             }
 

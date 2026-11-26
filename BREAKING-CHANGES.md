@@ -175,6 +175,21 @@ truncated; a matrix power whose exponent is not whole has no value, as over `dou
 | `"A / B".Compile<long[,], long[,], double[,]>("A", "B")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | `[[16, 11], [34, 27]] / 29` to rounding |
 | `"1 / A".Compile<long[,], long[,]>("A")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | throws `UncompilableNodeException`: a matrix over `Double` |
 
+### The trace of a matrix that is not square is null
+
+**Silent: a number for a trace that does not exist is now `null`.** `Matrix.Trace` summed the main diagonal of any
+matrix, so a 2 by 3 matrix had the trace `1 + 5`, and a vector had the trace of its first entry. The trace is defined
+for a square matrix only, as the sum of its eigenvalues, and `trace(...)` already refused any other. The property is now
+`Entity?`, `null` for a matrix that is not square, as `Determinant`, `Inverse` and `Adjugate` are
+([#2565](https://github.com/asc-community/AngouriMath/issues/2565)).
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `((Matrix)"[[1, 2, 3], [4, 5, 6]]").Trace` | `1 + 5` | `null` |
+| `((Matrix)"[1, 2, 3]").Trace` | `1` | `null` |
+| `((Matrix)"[[1, 2], [3, 4]]").Trace` | `1 + 4` | unchanged |
+| `"trace([[1, 2, 3], [4, 5, 6]])"` | throws `InvalidArgumentParseException` | unchanged |
+
 ### A transpose or a vector product beside a written matrix is a matrix, not an entry
 
 **Silent: a wrong answer, most often `0`, is now the expression left as written.** `InnerSimplified` and `Evaled`
@@ -249,6 +264,23 @@ a name, is still refused ([#2561](https://github.com/asc-community/AngouriMath/i
 | `(x * [[1, 2], [3, 4]])[2, 1] + y` | refused at `(x * [[1, 2], [3, 4]])[2, 1]` | `o = ((x * 3.0) + y);` |
 | `[1, 0]T * [[x, y], [1, 2]] * [0, 1]` | refused at `[[1, 0]]` | `o = y;` |
 | `x + dot(x * [1, 2], [3, 4, 5])` | refused at `dot(x * [1, 2], [3, 4, 5])` | refused at `dot([x, x * 2], [3, 4, 5])` |
+
+### sinh, tanh and coth of a large argument return
+
+**Not silent: an evaluation that took seconds, or never returned, returns its value.** A difference of two powers of
+`e`, which `sinh`, `tanh` and `coth` are written with, is evaluated with the digits it would cancel (2.9.0). There, 1
+was added exactly to a power past the exponent range, so `e^(10^7)` plus 1 was an integer of four million digits. The
+time grew with the argument, and the evaluation did not stop when cancelled. The values were already right where it
+returned, and they are unchanged ([#2563](https://github.com/asc-community/AngouriMath/issues/2563)).
+
+| `.Evaled` of | Was (2.9.0) | Now |
+|---|---|---|
+| `tanh(10^6)` | `1`, 408 ms | `1`, 2 ms |
+| `tanh(10^7)` | `1`, 18 s | `1` |
+| `tanh(-10^8)` | did not return in 60 s | `-1` |
+| `coth(-10^7)` | `-1`, 14 s | `-1` |
+| `sinh(10^7)` | `+oo`, 14 s | `+oo` |
+| `e^(10^7) - 1`, and `1 - e^(-10^7)` | `+oo` and `1`, 5 s each | `+oo` and `1` |
 
 ---
 

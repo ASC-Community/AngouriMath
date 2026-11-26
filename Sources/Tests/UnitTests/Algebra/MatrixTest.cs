@@ -683,6 +683,29 @@ namespace AngouriMath.Tests.Algebra
             Assert.Null(m.Determinant);
         }
 
+        // The trace summed the diagonal of any matrix, so a 2 by 3 one had the trace 1 + 5, where trace(...) refuses
+        // it. https://github.com/asc-community/AngouriMath/issues/2565
+        [Theory]
+        [InlineData("[1, 2, 3]")]
+        [InlineData("[1, 2, 3]T")]
+        [InlineData("[[1, 2, 3], [4, 5, 6]]")]
+        [InlineData("[[1, 3], [2, 5], [3, 6]]")]
+        public void CasesWhenTraceIsNull(string matrixRaw)
+        {
+            Matrix m = matrixRaw;
+            Assert.Null(m.Trace);
+        }
+
+        [Theory]
+        [InlineData("[[1, 2], [3, 4]]", "5")]
+        [InlineData("[[7]]", "7")]
+        [InlineData("[[a, b], [c, d]]", "a + d")]
+        public void TheTraceOfASquareMatrix(string matrixRaw, string expected)
+        {
+            Matrix m = matrixRaw;
+            Assert.Equal(expected.ToEntity().InnerSimplified, Assert.IsAssignableFrom<Entity>(m.Trace).InnerSimplified);
+        }
+
         [Theory]
         [InlineData("[1, 2, 3]")]
         [InlineData("[1, 2, 3]T")]
