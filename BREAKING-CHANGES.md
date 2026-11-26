@@ -137,6 +137,44 @@ compiled as a matrix is not read as a number: the operation is compiled on the m
 | `"dot(a, b)".Compile<double[], Complex[], Complex>("a", "b")` | throws `UncompilableNodeException`: vectors over `Double` and `Complex` | the scalar product |
 | `"dot(a, b)".Compile("a", "b")` | throws `UncompilableNodeException`, asking for a bug report | throws `UncompilableNodeException`: an operand is a number, and `Compile<..., double[]>` takes vectors |
 
+### Over a matrix argument of whole numbers, a constant and a quotient are not whole numbers
+
+**Silent: a truncated value is the value.** `Compile<...>` with a matrix argument over `long`, `int` or `BigInteger`
+converted every constant in the expression to that type, so `0.5` was `0`, `1 / 4` was `0` and `pi` was `3`, in the
+matrix arithmetic and outside it; and it divided a matrix of whole numbers entry by entry with truncation. A constant is
+now converted only where the element type holds it, an integer for the whole numbers, and keeps its own type otherwise,
+the matrix it meets widened to that. A quotient of a matrix of whole numbers, and a power of one to a negative constant,
+are computed over `double`, as a quotient of two whole numbers already was: `1 / A`, `A / B` and `A ^ (-1)` were
+refused, for want of an inverse among the whole numbers, and now compile. What stays whole is still computed over the
+whole numbers, exactly. A result that is not whole, asked for as a matrix of whole numbers, is refused rather than
+truncated; a matrix power whose exponent is not whole has no value, as over `double`
+([#2556](https://github.com/asc-community/AngouriMath/issues/2556)).
+
+`A = [[1, 2], [3, 4]]` and `B = [[-3, 5], [7, -2]]` throughout.
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `"trace(A * 0.5)".Compile<long[,], double>("A")`, and over `int[,]` and `BigInteger[,]` | `0` | `2.5` |
+| `"trace(A / 2)".Compile<long[,], double>("A")` | `2` | `2.5` |
+| `"trace(A) * 0.5".Compile<long[,], double>("A")` | `0` | `2.5` |
+| `"trace(pi * A)".Compile<long[,], double>("A")` | `15` | `15.707963267948966` |
+| `"trace(sqrt(2) * A)".Compile<long[,], double>("A")` | `5` | `7.0710678118654755` |
+| `"det(A / 2)".Compile<long[,], double>("A")` | `-1` | `-0.5` |
+| `"trace(A / n)".Compile<long[,], long, double>("A", "n")` at `n = 2` | `2` | `2.5` |
+| `"A / 2".Compile<long[,], double[,]>("A")` | throws `UncompilableNodeException`: a matrix over `Int64` | `[[0.5, 1], [1.5, 2]]` |
+| `"[[0.5, 1]] * A".Compile<long[,], double[,]>("A")` | throws `UncompilableNodeException`: a matrix over `Int64` | `[[3.5, 5]]` |
+| `"A / 2".Compile<long[,], long[,]>("A")` | `[[0, 1], [1, 2]]` | throws `UncompilableNodeException`: a matrix over `Double` |
+| `"A * 0.5".Compile<long[,], long[,]>("A")` | `[[0, 0], [0, 0]]` | throws `UncompilableNodeException`: a matrix over `Double` |
+| `"[[0.5, 1]] * A".Compile<long[,], long[,]>("A")` | `[[3, 4]]` | throws `UncompilableNodeException`: a matrix over `Double` |
+| `"A ^ 0.5".Compile<long[,], long[,]>("A")` | `[[1, 0], [0, 1]]` | throws `InvalidMatrixOperationException` when called: 0.5 is not a whole exponent |
+| `"trace(A + 1 / 4)".Compile<long[,], double>("A")` | `5` | `5.5` |
+| `"1 / A".Compile<long[,], double[,]>("A")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | the inverse, `[[-2, 1], [1.5, -0.5]]` to rounding |
+| `"A ^ (-1)".Compile<long[,], double[,]>("A")` | throws `UncompilableNodeException`: a matrix over `Int64` | the same inverse |
+| `"trace(A ^ (-1))".Compile<long[,], double>("A")` | throws `InvalidMatrixOperationException` when called: no inverse of a matrix of whole numbers | `-2.5` to rounding |
+| `"A ^ (-1)".Compile<long[,], long[,]>("A")` | throws `InvalidMatrixOperationException` when called: no inverse of a matrix of whole numbers | throws `UncompilableNodeException`: a matrix over `Double` |
+| `"A / B".Compile<long[,], long[,], double[,]>("A", "B")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | `[[16, 11], [34, 27]] / 29` to rounding |
+| `"1 / A".Compile<long[,], long[,]>("A")` | throws `UncompilableNodeException`: no inverse of a matrix of whole numbers | throws `UncompilableNodeException`: a matrix over `Double` |
+
 ---
 
 ## 2.9.0 — since 2.8.0

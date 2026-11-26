@@ -239,15 +239,135 @@ namespace AngouriMath.Tests.Common
             Assert.All(overComplex.Cast<Complex>(), entry => Assert.True(double.IsNaN(entry.Real)));
         }
 
-        // The inverse of a matrix of whole numbers is not one: refused where it is written, and at the call where a
-        // negative exponent arrives there.
+        // The inverse of a matrix of whole numbers is computed over double, as a quotient of two whole numbers is, and is
+        // not a matrix of whole numbers: asked for as one, it is refused. A negative exponent that arrives only at the
+        // call finds the power compiled over the whole numbers, and has no inverse there.
         [Fact]
-        public void AMatrixOfWholeNumbersIsNotInverted()
+        public void TheInverseOfAMatrixOfWholeNumbersIsNotWhole()
         {
             Assert.Throws<UncompilableNodeException>(() => "1 / A".ToEntity().Compile<long[,], long[,]>("A"));
+            Assert.Throws<UncompilableNodeException>(() => "A ^ (-1)".ToEntity().Compile<long[,], long[,]>("A"));
             var power = "A ^ n".ToEntity().Compile<long[,], long, long[,]>("A", "n");
             Assert.Equal(new long[,] { { 1, 4 }, { 0, 1 } }, power(new long[,] { { 1, 2 }, { 0, 1 } }, 2));
             Assert.Throws<InvalidMatrixOperationException>(() => power(new long[,] { { 1, 2 }, { 0, 1 } }, -1));
+        }
+
+        private static Complex[,] AsComplex<T>(T[,] a, Func<T, Complex> entry)
+        {
+            var result = new Complex[a.GetLength(0), a.GetLength(1)];
+            for (var r = 0; r < a.GetLength(0); r++)
+                for (var c = 0; c < a.GetLength(1); c++)
+                    result[r, c] = entry(a[r, c]);
+            return result;
+        }
+
+        private static void Near(Complex expected, Complex actual, string where)
+            => Assert.True(Complex.Abs(expected - actual) <= 1e-9 * Math.Max(1, Complex.Abs(expected)), $"{where}: expected {expected}, compiled {actual}");
+
+        private static readonly long[][,] WholeMatrices =
+        {
+            new long[,] { { 1, 2 }, { 3, 4 } },
+            new long[,] { { -3, 5 }, { 7, -2 } },
+        };
+
+        // A matrix argument over the whole numbers is computed over them only where the value stays whole. A constant
+        // was converted to the matrix's element type, so 0.5 was 0, pi 3 and sqrt(2) 2 ^ 0; and a quotient divided each
+        // entry with truncation, where a quotient of two whole numbers is computed over double. trace(A * 0.5) was 0 and
+        // trace(A / 2) was 2 at A = [[1, 2], [3, 4]], where both are 2.5. Checked against evaluation with A substituted,
+        // over long, int and BigInteger.
+        [Theory]
+        [InlineData("trace(A * 0.5)")]
+        [InlineData("trace(0.5 * A)")]
+        [InlineData("trace(A / 2)")]
+        [InlineData("trace(A / 3)")]
+        [InlineData("det(A / 2)")]
+        [InlineData("(A / 2)[2, 1]")]
+        [InlineData("trace(A) * 0.5")]
+        [InlineData("trace(pi * A)")]
+        [InlineData("trace(sqrt(2) * A)")]
+        [InlineData("[[0.5, 1]] * A * [[1], [0]]")]
+        [InlineData("trace(A + 1 / 4)")]
+        [InlineData("trace(1 / A)")]
+        [InlineData("trace(A ^ (-1))")]
+        [InlineData("det(A ^ (-2))")]
+        [InlineData("trace(2 / A + A / 4)")]
+        public void ANumberOfAMatrixOfWholeNumbersAgreesWithEvaluation(string expression)
+        {
+            var e = expression.ToEntity();
+            var overLongs = e.Compile<long[,], double>("A");
+            var overInts = e.Compile<int[,], double>("A");
+            var overBigIntegers = e.Compile<BigInteger[,], double>("A");
+            foreach (var a in WholeMatrices)
+            {
+                var expected = e.Substitute("A", AsEntity(AsComplex(a, v => v))).Evaled.EvalNumerical().ToNumerics();
+                Near(expected, overLongs(a), $"long, A = {AsEntity(AsComplex(a, v => v))}");
+                Near(expected, overInts(AsInts(a)), $"int, A = {AsEntity(AsComplex(a, v => v))}");
+                Near(expected, overBigIntegers(AsBigIntegers(a)), $"BigInteger, A = {AsEntity(AsComplex(a, v => v))}");
+            }
+        }
+
+        private static int[,] AsInts(long[,] a)
+        {
+            var result = new int[a.GetLength(0), a.GetLength(1)];
+            for (var r = 0; r < a.GetLength(0); r++)
+                for (var c = 0; c < a.GetLength(1); c++)
+                    result[r, c] = checked((int)a[r, c]);
+            return result;
+        }
+
+        private static BigInteger[,] AsBigIntegers(long[,] a)
+        {
+            var result = new BigInteger[a.GetLength(0), a.GetLength(1)];
+            for (var r = 0; r < a.GetLength(0); r++)
+                for (var c = 0; c < a.GetLength(1); c++)
+                    result[r, c] = a[r, c];
+            return result;
+        }
+
+        // The same, where the value is a matrix: it is a matrix over double. "A / 2" over long[,] asked for as double[,]
+        // was refused, the quotient being a matrix over long, and [[0.5, 1]] * A was [[3, 4]].
+        [Theory]
+        [InlineData("A / 2")]
+        [InlineData("A * 0.5 + 1")]
+        [InlineData("[[0.5, 1]] * A")]
+        [InlineData("1 / A")]
+        [InlineData("A ^ (-1)")]
+        [InlineData("A / 4 - 2 / A")]
+        public void AMatrixOfWholeNumbersAgreesWithEvaluation(string expression)
+        {
+            var e = expression.ToEntity();
+            var overLongs = e.Compile<long[,], double[,]>("A");
+            foreach (var a in WholeMatrices)
+                AssertAgrees(Evaluated(e, ("A", AsEntity(AsComplex(a, v => v)))), AsComplex(overLongs(a)));
+        }
+
+        // A quotient of two matrices of whole numbers, and of one by a whole number passed in, is computed over double
+        // as the quotient by a constant is.
+        [Fact]
+        public void AQuotientOfArgumentsOverTheWholeNumbersAgreesWithEvaluation()
+        {
+            var (a, b) = (WholeMatrices[0], WholeMatrices[1]);
+            var (entityA, entityB) = (AsEntity(AsComplex(a, v => v)), AsEntity(AsComplex(b, v => v)));
+            var quotient = "A / B".ToEntity();
+            AssertAgrees(Evaluated(quotient, ("A", entityA), ("B", entityB)), AsComplex(quotient.Compile<long[,], long[,], double[,]>("A", "B")(a, b)));
+            var byANumber = "trace(A / n)".ToEntity();
+            Near(byANumber.Substitute("A", entityA).Substitute("n", 2).Evaled.EvalNumerical().ToNumerics(),
+                byANumber.Compile<long[,], long, double>("A", "n")(a, 2), "trace(A / n) at n = 2");
+        }
+
+        // What stays whole is still computed over the whole numbers, exactly, where a double would round: 2 A + 1 at an
+        // entry of 2 ^ 60 is 2 ^ 61 + 1, which a double does not hold. A quotient or a constant that is not whole, asked
+        // for as a matrix of whole numbers, is refused rather than truncated; a power that is not whole has no value, as
+        // over double, where 0.5 was a whole exponent of 0 and A ^ 0.5 was the identity.
+        [Fact]
+        public void AMatrixOfWholeNumbersStaysWholeWhereItIs()
+        {
+            var a = new long[,] { { 1L << 60, 1 }, { 0, 1 } };
+            Assert.Equal(new long[,] { { (1L << 61) + 1, 3 }, { 1, 3 } }, "2 A + 1".ToEntity().Compile<long[,], long[,]>("A")(a));
+            Assert.Equal((1L << 60) + 1, "trace(A)".ToEntity().Compile<long[,], long>("A")(a));
+            Assert.Throws<UncompilableNodeException>(() => "A / 2".ToEntity().Compile<long[,], long[,]>("A"));
+            Assert.Throws<UncompilableNodeException>(() => "A * 0.5".ToEntity().Compile<long[,], long[,]>("A"));
+            Assert.Throws<InvalidMatrixOperationException>(() => "A ^ 0.5".ToEntity().Compile<long[,], long[,]>("A")(WholeMatrices[0]));
         }
 
         // A row times a matrix argument times a column is a 1 x 1 matrix, an entry of A, and a number. Simplified before
