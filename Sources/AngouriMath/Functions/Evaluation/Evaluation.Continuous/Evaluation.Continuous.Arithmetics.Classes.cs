@@ -561,6 +561,16 @@ namespace AngouriMath
                     (a, b) => (a, b) switch
                     {
                         (Complex n1, Complex n2) when !isExact => Number.Log(n1, n2),
+                        // The principal logarithm of the four points of the unit circle that are
+                        // numbers, i times the argument in (-pi; pi]: ln(-1) is i pi and ln(i) is
+                        // i pi / 2. ln(1) is 0 below. A trigonometric root was written ln(-1) / i
+                        // where it is pi. Over the reals ln(-1) has no value, so it is left there,
+                        // whether the node or the settings say the reals.
+                        // https://github.com/asc-community/AngouriMath/issues/2581
+                        (var @base, Complex point) when @base == MathS.e && !(Codomain < Domain.Complex)
+                            && MathS.Settings.Codomain.Value != Domain.Real
+                            && UnitCircleArgument(point) is { } argument
+                            => MathS.i * argument,
                         // The image of an interval of positive numbers, monotone for any base.
                         // https://github.com/asc-community/AngouriMath/issues/322
                         (var @base, Interval interval) when @base is not Set && IntervalArithmetic.Logarithm(@base, interval, isExact) is { } image => image,
@@ -590,8 +600,20 @@ namespace AngouriMath
                         _ => null
                     },
                     (@this, a, b) => ((Logf)@this).New(a, b), isExact);
+
+            /// <summary>
+            /// The argument of <c>-1</c>, <c>i</c> or <c>-i</c>, in <c>(-pi; pi]</c>, and
+            /// <see langword="null"/> for any other number. These are the only numbers on the unit
+            /// circle, besides 1, whose argument is a rational multiple of pi and whose parts are
+            /// rational, so the answer is exact without evaluating anything.
+            /// </summary>
+            internal static Entity? UnitCircleArgument(Complex point)
+                => point == Integer.MinusOne ? MathS.pi
+                 : point == MathS.i ? MathS.pi / 2
+                 : point == -MathS.i ? -MathS.pi / 2
+                 : null;
         }
-        
+
         public partial record DoubleFactorialf
         {
             // Defined on the integers but the negative even ones.
