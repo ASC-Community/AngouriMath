@@ -721,6 +721,25 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         internal static Set? Solved(Entity statement, Variable x)
             => Solve(statement, x)?.InnerSimplified as Set;
 
+        /// <summary>
+        /// An <c>abs(u)</c> in <paramref name="statement"/> with <paramref name="x"/> in it and no
+        /// other <c>abs</c> inside it, where <c>u</c> is real at every real <c>x</c>: built from
+        /// <c>x</c>, real numbers and named constants by sums, differences, products, quotients
+        /// and whole powers. <c>abs(sqrt(x))</c> is not one, since <c>sqrt(x)</c> is imaginary
+        /// for a negative <c>x</c> and neither half of the split would hold there.
+        /// </summary>
+        private static Absf? InnermostRealAbs(Entity statement, Variable x)
+            => statement.Nodes.OfType<Absf>().FirstOrDefault(abs =>
+                abs.Argument.ContainsNode(x)
+                && abs.Argument.Nodes.All(node => node switch
+                {
+                    Variable variable => variable == x || variable is Constant,
+                    Real => true,
+                    Sumf or Minusf or Mulf or Divf => true,
+                    Powf(_, Integer) => true,
+                    _ => false,
+                }));
+
         /// <summary>The solution set, or <see langword="null"/> where a part of the statement is declined.</summary>
         internal static Set? Solve(Entity expr, Variable x)
             => expr switch
@@ -753,6 +772,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                     Solve(left, x) is { } leftSolved && Solve(right, x) is { } rightSolved ? (Set)MathS.Union(leftSolved, rightSolved) : null,
                 Impliesf(var left, var right) => Implication(left, right, x),
                 Notf(var operand) => Negation(expr, operand, x),
+
+                // abs(u) of a real u is u where u >= 0 and -u where u < 0, so an inequality in
+                // abs(u) is two inequalities without it, each on its own half of the line, and
+                // the arms for and and or intersect and unite them. abs(2x - 3) <= 5 was refused.
+                // https://github.com/asc-community/AngouriMath/issues/2579
+                ComparisonSign comparison when comparison is not Equalsf && InnermostRealAbs(comparison, x) is { } abs =>
+                    Solve(abs.Argument >= 0 & comparison.Substitute(abs, abs.Argument)
+                        | abs.Argument < 0 & comparison.Substitute(abs, -abs.Argument), x),
 
                 Greaterf(var left, var right) =>
                     WithoutPoles(AnalyticalInequalitySolver.Solve(Minus(left, right), x), Minus(left, right), x),
