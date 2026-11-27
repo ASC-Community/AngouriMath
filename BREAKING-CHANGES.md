@@ -220,6 +220,30 @@ are those of [#2147](https://github.com/asc-community/AngouriMath/issues/2147) a
 | `"[1, 0]T * A * [0, 1]".ToEntity().InnerSimplified` | `0` | unchanged |
 | `"[1, 2] * det(A)".ToEntity().InnerSimplified` | `[det(A), 2 * det(A)]` | unchanged |
 
+### A symbolic inverse, adjugate or negative power has a value where a pivot is 0
+
+**Silent: `NaN`, which said there was no value, is now the value.** A matrix to a negative power, and a number over a
+matrix, went to GenericTensor's inverse. The adjugate of a matrix larger than 2 by 2 also came from GenericTensor, and
+so did the `Inverse` built from it. Both took determinants by elimination, which divides by the first pivot and
+multiplies it back. `Simplify` read that as a condition that the pivot is not 0, so at a point where the pivot is 0
+the answer had no value, though the inverse exists wherever the determinant is not 0, and the adjugate everywhere.
+The adjugate of a matrix with an entry that is not a number is now made of cofactors, each an exact determinant, and a
+negative power of such a matrix is a power of that adjugate over the determinant. A matrix of numbers has no pivot
+that may be 0, and is computed as before. A singular matrix to a negative power throws `InvalidMatrixOperationException`, the library's own exception, where it
+threw GenericTensor's `InvalidDeterminantException` ([#2564](https://github.com/asc-community/AngouriMath/issues/2564),
+which takes [#2346](https://github.com/asc-community/AngouriMath/issues/2346)'s fix of `Inverse` to the other routes).
+
+| Input | Was (2.9.0) | Now |
+|---|---|---|
+| `"[[a, b], [c, d]]^(-1)".ToEntity().Simplify()` | each entry `... provided not a = 0` | `[[d / (a * d - b * c), -b / (a * d - b * c)], [-c / (a * d - b * c), a / (a * d - b * c)]]` |
+| the same, then `a = 0, b = 1, c = 1, d = 0` and `Simplify` | `NaN` | `[[0, 1], [1, 0]]` |
+| `"1 / [[a, b], [c, d]]"`, the same | `NaN` | `[[0, 1], [1, 0]]` |
+| `Adjugate` of `[[a, 1, 0], [0, b, 1], [1, 0, c]]` | `[[b * c, -c, 1], [1, a * c * a / a, -a], [-b, -a * (-1) / a, a * b]]` | `[[b * c, -c, 1], [1, a * c, -a], [-b, 1, a * b]]` |
+| the same at `a = 0`, simplified | `NaN` | `[[b * c, -c, 1], [1, 0, 0], [-b, 1, 0]]` |
+| `Inverse` of the same, simplified, at `a = 0, b = 1, c = 1` | `NaN` | `[[1, -1, 1], [1, 0, 0], [-1, 1, 0]]` |
+| `((Matrix)"[[1, 2], [2, 4]]").Pow(-1)` | throws `InvalidDeterminantException` | throws `InvalidMatrixOperationException` |
+| `"[[1, 2], [3, 4]]^(-1)".ToEntity().Simplify()` | `[[-2, 1], [3/2, -1/2]]` | unchanged |
+
 ### A shader carries out a scalar product, a determinant or a transpose of a name beside a written matrix
 
 **Not silent: what was refused is printed.** `MathS.Shaders.Hlsl` and `Glsl` refused `dot`, `cross`, `det`,

@@ -522,13 +522,39 @@ namespace AngouriMath
             /// A matrix to the given power with InnerSimplified
             /// applied.
             /// </returns>
+            /// <remarks>
+            /// A negative power of a matrix with an entry that is not a number is a positive power of the adjugate
+            /// over the determinant, as <see cref="Inverse"/> has been since https://github.com/asc-community/AngouriMath/issues/2346.
+            /// GenericTensor's inverse took the determinant by elimination, divided by its first pivot, so
+            /// <c>[[a, b], [c, d]]^(-1)</c> had entries <c>d / (a * (d * a - c * b) / a)</c>, which simplified to a
+            /// condition that <c>a</c> is not 0: at <c>a = 0</c> it had no value, where <c>[[0, 1], [1, 0]]</c> is
+            /// its own inverse. https://github.com/asc-community/AngouriMath/issues/2564
+            /// </remarks>
+            /// <exception cref="InvalidMatrixOperationException">
+            /// The matrix is not square, or the power is negative and the matrix has no inverse.
+            /// </exception>
             public Matrix Pow(int exp)
-                => IsSquare switch
+            {
+                if (!IsSquare)
+                    throw new InvalidMatrixOperationException(
+                        $"Cannot raise a non-square matrix to a power, and this one is {RowCount}x{ColumnCount}");
+                if (exp >= 0 || IsAMatrixOfNumbers(this))
                 {
-                    false => throw new InvalidMatrixOperationException(
-                        $"Cannot raise a non-square matrix to a power, and this one is {RowCount}x{ColumnCount}"),
-                    true => new(InnerMatrix.MatrixPower(exp))
-                };
+                    // A matrix of numbers has no pivot that may be 0, and GenericTensor's inverse of one is exact.
+                    if (exp < 0 && Determinant is { } numericDeterminant && numericDeterminant == 0)
+                        throw new InvalidMatrixOperationException("A matrix whose determinant is 0 has no inverse, and so no negative power");
+                    return new(InnerMatrix.MatrixPower(exp));
+                }
+                // Not through Inverse, which can take GenericTensor's adjugate: that compiles an expression tree,
+                // which a native build cannot publish, and every node reaches this.
+                if (Determinant is not { } determinant || determinant == 0)
+                    throw new InvalidMatrixOperationException("A matrix whose determinant is 0 has no inverse, and so no negative power");
+                var adjugate = CofactorAdjugate(this);
+                var inverse = OfTheShapeOf(this, MathS.Matrix(RowCount, ColumnCount,
+                    (row, column) => adjugate[row, column] / determinant).InnerSimplified);
+                // -(exp + 1) + 1 rather than -exp, which int.MinValue does not have.
+                return exp == -1 ? inverse : inverse.Pow(-(exp + 1)) * inverse;
+            }
 
             /// <summary>
             /// Returns the n-th power of the
@@ -717,18 +743,53 @@ namespace AngouriMath
             }
 
             /// <summary>
-            /// Adjugate form of a matrix
+            /// Adjugate form of a matrix: the transpose of its cofactors, each the signed <see cref="Determinant"/> of a
+            /// minor. <see langword="null"/> for a matrix that is not square.
             /// </summary>
+            /// <remarks>
+            /// GenericTensor's adjugate took each minor by elimination, which divides by its first pivot and multiplies
+            /// it back, so an entry of the adjugate of <c>[[a, 1, 0], [0, b, 1], [1, 0, c]]</c> was <c>a * c * a / a</c>,
+            /// which simplified to a condition that <c>a</c> is not 0. The adjugate is a matrix of polynomials in the
+            /// entries and has a value everywhere, and so does the inverse wherever the determinant is not 0.
+            /// https://github.com/asc-community/AngouriMath/issues/2564
+            /// </remarks>
             public Matrix? Adjugate =>
                 adjugate.GetValue(static @this =>
                     {
                         if (!@this.IsSquare)
                             return null;
-                        // The adjugate takes every minor in one process-wide scratch matrix.
-                        // See Functions.GenTensorGuard.
-                        return ToMatrix(Functions.GenTensorGuard.Adjoint(@this.InnerMatrix));
+                        // A matrix of numbers has no pivot that may be 0, and its minors are taken as they were:
+                        // decimals near 1e50 lose digits to a cofactor's products either way, and GenericTensor's
+                        // order of operations is the one #561's inverse is pinned to.
+                        // The adjugate takes every minor in one process-wide scratch matrix. See Functions.GenTensorGuard.
+                        if (IsAMatrixOfNumbers(@this))
+                            return ToMatrix(Functions.GenTensorGuard.Adjoint(@this.InnerMatrix));
+                        return CofactorAdjugate(@this);
                     },
                     this);
+
+            private static bool IsAMatrixOfNumbers(Matrix matrix)
+                => Enumerable.Range(0, matrix.RowCount).All(row =>
+                       Enumerable.Range(0, matrix.ColumnCount).All(column => matrix[row, column] is Number));
+
+            /// <summary>
+            /// The adjugate of a square matrix, each entry the signed exact <see cref="Determinant"/> of a minor:
+            /// nothing is divided, and nothing goes through GenericTensor.
+            /// </summary>
+            private static Matrix CofactorAdjugate(Matrix matrix)
+            {
+                var n = matrix.RowCount;
+                if (n == 1)
+                    return OfTheShapeOf(matrix, MathS.Matrix(1, 1, (_, _) => Number.Integer.One));
+                return OfTheShapeOf(matrix, MathS.Matrix(n, n, (row, column) =>
+                {
+                    // The cofactor of the entry in row `column` and column `row`, which is the transpose.
+                    var minor = MathS.Matrix(n - 1, n - 1, (r, c) =>
+                        matrix[r < column ? r : r + 1, c < row ? c : c + 1]);
+                    var determinant = minor.Determinant!;
+                    return (row + column) % 2 == 0 ? determinant : -determinant;
+                }).InnerSimplified);
+            }
             // Computed by arithmetic on the entries, which the settings round: https://github.com/asc-community/AngouriMath/issues/2479
             private Convenience.SettingsDependent<Matrix?> adjugate;
 

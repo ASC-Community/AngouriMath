@@ -1023,6 +1023,38 @@ namespace AngouriMath.Tests.Algebra
             Assert.IsNotType<Matrix>(expression.ToEntity().Simplify());
         }
 
+        // A symbolic matrix to a negative power was inverted by elimination, which divided by the first pivot, and
+        // Simplify made that a condition that the pivot is not 0: at a = 0 the answer had no value, though the
+        // determinant is not 0 there. https://github.com/asc-community/AngouriMath/issues/2564
+        [Theory]
+        [InlineData("[[a, b], [c, d]] ^ (-1)", "a = 0, b = 1, c = 1, d = 0", "[[0, 1], [1, 0]]")]
+        [InlineData("1 / [[a, b], [c, d]]", "a = 0, b = 1, c = 1, d = 0", "[[0, 1], [1, 0]]")]
+        [InlineData("[[a, b], [c, d]] ^ (-2)", "a = 0, b = 1, c = 1, d = 0", "[[1, 0], [0, 1]]")]
+        [InlineData("[[a, 1, 0], [0, b, 1], [1, 0, c]] ^ (-1)", "a = 0, b = 1, c = 1", "[[1, -1, 1], [1, 0, 0], [-1, 1, 0]]")]
+        [InlineData("[[a, b], [c, d]] ^ (-1)", "a = 2, b = 1, c = 1, d = 1", "[[1, -1], [-1, 2]]")]
+        public void ANegativePowerHasAValueWhereThePivotIsZero(string expression, string values, string expected)
+        {
+            var simplified = expression.ToEntity().Simplify();
+            Assert.DoesNotContain(simplified.Nodes, node => node is Providedf);
+            foreach (var assignment in values.Split(", "))
+            {
+                var parts = assignment.Split(" = ");
+                simplified = simplified.Substitute(parts[0], parts[1].ToEntity());
+            }
+            Assert.Equal(expected.ToEntity().Simplify(), simplified.Simplify());
+        }
+
+        [Fact]
+        public void ANegativePowerIsAPowerOfTheInverse()
+        {
+            Matrix m = "[[a, b], [c, d]]";
+            var inverse = TestExtensions.AsNotNull(m.Inverse);
+            Assert.Equal(inverse, m.Pow(-1));
+            Assert.Equal((inverse * inverse).Simplify(), m.Pow(-2).Simplify());
+            Assert.Equal(((Matrix)"[[1, 2], [3, 4]]").Pow(-1), (Matrix)"[[-2, 1], [3/2, -1/2]]");
+            Assert.Throws<InvalidMatrixOperationException>(() => ((Matrix)"[[1, 2], [2, 4]]").Pow(-1));
+        }
+
         // A number over a matrix is the number times its inverse, so that it agrees with the
         // matrix to the power -1, which Simplify writes it as. A matrix over a number is still
         // spread over the entries.
