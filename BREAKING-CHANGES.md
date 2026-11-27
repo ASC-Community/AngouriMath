@@ -100,6 +100,26 @@ sum, `arcsin(a)` or `arccos(1/3)`, is written as before
 
 ---
 
+### An inequality through ln, an exponential or sqrt is solved
+
+**Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException` for an
+inequality through a logarithm, an exponential with a constant base or an even root. Each is strictly monotone, so the
+inequality is now solved as the one inside it, on the function's domain: `log(b, u) > c` is `u > 0` and `u > b^c`,
+`b^u < c` is `u < log(b, c)` where `c > 0` and nothing otherwise, and `sqrt(u) < c` is `0 <= u < c^2`. A base below 1
+reverses the comparison. This applies where `c` is a real constant and `u` is real at every real `x`. `ln(x) > a`, with
+a symbolic bound, is still declined ([#2585](https://github.com/asc-community/AngouriMath/issues/2585)).
+
+| `.Solve("x")` | Was (2.10.0) | Now |
+|---|---|---|
+| `ln(x) > 1` | throws `NotSufficientlySupportedException` | `(e; +oo)` |
+| `e^x < 2` | throws | `(-oo; ln(2))` |
+| `2^x >= 8` | throws | `[3; +oo)` |
+| `ln(x - 1) <= 0` | throws | `(1; 2]` |
+| `sqrt(x) < 2` | throws | `[0; 4)` |
+| `(1/2)^x > 4` | throws | `(-oo; -2)` |
+| `e^x > -1` | throws | `RR` |
+| `ln(x) > a` | throws | unchanged |
+
 ## 2.10.0 — since 2.9.0
 
 **Read these first.**
