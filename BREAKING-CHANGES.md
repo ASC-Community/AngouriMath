@@ -80,6 +80,24 @@ folded. The logarithm of any other point on the unit circle, such as `-1/2 + i s
 | `"sin(x) + cos(x) = 1".Solve("x")` | `union({ 2 * pi * n, ln(i) / i + 2 * pi * n }, n in ZZ)` | `union({ 2 * pi * n, pi / 2 + 2 * pi * n }, n in ZZ)` |
 | `"sin(2x) = sin(x)".Solve("x")` | the root `ln(-1) / i + 2 * pi * n` | `pi + 2 * pi * n` |
 
+### A term with a finite limit is taken out of a sum
+
+**An answer where there was none.** A sum whose two halves tend to opposite infinities was left unevaluated, so its
+limit depended on how it was bracketed. `ln(x + 1) + (-1/2 ln(x^2 + 1) + arctan(x))` at `+oo` had no answer, while
+`(ln(x + 1) - 1/2 ln(x^2 + 1)) + arctan(x)` was `pi / 2`. A term with a finite limit is now replaced by that limit,
+and the terms that diverge are taken together. That sum is the antiderivative of `1/((x + 1)(x^2 + 1))`, so a
+rational function with a linear and an irreducible quadratic factor below the bar now has its integral up to `+oo`
+([#2599](https://github.com/asc-community/AngouriMath/issues/2599)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/((x+1)*(x^2+1)), x, 0, +oo)`, simplified | unevaluated | `pi / 4` |
+| `integral(1/((x+2)*(x^2+1)), x, 0, +oo)`, simplified | unevaluated | `(pi - ln(2)) / 5` |
+| `integral(1/(x^3+1), x, 0, +oo)`, simplified | unevaluated | `2/9 * sqrt(3) * pi` |
+| `integral(1/(x^4+1), x, 0, +oo)`, simplified | unevaluated | `sqrt(2) * pi / 4` |
+| `ln(x + 1) + (-1/2 * ln(x^2 + 1) + arctan(x))`, limit at `+oo` | unevaluated | `pi / 2` |
+| `ln(x) + (exp(x) - ln(sin(x)))`, limit at 0 from the right | unevaluated | `1` |
+
 ### A trigonometric root at a rational multiple of pi is one multiple, written once
 
 **Silent, in the printed form only, and in how many members a family lists.** The inversion of `sin` and `cos` wrote a

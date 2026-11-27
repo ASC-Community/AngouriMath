@@ -44,7 +44,7 @@ namespace AngouriMath
                         var (lim1, lim2) => (lim1 is { IsFinite: true } ? lim1 : Augend,
                                              lim2 is { IsFinite: true } ? lim2 : Addend)
                     };
-                return ComputeLimitImpl(New(augend, addend), x, dist, side);
+                return ComputeLimitImpl(New(augend, addend), x, dist, side) ?? ByTheLimitsOfItsTerms(this, x, dist, side);
             }
         }
 
@@ -61,8 +61,51 @@ namespace AngouriMath
                         var (lim1, lim2) => (lim1 is { IsFinite: true } ? lim1 : Minuend,
                                              lim2 is { IsFinite: true } ? lim2 : Subtrahend)
                     };
-                return ComputeLimitImpl(New(minuend, subtrahend), x, dist, side);
+                return ComputeLimitImpl(New(minuend, subtrahend), x, dist, side) ?? ByTheLimitsOfItsTerms(this, x, dist, side);
             }
+        }
+
+        /// <summary>
+        /// The limit of a sum or a difference with each term whose limit is finite replaced by that limit, the
+        /// terms that are not left together as one sum, or <see langword="null"/> where no term has a finite
+        /// limit or the rest is not settled.
+        /// </summary>
+        /// <remarks>
+        /// The descent asks each half of a sum for its limit, and a sum is a binary tree, so which terms share a
+        /// half is an accident of how it was written. <c>ln(x + 1) + (-1/2 ln(x^2 + 1) + arctan(x))</c> at
+        /// <c>+oo</c> is <c>+oo</c> plus <c>-oo</c>, and the reading of a difference of infinities takes two terms,
+        /// so it was not settled, where <c>(ln(x + 1) - 1/2 ln(x^2 + 1)) + arctan(x)</c> was <c>pi/2</c>. That was
+        /// the antiderivative of <c>1/((x + 1)(x^2 + 1))</c>, so the integral over <c>[0, +oo)</c> was left
+        /// unevaluated where it is <c>pi/4</c>. Replacing a term by its limit is exact: where one term tends to
+        /// a finite <c>L</c>, the rest of the sum has a limit exactly when the whole does, and the two differ by
+        /// <c>L</c>. Asked only after the halves have failed, so a sum they settle is answered as before.
+        /// https://github.com/asc-community/AngouriMath/issues/2599
+        /// </remarks>
+        private static Entity? ByTheLimitsOfItsTerms(Entity sum, Variable x, Entity dist, ApproachFrom side)
+        {
+            var terms = Sumf.LinearChildren(sum);
+            if (terms.Count <= 2)
+                return null;
+            Entity? diverging = null;
+            Entity settled = Number.Integer.Zero;
+            var replaced = false;
+            foreach (var term in terms)
+            {
+                if (!term.ContainsNode(x))
+                    settled += term;
+                else if (term.ComputeLimitDivideEtImpera(x, dist, side) is { IsFinite: true } limit && !limit.ContainsNode(x))
+                {
+                    settled += limit;
+                    replaced = true;
+                }
+                else
+                    diverging = diverging is null ? term : diverging + term;
+            }
+            if (!replaced || diverging is null)
+                return null;
+            return ComputeLimit(diverging, x, dist, side) is { } rest
+                ? ComputeLimitImpl(rest + settled, x, dist, side)
+                : null;
         }
 
         partial record Mulf
