@@ -40,7 +40,27 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
-## Unreleased — since 2.9.0
+## 2.10.0 — since 2.9.0
+
+**Read these first.**
+
+- **A property that can be null.** `Matrix.Trace` is `Entity?`, and `null` for a matrix that is not square, where it
+  summed the diagonal of any matrix. The annotation is the only change to the public surface, and code bound against
+  2.9.0 still binds. See *The trace of a matrix that is not square is null*.
+- **Another exception.** A singular matrix to a negative power throws `InvalidMatrixOperationException`, where it threw
+  GenericTensor's `InvalidDeterminantException`. See *A symbolic inverse, adjugate or negative power has a value where
+  a pivot is 0*.
+- **Silent: a matrix operation beside a written matrix.** `[1, 0]T * transpose(A) * [0, 1]` is left as written, where
+  it was `0`; a symbolic inverse at a zero pivot is its value, where it was `NaN`; and a constant beside a compiled
+  matrix of whole numbers is not truncated. See *A transpose or a vector product beside a written matrix is a matrix,
+  not an entry* and the entries around it.
+- **Silent: refusals that compile.** `dot`, `cross`, `det`, `transpose`, `trace` and an entry of a name beside a
+  written matrix compile, and a shader prints them, where both refused. See *A scalar product, a determinant or a
+  transpose of a name compiled as a number is compiled*.
+- **Silent, in the printed form only: a solved root has one sign where it had two.** `p V = n R T` solved for `T` is
+  `{ p * V / (n * R) }`, where it was `{ -p * V / (-n * R) }`. Code that compares printed roots sees another string.
+- **Silent: `Factorize` and `MathS.Polynomials.Factor` answer more polynomials in several variables,** where they
+  refused or stopped early. See the first four entries.
 
 ### A polynomial in three or more variables is factored past the substitution's reach
 
