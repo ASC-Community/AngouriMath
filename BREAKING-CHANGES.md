@@ -40,6 +40,29 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ---
 
+## Unreleased — since 2.10.0
+
+### An inequality with abs of x is solved
+
+**Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException`, *"Only
+polynomial inequalities are supported …"*, for any inequality with `abs` of `x` in it. Over the reals, `abs(u)` is `u`
+where `u >= 0` and `-u` where `u < 0`. So the inequality is now solved as two inequalities without the `abs`, each on
+its own half of the line. This applies where `u` is real at every real `x`: a polynomial or a quotient of polynomials
+in `x` with real coefficients. `abs(sqrt(x))` is still declined, since `sqrt(x)` is imaginary for a negative `x`. The
+equation `abs(x - 1) = 2` is solved over `CC` as before
+([#2579](https://github.com/asc-community/AngouriMath/issues/2579)).
+
+| `.Solve("x")` | Was (2.10.0) | Now |
+|---|---|---|
+| `abs(2x - 3) <= 5` | throws `NotSufficientlySupportedException` | `[-1; 4]` |
+| `abs(x) > 1` | throws | `(1; +oo) \/ (-oo; -1)` |
+| `abs(x - 1) + abs(x + 1) < 4` | throws | `(-2; 2)` |
+| `abs(x^2 - 4) < 3` | throws | `(-sqrt(7); -1) \/ (1; sqrt(7))` |
+| `abs(1/x) > 1` | throws | `(0; 1) \/ (-1; 0)` |
+| `abs(sqrt(x)) > 1` | throws | unchanged |
+
+---
+
 ## 2.10.0 — since 2.9.0
 
 **Read these first.**
