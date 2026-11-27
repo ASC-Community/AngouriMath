@@ -100,6 +100,22 @@ sum, `arcsin(a)` or `arccos(1/3)`, is written as before
 
 ---
 
+### A power of a constant cancels across a quotient
+
+**Silent, in the printed form only.** `Simplify` paired the factors of a quotient only when the numerator and the
+denominator both held a variable. So a power of a constant such as `ln(2)`, `pi` or `sin(1)` was not cancelled when
+only one side held `x`, although `y / (x y^2)` was. The factors are now also paired when one side holds a variable
+and the two share a factor free of variables. The value is the same
+([#2603](https://github.com/asc-community/AngouriMath/issues/2603)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `"ln(2) / (x * ln(2)^2)".Simplify()` | `ln(2) / (x * ln(2) ^ 2)` | `1 / (x * ln(2))` |
+| `"log(2, x)".Differentiate("x").Simplify()` | `ln(2) / (x * ln(2) ^ 2)` | `1 / (x * ln(2))` |
+| `"pi / (x * pi^2)".Simplify()` | `pi / (x * pi ^ 2)` | `1 / (pi * x)` |
+| `"ln(2)^2 / (x * ln(2))".Simplify()` | `ln(2) ^ 2 / (x * ln(2))` | `ln(2) / x` |
+| `"ln(2) * x / ln(2)^2".Simplify()` | `x * ln(2) / ln(2) ^ 2` | `x / ln(2)` |
+
 ### An inequality through ln, an exponential or sqrt is solved
 
 **Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException` for an
