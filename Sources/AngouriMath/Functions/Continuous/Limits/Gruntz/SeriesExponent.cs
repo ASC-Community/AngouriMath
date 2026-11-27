@@ -110,8 +110,9 @@ namespace AngouriMath.Functions.Algebra
             if (other.IsRational && IsRational)
                 return Of(Rational.Add(other.Rational));
             var terms = new Dictionary<Entity, (ERational Multiple, EDecimal Value)>(irrational);
-            foreach (var (constant, (multiple, basis)) in other.irrational)
+            foreach (var term in other.irrational)
             {
+                var (constant, (multiple, basis)) = (term.Key, term.Value);
                 var total = terms.TryGetValue(constant, out var already) ? already.Multiple.Add(multiple) : multiple;
                 if (total.IsZero) terms.Remove(constant);
                 else terms[constant] = (total, basis);
@@ -126,8 +127,8 @@ namespace AngouriMath.Functions.Algebra
             if (IsRational)
                 return Of(Rational.Multiply(factor));
             var terms = new Dictionary<Entity, (ERational Multiple, EDecimal Value)>();
-            foreach (var (constant, (multiple, basis)) in irrational)
-                terms[constant] = (multiple.Multiply(factor), basis);
+            foreach (var term in irrational)
+                terms[term.Key] = (term.Value.Multiple.Multiply(factor), term.Value.Value);
             return new(Rational.Multiply(factor), terms);
         }
 
