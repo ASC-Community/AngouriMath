@@ -729,16 +729,89 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// for a negative <c>x</c> and neither half of the split would hold there.
         /// </summary>
         private static Absf? InnermostRealAbs(Entity statement, Variable x)
-            => statement.Nodes.OfType<Absf>().FirstOrDefault(abs =>
-                abs.Argument.ContainsNode(x)
-                && abs.Argument.Nodes.All(node => node switch
+            => statement.Nodes.OfType<Absf>().FirstOrDefault(abs => IsRealAtRealX(abs.Argument, x));
+
+        /// <summary>
+        /// Whether <paramref name="expression"/> mentions <paramref name="x"/> and is real at every
+        /// real <c>x</c> where it is defined: built from <c>x</c>, real numbers and named constants
+        /// by sums, differences, products, quotients and whole powers.
+        /// </summary>
+        private static bool IsRealAtRealX(Entity expression, Variable x)
+            => expression.ContainsNode(x)
+                && expression.Nodes.All(node => node switch
                 {
                     Variable variable => variable == x || variable is Constant,
                     Real => true,
                     Sumf or Minusf or Mulf or Divf => true,
                     Powf(_, Integer) => true,
                     _ => false,
-                }));
+                });
+
+        /// <summary>Whether a real-at-real-x expression has a pole: a quotient or a negative whole power.</summary>
+        private static bool MayHaveAPole(Entity expression)
+            => expression.Nodes.Any(node => node is Divf || node is Powf(_, Integer { EInteger.Sign: < 0 }));
+
+        /// <summary><c>u &gt; c</c>, <c>u &gt;= c</c>, <c>u &lt; c</c> or <c>u &lt;= c</c>.</summary>
+        private static Entity Comparison(Entity u, bool above, bool strict, Entity bound)
+            => (above, strict) switch
+            {
+                (true, true) => u > bound,
+                (true, false) => u >= bound,
+                (false, true) => u < bound,
+                (false, false) => u <= bound,
+            };
+
+        /// <summary>A real number, other than <c>x</c>, that <paramref name="entity"/> evaluates to, or <see langword="null"/>.</summary>
+        private static Real? RealConstant(Entity entity, Variable x)
+            => !entity.ContainsNode(x) && entity.Evaled is Real { IsFinite: true } real ? real : null;
+
+        /// <summary>
+        /// An inequality between a strictly monotone function of <c>u</c> and a real constant
+        /// <c>c</c>, solved as the inequality in <c>u</c> it is equivalent to, where <c>u</c> is
+        /// real at real <c>x</c>: <c>log(b, u) &gt; c</c> is <c>u &gt; 0</c> and <c>u &gt; b^c</c>;
+        /// <c>b^u &lt; c</c> is <c>u &lt; log(b, c)</c> for <c>c &gt; 0</c> and nothing otherwise, and
+        /// <c>b^u &gt; c</c> for <c>c &lt;= 0</c> holds wherever <c>u</c> is defined;
+        /// <c>u^(p/q)</c> with <c>q</c> even is defined for <c>u &gt;= 0</c>, and below a negative
+        /// <c>c</c> nowhere. A base below 1 reverses the comparison. <see langword="null"/> for any
+        /// other inequality. https://github.com/asc-community/AngouriMath/issues/2585
+        /// </summary>
+        private static Set? MonotoneInverted(ComparisonSign comparison, Variable x)
+        {
+            var (left, right, above, strict) = comparison switch
+            {
+                Greaterf(var l, var r) => (l, r, true, true),
+                GreaterOrEqualf(var l, var r) => (l, r, true, false),
+                Lessf(var l, var r) => (l, r, false, true),
+                LessOrEqualf(var l, var r) => (l, r, false, false),
+                _ => ((Entity?)null, (Entity?)null, false, false),
+            };
+            if (left is null || right is null)
+                return null;
+            if (!left.ContainsNode(x))
+                (left, right, above) = (right, left, !above);
+            if (RealConstant(right, x) is not { } bound)
+                return null;
+            var positive = bound.EDecimal.Sign > 0;
+            switch (left)
+            {
+                case Logf(var @base, var u) when RealConstant(@base, x) is { } b && IsAPositiveBaseOtherThanOne(b) && IsRealAtRealX(u, x):
+                    return Solve(u > 0 & Comparison(u, above == IsAboveOne(b), strict, MathS.Pow(@base, right)), x);
+                case Powf(var @base, var u) when RealConstant(@base, x) is { } b && IsAPositiveBaseOtherThanOne(b) && IsRealAtRealX(u, x):
+                    if (positive)
+                        return Solve(Comparison(u, above == IsAboveOne(b), strict, MathS.Log(@base, right)), x);
+                    return !above ? Empty : MayHaveAPole(u) ? Solve(u > 0 | u <= 0, x) : MathS.Sets.R;
+                case Powf(var u, Rational { ERational: var power } exponent) when exponent is not Integer
+                    && power.Denominator.IsEven && power.Sign > 0 && IsRealAtRealX(u, x):
+                    if (bound.EDecimal.Sign >= 0)
+                        return Solve(u >= 0 & Comparison(u, above, strict, MathS.Pow(right, Rational.Create(power.Denominator, power.Numerator))), x);
+                    return above ? Solve(u >= 0, x) : Empty;
+                default:
+                    return null;
+            }
+
+            static bool IsAPositiveBaseOtherThanOne(Real b) => b.EDecimal.Sign > 0 && b.EDecimal.CompareTo(EDecimal.One) != 0;
+            static bool IsAboveOne(Real b) => b.EDecimal.CompareTo(EDecimal.One) > 0;
+        }
 
         /// <summary>The solution set, or <see langword="null"/> where a part of the statement is declined.</summary>
         internal static Set? Solve(Entity expr, Variable x)
@@ -780,6 +853,11 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 ComparisonSign comparison when comparison is not Equalsf && InnermostRealAbs(comparison, x) is { } abs =>
                     Solve(abs.Argument >= 0 & comparison.Substitute(abs, abs.Argument)
                         | abs.Argument < 0 & comparison.Substitute(abs, -abs.Argument), x),
+
+                // An inequality through a logarithm, an exponential with a constant base or an even
+                // root, solved as the inequality inside it. ln(x) > 1 was refused.
+                // https://github.com/asc-community/AngouriMath/issues/2585
+                ComparisonSign comparison when MonotoneInverted(comparison, x) is { } inverted => inverted,
 
                 Greaterf(var left, var right) =>
                     WithoutPoles(AnalyticalInequalitySolver.Solve(Minus(left, right), x), Minus(left, right), x),
