@@ -466,16 +466,18 @@ namespace AngouriMath
             /// Whether a square matrix may have an inverse: not where its determinant is zero.
             /// </summary>
             /// <remarks>
-            /// Asked of the exact elimination, not of <see cref="Matrix.Inverse"/> or
-            /// <see cref="Matrix.Determinant"/>, which can go through GenericTensor's compiled
-            /// operations: those are not safe in a native build, and every node reaches this.
-            /// Using them here broke the native build of every wrapper. A determinant the
-            /// elimination cannot write is not known to be zero.
+            /// Asked of <see cref="Matrix.IsSingular"/>, which decides the determinant by its value.
+            /// Asking only the exact elimination left a determinant it cannot write, Laplace's
+            /// <c>(e^x)^2 - e^(2x)</c>, as not known to be zero, and the negative power divided by
+            /// it: <c>[[e^x, e^(2x)], [1, e^x]]^(-1)</c> simplified to <c>NaN</c>.
+            /// https://github.com/asc-community/AngouriMath/issues/2598
+            /// <see cref="Matrix.Determinant"/> is the elimination or a Laplace expansion written
+            /// over the entries, neither of which goes through GenericTensor's compiled operations,
+            /// which a native build cannot publish.
+            /// https://github.com/asc-community/AngouriMath/issues/2147
             /// </remarks>
             internal static bool MayHaveAnInverse(Matrix m)
-                => m.IsSquare
-                   && (Functions.PolynomialDeterminant.Of(m.RowCount, (row, column) => m[row, column]) is not { } determinant
-                       || determinant.InnerSimplified != 0);
+                => m.IsSquare && !m.IsSingular;
 
             // Re(x) = x/2 * (1 + 1/sgn(x)^2)
             internal static Entity Re(Entity x) => x / 2 * (1 + 1 / new Signumf(x).Pow(2));
