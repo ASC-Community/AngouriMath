@@ -207,9 +207,53 @@ constructor, and each runs on first touch of that type rather than on load. The 
 JIT plus the tables on the path actually taken. **Adding an unreached subsystem to the kernel costs
 bytes on disk and nothing at startup.**
 
+### Under WebAssembly
+
+Three `Microsoft.NET.Sdk.WebAssembly` apps, published with `dotnet publish -c Release`
+(`PublishTrimmed=true`, `TrimMode=full`, no AOT, `InvariantGlobalization`) on .NET SDK 10.0.302,
+differ only in the kernel: a **baseline** with no AngouriMath, whose one `[JSExport]` returns its
+argument; **trimmed**, referencing the 2.10.0 package, whose export parses a string and calls
+`Simplify`; and **whole**, the same with `<TrimmerRootAssembly Include="AngouriMath" />`. Counting
+the files `dotnet.js` loads, with the publish output's `.br` and `.gz` siblings for the compressed
+columns:
+
+| | files | raw | Brotli | gzip |
+|---|--:|--:|--:|--:|
+| baseline | 7 | 2,990,284 B | 899,631 B | 1,108,803 B |
+| trimmed | 22 | 7,640,036 B | 2,230,485 B | 2,785,054 B |
+| whole | 25 | 8,353,228 B | 2,417,062 B | 3,017,925 B |
+
+**The kernel adds 1,330,854 B Brotli trimmed, and keeping it whole adds 186,577 B more.** Of the
+15 files it adds, `AngouriMath.wasm` is 899,691 B Brotli (3,373,337 B raw); the rest are its four
+package dependencies and ten framework assemblies, the largest `System.Linq.Expressions` at
+113,719 B Brotli. None of the three publishes gives a trim warning.
+
+The baseline is the runtime relinked by Emscripten, which `InvariantGlobalization` requires
+whenever the `wasm-tools` workload is installed; without the workload the prebuilt runtime is
+used and the baseline is larger. The kernel's increment barely depends on it:
+`dotnet.native.wasm` is 1,975 B Brotli larger with the kernel than without.
+
+Time in Chromium, served from `127.0.0.1` with `Cache-Control: no-store` so that every load
+fetches every file, on an AMD EPYC 4464P; the first visit, then the range over four reloads, in ms:
+
+| | runtime ready | first `Simplify` | second `Simplify` | first answer, from navigation |
+|---|--:|--:|--:|--:|
+| baseline | 96, then 44–57 | — | — | 120, then 55–69 |
+| trimmed | 170, then 75–148 | 369, then 142–221 | 99, then 63–74 | 564, then 229–383 |
+| whole | 129, then 76–103 | 228, then 160–191 | 72, then 61–79 | 374, then 254–304 |
+
+"Runtime ready" is `dotnet.create()` plus `getAssemblyExports`. The first call is
+`sin(x)^2 + cos(x)^2`, answered `1`; the second `(x^2 - 1) / (x - 1)`, answered
+`x + 1 provided not x - 1 = 0`. **So the first `Simplify` costs about 0.2 s in the interpreter,
+and the next about 0.07 s; over a network the bytes are the cost.** This was measured without
+Blazor, whose own assemblies grow the baseline and share some of the kernel's, so its increment
+there should be no larger
+([#2296](https://github.com/asc-community/AngouriMath/issues/2296)).
+
 ### Not measured, and therefore not claimed
 
-Restore and download time from nuget.org; the payload under Blazor WebAssembly; ReadyToRun; the
+Restore and download time from nuget.org; the payload and first call under Blazor WebAssembly and
+under WebAssembly AOT; ReadyToRun; the
 `netstandard2.0` leg under trimming — `PublishTrimmed` on a *project* reference to the kernel fails
 with `NETSDK1124`, because the property flows into the `netstandard2.0` target. Item 79's smoke test
 therefore has to consume the kernel as a **package**, or pin the target framework of the reference.
