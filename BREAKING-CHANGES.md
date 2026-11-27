@@ -61,6 +61,25 @@ equation `abs(x - 1) = 2` is solved over `CC` as before
 | `abs(1/x) > 1` | throws | `(0; 1) \/ (-1; 0)` |
 | `abs(sqrt(x)) > 1` | throws | unchanged |
 
+### ln(-1), ln(i) and ln(-i) are folded
+
+**Silent, in the printed form only.** `ln(-1)`, `ln(i)` and `ln(-i)` were left as written by `InnerSimplified` and
+`Simplify`. Each is now `i` times its argument in `(-pi; pi]`. The value is the same, but a string comparison sees
+another string. The trigonometric solver used to write a root at one of these points as `ln(w) / i`, and now writes
+the angle. Over the reals, by the node's codomain or by `MathS.Settings.Codomain`, `ln(-1)` has no value and is not
+folded. The logarithm of any other point on the unit circle, such as `-1/2 + i sqrt(3)/2`, is unchanged
+([#2581](https://github.com/asc-community/AngouriMath/issues/2581)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `"ln(-1)".Simplify()` | `ln(-1)` | `i * pi` |
+| `"ln(i)".Simplify()` | `ln(i)` | `1/2 * i * pi` |
+| `"ln(-i)".Simplify()` | `ln(-i)` | `(-1/2 * i) * pi` |
+| `"ln(-1) / i".Simplify()` | `(-i) * ln(-1)` | `pi` |
+| `"e^x + 1 = 0".Solve("x")` | `union({ ln(-1) + 2 * pi * i * n }, n in ZZ)` | `union({ i * pi + 2 * pi * i * n }, n in ZZ)` |
+| `"sin(x) + cos(x) = 1".Solve("x")` | `union({ 2 * pi * n, ln(i) / i + 2 * pi * n }, n in ZZ)` | `union({ 2 * pi * n, pi / 2 + 2 * pi * n }, n in ZZ)` |
+| `"sin(2x) = sin(x)".Solve("x")` | the root `ln(-1) / i + 2 * pi * n` | `pi + 2 * pi * n` |
+
 ---
 
 ## 2.10.0 — since 2.9.0

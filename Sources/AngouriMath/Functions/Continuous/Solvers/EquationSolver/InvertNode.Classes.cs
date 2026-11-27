@@ -179,8 +179,13 @@ namespace AngouriMath
                 // https://github.com/asc-community/AngouriMath/issues/2319
                 // A positive base has a positive real power, and only there is the value positive.
                 value = WhereAPowerCanBe(value, overTheReals && Rotated() is null && Base.Evaled is Real { IsPositive: true });
+                // Where the value is -1, i or -i, t is its argument, pi, pi / 2 or -pi / 2, and not
+                // ln(-1) / i, which folds only as far as i pi / i: sin(2x) = sin(x) had the root
+                // ln(-1) / i + 2 pi n. https://github.com/asc-community/AngouriMath/issues/2581
                 if (Rotated() is { } angle)
-                    return angle.Invert(MathS.Log(Base, value) / MathS.i + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x);
+                    return angle.Invert((value.InnerSimplified is Complex point && Logf.UnitCircleArgument(point) is { } argument
+                                            ? argument : MathS.Log(Base, value) / MathS.i)
+                                        + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x);
                 if (overTheReals || Base.Evaled is Complex { IsZero: true } || Base.Evaled == Integer.One)
                     return Exponent.Invert(MathS.Log(Base, value), x);
                 var turn = 2 * MathS.pi * MathS.i * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z);
