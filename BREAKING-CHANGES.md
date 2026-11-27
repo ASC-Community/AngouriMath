@@ -80,6 +80,24 @@ folded. The logarithm of any other point on the unit circle, such as `-1/2 + i s
 | `"sin(x) + cos(x) = 1".Solve("x")` | `union({ 2 * pi * n, ln(i) / i + 2 * pi * n }, n in ZZ)` | `union({ 2 * pi * n, pi / 2 + 2 * pi * n }, n in ZZ)` |
 | `"sin(2x) = sin(x)".Solve("x")` | the root `ln(-1) / i + 2 * pi * n` | `pi + 2 * pi * n` |
 
+### A trigonometric root at a rational multiple of pi is one multiple, written once
+
+**Silent, in the printed form only, and in how many members a family lists.** The inversion of `sin` and `cos` wrote a
+root as the sum it was built from. `arccos(-1/2)` is exactly `pi / 2 - arcsin(-1/2)`, so a root was
+`pi / 2 - -pi / 6`. And `sin(x) = 1` listed `pi / 2` and `pi - pi / 2`, the same root twice. Where the angle is a sum
+of rational multiples of `pi`, it is now one multiple, taken in `(-pi; pi]`. That is the same family, since `2 pi n`
+follows it, and a member that only repeated another is gone. The value set is unchanged. An angle that is not such a
+sum, `arcsin(a)` or `arccos(1/3)`, is written as before
+([#2581](https://github.com/asc-community/AngouriMath/issues/2581)).
+
+| `.Solve("x")` | Was (2.10.0) | Now |
+|---|---|---|
+| `cos(x) = -1/2` | `union({ pi / 2 - -pi / 6 + 2 * pi * n, -(pi / 2 - -pi / 6) + 2 * pi * n }, n in ZZ)` | `union({ 2/3 * pi + 2 * pi * n, -2/3 * pi + 2 * pi * n }, n in ZZ)` |
+| `sin(x) = 1` | `union({ pi / 2 + 2 * pi * n, pi - pi / 2 + 2 * pi * n }, n in ZZ)` | `union({ pi / 2 + 2 * pi * n }, n in ZZ)` |
+| `sin(x) = -1` | `union({ -pi / 2 + 2 * pi * n, pi - -pi / 2 + 2 * pi * n }, n in ZZ)` | `union({ -pi / 2 + 2 * pi * n }, n in ZZ)` |
+| `cos(x) = -1` | `union({ pi / 2 - -pi / 2 + 2 * pi * n, -(pi / 2 - -pi / 2) + 2 * pi * n }, n in ZZ)` | `union({ pi + 2 * pi * n }, n in ZZ)` |
+| `2cos(x)^2 + cos(x) - 1 = 0` | four members, among them `pi / 2 - -pi / 2` and `-(pi / 2 - -pi / 2)` | `union({ pi + 2 * pi * n, pi / 3 + 2 * pi * n, -pi / 3 + 2 * pi * n }, n in ZZ)` |
+
 ---
 
 ## 2.10.0 — since 2.9.0
