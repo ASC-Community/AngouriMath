@@ -112,7 +112,7 @@ namespace AngouriMath.Tests.Algebra
             Assert.Equal(MathS.Matrix(new Entity[,]
             {
                 { "pi / 6 + 2 * pi * n_1", "t_1" },
-                { "pi - pi / 6 + 2 * pi * n_1", "t_1" },
+                { "5/6 * pi + 2 * pi * n_1", "t_1" },
             }), solved.Rows);
             Assert.Equal(new[] { In("n_1", MathS.Sets.Z), In("t_1", MathS.Sets.C) }, solved.Parameters);
         }

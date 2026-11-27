@@ -52,10 +52,13 @@ namespace AngouriMath.Tests.Algebra
 
         /// <summary>
         /// The branch the elimination lost: <c>(0, 1)</c> for the first two, where <c>x</c> is
-        /// zero, and <c>(1, e)</c> for the third, where <c>x - 1</c> is.
+        /// zero, and <c>(1, e)</c> for the third, where <c>x - 1</c> is. The first has two rows,
+        /// <c>(0, 1)</c> and <c>(pi / 2 + 2 pi n, 0)</c>: it had three while <c>sin(x) = 1</c> listed
+        /// <c>pi / 2</c> and <c>pi - pi / 2</c>, one root twice
+        /// (https://github.com/asc-community/AngouriMath/issues/2581).
         /// </summary>
         [Theory]
-        [InlineData("x * y", "sin(x) + y - 1", 3, "0", "1")]
+        [InlineData("x * y", "sin(x) + y - 1", 2, "0", "1")]
         [InlineData("x * y", "y - cos(x)", 3, "0", "1")]
         [InlineData("(x - 1) * (y - 2)", "e^x - y", 2, "1", "e")]
         // Over the complex numbers e^x = 2 is a family, its whole parameter free in the row.

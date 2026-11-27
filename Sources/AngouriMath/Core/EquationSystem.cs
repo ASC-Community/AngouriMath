@@ -189,7 +189,7 @@ namespace AngouriMath.Core
         /// </code>
         /// Prints
         /// <code>
-        /// [[pi / 6 + 2 * pi * n_1, t_1], [pi - pi / 6 + 2 * pi * n_1, t_1]]
+        /// [[pi / 6 + 2 * pi * n_1, t_1], [5/6 * pi + 2 * pi * n_1, t_1]]
         /// n_1 in ZZ
         /// t_1 in CC
         /// </code>
