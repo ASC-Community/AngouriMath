@@ -120,6 +120,16 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 return told ? new() { new() } : null;
             }
 
+            // An equation that is zero for every value of its symbols constrains nothing. A copy of
+            // another, put through the root of the one it copies, is one: `2x - 2y` after `y = x` is
+            // `2x - 2x`, which still mentions `x`, and solving it for `x` gives all of CC, which is no
+            // root to go on with, so the system was declined. It is decided by value and dropped.
+            // Only a zero is: `x - x - 1` is away from zero at every point and stays, and the
+            // system that left it has no solution. https://github.com/asc-community/AngouriMath/issues/2601
+            var constraining = equations.Where(equation => !Vanishes(equation, System.Array.Empty<Variable>())).ToList();
+            if (constraining.Count < equations.Count)
+                equations = constraining;
+
             // No equation is left, so every unknown left is free.
             if (equations.Count == 0)
             {
@@ -219,7 +229,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// is decided as <c>forall n_1 in ZZ : sin(pi/6 + 2 pi n_1) - 1/2 = 0</c>, which takes the
         /// whole periods out. https://github.com/asc-community/AngouriMath/issues/212
         /// </remarks>
-        private static bool Vanishes(Entity expression, IReadOnlyList<Variable> whole)
+        internal static bool Vanishes(Entity expression, IReadOnlyList<Variable> whole)
         {
             if (expression.InnerSimplified.Evaled is Complex { IsZero: true })
                 return true;

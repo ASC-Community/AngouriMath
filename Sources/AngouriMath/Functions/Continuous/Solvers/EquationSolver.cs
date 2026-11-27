@@ -453,6 +453,22 @@ namespace AngouriMath.Functions.Algebra
                     + "triangularising path declined it and eliminating in radicals has not "
                     + "finished. Raise MathS.Settings.Budget to allow more, or pass a "
                     + "cancellation token with MathS.Multithreading.SetLocalCancellationToken");
+            // An equation that is zero for every value constrains nothing, and solving it for an
+            // unknown it still mentions gives all of CC, which no candidate goes on from: with
+            // z = 1 - x - y from x + y + z = 1, its copy 2x + 2y + 2z = 2 is 2x + 2y + 2(1 - x - y) - 2,
+            // and the system was declined. Dropped, it can leave fewer equations than unknowns, or an
+            // unknown none of them mentions, and that is the non-square solver's shape.
+            // https://github.com/asc-community/AngouriMath/issues/2601
+            var constraining = equations.Where(equation => !NonSquareSystemSolver.Vanishes(equation, System.Array.Empty<Variable>())).ToList();
+            if (constraining.Count < equations.Count && ledger is not null)
+            {
+                var unknowns = vars.ToArray();
+                if (constraining.Count < unknowns.Length || unknowns.Any(unknown => !constraining.Any(equation => equation.ContainsNode(unknown))))
+                    // Its null is both "no solutions" and "could not tell", and is passed on as the
+                    // second, which declines the system rather than dropping a branch's rows.
+                    return NonSquareSystemSolver.Solve(constraining, unknowns, ledger);
+                equations = constraining;
+            }
             var var = vars[^1];
             if (equations.Count == 1)
             {
