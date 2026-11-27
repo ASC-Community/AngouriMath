@@ -42,6 +42,25 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.10.0
 
+### A singular matrix is not inverted because its determinant is not written as 0
+
+**Not silent: a wrong answer is now no answer.** `Matrix.Inverse`, `Matrix.Pow` with a negative exponent, `M^(-1)` and
+dividing by `M` asked whether the determinant was written as `0`. A determinant that Laplace expansion writes for
+entries that are not polynomials, such as `(e^x)^2 - e^(2x)` or `sin(2x) - 2 sin(x) cos(x)`, is zero without being
+written so, and the adjugate was divided by it. The determinant is now decided by its value: a value away from zero at
+one point, or else `Simplify` proving it zero. A singular matrix answers as `[[1, 2], [2, 4]]` already did: `Inverse` is
+`null`, `Pow(-1)` throws `InvalidMatrixOperationException`, and `M^(-1)` stays written as `1 / M`
+([#2598](https://github.com/asc-community/AngouriMath/issues/2598)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `Inverse` of `[[e^x, e^(2x)], [1, e^x]]` | entries over `(e^x)^2 - e^(2x)`, `NaN` once simplified | `null` |
+| `.Pow(-1)` of the same | entries over `(e^x)^2 - e^(2x)` | throws `InvalidMatrixOperationException` |
+| `"[[e^x, e^(2x)], [1, e^x]]^(-1)".Simplify()` | `NaN` | `1 / [[e ^ x, e ^ (2 * x)], [1, e ^ x]]` |
+| `"[[sin(2x), 2 sin(x)], [cos(x), 1]]^(-1)".Simplify()` | `NaN` | `1 / [[sin(2 * x), 2 * sin(x)], [cos(x), 1]]` |
+| `"[[sin(x)^2, 1], [1 - cos(x)^2, 1]]^(-1)".Simplify()` | `NaN` | `1 / [[sin(x) ^ 2, 1], [sin(x) ^ 2, 1]]` |
+| `"[[e^x, e^(2x)], [2, e^x]]^(-1)".Simplify()` | its inverse | unchanged |
+
 ### An inequality with abs of x is solved
 
 **Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException`, *"Only

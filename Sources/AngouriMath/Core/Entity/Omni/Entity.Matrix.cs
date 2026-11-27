@@ -458,7 +458,7 @@ namespace AngouriMath
             {
                 if (!@this.IsSquare)
                     return null;
-                if (@this.Determinant is not { } determinant || determinant == 0)
+                if (@this.Determinant is not { } determinant || IsZeroAsAValue(determinant))
                     return null;
                 if (@this.Adjugate is not { } adjugate)
                     return null;
@@ -547,7 +547,7 @@ namespace AngouriMath
                 }
                 // Not through Inverse, which can take GenericTensor's adjugate: that compiles an expression tree,
                 // which a native build cannot publish, and every node reaches this.
-                if (Determinant is not { } determinant || determinant == 0)
+                if (Determinant is not { } determinant || IsZeroAsAValue(determinant))
                     throw new InvalidMatrixOperationException("A matrix whose determinant is 0 has no inverse, and so no negative power");
                 var adjugate = CofactorAdjugate(this);
                 var inverse = OfTheShapeOf(this, MathS.Matrix(RowCount, ColumnCount,
@@ -767,6 +767,46 @@ namespace AngouriMath
                         return CofactorAdjugate(@this);
                     },
                     this);
+
+            /// <summary>
+            /// Whether this matrix is square and has no inverse: its <see cref="Determinant"/> is zero as a
+            /// value, which <see cref="IsZeroAsAValue"/> decides.
+            /// </summary>
+            internal bool IsSingular => IsSquare && (Determinant is not { } determinant || IsZeroAsAValue(determinant));
+
+            /// <summary>
+            /// Whether <paramref name="determinant"/> is zero for every value of its symbols, and not only
+            /// where it is written as <c>0</c>.
+            /// </summary>
+            /// <remarks>
+            /// <para>
+            /// Laplace expansion writes the determinant of a matrix whose entries are not polynomials, and
+            /// writes it as it multiplied: <c>(e^x)^2 - e^(2x)</c> for <c>[[e^x, e^(2x)], [1, e^x]]</c>,
+            /// <c>sin(2x) - 2 sin(x) cos(x)</c> for <c>[[sin(2x), 2 sin(x)], [cos(x), 1]]</c>. Both are zero
+            /// and neither is <c>0</c>, and the inverse divided the adjugate by them: a matrix of <c>NaN</c>.
+            /// https://github.com/asc-community/AngouriMath/issues/2598
+            /// </para>
+            /// <para>
+            /// A value away from zero at one point is not zero everywhere, which settles an invertible matrix
+            /// without simplifying. Otherwise the determinant is zero only where <c>Simplify</c> proves it, so a
+            /// determinant that merely passes near zero at the point is not taken for one. A
+            /// <c>0 provided C</c> is zero wherever the entries have a value.
+            /// </para>
+            /// </remarks>
+            private static bool IsZeroAsAValue(Entity determinant)
+            {
+                if (determinant == 0)
+                    return true;
+                var pinned = determinant;
+                var values = new[] { 1.37, 0.61, 2.23, 1.91, 0.83, 1.13 };
+                var index = 0;
+                foreach (var symbol in determinant.Vars.Distinct().ToList())
+                    pinned = pinned.Substitute(symbol, values[index++ % values.Length]);
+                if (pinned.Evaled is Number.Complex { IsNaN: false } atAPoint
+                    && ((Number.Real)atAPoint.Abs()).EDecimal.ToDouble() > 1e-9)
+                    return false;
+                return determinant.Simplify() is Number.Integer { IsZero: true } or Providedf(Number.Integer { IsZero: true }, _);
+            }
 
             private static bool IsAMatrixOfNumbers(Matrix matrix)
                 => Enumerable.Range(0, matrix.RowCount).All(row =>
