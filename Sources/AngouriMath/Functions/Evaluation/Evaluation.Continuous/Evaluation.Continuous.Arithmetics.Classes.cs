@@ -569,11 +569,8 @@ namespace AngouriMath
                         // https://github.com/asc-community/AngouriMath/issues/2581
                         (var @base, Complex point) when @base == MathS.e && !(Codomain < Domain.Complex)
                             && MathS.Settings.Codomain.Value != Domain.Real
-                            && UnitCircleTurn(point) is { } turn
-                            // The coefficient i * turn is one number, so the answer is already in
-                            // the order the normalisation leaves it: 1/2 * i * pi, not i * pi / 2,
-                            // which a second pass would rewrite.
-                            => (turn == Integer.One ? MathS.i : Complex.Create(Integer.Zero, turn)) * MathS.pi,
+                            && UnitCircleArgument(point) is { } argument
+                            => MathS.i * argument,
                         // The image of an interval of positive numbers, monotone for any base.
                         // https://github.com/asc-community/AngouriMath/issues/322
                         (var @base, Interval interval) when @base is not Set && IntervalArithmetic.Logarithm(@base, interval, isExact) is { } image => image,
@@ -611,15 +608,9 @@ namespace AngouriMath
             /// rational, so the answer is exact without evaluating anything.
             /// </summary>
             internal static Entity? UnitCircleArgument(Complex point)
-                => UnitCircleTurn(point) is { } turn
-                    ? turn == Integer.One ? MathS.pi : turn == Rational.Create(1, 2) ? MathS.pi / 2 : -MathS.pi / 2
-                    : null;
-
-            /// <summary>The argument of <c>-1</c>, <c>i</c> or <c>-i</c> as a multiple of pi: 1, 1/2 or -1/2.</summary>
-            private static Rational? UnitCircleTurn(Complex point)
-                => point == Integer.MinusOne ? Integer.One
-                 : point == MathS.i ? Rational.Create(1, 2)
-                 : point == -MathS.i ? Rational.Create(-1, 2)
+                => point == Integer.MinusOne ? MathS.pi
+                 : point == MathS.i ? MathS.pi / 2
+                 : point == -MathS.i ? -MathS.pi / 2
                  : null;
         }
 
