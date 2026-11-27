@@ -86,11 +86,11 @@ namespace AngouriMath
 
         partial record Mulf
         {
-            // x * a = value => x = value / a
+            // x * a = value => x = value / a, with a minus sign in front of a moved onto value
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
                 Multiplier.ContainsNode(x)
-                ? Multiplier.Invert(value / Multiplicand, x)
-                : Multiplicand.Invert(value / Multiplier, x);
+                ? Multiplier.Invert(PolynomialSolver.Quotient(value, Multiplicand), x)
+                : Multiplicand.Invert(PolynomialSolver.Quotient(value, Multiplier), x);
         }
 
         partial record Divf

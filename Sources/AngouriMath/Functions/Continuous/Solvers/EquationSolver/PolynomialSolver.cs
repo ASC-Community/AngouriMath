@@ -58,7 +58,69 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         // ax + b = 0
         // ax = -b
         // x = -b / a
-        internal static IEnumerable<Entity> SolveLinear(Entity a, Entity b) => new[] { (-b / a).InnerSimplified };
+        internal static IEnumerable<Entity> SolveLinear(Entity a, Entity b) => new[] { MinusQuotient(b, a) };
+
+        /// <summary>
+        /// <c>-numerator / denominator</c>, with a minus sign written in front of the denominator taken off it and
+        /// off the numerator: solving <c>p V = n R T</c> for <c>T</c> reads <c>a = -n R</c> and <c>b = p V</c>, and
+        /// <c>-b / a</c> was <c>-p * V / (-n * R)</c>, where it is <c>p * V / (n * R)</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2566
+        /// </summary>
+        internal static Entity MinusQuotient(Entity numerator, Entity denominator)
+            => (WithoutALeadingMinus(denominator) is { } positive ? numerator / positive : -numerator / denominator).InnerSimplified;
+
+        /// <summary>
+        /// <c>numerator / denominator</c>, with a minus sign written in front of the denominator taken off both:
+        /// inverting <c>-n R * T = -p V</c> for <c>T</c> divides the two, and gave <c>-p * V / (-n * R)</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2566
+        /// </summary>
+        internal static Entity Quotient(Entity numerator, Entity denominator)
+            => WithoutALeadingMinus(denominator) is { } positive
+                ? (WithoutALeadingMinus(numerator) ?? -numerator) / positive
+                : numerator / denominator;
+
+        /// <summary>
+        /// <paramref name="term"/> negated, where it is written with a minus in front: a negative number, a product
+        /// whose numbers multiply to one, a quotient whose dividend is one, or a sum all of whose terms are.
+        /// <see langword="null"/> for any other.
+        /// </summary>
+        private static Entity? WithoutALeadingMinus(Entity term)
+        {
+            switch (term)
+            {
+                case Real real:
+                    return real.IsNegative ? (-real).InnerSimplified : null;
+                case Divf(var dividend, var divisor):
+                    return WithoutALeadingMinus(dividend) is { } positiveDividend ? positiveDividend / divisor : null;
+                case Mulf mulf:
+                    // The numbers among the factors, however the product nests them: a coefficient read off a
+                    // polynomial arrives as 1 * (-1) * n * R.
+                    var factors = Mulf.LinearChildren(mulf).ToList();
+                    var numbers = factors.OfType<Real>().ToList();
+                    if (numbers.Count == 0)
+                        return null;
+                    var coefficient = numbers.Aggregate((Real)Integer.One, (product, number) => product * number);
+                    if (!coefficient.IsNegative)
+                        return null;
+                    var rest = factors.Where(factor => factor is not Real).ToList();
+                    var positive = (-coefficient).InnerSimplified;
+                    if (rest.Count == 0)
+                        return positive;
+                    var product = rest.Aggregate((left, right) => left * right);
+                    return positive == Integer.One ? product : positive * product;
+                case Sumf or Minusf:
+                    // A sum each of whose terms is written with a minus: -1 / a + -1 / b.
+                    var positives = new List<Entity>();
+                    foreach (var summand in Sumf.LinearChildren(term))
+                        if (WithoutALeadingMinus(summand) is { } positiveSummand)
+                            positives.Add(positiveSummand);
+                        else
+                            return null;
+                    return positives.Aggregate((left, right) => left + right);
+                default:
+                    return null;
+            }
+        }
 
         /// <summary>Solves ax^2 + bx + c</summary>
         /// <param name="a">Coefficient of x^2</param>
@@ -409,7 +471,7 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 (2, _) =>
                     // Solve a x ^ n + b = 0 for x ^ n -> x ^ n = -b / a
                     MathS.Pow(subtree, Integer.Create(powers[1]))
-                    .Invert((-1 * monomialsByPower[powers[0]] / monomialsByPower[powers[1]]).InnerSimplified, subtree),
+                    .Invert(MinusQuotient(monomialsByPower[powers[0]], monomialsByPower[powers[1]]), subtree),
                 (_, 2) => SolveQuadratic(GetMonomialByPower(2), GetMonomialByPower(1), GetMonomialByPower(0)),
                 (_, 3) => SolveCubic(GetMonomialByPower(3), GetMonomialByPower(2), GetMonomialByPower(1), GetMonomialByPower(0)),
                 (_, 4) => SolveQuartic(GetMonomialByPower(4), GetMonomialByPower(3),
