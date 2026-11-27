@@ -103,6 +103,26 @@ checked by exact division. `Entity.Factorize` asks the same layer.
 | `MathS.Polynomials.Factor("(x ^ 3 - 5 * x ^ 2 * y ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2)", "x")` | `null` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
 | `"3 * x ^ 6 + (-3) * x ^ 5 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y * z ^ 2 + x ^ 5 * y ^ 3 * z ^ 3 + -x ^ 4 * y ^ 6 * z ^ 5 + (-5) * x ^ 4 * y ^ 4 * z ^ 5 + (-3) * x ^ 4 * y ^ 2 + 3 * x ^ 3 * y ^ 5 * z ^ 2 + 15 * x ^ 3 * y ^ 3 * z ^ 2 + (-15) * x ^ 5 * y ^ 2 + 15 * x ^ 4 * y ^ 5 * z ^ 2 + 75 * x ^ 4 * y ^ 3 * z ^ 2 + (-5) * x ^ 4 * y ^ 5 * z ^ 3 + 5 * x ^ 3 * y ^ 8 * z ^ 5 + 25 * x ^ 3 * y ^ 6 * z ^ 5 + 15 * x ^ 3 * y ^ 4 + (-15) * x ^ 2 * y ^ 7 * z ^ 2 + (-75) * x ^ 2 * y ^ 5 * z ^ 2".Factorize()` | `x ^ 2 * z ^ 2 * ((-15) * y ^ 7 + (-75) * y ^ 5) + x ^ 3 * (z ^ 5 * (5 * y ^ 8 + 25 * y ^ 6) + z ^ 2 * (3 * y ^ 5 + 15 * y ^ 3) + 15 * y ^ 4) + x ^ 4 * (z ^ 2 * (15 * y ^ 5 + 75 * y ^ 3) + z ^ 5 * (-y ^ 6 + (-5) * y ^ 4) + (-3) * y ^ 2 + (-5) * y ^ 5 * z ^ 3) + x ^ 5 * (z ^ 2 * ((-3) * y ^ 3 + (-15) * y) + (y * z) ^ 3 + (-15) * y ^ 2) + 3 * x ^ 6` | `x ^ 2 * (x - 5 * y ^ 2) * (x - y ^ 3 * z ^ 2 - 5 * y * z ^ 2) * (3 * x ^ 2 + x * y ^ 3 * z ^ 3 - 3 * y ^ 2)` |
 
+### A solved root is written with one sign where it had two
+
+**Silent, in the printed form only: the value is unchanged.** The root of an equation linear in the unknown was written
+`-b / a`, and inverting a product divided the other side by the factor as it stood. Where the coefficient was written
+with a minus sign, the root then carried two signs, as in `-p * V / (-n * R)`. A minus sign in front of a divisor is now
+taken off it and off the dividend: in front of a number, in front of a product whose numbers multiply to a negative
+one, in front of a quotient's dividend, or in front of every term of a sum
+([#2566](https://github.com/asc-community/AngouriMath/issues/2566)).
+
+| `.Solve(...)` and `.SolveEquation(...)` of | Was (2.9.0) | Now |
+|---|---|---|
+| `"p V = n R T"` for `T` | `{ -p * V / (-n * R) }` | `{ p * V / (n * R) }` |
+| `"b = a x"` for `x` | `{ -b / (-a) }` | `{ b / a }` |
+| `"c - 2 x = 0"` for `x` | `{ -c / (-2) }` | `{ c / 2 }` |
+| `"3 - 4 y x = 0"` for `x` | `{ (-3) / ((-4) * y) }` | `{ 3 / (4 * y) }` |
+| `"1/R = 1/a + 1/b"` for `R` | `{ (-1) / (-1 / a + -1 / b) }` | `{ 1 / (1 / a + 1 / b) }` |
+| `"E = m v^2 / 2"` for `v` | `{ sqrt(-E / (-m * 1/2)), -sqrt(-E / (-m * 1/2)) }` | `{ sqrt(E / (m * 1/2)), -sqrt(E / (m * 1/2)) }` |
+| `"T = 2 pi sqrt(L / g)"` for `L` | `{ (-T / ((-2) * pi)) ^ 2 * g provided ... }` | `{ (T / (2 * pi)) ^ 2 * g provided ... }` |
+| `"a x = b"` and `"a x + b = 0"` for `x` | `{ b / a }` and `{ -b / a }` | unchanged |
+
 ### A scalar product, a determinant or a transpose of a name compiled as a number is compiled
 
 **Not silent where it was refused: it compiles, or is refused saying why. Silent where it compiled: a truncated value
