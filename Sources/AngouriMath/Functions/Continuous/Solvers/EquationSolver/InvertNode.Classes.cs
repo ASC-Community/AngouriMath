@@ -330,13 +330,70 @@ namespace AngouriMath
         }
 
         // TODO: Consider case when sin(sin(x)) where double-mention of n occures
+        partial record Function
+        {
+            /// <summary>
+            /// <paramref name="angle"/> as one rational multiple of pi where it is a sum of them,
+            /// and as written otherwise. <c>arccos(-1/2)</c> is exactly <c>pi / 2 - arcsin(-1/2)</c>,
+            /// so a root of <c>cos(x) = -1/2</c> was <c>pi / 2 - -pi / 6</c> where it is
+            /// <c>2/3 pi</c>, and <c>sin(x) = 1</c> listed <c>pi / 2</c> and <c>pi - pi / 2</c>, one
+            /// root twice. Only whole and rational coefficients are read, never a decimal, so the
+            /// fold is exact. The angle is reduced into <c>(-pi; pi]</c>, which only a caller adding
+            /// <c>2 pi n</c> may ask for. https://github.com/asc-community/AngouriMath/issues/2581
+            /// </summary>
+            private protected static Entity Angle(Entity angle)
+            {
+                if (MultipleOfPi(angle.InnerSimplified) is not { } multiple)
+                    return angle;
+                // Every caller adds 2 pi n, so the angle is taken in (-pi; pi]: sin(x) = -1 had
+                // -pi / 2 and 3 pi / 2, one family written twice.
+                var two = PeterO.Numbers.ERational.FromInt32(2);
+                var turns = multiple.Divide(two).ToEInteger(); // toward zero
+                multiple = multiple.Subtract(two.Multiply(PeterO.Numbers.ERational.FromEInteger(turns)));
+                if (multiple.CompareTo(PeterO.Numbers.ERational.One) > 0)
+                    multiple = multiple.Subtract(two);
+                else if (multiple.CompareTo(PeterO.Numbers.ERational.FromInt32(-1)) <= 0)
+                    multiple = multiple.Add(two);
+                var gcd = multiple.Numerator.Gcd(multiple.Denominator);
+                var (numerator, denominator) = gcd.IsZero ? (multiple.Numerator, multiple.Denominator)
+                    : (multiple.Numerator.Divide(gcd), multiple.Denominator.Divide(gcd));
+                if (numerator.IsZero)
+                    return Integer.Zero;
+                // Written as the library writes them: pi / 6 and -pi / 2 for a unit numerator, 5/6 * pi
+                // otherwise, the coefficient made from its two integers so that no decimal is involved.
+                if (numerator.Abs().Equals(PeterO.Numbers.EInteger.One))
+                {
+                    Entity unit = numerator.Sign < 0 ? -MathS.pi : MathS.pi;
+                    return denominator.Equals(PeterO.Numbers.EInteger.One) ? unit : unit / Integer.Create(denominator);
+                }
+                return Rational.Create(numerator, denominator) * MathS.pi;
+            }
+
+            /// <summary>
+            /// The rational <c>q</c> with <paramref name="expr"/> exactly <c>q pi</c>, or <see langword="null"/>,
+            /// computed on <see cref="PeterO.Numbers.ERational"/> so that no decimal is involved.
+            /// </summary>
+            private static PeterO.Numbers.ERational? MultipleOfPi(Entity expr)
+                => expr switch
+                {
+                    Variable when expr == MathS.pi => PeterO.Numbers.ERational.One,
+                    Integer { IsZero: true } => PeterO.Numbers.ERational.Zero,
+                    Sumf(var a, var b) => MultipleOfPi(a) is { } p && MultipleOfPi(b) is { } q ? p.Add(q) : null,
+                    Minusf(var a, var b) => MultipleOfPi(a) is { } p && MultipleOfPi(b) is { } q ? p.Subtract(q) : null,
+                    Mulf(Rational r, var b) => MultipleOfPi(b) is { } q ? r.ERational.Multiply(q) : null,
+                    Mulf(var a, Rational r) => MultipleOfPi(a) is { } p ? p.Multiply(r.ERational) : null,
+                    Divf(var a, Rational r) when !r.ERational.IsZero => MultipleOfPi(a) is { } p ? p.Divide(r.ERational) : null,
+                    _ => null,
+                };
+        }
+
         partial record Sinf
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
                 // sin(x) = value => x = arcsin(value) + 2pi * n
-                Argument.Invert(MathS.Arcsin(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } first
+                Argument.Invert(Angle(MathS.Arcsin(value)) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } first
                 // sin(x) = value => x = pi - arcsin(value) + 2pi * n
-                && Argument.Invert(MathS.pi - MathS.Arcsin(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } second
+                && Argument.Invert(Angle(MathS.pi - MathS.Arcsin(value)) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } second
                 ? first.Concat(second) : null;
         }
 
@@ -344,9 +401,9 @@ namespace AngouriMath
         {
             private protected override IEnumerable<Entity>? InvertNode(Entity value, Entity x) =>
                 // cos(x) = value => x = arccos(value) + 2pi * n
-                Argument.Invert(MathS.Arccos(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } first
+                Argument.Invert(Angle(MathS.Arccos(value)) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } first
                 // cos(x) = value => x = -arccos(value) + 2pi * n
-                && Argument.Invert(-MathS.Arccos(value) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } second
+                && Argument.Invert(Angle(-MathS.Arccos(value)) + 2 * MathS.pi * SolutionParameters.Mint(this + value, "n", MathS.Sets.Z), x) is { } second
                 ? first.Concat(second) : null;
         }
 
