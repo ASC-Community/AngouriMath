@@ -99,6 +99,22 @@ folded. The logarithm of any other point on the unit circle, such as `-1/2 + i s
 | `"sin(x) + cos(x) = 1".Solve("x")` | `union({ 2 * pi * n, ln(i) / i + 2 * pi * n }, n in ZZ)` | `union({ 2 * pi * n, pi / 2 + 2 * pi * n }, n in ZZ)` |
 | `"sin(2x) = sin(x)".Solve("x")` | the root `ln(-1) / i + 2 * pi * n` | `pi + 2 * pi * n` |
 
+### A root found by Newton's method prints only digits that are right
+
+**Silent, in the digits.** A root that the solver could only find numerically was computed in `double` and widened to
+a decimal, which kept every digit of the binary fraction. About fifty digits were printed, and only the first sixteen
+were the root's. The root is now refined by Newton's steps in the library's own evaluation, forty digits past
+`MathS.Settings.DecimalPrecisionContext`, and given to the digits the last step shows are right: all but eight of the
+working precision for a simple root, fewer for a multiple one. `SolveNt` does the same. A search that solved quickly
+takes longer: 30 to 240 ms more for the four equations measured, which had one to thirteen roots. Polynomial roots are unchanged
+([#2613](https://github.com/asc-community/AngouriMath/issues/2613)).
+
+| `.Solve("x")` | Was (2.10.0) | Now |
+|---|---|---|
+| `cos(x) = x`, its real root | `0.7390851332151606722931092008366249501705169677734375` | `0.73908513321516064165531208767387340401341175890075746496568063577328465488354759459937610693` |
+| `x - e^(1 - ln(x)) = 0` | `±1.64872127070012819416433558217249810695648193359375` | `±1.6487212707001281468486507878141635716537761007101480115750793116406610211942156086327765201` |
+| `x^x = 2`, its real root | `1.5596104694623693642796524727600626647472381591796875` | `1.5596104694623693499703887687650029932848835118430914247195945694139730345495905871054134447` |
+
 ### A term with a finite limit is taken out of a sum
 
 **An answer where there was none.** A sum whose two halves tend to opposite infinities was left unevaluated, so its

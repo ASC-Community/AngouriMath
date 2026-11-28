@@ -136,7 +136,122 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
             // https://github.com/asc-community/AngouriMath/issues/1420
             if (forTheSolver && !AreIsolated(distinct, f))
                 return null;
-            return distinct;
+            return new HashSet<Complex>(distinct.Select(root => Refined(function, derivative, v, root)));
+        }
+
+        /// <summary>
+        /// The significant digits a root the search found in <c>double</c> is given to where it cannot be
+        /// refined: a <c>double</c> holds fifteen to seventeen, and the iteration that found the root loses
+        /// some of them near a root that is not simple. The third root of <c>(3 - t)^(1/3) + sqrt(4 + t) = 3</c>
+        /// came out of the search as <c>33.51422140524465476</c>, and it is <c>33.51422140524466378</c>.
+        /// </summary>
+        private const int DoubleDigits = 14;
+
+        /// <summary>
+        /// <paramref name="root"/>, found in <c>double</c>, carried to the working precision by Newton's
+        /// steps in the library's own evaluation, and given to the digits the error left is known to.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A <c>double</c> widened to an <c>EDecimal</c> keeps every digit of its binary fraction, about
+        /// fifty, and only the first sixteen are the root's: <c>cos(x) = x</c> was
+        /// <c>0.7390851332151606722931092008366249501705169677734375</c>, where the root is
+        /// <c>0.7390851332151606416553120876…</c>. A printed digit that is wrong is a wrong answer.
+        /// https://github.com/asc-community/AngouriMath/issues/2613
+        /// </para>
+        /// <para>
+        /// The steps are taken past the working precision and without downcasting. Downcasting takes the
+        /// residual of a cancellation below ten to the minus half the digits for zero, so <c>f</c> reads 0
+        /// fifty digits short of the root. The steps are taken forty digits past the working precision, and
+        /// the last of them measures the error that is left. The root is given to the digits that error
+        /// leaves, at most all but eight of the working digits. A multiple root,
+        /// which converges only linearly, keeps fewer. A refinement that fails gives the root to the
+        /// <see cref="DoubleDigits"/> a <c>double</c> is sure of.
+        /// </para>
+        /// </remarks>
+        private static Complex Refined(Entity function, Entity derivative, Entity.Variable v, Complex root)
+        {
+            var context = MathS.Settings.DecimalPrecisionContext.Value;
+            if (context.Precision.IsZero || !context.Precision.CanFitInInt32())
+                return RoundedTo(root, DoubleDigits);
+            var precision = context.Precision.ToInt32Checked();
+            var digits = precision + 40;
+            var enough = EDecimal.Create(EInteger.One, EInteger.FromInt32(-(precision - 6)));
+            var current = root;
+            Complex? last = null;
+            // Each step at about twice the digits of the last, since that is what each makes right, up to
+            // forty past the working precision. A step is taken in the digits it is computed at, so the
+            // point is not rounded back to the working precision between steps. The last step is the
+            // error left in the point it started from, at a simple root that error itself and at a root
+            // of multiplicity m about a 1/m of it, and the point it leads to has no more.
+            for (int count = 0, working = 40; count < 16; count++, working *= 2)
+            {
+                if (Step(current, System.Math.Min(digits, working)) is not var (next, step))
+                    return RoundedTo(root, DoubleDigits);
+                current = next;
+                last = step;
+                if (working >= digits && step.Abs().EDecimal.CompareTo(current.Abs().EDecimal.Multiply(enough)) <= 0)
+                    break;
+            }
+            // The steps are to make the root the search found more precise, not to go to another. They
+            // can: the search iterates on the compiled form, which takes an odd root of a negative number
+            // as the real one, and the evaluation need not read every such root the same way at every
+            // precision. (3 - t)^(1/3) + sqrt(4 + t) = 3 has a root at t = 33.514..., and with the steps
+            // taken from it, that root was missing from the answer. A root that moves further than
+            // its double could have been off by is kept as the search gave it, to the digits a double holds.
+            var drift = (current - root).Abs().EDecimal;
+            var allowed = EDecimal.Create(1, -10).Multiply(EDecimal.Max(EDecimal.One, root.Abs().EDecimal));
+            if (drift.CompareTo(allowed) > 0)
+                return RoundedTo(root, DoubleDigits);
+            var known = precision - 8;
+            var scale = current.Abs().EDecimal;
+            var moved = last!.Abs().EDecimal;
+            if (!scale.IsZero && !moved.IsZero)
+            {
+                var place = (int)System.Math.Floor(-moved.Divide(scale, EContext.ForPrecision(20)).Log10(EContext.ForPrecision(20)).ToDouble()) - 2;
+                known = System.Math.Min(known, System.Math.Max(place, 1));
+            }
+            return RoundedTo(current, known);
+
+            EContext At(int digits)
+            {
+                var largest = context.HasExponentRange && context.EMax.CanFitInInt32()
+                    ? System.Math.Max(context.EMax.ToInt32Unchecked(), 2 * digits) : 2 * digits;
+                return context.WithPrecision(digits).WithExponentRange(-2 * digits, largest);
+            }
+
+            // The Newton step at a point, f / f', and the point it leads to, at the given digits, or null
+            // where it has no value.
+            (Complex Next, Complex Step)? Step(Complex at, int digits)
+            {
+                using var _ = MathS.Settings.DecimalPrecisionContext.Set(At(digits));
+                using var __ = MathS.Settings.DowncastingEnabled.Set(false);
+                if (function.Substitute(v, at).Evaled is not Complex value
+                    || derivative.Substitute(v, at).Evaled is not Complex slope
+                    || !value.IsFinite || !slope.IsFinite || slope.IsZero)
+                    return null;
+                var step = value / slope;
+                var next = at - step;
+                return step.IsFinite && next.IsFinite ? (next, step) : null;
+            }
+        }
+
+        /// <summary>
+        /// <paramref name="number"/> with each part to <paramref name="digits"/> significant digits of the
+        /// larger part's size, so that a part near zero beside the other keeps no digits the other does not.
+        /// </summary>
+        private static Complex RoundedTo(Complex number, int digits)
+        {
+            var re = number.RealPart.EDecimal;
+            var im = number.ImaginaryPart.EDecimal;
+            var larger = re.Abs().CompareTo(im.Abs()) >= 0 ? re : im;
+            if (larger.IsZero || !larger.IsFinite)
+                return number;
+            // The place of the last digit kept: the larger part's leading digit, less the digits.
+            var leading = larger.Abs().Log10(EContext.ForPrecision(20)).ToDouble();
+            var place = EInteger.FromInt32((int)System.Math.Floor(leading) - digits + 1);
+            var context = EContext.ForRounding(ERounding.HalfEven);
+            return Complex.Create(re.Quantize(place, context).Reduce(null), im.Quantize(place, context).Reduce(null));
         }
 
         /// <summary>Whether every number written in <paramref name="expr"/> is real.</summary>
