@@ -61,6 +61,23 @@ one point, or else `Simplify` proving it zero. A singular matrix answers as `[[1
 | `"[[sin(x)^2, 1], [1 - cos(x)^2, 1]]^(-1)".Simplify()` | `NaN` | `1 / [[sin(x) ^ 2, 1], [sin(x) ^ 2, 1]]` |
 | `"[[e^x, e^(2x)], [2, e^x]]^(-1)".Simplify()` | its inverse | unchanged |
 
+### The whole part of a large rational power is taken out
+
+**Silent, in the printed form only.** A rational raised to a rational power was written as a whole part times a
+radical only while the base raised to the exponent's numerator stayed under 2^40. So `2^(19/2)` was `512 * sqrt(2)`
+and `2^(21/2)` was left as written, and products that should cancel did not. The whole part `b^(p div q)` is now
+taken out first, and only `b^((p mod q)/q)` is left as a radical. A whole part past about 10^300 is still left in the
+power. The value is the same
+([#2609](https://github.com/asc-community/AngouriMath/issues/2609)).
+
+| `.Simplify()` | Was (2.10.0) | Now |
+|---|---|---|
+| `2^(21/2)` | `2 ^ (21/2)` | `1024 * sqrt(2)` |
+| `2^(-21/2)` | `2 ^ (-21/2)` | `sqrt(2) / 2048` |
+| `5^(17/2)` | `5 ^ (17/2)` | `390625 * sqrt(5)` |
+| `32768 * 2^(-29/2)` | `32768 * 2 ^ (-29/2)` | `sqrt(2)` |
+| `2 / (2^(-29/2) * 32768)` | `1/16384 / 2 ^ (-29/2)` | `sqrt(2)` |
+
 ### An inequality with abs of x is solved
 
 **Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException`, *"Only
