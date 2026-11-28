@@ -97,6 +97,9 @@ namespace AngouriMath
             var (lower, upper) = (from.Evaled as Number.Real, to.Evaled as Number.Real);
             if (lower is { IsNaN: true } || upper is { IsNaN: true })
                 (lower, upper) = (null, null);
+            var asFound = antiderivative;
+            if (lower is not null && upper is not null)
+                antiderivative = WithRealLogarithms(antiderivative, x, lower < upper ? lower : upper, lower < upper ? upper : lower);
             // Where an argument off the real line crosses a branch cut, or may, the antiderivative jumps there although the
             // integrand does not. Between bounds that are not numbers any crossing is one that cannot be placed.
             // https://github.com/asc-community/AngouriMath/issues/2460
@@ -111,6 +114,13 @@ namespace AngouriMath
                     : null;
             var (lowest, highest) = lower < upper ? (lower, upper) : (upper, lower);
             var breaks = AntiderivativeBreaks.Inside(antiderivative, x, lowest, highest);
+            // A logarithm taken of its argument's modulus breaks where the argument is zero or has a pole, which the
+            // antiderivative as found breaks at too; its breaks are kept, so that the modulus can hide none of them.
+            if (!ReferenceEquals(asFound, antiderivative) && breaks is not null)
+                breaks = AntiderivativeBreaks.Inside(asFound, x, lowest, highest) is { } asFoundBreaks
+                    ? breaks.Concat(asFoundBreaks).GroupBy(@break => @break.Value).Select(group => group.First())
+                        .OrderBy(@break => @break.Value.EDecimal).ToList()
+                    : null;
             if (AcrossTheCuts(antiderivative, x, crossings, lowest, highest, breaks) is not { } acrossTheCuts)
                 return null;
             if (lower > upper)
@@ -141,6 +151,81 @@ namespace AngouriMath
                 total += before - after;
             }
             return AtTheBound(antiderivative, x, to, from, continuousInside: true) is { } atTheEnd ? total + atTheEnd : null;
+        }
+
+        /// <summary>
+        /// <paramref name="antiderivative"/> with the logarithm of each argument that is real for real
+        /// <paramref name="x"/> taken of its modulus, <c>ln(abs(u))</c> for <c>ln(u)</c>.
+        /// </summary>
+        /// <remarks>
+        /// Where <c>u</c> is real, <c>ln(u)</c> is <c>ln(abs(u)) + i pi</c> where <c>u &lt; 0</c> and <c>ln(abs(u))</c>
+        /// elsewhere. The two differ by a constant between two zeros or poles of <c>u</c>, and the range is split at
+        /// those already (see <see cref="AntiderivativeBreaks.Inside"/>), so <c>F(b) - F(a)</c> taken piece by piece is
+        /// the same with either, and with the modulus it is real. Taken at a negative <c>u</c>, the integral of
+        /// <c>1/x</c> over <c>[-2, -1]</c> was <c>i pi - ln(-2)</c>, and over <c>[-1, 0]</c> it was
+        /// <c>(-i) pi - +oo</c>, an imaginary part beside an infinity, where it is <c>-oo</c>. An argument holding
+        /// anything that is not real on the real line, such as <c>x + i</c>, a parameter or a root, is left as it was.
+        /// https://github.com/asc-community/AngouriMath/issues/2611
+        /// </remarks>
+        private static Entity WithRealLogarithms(Entity antiderivative, Variable x, Number.Real lowest, Number.Real highest)
+        {
+            var samples = SamplePoints(lowest, highest);
+            return antiderivative.Replace(node =>
+                node is Logf(var @base, var argument) and not Logf(_, Absf)
+                && argument.ContainsNode(x) && IsRealOnTheRealLine(argument, x)
+                && @base.Evaled is Number.Real { IsPositive: true, IsFinite: true } positive && positive != 1
+                // Only an argument seen to be negative in the range: elsewhere the logarithm is real already, and is
+                // left as it was written.
+                && samples.Any(point => argument.Substitute(x, point).Evaled is Number.Real { IsNegative: true, IsFinite: true })
+                    ? new Logf(@base, new Absf(argument))
+                    : node);
+        }
+
+        /// <summary>Finite points spread over the range, its finite bounds among them.</summary>
+        private static List<Entity> SamplePoints(Number.Real lowest, Number.Real highest)
+        {
+            var points = new List<Entity>();
+            var steps = new Entity[] { Number.Rational.Create(1, 2), 1, 10, 100, 1000 };
+            if (lowest.IsFinite)
+                points.Add(lowest);
+            if (highest.IsFinite)
+                points.Add(highest);
+            if (lowest.IsFinite && highest.IsFinite)
+                for (var k = 1; k < 8; k++)
+                    points.Add((lowest + (highest - lowest) * Number.Rational.Create(k, 8)).InnerSimplified);
+            else if (lowest.IsFinite)
+                points.AddRange(steps.Select(step => (lowest + step).InnerSimplified));
+            else if (highest.IsFinite)
+                points.AddRange(steps.Select(step => (highest - step).InnerSimplified));
+            else
+                points.AddRange(steps.SelectMany(step => new[] { step, (-step).InnerSimplified }).Prepend(Number.Integer.Zero));
+            return points;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is real at every real <paramref name="x"/> where it has a value: built from
+        /// <paramref name="x"/> and real constants by arithmetic, whole powers, powers of a positive base, the modulus
+        /// and the trigonometric and hyperbolic functions.
+        /// </summary>
+        private static bool IsRealOnTheRealLine(Entity expr, Variable x)
+        {
+            if (!expr.ContainsNode(x))
+                return expr.Vars.All(variable => variable == x) && expr.Evaled is Number.Real { IsFinite: true };
+            return expr switch
+            {
+                Variable variable => variable == x,
+                Sumf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Minusf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Mulf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Divf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Powf(var a, Number.Integer) => IsRealOnTheRealLine(a, x),
+                Powf(var a, var b) => !a.ContainsNode(x) && a.Evaled is Number.Real { IsPositive: true, IsFinite: true }
+                                      && IsRealOnTheRealLine(b, x),
+                Absf(var a) => IsRealOnTheRealLine(a, x),
+                Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf or Arctanf or Arccotanf
+                    => expr.DirectChildren.All(argument => IsRealOnTheRealLine(argument, x)),
+                _ => false
+            };
         }
 
         /// <summary>
@@ -341,7 +426,9 @@ namespace AngouriMath
             // Within a budget of the limits it asks along the way. Past it the limit is undecided and the integral left
             // as written, which is no wrong answer. The most a decided limit at a bound took in the tests is 957; one
             // spelling of the antiderivative of ln(x) Si(x) took over 38,000 in forty seconds without deciding.
-            var limit = Functions.Algebra.LimitFunctional.WithinABudget(LimitsAtABound, () => antiderivative.Limit(x, bound, side));
+            var limit = Functions.Algebra.LimitFunctional.WithinABudget(LimitsAtABound,
+                () => (bound.Evaled is Number.Real { EDecimal: var at } && at.IsInfinity() ? WithItsLogarithmsGathered(antiderivative, x, bound, side) : antiderivative)
+                    .Limit(x, bound, side));
             if (SettingsState.StillHolds(stamp))
             {
                 if (into.Count >= 256)
@@ -350,6 +437,82 @@ namespace AngouriMath
             }
             return limit;
         }
+        /// <summary>
+        /// <paramref name="antiderivative"/> with its logarithms whose multiples are rational multiples of each other
+        /// gathered into one, <c>c ln(a) + r c ln(b)</c> into <c>c ln(a b^r)</c>, where each argument is positive on
+        /// the way to <paramref name="bound"/>; as it is where none are.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The antiderivative of a rational function with quadratic factors is a sum of a logarithm and an
+        /// arctangent for each, and at an infinite bound each logarithm diverges while their sum does not:
+        /// <c>1/(x^8 + 1)</c> has four, in pairs <c>c ln(a) - c ln(b)</c>, among four arctangents. The limit takes the
+        /// sum apart by its binary tree, in which no two of the logarithms that cancel stand together, and took nine
+        /// seconds to put them back. The integral of <c>1/(x^6 + 1)</c> over <c>[0, +oo)</c> took 48, and that of
+        /// <c>1/(x^4 + 1)</c> seven. Gathered, each pair is the logarithm of a quotient tending to 1, and each of these
+        /// takes under a second.
+        /// https://github.com/asc-community/AngouriMath/issues/2619
+        /// </para>
+        /// <para>
+        /// <c>ln(a) + r ln(b) = ln(a b^r)</c> holds for <c>a</c> and <c>b</c> positive and <c>r</c> rational, and only
+        /// up to a multiple of <c>2 pi i</c> otherwise, so an argument that is not positive on the way is left out:
+        /// at <c>-oo</c>, <c>ln(x + 1)</c> of the antiderivative of <c>1/(x^3 + 1)</c> is <c>ln|x + 1| + pi i</c>.
+        /// </para>
+        /// </remarks>
+        private static Entity WithItsLogarithmsGathered(Entity antiderivative, Variable x, Entity bound, ApproachFrom side)
+        {
+            if (antiderivative is not (Sumf or Minusf))
+                return antiderivative;
+            var others = new List<Entity>();
+            var groups = new List<(Entity Multiple, List<(Entity Argument, Entity Power)> Members)>();
+            foreach (var term in Sumf.LinearChildren(antiderivative))
+            {
+                if (AsAMultipleOfALogarithm(term) is not var (argument, multiple)
+                    || multiple.Evaled is not Number.Real { IsFinite: true } || ((Number.Real)multiple.Evaled).IsZero)
+                {
+                    others.Add(term);
+                    continue;
+                }
+                var joined = false;
+                foreach (var (groupMultiple, members) in groups)
+                    if ((multiple / groupMultiple).Evaled is Number.Rational power)
+                    {
+                        members.Add((argument, power));
+                        joined = true;
+                        break;
+                    }
+                if (!joined)
+                    groups.Add((multiple, new() { (argument, Integer.One) }));
+            }
+            if (groups.All(group => group.Members.Count < 2))
+                return antiderivative;
+            var gathered = new List<Entity>(others);
+            foreach (var (multiple, members) in groups)
+            {
+                var positive = members.Where(member => IsPositiveOnTheWay(member.Argument)).ToList();
+                foreach (var member in members.Except(positive))
+                    gathered.Add(multiple * member.Power * MathS.Ln(member.Argument));
+                if (positive.Count == 0)
+                    continue;
+                var product = positive.Select(member => member.Power == Integer.One ? member.Argument : MathS.Pow(member.Argument, member.Power))
+                    .Aggregate((all, one) => all * one);
+                gathered.Add(multiple * MathS.Ln(product.InnerSimplified));
+            }
+            return Sumf.Sum(gathered);
+
+            bool IsPositiveOnTheWay(Entity argument)
+                => MathS.Signum(argument).Limit(x, bound, side).Evaled is Integer { EInteger: var sign } && sign.Equals(PeterO.Numbers.EInteger.One);
+
+            (Entity Argument, Entity Multiple)? AsAMultipleOfALogarithm(Entity term) => term switch
+            {
+                Logf(var logBase, var argument) when logBase == MathS.e && argument.ContainsNode(x) => (argument, Integer.One),
+                Mulf(var constant, var rest) when !constant.ContainsNode(x) && AsAMultipleOfALogarithm(rest) is var (a, m) => (a, constant * m),
+                Mulf(var rest, var constant) when !constant.ContainsNode(x) && AsAMultipleOfALogarithm(rest) is var (a, m) => (a, m * constant),
+                Divf(var rest, var constant) when !constant.ContainsNode(x) && AsAMultipleOfALogarithm(rest) is var (a, m) => (a, m / constant),
+                _ => null
+            };
+        }
+
         [System.ThreadStatic] private static Dictionary<(Entity, Variable, Entity, ApproachFrom), Entity>? limitsAtBounds;
         /// <summary>How many limits the limit at one bound may ask in all.</summary>
         private const int LimitsAtABound = 2000;

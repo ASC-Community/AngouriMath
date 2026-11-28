@@ -72,10 +72,37 @@ namespace AngouriMath.Functions
                     => SumOfFractions(expr, leftNum, leftDen, rightNum, rightDen),
                 Minusf(Divf(var leftNum, var leftDen), Divf(var rightNum, var rightDen))
                     => SumOfFractions(expr, leftNum, leftDen, -rightNum, rightDen),
-                Divf(var num, var den) when num.Vars.Any() && den.Vars.Any()
+                Divf(var num, var den) when PairsOff(num, den)
                     => PairwiseGroupedQuotient(expr, num, den, level),
                 _ => expr
             };
+
+        /// <summary>
+        /// Whether the factors of <paramref name="num"/> / <paramref name="den"/> are worth
+        /// pairing: both sides hold a variable, or one does and the two share a factor free of
+        /// variables, as a power of it. Testing for variables alone left
+        /// <c>ln(2) / (x ln(2)^2)</c>, the derivative of <c>log(2, x)</c>, as written, while
+        /// <c>y / (x y^2)</c> cancelled.
+        /// https://github.com/asc-community/AngouriMath/issues/2603
+        /// </summary>
+        internal static bool PairsOff(Entity num, Entity den)
+        {
+            var numHasVariables = num.Vars.Any();
+            var denHasVariables = den.Vars.Any();
+            if (numHasVariables && denHasVariables)
+                return true;
+            if (!numHasVariables && !denHasVariables)
+                return false;
+            var numBases = Mulf.LinearChildren(num).Select(BaseOf).Where(IsAConstantFactor).ToList();
+            if (numBases.Count == 0)
+                return false;
+            return Mulf.LinearChildren(den).Select(BaseOf).Where(IsAConstantFactor).Any(numBases.Contains);
+
+            static Entity BaseOf(Entity factor)
+                => factor is Powf(var @base, Number) ? @base : factor;
+            static bool IsAConstantFactor(Entity factor)
+                => factor is not Number && !factor.Vars.Any();
+        }
 
         /// <summary>
         /// The quotient regrouped pairwise, its factors put through the power rules and

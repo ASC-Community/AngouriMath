@@ -45,6 +45,13 @@ namespace AngouriMath.Functions
         private const int MaxExponentPart = 64;
 
         /// <summary>
+        /// The most bits a power whose whole part is taken out may have, about 10^77.
+        /// https://github.com/asc-community/AngouriMath/issues/2609
+        /// https://github.com/asc-community/AngouriMath/issues/2615
+        /// </summary>
+        private const int MaxResultBits = 256;
+
+        /// <summary>
         /// The reciprocal of <paramref name="radicand"/> ^ <paramref name="exponent"/>, written
         /// without a radical below the line, or null when the exponent is not a root at all.
         /// </summary>
@@ -68,8 +75,35 @@ namespace AngouriMath.Functions
             var power = exponent.Numerator.EInteger.ToInt32Checked();
             var rootIndex = exponent.Denominator.EInteger.ToInt32Checked();
             // A whole exponent is somebody else's case.
-            if (rootIndex < 2 || power is 0 || System.Math.Abs(power) > MaxExponentPart || rootIndex > MaxExponentPart)
+            if (rootIndex < 2 || power is 0 || rootIndex > MaxExponentPart)
                 return null;
+
+            // An exponent past one takes its whole part out first: b^(p/q) is b^(p div q) times
+            // b^((p mod q)/q), and only the second is a radical. Raising the radicand to all of p
+            // before splitting it gave up past 2^40, so 2^(19/2) was 512 sqrt(2) and 2^(21/2)
+            // was left as written, and 32768 * 2^(-29/2) did not cancel to sqrt(2).
+            // https://github.com/asc-community/AngouriMath/issues/2609
+            if (System.Math.Abs(power) > rootIndex)
+            {
+                var @base = power < 0
+                    ? Rational.Create(radicand.Denominator.EInteger, radicand.Numerator.EInteger)
+                    : radicand;
+                var wholePower = System.Math.Abs(power) / rootIndex;
+                // The whole result, the whole part times what is left under the root, is bounded
+                // by b^(p div q + 1), and is kept well under 10^100. Past about 10^100 an exact
+                // integer times an irrational is folded into the 100-digit rounded decimal, which
+                // is then read back as an integer: 2^300 sqrt(2) stays exact, while 2^340 sqrt(2)
+                // simplifies to an integer, on master and on 2.10.0. Extracting a whole part that
+                // large would turn a power written correctly into that wrong answer.
+                // https://github.com/asc-community/AngouriMath/issues/2615
+                if (TooLargeRaised(@base.Numerator.EInteger, wholePower + 1, MaxResultBits)
+                    || TooLargeRaised(@base.Denominator.EInteger, wholePower + 1, MaxResultBits))
+                    return null;
+                var wholeFactor = Rational.Create(
+                    @base.Numerator.EInteger.Pow(wholePower), @base.Denominator.EInteger.Pow(wholePower));
+                var restExponent = Rational.Create(EInteger.FromInt32(System.Math.Abs(power) % rootIndex), EInteger.FromInt32(rootIndex));
+                return wholeFactor * (PullOutOfRadical(@base, restExponent) ?? new Powf(@base, restExponent));
+            }
 
             // A negative exponent is the same question asked of the reciprocal: 2^(-1/2) is
             // (1/2)^(1/2). Turning it round rather than declining it is what keeps 1/sqrt(2)
@@ -125,10 +159,10 @@ namespace AngouriMath.Functions
         /// Whether <paramref name="value"/> raised to <paramref name="power"/> would exceed the
         /// radicand bound, decided from the bit length so that the power is never taken.
         /// </summary>
-        private static bool TooLargeRaised(EInteger value, int power)
+        private static bool TooLargeRaised(EInteger value, int power, int maxBits = MaxRadicandBits)
             => value.GetUnsignedBitLengthAsEInteger()
                     .Multiply(power)
-                    .CompareTo(EInteger.FromInt32(MaxRadicandBits)) > 0;
+                    .CompareTo(EInteger.FromInt32(maxBits)) > 0;
 
         /// <summary>
         /// Splits <paramref name="value"/> into the part that comes out from under a root of

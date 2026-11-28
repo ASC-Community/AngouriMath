@@ -67,6 +67,23 @@ integer. Exact large integers are unchanged
 | `"integral(exp(x), x, 0, 300)".Simplify()` | `1942426395…4199999…9` | `e ^ 300 - 1` |
 | `"2^340 * sqrt(2)".Evaled` | an `Integer` | `3.167477390…E+102`, a `Real` |
 
+### A square system is answered exactly whichever order its equations are in
+
+**Not silent: a decimal answer is now exact, and a refused system has an answer.** The eliminator took the last
+unknown from the first equation that gave a root for it, and kept whatever that led to. From `ln(x) + ln(y) = 1`, `y`
+is `e^(1 - ln(x))`, and `x = e^(1 - ln(x))` was solved by Newton's method. When the substitution left an equation the
+solver could not solve, the system was declined. Each candidate equation is now tried in turn, and the first exact
+answer is kept. A system with a decimal in it, or one whose first candidate is undecided and whose later ones answer
+only in decimals, is answered as before ([#2607](https://github.com/asc-community/AngouriMath/issues/2607)).
+
+| `MathS.Equations(...).Solve("x", "y")` | Was (2.10.0) | Now |
+|---|---|---|
+| `ln(x) + ln(y) - 1`, `x - y` | `[[1.64872127070012819416433558217249810695648193359375, …]]` | `[[sqrt(e), sqrt(e)]]` |
+| `ln(x) + ln(y) - 2`, `x - y` | `[[2.718281828459045090795598298427648842334747314453125, …]]` | `[[sqrt(e ^ 2), sqrt(e ^ 2)]]` |
+| `e^x * e^y - 4`, `x - y` | `null` | `[[ln(2) + 2 * pi * i * n_1, …], [ln(-2) + 2 * pi * i * n_1, …]]` |
+| `2^x + 2^y - 8`, `x - y` | `null` | `[[2 + 2 * pi * i * n_1 / ln(2), …]]` |
+| `x - y`, `ln(x) + ln(y) - 1` | `[[sqrt(e), sqrt(e)]]` | unchanged |
+
 ### A singular matrix is not inverted because its determinant is not written as 0
 
 **Not silent: a wrong answer is now no answer.** `Matrix.Inverse`, `Matrix.Pow` with a negative exponent, `M^(-1)` and
@@ -85,6 +102,43 @@ one point, or else `Simplify` proving it zero. A singular matrix answers as `[[1
 | `"[[sin(2x), 2 sin(x)], [cos(x), 1]]^(-1)".Simplify()` | `NaN` | `1 / [[sin(2 * x), 2 * sin(x)], [cos(x), 1]]` |
 | `"[[sin(x)^2, 1], [1 - cos(x)^2, 1]]^(-1)".Simplify()` | `NaN` | `1 / [[sin(x) ^ 2, 1], [sin(x) ^ 2, 1]]` |
 | `"[[e^x, e^(2x)], [2, e^x]]^(-1)".Simplify()` | its inverse | unchanged |
+
+### The whole part of a large rational power is taken out
+
+**Silent, in the printed form only.** A rational raised to a rational power was written as a whole part times a
+radical only while the base raised to the exponent's numerator stayed under 2^40. So `2^(19/2)` was `512 * sqrt(2)`
+and `2^(21/2)` was left as written, and products that should cancel did not. The whole part `b^(p div q)` is now
+taken out first, and only `b^((p mod q)/q)` is left as a radical. A power past about 10^77 is still left as it was,
+since past about 10^100 an integer times a radical is folded into a rounded decimal
+([#2615](https://github.com/asc-community/AngouriMath/issues/2615)). The value is the same
+([#2609](https://github.com/asc-community/AngouriMath/issues/2609)).
+
+| `.Simplify()` | Was (2.10.0) | Now |
+|---|---|---|
+| `2^(21/2)` | `2 ^ (21/2)` | `1024 * sqrt(2)` |
+| `2^(-21/2)` | `2 ^ (-21/2)` | `sqrt(2) / 2048` |
+| `5^(17/2)` | `5 ^ (17/2)` | `390625 * sqrt(5)` |
+| `32768 * 2^(-29/2)` | `32768 * 2 ^ (-29/2)` | `sqrt(2)` |
+| `2 / (2^(-29/2) * 32768)` | `1/16384 / 2 ^ (-29/2)` | `sqrt(2)` |
+
+### A real integral through ln of a negative number is real
+
+**Not silent: a divergent integral had an imaginary part, and a finite one was written through `ln` of a negative
+number.** The antiderivative of `1/u` is `ln(u)`, and a definite integral over a range where `u < 0` took it at
+negative numbers. A finite value came out as `ln(-1) - ln(-2)`. The value was right, but it was written through
+complex logarithms. A divergent integral came out as `-oo - ln(-1)`, an infinity with an imaginary part. The integral
+of a real function is `-oo` there. Where `u` is real and seen to be negative in the range, the logarithm is now taken of
+`abs(u)`. The two differ by a constant between the points where the range is already split, so the value is
+unchanged and is written as a real number. An argument that is not real on the real line, such as `x + i`, is left as
+it was ([#2611](https://github.com/asc-community/AngouriMath/issues/2611)).
+
+| simplified | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/x, x, -1, 0)` | `-oo - ln(-1)` | `-oo` |
+| `integral(1/(x-3), x, 0, 3)` | `-oo - ln(-3)` | `-oo` |
+| `integral(tan(x), x, pi/2, 3 pi/4)` | `-oo - ln(-1/2 * sqrt(2))` | `-oo` |
+| `integral(1/x, x, -2, -1)` | `ln(-1) - ln(-2)` | `-ln(2)` |
+| `integral(1/(x^2-1), x, -1/2, 1/2)` | `(ln(-1/3) - ln(-3)) / 2` | `ln(1/3)` |
 
 ### An inequality with abs of x is solved
 
@@ -142,6 +196,23 @@ folded. The logarithm of any other point on the unit circle, such as `-1/2 + i s
 | `"sin(x) + cos(x) = 1".Solve("x")` | `union({ 2 * pi * n, ln(i) / i + 2 * pi * n }, n in ZZ)` | `union({ 2 * pi * n, pi / 2 + 2 * pi * n }, n in ZZ)` |
 | `"sin(2x) = sin(x)".Solve("x")` | the root `ln(-1) / i + 2 * pi * n` | `pi + 2 * pi * n` |
 
+### A root found by Newton's method prints only digits that are right
+
+**Silent, in the digits.** A root that the solver could only find numerically was computed in `double` and widened to
+a decimal, which kept every digit of the binary fraction. About fifty digits were printed, and only the first sixteen
+were the root's. The root is now refined by Newton's steps in the library's own evaluation, at twice the digits of
+`MathS.Settings.DecimalPrecisionContext` and twenty more. It is given to the digits the last step shows are right: all
+but eight of the working precision for a simple root, fewer for a multiple one. `SolveNt` does the same. A search that
+solved quickly takes longer: 65 to 440 ms more for the four equations measured, which had one to thirteen roots.
+Polynomial roots are unchanged
+([#2613](https://github.com/asc-community/AngouriMath/issues/2613)).
+
+| `.Solve("x")` | Was (2.10.0) | Now |
+|---|---|---|
+| `cos(x) = x`, its real root | `0.7390851332151606722931092008366249501705169677734375` | `0.73908513321516064165531208767387340401341175890075746496568063577328465488354759459937610693` |
+| `x - e^(1 - ln(x)) = 0` | `±1.64872127070012819416433558217249810695648193359375` | `±1.6487212707001281468486507878141635716537761007101480115750793116406610211942156086327765201` |
+| `x^x = 2`, its real root | `1.5596104694623693642796524727600626647472381591796875` | `1.5596104694623693499703887687650029932848835118430914247195945694139730345495905871054134447` |
+
 ### A term with a finite limit is taken out of a sum
 
 **An answer where there was none.** A sum whose two halves tend to opposite infinities was left unevaluated, so its
@@ -198,6 +269,22 @@ answered through an antiderivative, such as `abs(x - 1)` over `[0, 3]`, gives th
 
 ---
 
+### A power of a constant cancels across a quotient
+
+**Silent, in the printed form only.** `Simplify` paired the factors of a quotient only when the numerator and the
+denominator both held a variable. So a power of a constant such as `ln(2)`, `pi` or `sin(1)` was not cancelled when
+only one side held `x`, although `y / (x y^2)` was. The factors are now also paired when one side holds a variable
+and the two share a factor free of variables. The value is the same
+([#2603](https://github.com/asc-community/AngouriMath/issues/2603)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `"ln(2) / (x * ln(2)^2)".Simplify()` | `ln(2) / (x * ln(2) ^ 2)` | `1 / (x * ln(2))` |
+| `"log(2, x)".Differentiate("x").Simplify()` | `ln(2) / (x * ln(2) ^ 2)` | `1 / (x * ln(2))` |
+| `"pi / (x * pi^2)".Simplify()` | `pi / (x * pi ^ 2)` | `1 / (pi * x)` |
+| `"ln(2)^2 / (x * ln(2))".Simplify()` | `ln(2) ^ 2 / (x * ln(2))` | `ln(2) / x` |
+| `"ln(2) * x / ln(2)^2".Simplify()` | `x * ln(2) / ln(2) ^ 2` | `x / ln(2)` |
+
 ### An inequality through ln, an exponential or sqrt is solved
 
 **Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException` for an
@@ -217,6 +304,24 @@ a symbolic bound, is still declined ([#2585](https://github.com/asc-community/An
 | `(1/2)^x > 4` | throws | `(-oo; -2)` |
 | `e^x > -1` | throws | `RR` |
 | `ln(x) > a` | throws | unchanged |
+
+### An integral of a rational function over an infinite range is found in under a second
+
+**Not silent: an integral that did not finish, or was left as written, has its value.** The antiderivative of a
+rational function with quadratic factors has a logarithm for each. At an infinite bound these diverge in pairs,
+`c ln(a) - c ln(b)`, and their sum does not, but the limit took the sum apart by its binary tree. It is now taken with
+the logarithms whose multiples are rational multiples of each other gathered into one, `c ln(a / b)`, wherever their
+arguments are positive on the way. Where the limit gathers two logarithms itself, the common multiple is taken out
+first, so the powers inside are rational ([#2619](https://github.com/asc-community/AngouriMath/issues/2619)).
+
+| `integral(f, x, a, +oo).Simplify()` | Was (2.10.0) | Now |
+|---|---|---|
+| `1/(x^6+1)`, from 0 | did not finish in 20 s | `pi / 3`, 0.5 s |
+| `1/(x^8+1)`, from `-oo` | did not finish in 20 s | `pi * (2 - sqrt(2)) ^ (-1/2) / 2`, 0.2 s |
+| `1/(x^4+1)`, from 0 | left as written, 7 s | `sqrt(2) * pi / 4`, 0.1 s |
+| `1/(x^3+1)`, from 0 | left as written | `2/9 * sqrt(3) * pi` |
+| `(x+1)/(x^4+1)`, from 0 | left as written | `pi * (1 + sqrt(2)) / 4` |
+| `1/(x^5+1)`, from 0 | left as written | unchanged |
 
 ### A system with a redundant equation is solved
 
