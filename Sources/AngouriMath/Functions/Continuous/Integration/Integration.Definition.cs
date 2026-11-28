@@ -97,6 +97,9 @@ namespace AngouriMath
             var (lower, upper) = (from.Evaled as Number.Real, to.Evaled as Number.Real);
             if (lower is { IsNaN: true } || upper is { IsNaN: true })
                 (lower, upper) = (null, null);
+            var asFound = antiderivative;
+            if (lower is not null && upper is not null)
+                antiderivative = WithRealLogarithms(antiderivative, x, lower < upper ? lower : upper, lower < upper ? upper : lower);
             // Where an argument off the real line crosses a branch cut, or may, the antiderivative jumps there although the
             // integrand does not. Between bounds that are not numbers any crossing is one that cannot be placed.
             // https://github.com/asc-community/AngouriMath/issues/2460
@@ -111,6 +114,13 @@ namespace AngouriMath
                     : null;
             var (lowest, highest) = lower < upper ? (lower, upper) : (upper, lower);
             var breaks = AntiderivativeBreaks.Inside(antiderivative, x, lowest, highest);
+            // A logarithm taken of its argument's modulus breaks where the argument is zero or has a pole, which the
+            // antiderivative as found breaks at too; its breaks are kept, so that the modulus can hide none of them.
+            if (!ReferenceEquals(asFound, antiderivative) && breaks is not null)
+                breaks = AntiderivativeBreaks.Inside(asFound, x, lowest, highest) is { } asFoundBreaks
+                    ? breaks.Concat(asFoundBreaks).GroupBy(@break => @break.Value).Select(group => group.First())
+                        .OrderBy(@break => @break.Value.EDecimal).ToList()
+                    : null;
             if (AcrossTheCuts(antiderivative, x, crossings, lowest, highest, breaks) is not { } acrossTheCuts)
                 return null;
             if (lower > upper)
@@ -141,6 +151,81 @@ namespace AngouriMath
                 total += before - after;
             }
             return AtTheBound(antiderivative, x, to, from, continuousInside: true) is { } atTheEnd ? total + atTheEnd : null;
+        }
+
+        /// <summary>
+        /// <paramref name="antiderivative"/> with the logarithm of each argument that is real for real
+        /// <paramref name="x"/> taken of its modulus, <c>ln(abs(u))</c> for <c>ln(u)</c>.
+        /// </summary>
+        /// <remarks>
+        /// Where <c>u</c> is real, <c>ln(u)</c> is <c>ln(abs(u)) + i pi</c> where <c>u &lt; 0</c> and <c>ln(abs(u))</c>
+        /// elsewhere. The two differ by a constant between two zeros or poles of <c>u</c>, and the range is split at
+        /// those already (see <see cref="AntiderivativeBreaks.Inside"/>), so <c>F(b) - F(a)</c> taken piece by piece is
+        /// the same with either, and with the modulus it is real. Taken at a negative <c>u</c>, the integral of
+        /// <c>1/x</c> over <c>[-2, -1]</c> was <c>i pi - ln(-2)</c>, and over <c>[-1, 0]</c> it was
+        /// <c>(-i) pi - +oo</c>, an imaginary part beside an infinity, where it is <c>-oo</c>. An argument holding
+        /// anything that is not real on the real line, such as <c>x + i</c>, a parameter or a root, is left as it was.
+        /// https://github.com/asc-community/AngouriMath/issues/2611
+        /// </remarks>
+        private static Entity WithRealLogarithms(Entity antiderivative, Variable x, Number.Real lowest, Number.Real highest)
+        {
+            var samples = SamplePoints(lowest, highest);
+            return antiderivative.Replace(node =>
+                node is Logf(var @base, var argument) and not Logf(_, Absf)
+                && argument.ContainsNode(x) && IsRealOnTheRealLine(argument, x)
+                && @base.Evaled is Number.Real { IsPositive: true, IsFinite: true } positive && positive != 1
+                // Only an argument seen to be negative in the range: elsewhere the logarithm is real already, and is
+                // left as it was written.
+                && samples.Any(point => argument.Substitute(x, point).Evaled is Number.Real { IsNegative: true, IsFinite: true })
+                    ? new Logf(@base, new Absf(argument))
+                    : node);
+        }
+
+        /// <summary>Finite points spread over the range, its finite bounds among them.</summary>
+        private static List<Entity> SamplePoints(Number.Real lowest, Number.Real highest)
+        {
+            var points = new List<Entity>();
+            var steps = new Entity[] { Number.Rational.Create(1, 2), 1, 10, 100, 1000 };
+            if (lowest.IsFinite)
+                points.Add(lowest);
+            if (highest.IsFinite)
+                points.Add(highest);
+            if (lowest.IsFinite && highest.IsFinite)
+                for (var k = 1; k < 8; k++)
+                    points.Add((lowest + (highest - lowest) * Number.Rational.Create(k, 8)).InnerSimplified);
+            else if (lowest.IsFinite)
+                points.AddRange(steps.Select(step => (lowest + step).InnerSimplified));
+            else if (highest.IsFinite)
+                points.AddRange(steps.Select(step => (highest - step).InnerSimplified));
+            else
+                points.AddRange(steps.SelectMany(step => new[] { step, (-step).InnerSimplified }).Prepend(Number.Integer.Zero));
+            return points;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="expr"/> is real at every real <paramref name="x"/> where it has a value: built from
+        /// <paramref name="x"/> and real constants by arithmetic, whole powers, powers of a positive base, the modulus
+        /// and the trigonometric and hyperbolic functions.
+        /// </summary>
+        private static bool IsRealOnTheRealLine(Entity expr, Variable x)
+        {
+            if (!expr.ContainsNode(x))
+                return expr.Vars.All(variable => variable == x) && expr.Evaled is Number.Real { IsFinite: true };
+            return expr switch
+            {
+                Variable variable => variable == x,
+                Sumf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Minusf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Mulf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Divf(var a, var b) => IsRealOnTheRealLine(a, x) && IsRealOnTheRealLine(b, x),
+                Powf(var a, Number.Integer) => IsRealOnTheRealLine(a, x),
+                Powf(var a, var b) => !a.ContainsNode(x) && a.Evaled is Number.Real { IsPositive: true, IsFinite: true }
+                                      && IsRealOnTheRealLine(b, x),
+                Absf(var a) => IsRealOnTheRealLine(a, x),
+                Sinf or Cosf or Tanf or Cotanf or Secantf or Cosecantf or Arctanf or Arccotanf
+                    => expr.DirectChildren.All(argument => IsRealOnTheRealLine(argument, x)),
+                _ => false
+            };
         }
 
         /// <summary>
