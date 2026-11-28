@@ -482,8 +482,28 @@ namespace AngouriMath
             // Re(x) = x/2 * (1 + 1/sgn(x)^2)
             internal static Entity Re(Entity x) => x / 2 * (1 + 1 / new Signumf(x).Pow(2));
 
+            /// <summary>
+            /// The real odd root of a negative base, where the exponent is written as an exact fraction of odd denominator
+            /// below 10 and evaluates to a decimal, as it does with downcasting off: 1/3 is then a quotient of the whole
+            /// decimals 1 and 3, and is 0.333..., and (-8)^(1/3) was the principal 1 + 1.732i, where it is -2 with the
+            /// downcasting on. https://github.com/asc-community/AngouriMath/issues/2622
+            /// </summary>
+            private static Entity? AnOddRootOfANegative(Entity @base, Entity exponent)
+                => exponent switch
+                    {
+                        Rational r => r,
+                        Divf(Real { EDecimal: var above }, Real { EDecimal: var below }) when above.IsInteger() && below.IsInteger() && !below.IsZero
+                            => Rational.Create(PeterO.Numbers.ERational.Create(above.ToEInteger(), below.ToEInteger())),
+                        _ => null
+                    }
+                    is { } fraction && Numerics.IntervalEvaluation.TheRealRootIsTaken(fraction) is { } numerator
+                    && exponent.Evaled is not Rational && @base.Evaled is Real { EDecimal.IsNegative: true } negative
+                    && Number.Pow(-negative, fraction) is var modulus
+                    ? (numerator.IsEven ? modulus : -modulus) : null;
+
             /// <inheritdoc/>
             protected override Entity InnerSimplify(bool isExact) =>
+                !isExact && AnOddRootOfANegative(Base, Exponent) is { } oddRoot ? oddRoot :
                 ExpandOnTwoArguments(Base, Exponent,
                 (a, b) => (a, b) switch
                 {
