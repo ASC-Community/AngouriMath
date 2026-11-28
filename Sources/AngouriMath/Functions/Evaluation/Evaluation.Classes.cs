@@ -63,6 +63,12 @@ namespace AngouriMath
         /// infinite as evaluated. An infinity counts as exact, and every expression holding one was simplified to
         /// it. An operand that is a decimal already is not asked about: its power past the range is the
         /// decimal's <c>+oo</c>, as it was. Asked only of a value that is not finite.
+        /// <para>
+        /// An operand written exactly whose value is a decimal, <c>sqrt(2)</c> or <c>pi</c>, is finite all the same:
+        /// <c>2^4000 sqrt(2)</c> is about <c>1.9e1204</c>, past the range, and its <c>+oo</c> was taken as the
+        /// value of the product, so <c>Simplify</c> answered <c>+oo</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2615
+        /// </para>
         /// </summary>
         private static bool IsAnInfinityOnlyRoundingMade(Entity node, Entity value)
             => value is Complex number && !Number.PartsAreFinite(number) && !value.IsNaN && node.Nodes.Any(IsFiniteRoundedOntoAnInfinity);
@@ -70,7 +76,8 @@ namespace AngouriMath
         private static bool IsFiniteRoundedOntoAnInfinity(Entity part)
             => part is Sumf or Minusf or Mulf or Powf
                && part.Evaled is Complex { IsFinite: false } evaluated && !evaluated.IsNaN
-               && part.DirectChildren.All(static operand => operand.Evaled is Complex { IsFinite: true, IsExact: true })
+               && part.DirectChildren.All(static operand => operand.Evaled is Complex finite && IsFiniteExactly(finite)
+                   && (finite.IsExact || !operand.Nodes.Any(static node => node is Number { IsExact: false })))
                && !(part is Powf(var @base, _) && @base.Evaled is Complex { IsZero: true });
 
         /// <summary>
@@ -79,13 +86,21 @@ namespace AngouriMath
         /// </summary>
         private static bool CannotBeZero(Entity expr) => expr switch
         {
-            Complex number => !number.IsZero && number.IsFinite,
-            Variable { IsConstant: true } constant => constant.Evaled is Complex { IsZero: false, IsFinite: true },
+            Complex number => !number.IsZero && IsFiniteExactly(number),
+            Variable { IsConstant: true } constant => constant.Evaled is Complex { IsZero: false } value && IsFiniteExactly(value),
             Mulf(var left, var right) => CannotBeZero(left) && CannotBeZero(right),
-            Divf(var dividend, var divisor) => CannotBeZero(dividend) && divisor.Evaled is Complex { IsFinite: true },
-            Powf(var @base, var exponent) => CannotBeZero(@base) && exponent.Evaled is Complex { IsFinite: true },
+            Divf(var dividend, var divisor) => CannotBeZero(dividend) && divisor.Evaled is Complex value && IsFiniteExactly(value),
+            Powf(var @base, var exponent) => CannotBeZero(@base) && exponent.Evaled is Complex value && IsFiniteExactly(value),
             _ => SignOfANonzero(expr) is not null
         };
+
+        /// <summary>
+        /// Whether <paramref name="number"/> is finite, a rational however large among them: <c>IsFinite</c> reads a
+        /// rational through the decimals, and <c>2^3400</c> is past their range there, so <c>sqrt(2) / 2^3400</c>, which
+        /// evaluates to 0, was not known to be a quotient that cannot be 0, and <c>Simplify</c> answered 0.
+        /// https://github.com/asc-community/AngouriMath/issues/2615
+        /// </summary>
+        private static bool IsFiniteExactly(Complex number) => number is Rational || number.IsFinite;
 
         /// <summary>
         /// The sign of <paramref name="expr"/> where it is a real number or a constant that is not
