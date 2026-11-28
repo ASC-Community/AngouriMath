@@ -341,7 +341,9 @@ namespace AngouriMath
             // Within a budget of the limits it asks along the way. Past it the limit is undecided and the integral left
             // as written, which is no wrong answer. The most a decided limit at a bound took in the tests is 957; one
             // spelling of the antiderivative of ln(x) Si(x) took over 38,000 in forty seconds without deciding.
-            var limit = Functions.Algebra.LimitFunctional.WithinABudget(LimitsAtABound, () => antiderivative.Limit(x, bound, side));
+            var limit = Functions.Algebra.LimitFunctional.WithinABudget(LimitsAtABound,
+                () => (bound.Evaled is Number.Real { EDecimal: var at } && at.IsInfinity() ? WithItsLogarithmsGathered(antiderivative, x, bound, side) : antiderivative)
+                    .Limit(x, bound, side));
             if (SettingsState.StillHolds(stamp))
             {
                 if (into.Count >= 256)
@@ -350,6 +352,82 @@ namespace AngouriMath
             }
             return limit;
         }
+        /// <summary>
+        /// <paramref name="antiderivative"/> with its logarithms whose multiples are rational multiples of each other
+        /// gathered into one, <c>c ln(a) + r c ln(b)</c> into <c>c ln(a b^r)</c>, where each argument is positive on
+        /// the way to <paramref name="bound"/>; as it is where none are.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The antiderivative of a rational function with quadratic factors is a sum of a logarithm and an
+        /// arctangent for each, and at an infinite bound each logarithm diverges while their sum does not:
+        /// <c>1/(x^8 + 1)</c> has four, in pairs <c>c ln(a) - c ln(b)</c>, among four arctangents. The limit takes the
+        /// sum apart by its binary tree, in which no two of the logarithms that cancel stand together, and took nine
+        /// seconds to put them back. The integral of <c>1/(x^6 + 1)</c> over <c>[0, +oo)</c> took 48, and that of
+        /// <c>1/(x^4 + 1)</c> seven. Gathered, each pair is the logarithm of a quotient tending to 1, and each of these
+        /// takes under a second.
+        /// https://github.com/asc-community/AngouriMath/issues/2619
+        /// </para>
+        /// <para>
+        /// <c>ln(a) + r ln(b) = ln(a b^r)</c> holds for <c>a</c> and <c>b</c> positive and <c>r</c> rational, and only
+        /// up to a multiple of <c>2 pi i</c> otherwise, so an argument that is not positive on the way is left out:
+        /// at <c>-oo</c>, <c>ln(x + 1)</c> of the antiderivative of <c>1/(x^3 + 1)</c> is <c>ln|x + 1| + pi i</c>.
+        /// </para>
+        /// </remarks>
+        private static Entity WithItsLogarithmsGathered(Entity antiderivative, Variable x, Entity bound, ApproachFrom side)
+        {
+            if (antiderivative is not (Sumf or Minusf))
+                return antiderivative;
+            var others = new List<Entity>();
+            var groups = new List<(Entity Multiple, List<(Entity Argument, Entity Power)> Members)>();
+            foreach (var term in Sumf.LinearChildren(antiderivative))
+            {
+                if (AsAMultipleOfALogarithm(term) is not var (argument, multiple)
+                    || multiple.Evaled is not Number.Real { IsFinite: true } || ((Number.Real)multiple.Evaled).IsZero)
+                {
+                    others.Add(term);
+                    continue;
+                }
+                var joined = false;
+                foreach (var (groupMultiple, members) in groups)
+                    if ((multiple / groupMultiple).Evaled is Number.Rational power)
+                    {
+                        members.Add((argument, power));
+                        joined = true;
+                        break;
+                    }
+                if (!joined)
+                    groups.Add((multiple, new() { (argument, Integer.One) }));
+            }
+            if (groups.All(group => group.Members.Count < 2))
+                return antiderivative;
+            var gathered = new List<Entity>(others);
+            foreach (var (multiple, members) in groups)
+            {
+                var positive = members.Where(member => IsPositiveOnTheWay(member.Argument)).ToList();
+                foreach (var member in members.Except(positive))
+                    gathered.Add(multiple * member.Power * MathS.Ln(member.Argument));
+                if (positive.Count == 0)
+                    continue;
+                var product = positive.Select(member => member.Power == Integer.One ? member.Argument : MathS.Pow(member.Argument, member.Power))
+                    .Aggregate((all, one) => all * one);
+                gathered.Add(multiple * MathS.Ln(product.InnerSimplified));
+            }
+            return Sumf.Sum(gathered);
+
+            bool IsPositiveOnTheWay(Entity argument)
+                => MathS.Signum(argument).Limit(x, bound, side).Evaled is Integer { EInteger: var sign } && sign.Equals(PeterO.Numbers.EInteger.One);
+
+            (Entity Argument, Entity Multiple)? AsAMultipleOfALogarithm(Entity term) => term switch
+            {
+                Logf(var logBase, var argument) when logBase == MathS.e && argument.ContainsNode(x) => (argument, Integer.One),
+                Mulf(var constant, var rest) when !constant.ContainsNode(x) && AsAMultipleOfALogarithm(rest) is var (a, m) => (a, constant * m),
+                Mulf(var rest, var constant) when !constant.ContainsNode(x) && AsAMultipleOfALogarithm(rest) is var (a, m) => (a, m * constant),
+                Divf(var rest, var constant) when !constant.ContainsNode(x) && AsAMultipleOfALogarithm(rest) is var (a, m) => (a, m / constant),
+                _ => null
+            };
+        }
+
         [System.ThreadStatic] private static Dictionary<(Entity, Variable, Entity, ApproachFrom), Entity>? limitsAtBounds;
         /// <summary>How many limits the limit at one bound may ask in all.</summary>
         private const int LimitsAtABound = 2000;

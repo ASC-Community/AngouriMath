@@ -209,6 +209,24 @@ a symbolic bound, is still declined ([#2585](https://github.com/asc-community/An
 | `e^x > -1` | throws | `RR` |
 | `ln(x) > a` | throws | unchanged |
 
+### An integral of a rational function over an infinite range is found in under a second
+
+**Not silent: an integral that did not finish, or was left as written, has its value.** The antiderivative of a
+rational function with quadratic factors has a logarithm for each. At an infinite bound these diverge in pairs,
+`c ln(a) - c ln(b)`, and their sum does not, but the limit took the sum apart by its binary tree. It is now taken with
+the logarithms whose multiples are rational multiples of each other gathered into one, `c ln(a / b)`, wherever their
+arguments are positive on the way. Where the limit gathers two logarithms itself, the common multiple is taken out
+first, so the powers inside are rational ([#2619](https://github.com/asc-community/AngouriMath/issues/2619)).
+
+| `integral(f, x, a, +oo).Simplify()` | Was (2.10.0) | Now |
+|---|---|---|
+| `1/(x^6+1)`, from 0 | did not finish in 20 s | `pi / 3`, 0.5 s |
+| `1/(x^8+1)`, from `-oo` | did not finish in 20 s | `pi * (2 - sqrt(2)) ^ (-1/2) / 2`, 0.2 s |
+| `1/(x^4+1)`, from 0 | left as written, 7 s | `sqrt(2) * pi / 4`, 0.1 s |
+| `1/(x^3+1)`, from 0 | left as written | `2/9 * sqrt(3) * pi` |
+| `(x+1)/(x^4+1)`, from 0 | left as written | `pi * (1 + sqrt(2)) / 4` |
+| `1/(x^5+1)`, from 0 | left as written | unchanged |
+
 ### A system with a redundant equation is solved
 
 **Not silent: a refused system has an answer, and one incomplete answer is now complete.** Some systems repeat an
