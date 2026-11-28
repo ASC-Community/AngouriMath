@@ -2563,10 +2563,18 @@ namespace AngouriMath.Functions.Algebra
                     && AsMultipleOfALogarithm(terms[1], x) is var (secondBase, secondArgument, secondMultiple)
                     && firstBase == secondBase
                     && IsPositiveOnTheWay(firstArgument) && IsPositiveOnTheWay(secondArgument))
-                    return ComputeLimit(
-                        MathS.Log(firstBase,
-                            (MathS.Pow(firstArgument, firstMultiple) * MathS.Pow(secondArgument, secondMultiple)).InnerSimplified),
-                        x, dest);
+                    // Where the multiples are rational multiples of each other, the common one is taken out and the
+                    // powers inside are rational: c ln(a) - c ln(b) is c ln(a / b). Raised to c = sqrt(3)/12 and to
+                    // -c, the arguments of the antiderivative of 1/(x^6 + 1) made a limit that took four and a half
+                    // seconds; a / b is a quotient of two quadratics, and its limit takes half of one. https://github.com/asc-community/AngouriMath/issues/2619
+                    return (secondMultiple / firstMultiple).Evaled is Number.Rational multiplesRatio
+                        ? (ComputeLimit(
+                            MathS.Log(firstBase, (firstArgument * MathS.Pow(secondArgument, multiplesRatio)).InnerSimplified), x, dest) is { } inside
+                            ? (firstMultiple * inside).InnerSimplified : null)
+                        : ComputeLimit(
+                            MathS.Log(firstBase,
+                                (MathS.Pow(firstArgument, firstMultiple) * MathS.Pow(secondArgument, secondMultiple)).InnerSimplified),
+                            x, dest);
 
                 // The faster growing part decides the answer whenever there is one, which is
                 // what the ratio of the two says: lim x -> +oo e^x - x is +oo because x / e^x
