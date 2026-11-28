@@ -160,12 +160,14 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
         /// https://github.com/asc-community/AngouriMath/issues/2613
         /// </para>
         /// <para>
-        /// The steps are taken past the working precision and without downcasting. Downcasting takes the
-        /// residual of a cancellation below ten to the minus half the digits for zero, so <c>f</c> reads 0
-        /// fifty digits short of the root. The steps are taken forty digits past the working precision, and
-        /// the last of them measures the error that is left. The root is given to the digits that error
-        /// leaves, at most all but eight of the working digits. A multiple root,
-        /// which converges only linearly, keeps fewer. A refinement that fails gives the root to the
+        /// Downcasting takes the residual of a cancellation below ten to the minus half the digits for zero,
+        /// so at the working precision <c>f</c> reads 0 fifty digits short of the root. The steps are therefore
+        /// taken at twice the working digits and twenty more, where that floor is past them. Downcasting stays
+        /// on: with it off, an odd root of a negative number is the principal one and not the real one, so
+        /// <c>(3 - t)^(1/3)</c> at <c>t = 33.5</c> is <c>1.562 + 2.706i</c> and not <c>-3.124</c>, and the steps
+        /// went to another root. The last step measures the error that is left, and the root is given to the
+        /// digits that error leaves, at most all but eight of the working digits. A multiple root, which
+        /// converges only linearly, keeps fewer. A refinement that fails gives the root to the
         /// <see cref="DoubleDigits"/> a <c>double</c> is sure of.
         /// </para>
         /// </remarks>
@@ -175,12 +177,14 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
             if (context.Precision.IsZero || !context.Precision.CanFitInInt32())
                 return RoundedTo(root, DoubleDigits);
             var precision = context.Precision.ToInt32Checked();
-            var digits = precision + 40;
+            if (root.IsZero)
+                return root;
+            var digits = 2 * precision + 20;
             var enough = EDecimal.Create(EInteger.One, EInteger.FromInt32(-(precision - 6)));
             var current = root;
             Complex? last = null;
             // Each step at about twice the digits of the last, since that is what each makes right, up to
-            // forty past the working precision. A step is taken in the digits it is computed at, so the
+            // the digits above. A step is taken in the digits it is computed at, so the
             // point is not rounded back to the working precision between steps. The last step is the
             // error left in the point it started from, at a simple root that error itself and at a root
             // of multiplicity m about a 1/m of it, and the point it leads to has no more.
@@ -193,14 +197,13 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
                 if (working >= digits && step.Abs().EDecimal.CompareTo(current.Abs().EDecimal.Multiply(enough)) <= 0)
                     break;
             }
-            // The steps are to make the root the search found more precise, not to go to another. They
-            // can: the search iterates on the compiled form, which takes an odd root of a negative number
-            // as the real one, and the evaluation need not read every such root the same way at every
-            // precision. (3 - t)^(1/3) + sqrt(4 + t) = 3 has a root at t = 33.514..., and with the steps
-            // taken from it, that root was missing from the answer. A root that moves further than
-            // its double could have been off by is kept as the search gave it, to the digits a double holds.
+            // The steps are to make the root the search found more precise, not to go to another, which
+            // the compiled form the search iterates on and the evaluation may differ on. A root that moves
+            // further than its double could have been off by is kept as the search gave it, to the digits a
+            // double holds. Further relative to the root, at every size: against max(1, |root|) the allowance
+            // would be 10^-10 outright for a root of 10^-30, room to go to another root of a rescaled equation.
             var drift = (current - root).Abs().EDecimal;
-            var allowed = EDecimal.Create(1, -10).Multiply(EDecimal.Max(EDecimal.One, root.Abs().EDecimal));
+            var allowed = EDecimal.Create(1, -10).Multiply(root.Abs().EDecimal);
             if (drift.CompareTo(allowed) > 0)
                 return RoundedTo(root, DoubleDigits);
             var known = precision - 8;
@@ -225,7 +228,6 @@ namespace AngouriMath.Functions.Algebra.NumericalSolving
             (Complex Next, Complex Step)? Step(Complex at, int digits)
             {
                 using var _ = MathS.Settings.DecimalPrecisionContext.Set(At(digits));
-                using var __ = MathS.Settings.DowncastingEnabled.Set(false);
                 if (function.Substitute(v, at).Evaled is not Complex value
                     || derivative.Substitute(v, at).Evaled is not Complex slope
                     || !value.IsFinite || !slope.IsFinite || slope.IsZero)

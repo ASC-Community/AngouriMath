@@ -41,7 +41,7 @@ namespace AngouriMath.Tests.Algebra.SolveTest
         }
 
         private static Complex[] Roots(string equation)
-            => Assert.IsType<Set.FiniteSet>(equation.ToEntity().Solve("x")).Elements.Cast<Complex>().ToArray();
+            => Assert.IsType<Set.FiniteSet>(equation.ToEntity().Solve("x")).Elements.Select(root => (Complex)root.Evaled).ToArray();
 
         [Fact]
         public void TheRealRootOfCosXEqualsX()
@@ -90,6 +90,35 @@ namespace AngouriMath.Tests.Algebra.SolveTest
         {
             var root = Assert.Single("cos(x) - x".ToEntity().SolveNt("x"), root => root.ImaginaryPart.IsZero);
             EveryDigitIsRight(root.RealPart.EDecimal, "0.739085133215160641655312087673873404013411758900757464965681", 50);
+        }
+
+        // An odd root of a negative number is the real one in the steps as in the search. With downcasting off it was
+        // the principal one, and the steps from 33.514... went elsewhere: the root was left at the digits of a double.
+        [Fact]
+        public void TheRootThatNeedsTheRealCubeRootIsRefinedToo()
+        {
+            var root = Assert.Single(Roots("(3 - 4x)^(1/3) + sqrt(4 + 4x) = 3"), root => root.RealPart.EDecimal.ToDouble() > 8);
+            EveryDigitIsRight(root.RealPart.EDecimal, "8.378555351311165946188939565091205774681881502134607354499795", 50);
+        }
+
+        // The cube-root equations of the solver's rescaled cross-check, x written as 10^-30 x, whose roots are those of
+        // the equation as written times 10^30. Refined without downcasting, the steps left some of them out.
+        [Theory]
+        [InlineData("(2 - 3x)^(1/3) + sqrt(1 - x) = 3 - 4x", 4)]
+        [InlineData("(-4 - x)^(1/3) + sqrt(-2 - 2x) = 3 + x", 1)]
+        [InlineData("(3 + 3x - 3x^2)^(1/3) + sqrt(-2 - 3x) = -1", 1)]
+        public void ARescaledEquationKeepsEveryRoot(string equation, int count)
+        {
+            var asWritten = Roots(equation);
+            Assert.Equal(count, asWritten.Length);
+            var rescaled = Roots(System.Text.RegularExpressions.Regex.Replace(equation, "(?<![a-z])x(?![a-z])", "(10^(-30) * x)"));
+            Assert.Equal(count, rescaled.Length);
+            foreach (var root in asWritten)
+            {
+                var expected = root.RealPart.EDecimal.Multiply(EDecimal.FromString("1E30"));
+                Assert.Contains(rescaled, other =>
+                    other.RealPart.EDecimal.Subtract(expected).Abs().CompareTo(expected.Abs().Multiply(EDecimal.FromString("1E-8"))) <= 0);
+            }
         }
     }
 }
