@@ -43,7 +43,7 @@ namespace AngouriMath.Tests.Core.Transformations
         public void WhereARuleGoes()
         {
             Stated(33, MatchedRules.All.Count, "the number of rule sets written as data");
-            Stated(341, MatchedRules.All.Sum(set => set.Rules.Count), "the number of rules written as data");
+            Stated(343, MatchedRules.All.Sum(set => set.Rules.Count), "the number of rules written as data");
             Stated(30, RewriteRules.All.Count, "the number of registered sets");
             // Two families register under one name and run a data set under another --
             // CommonDenominator over MatchedRules.CommonDenominator(level), CanonicalOrder over
@@ -64,7 +64,7 @@ namespace AngouriMath.Tests.Core.Transformations
         {
             var names = MatchedRules.All.SelectMany(set => set.Rules)
                 .Select(rule => rule.Name).Distinct(StringComparer.Ordinal).ToList();
-            Stated(312, names.Count, "the number of distinct rule names");
+            Stated(314, names.Count, "the number of distinct rule names");
 
             var words = names.Select(name => name.Split('-').Length).ToList();
             Stated(4, words.Min(), "the shortest rule name in words");
@@ -73,7 +73,7 @@ namespace AngouriMath.Tests.Core.Transformations
 
         [Fact]
         public void TheIdentityIsNotTheName()
-            => Stated(338,
+            => Stated(340,
                 MatchedRules.All.SelectMany(set => set.Rules).Count(rule => rule.Description is not null),
                 "how many rules carry an identity");
 
@@ -99,7 +99,7 @@ namespace AngouriMath.Tests.Core.Transformations
             // from belongs somewhere that fails when it moves.
             Stated(130, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Collects),
                 "how many rules are declared Collects");
-            Stated(49, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Rearranges),
+            Stated(51, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Rearranges),
                 "how many rules are declared Rearranges");
             Stated(36, rules.Count(rule => rule.Growth is RewriteRuleGrowth.Expands),
                 "how many rules are declared Expands");
@@ -134,7 +134,7 @@ namespace AngouriMath.Tests.Core.Transformations
         public void SoundnessIsPerRule()
         {
             var rules = MatchedRules.All.SelectMany(set => set.Rules).ToList();
-            Stated(190, rules.Count(rule => rule.Soundness is Soundness.Sound),
+            Stated(192, rules.Count(rule => rule.Soundness is Soundness.Sound),
                 "how many rules are Sound");
             Stated(151, rules.Count(rule => rule.Soundness is Soundness.SoundUnderAssumptions),
                 "how many rules are SoundUnderAssumptions");

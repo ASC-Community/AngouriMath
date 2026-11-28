@@ -98,6 +98,21 @@ irrational constants. Where two exponents written over different constants canno
 | `(2^x + 3^x) / (3^x + 4^x)` at `+oo` | unevaluated | `0` |
 | `x^10 * 2^x / 3^x` at `+oo` | unevaluated | `0` |
 
+### A negative multiple of ln of a rational below 1 is turned round
+
+**Silent, in the printed form only.** `ln(1/b) = -ln(b)` matched a written quotient `1 / b`, never the literal
+`1/2`. So `-ln(1/2)` was left as written, although `ln(2)` is the same value and simpler. `Simplify` now writes
+`c * log(a, r)` as `(-c) * log(a, 1/r)` for a negative rational `c` and a rational `r` between 0 and 1, which holds on
+the principal branch because `r` is a positive real. A bare `ln(1/2)` is left as it is, so `e^(x * ln(1/2))` is still
+`(1/2)^x`. The value is the same ([#2617](https://github.com/asc-community/AngouriMath/issues/2617)).
+
+| `.Simplify()` | Was (2.10.0) | Now |
+|---|---|---|
+| `-ln(1/2)` | `-ln(1/2)` | `ln(2)` |
+| `-ln(2/3)` | `-ln(2/3)` | `ln(3/2)` |
+| `-3 * ln(1/2)` | `(-3) * ln(1/2)` | `3 * ln(2)` |
+| `-ln(1/10)` | `-ln(1/10)` | `ln(10)` |
+
 ### ln(-1), ln(i) and ln(-i) are folded
 
 **Silent, in the printed form only.** `ln(-1)`, `ln(i)` and `ln(-i)` were left as written by `InnerSimplified` and
