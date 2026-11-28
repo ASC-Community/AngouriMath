@@ -80,6 +80,24 @@ equation `abs(x - 1) = 2` is solved over `CC` as before
 | `abs(1/x) > 1` | throws | `(0; 1) \/ (-1; 0)` |
 | `abs(sqrt(x)) > 1` | throws | unchanged |
 
+### A limit at infinity comparing 2^x with 3^x is answered
+
+**Not silent: a limit that was left unevaluated has a value.** Gruntz's algorithm writes each fastest-growing exponential
+as a power of one of them, and for `2^x` and `3^x` that power is `ln(3)/ln(2)`, which is irrational. The series it
+expands in took rational exponents only, so such limits were declined. Its exponents may now be rational multiples of
+irrational constants. Where two exponents written over different constants cannot be told apart by value, as
+`ln(6)/ln(2)` and `1 + ln(3)/ln(2)`, the limit is still declined
+([#2597](https://github.com/asc-community/AngouriMath/issues/2597)).
+
+| `.Limit("x", ...)` | Was (2.10.0) | Now |
+|---|---|---|
+| `(3^x + 2^x)^(1/x)` at `+oo` | `limit((3 ^ x + 2 ^ x) ^ (1 / x), x, +oo)` | `3` |
+| `(3^x + 2^x)^(1/x)` at `-oo` | unevaluated | `2` |
+| `ln(2^x + 3^x) / x` at `+oo` | unevaluated | `ln(3)` |
+| `(4^x + 3^x) / (4^x - 3^x)` at `+oo` | unevaluated | `1` |
+| `(2^x + 3^x) / (3^x + 4^x)` at `+oo` | unevaluated | `0` |
+| `x^10 * 2^x / 3^x` at `+oo` | unevaluated | `0` |
+
 ### ln(-1), ln(i) and ln(-i) are folded
 
 **Silent, in the printed form only.** `ln(-1)`, `ln(i)` and `ln(-i)` were left as written by `InnerSimplified` and

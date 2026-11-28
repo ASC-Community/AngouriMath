@@ -101,7 +101,8 @@ namespace AngouriMath.Functions.Algebra
                 if (MrvLeadTerm(e, x) is not var (coefficient, power))
                 { Trace($"limitinf({e.Stringize()}) leadterm", null); return null; }
                 Trace($"  leadterm({e.Stringize()})", $"({coefficient.Stringize()}, {power})");
-                var sign = power.Sign;
+                if (power.Sign is not { } sign)
+                    return null;
                 if (sign > 0)
                     return 0;                       // w^positive tends to zero
                 if (sign == 0)
@@ -310,15 +311,15 @@ namespace AngouriMath.Functions.Algebra
         /// The leading coefficient of the expression and the exponent it sits at, once the
         /// expression has been rewritten in terms of one member of its mrv set.
         /// </summary>
-        private static (Entity Coefficient, ERational Power)? MrvLeadTerm(Entity e, Variable x)
+        private static (Entity Coefficient, SeriesExponent Power)? MrvLeadTerm(Entity e, Variable x)
         {
             if (!e.ContainsNode(x))
-                return (e, ERational.Zero);
+                return (e, SeriesExponent.Zero);
             if (Mrv(e, x) is not { } omega)
             { Trace($"  mrv({e.Stringize()})", null); return null; }
             Trace($"  mrv({e.Stringize()})", "{" + string.Join(", ", omega.Select(o => o.Stringize())) + "}");
             if (omega.Count == 0)
-                return (e, ERational.Zero);
+                return (e, SeriesExponent.Zero);
 
             if (omega.Contains(x))
             {
@@ -348,7 +349,15 @@ namespace AngouriMath.Functions.Algebra
             for (var order = 2; order <= 32; order *= 2)
             {
                 MultithreadingFunctional.ExitIfCancelled();
-                var series = AsymptoticSeries.Expand(rewritten, w, logarithmOfW, ERational.FromInt32(order));
+                SeriesExponent.Undecided = false;
+                var series = AsymptoticSeries.Expand(rewritten, w, logarithmOfW, SeriesExponent.Of(order));
+                var undecided = SeriesExponent.Undecided;
+                SeriesExponent.Undecided = false;
+                // Two exponents that could not be told apart may be one power written two ways,
+                // whose terms did not merge, so no leading term read from it can be trusted.
+                // https://github.com/asc-community/AngouriMath/issues/2597
+                if (undecided)
+                { Trace($"  series(order {order})", "undecided exponents"); return null; }
                 if (series is null)
                 { Trace($"  series(order {order})", null); return null; }
                 if (series.LeadingTerm() is not var (coefficient, power))
@@ -399,13 +408,32 @@ namespace AngouriMath.Functions.Algebra
             {
                 if (LimitInf(Bare((exponent / chosen).Simplify()), x) is not { } comparison)
                     return null;
-                if (Bare(comparison).Evaled is not Rational power || !power.ERational.IsFinite)
+                comparison = Bare(comparison);
+                Entity power;
+                Entity powerOfW;
+                if (comparison.Evaled is Rational rational)
+                {
+                    if (!rational.ERational.IsFinite)
+                        return null;
+                    power = rational;
+                    powerOfW = MathS.Pow(substituted, power);
+                }
+                // An irrational ratio, as for 3^x written in w = 2^(-x): the power is
+                // -ln(3)/ln(2), which the series carries as an exponent of its own.
+                // https://github.com/asc-community/AngouriMath/issues/2597
+                else if (comparison.Evaled is Real { IsFinite: true, IsNaN: false }
+                         && SeriesExponent.Of(comparison) is { IsRational: false })
+                {
+                    power = comparison;
+                    powerOfW = MathS.Pow(w, signOfExponent > 0 ? -comparison : comparison);
+                }
+                else
                     return null;
                 // exp(exponent - c * chosen) is left as one exponential on purpose. Splitting
                 // it into a product of exponentials would put back a function of a faster
                 // class than w and the series below would no longer mean anything.
                 var coefficient = Exponential(Bare((exponent - power * chosen).Simplify()));
-                rewritten = rewritten.Substitute(member, coefficient * MathS.Pow(substituted, power));
+                rewritten = rewritten.Substitute(member, coefficient * powerOfW);
             }
             if (rewritten.ContainsNode(x) && !logarithmOfW.ContainsNode(x))
                 return null;
