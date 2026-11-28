@@ -66,8 +66,9 @@ one point, or else `Simplify` proving it zero. A singular matrix answers as `[[1
 **Silent, in the printed form only.** A rational raised to a rational power was written as a whole part times a
 radical only while the base raised to the exponent's numerator stayed under 2^40. So `2^(19/2)` was `512 * sqrt(2)`
 and `2^(21/2)` was left as written, and products that should cancel did not. The whole part `b^(p div q)` is now
-taken out first, and only `b^((p mod q)/q)` is left as a radical. A whole part past about 10^300 is still left in the
-power. The value is the same
+taken out first, and only `b^((p mod q)/q)` is left as a radical. A power past about 10^77 is still left as it was,
+since past about 10^100 an integer times a radical is folded into a rounded decimal
+([#2615](https://github.com/asc-community/AngouriMath/issues/2615)). The value is the same
 ([#2609](https://github.com/asc-community/AngouriMath/issues/2609)).
 
 | `.Simplify()` | Was (2.10.0) | Now |

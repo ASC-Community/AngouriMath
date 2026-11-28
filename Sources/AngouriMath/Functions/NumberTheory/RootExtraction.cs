@@ -45,10 +45,11 @@ namespace AngouriMath.Functions
         private const int MaxExponentPart = 64;
 
         /// <summary>
-        /// The most bits a whole part taken out of a power may have, about 10^300.
+        /// The most bits a power whose whole part is taken out may have, about 10^77.
         /// https://github.com/asc-community/AngouriMath/issues/2609
+        /// https://github.com/asc-community/AngouriMath/issues/2615
         /// </summary>
-        private const int MaxWholePartBits = 1000;
+        private const int MaxResultBits = 256;
 
         /// <summary>
         /// The reciprocal of <paramref name="radicand"/> ^ <paramref name="exponent"/>, written
@@ -88,13 +89,15 @@ namespace AngouriMath.Functions
                     ? Rational.Create(radicand.Denominator.EInteger, radicand.Numerator.EInteger)
                     : radicand;
                 var wholePower = System.Math.Abs(power) / rootIndex;
-                // Kept far below the decimal context's exponent range. A product of an integer past
-                // about 10^1000 and a radical is folded to +oo, so 2^4000 sqrt(2) simplifies to +oo,
-                // and extracting a whole part that large would turn a power written correctly into
-                // that wrong answer.
-                if (Number.IsTooLargeToBuild(@base, EInteger.FromInt32(wholePower))
-                    || TooLargeRaised(@base.Numerator.EInteger, wholePower, MaxWholePartBits)
-                    || TooLargeRaised(@base.Denominator.EInteger, wholePower, MaxWholePartBits))
+                // The whole result, the whole part times what is left under the root, is bounded
+                // by b^(p div q + 1), and is kept well under 10^100. Past about 10^100 an exact
+                // integer times an irrational is folded into the 100-digit rounded decimal, which
+                // is then read back as an integer: 2^300 sqrt(2) stays exact, while 2^340 sqrt(2)
+                // simplifies to an integer, on master and on 2.10.0. Extracting a whole part that
+                // large would turn a power written correctly into that wrong answer.
+                // https://github.com/asc-community/AngouriMath/issues/2615
+                if (TooLargeRaised(@base.Numerator.EInteger, wholePower + 1, MaxResultBits)
+                    || TooLargeRaised(@base.Denominator.EInteger, wholePower + 1, MaxResultBits))
                     return null;
                 var wholeFactor = Rational.Create(
                     @base.Numerator.EInteger.Pow(wholePower), @base.Denominator.EInteger.Pow(wholePower));

@@ -24,6 +24,7 @@ namespace AngouriMath.Tests.Common
         [InlineData("2^(21/2)", "1024 * sqrt(2)")]
         [InlineData("2^(-21/2)", "sqrt(2) / 2048")]
         [InlineData("2^(29/2)", "16384 * sqrt(2)")]
+        [InlineData("2^(201/2)", "1267650600228229401496703205376 * sqrt(2)")]
         [InlineData("5^(17/2)", "390625 * sqrt(5)")]
         [InlineData("2^(65/3)", "2097152 * 2^(2/3)")]
         [InlineData("(2/3)^(21/2)", "1024/177147 * sqrt(6)")]
@@ -43,11 +44,18 @@ namespace AngouriMath.Tests.Common
         }
 
         /// <summary>
-        /// A whole part too large to take out leaves the power as written. A product of an
-        /// integer past about 10^1000 and a radical simplifies to +oo, so extracting one would
-        /// replace a correct power with that.
+        /// A power too large to have its whole part taken out is answered as it was before.
+        /// Past about 10^100 a product of an integer and a radical is folded into a rounded
+        /// decimal and read back as an integer, so extracting one would replace a correct power
+        /// with that. 2^(681/2) and 2^(801/2) already come back as integers from
+        /// InnerSimplified, on master and on 2.10.0, by that same fold. This pins that the
+        /// extraction adds nothing to it; the fold is
+        /// https://github.com/asc-community/AngouriMath/issues/2615
         /// </summary>
         [Theory]
+        [InlineData("2^(601/2)")]
+        [InlineData("2^(681/2)")]
+        [InlineData("2^(801/2)")]
         [InlineData("2^(10000001/2)")]
         [InlineData("2^(-10000001/2)")]
         public void TooLargeAWholePartIsLeftInThePower(string power)
