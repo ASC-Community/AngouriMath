@@ -42,6 +42,23 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.10.0
 
+### A square system is answered exactly whichever order its equations are in
+
+**Not silent: a decimal answer is now exact, and a refused system has an answer.** The eliminator took the last
+unknown from the first equation that gave a root for it, and kept whatever that led to. From `ln(x) + ln(y) = 1`, `y`
+is `e^(1 - ln(x))`, and `x = e^(1 - ln(x))` was solved by Newton's method. When the substitution left an equation the
+solver could not solve, the system was declined. Each candidate equation is now tried in turn, and the first exact
+answer is kept. A system with a decimal in it, or one whose first candidate is undecided and whose later ones answer
+only in decimals, is answered as before ([#2607](https://github.com/asc-community/AngouriMath/issues/2607)).
+
+| `MathS.Equations(...).Solve("x", "y")` | Was (2.10.0) | Now |
+|---|---|---|
+| `ln(x) + ln(y) - 1`, `x - y` | `[[1.64872127070012819416433558217249810695648193359375, …]]` | `[[sqrt(e), sqrt(e)]]` |
+| `ln(x) + ln(y) - 2`, `x - y` | `[[2.718281828459045090795598298427648842334747314453125, …]]` | `[[sqrt(e ^ 2), sqrt(e ^ 2)]]` |
+| `e^x * e^y - 4`, `x - y` | `null` | `[[ln(2) + 2 * pi * i * n_1, …], [ln(-2) + 2 * pi * i * n_1, …]]` |
+| `2^x + 2^y - 8`, `x - y` | `null` | `[[2 + 2 * pi * i * n_1 / ln(2), …]]` |
+| `x - y`, `ln(x) + ln(y) - 1` | `[[sqrt(e), sqrt(e)]]` | unchanged |
+
 ### A singular matrix is not inverted because its determinant is not written as 0
 
 **Not silent: a wrong answer is now no answer.** `Matrix.Inverse`, `Matrix.Pow` with a negative exponent, `M^(-1)` and
