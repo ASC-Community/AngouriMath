@@ -157,6 +157,23 @@ a symbolic bound, is still declined ([#2585](https://github.com/asc-community/An
 | `e^x > -1` | throws | `RR` |
 | `ln(x) > a` | throws | unchanged |
 
+### A system with a redundant equation is solved
+
+**Not silent: a refused system has an answer, and one incomplete answer is now complete.** Some systems repeat an
+equation, or contain a multiple of another. After the elimination substituted a root, such an equation became an
+identity like `2x - 2x`, and the system was declined. Where the elimination was square, it could also stop at one
+point of a curve of solutions. An equation that is zero for every value is now dropped, and what remains is solved as a
+family. An inconsistency is not dropped: `x - y`, `2x - 2y`, `x - y - 1` is still `null`
+([#2601](https://github.com/asc-community/AngouriMath/issues/2601)).
+
+| `MathS.Equations(...).Solve(...)` | Was (2.10.0) | Now |
+|---|---|---|
+| `x - y`, `2x - 2y`, `3x - 3y` for x, y | `null` | `[[t_1, t_1]]` |
+| `x + 2y - 3`, `2x + 4y - 6`, `3x + 6y - 9` for x, y | `null` | `[[t_1, -(t_1 + -3) / 2]]` |
+| `x + y + z - 1` with its double and triple, for x, y, z | `null` | a family in two parameters |
+| `sin(x) - y`, `2 sin(x) - 2y`, `3 sin(x) - 3y` for x, y | `null` | `[[t_1, sin(t_1)]]` |
+| `x y - z`, `2 x y - 2 z`, `x + y + z` for x, y, z | `[[0, 0, 0]]`, one point of a curve | `[[t_1, -t_1 / (1 + t_1), t_1 * -t_1 / (1 + t_1)]]` |
+
 ## 2.10.0 — since 2.9.0
 
 **Read these first.**
