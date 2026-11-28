@@ -2434,7 +2434,7 @@ namespace AngouriMath.Core.Transformations.Matching
                 (node, bound) => Functions.Patterns.PairwiseGroupedQuotient(
                     node, bound["num"], bound["den"], level),
                 Soundness.SoundUnderAssumptions,
-                when: bound => bound["num"].Vars.Any() && bound["den"].Vars.Any(),
+                when: bound => Functions.Patterns.PairsOff(bound["num"], bound["den"]),
                 description: "num / den = the quotient with shared factors paired off"));
 
         /// <summary>
