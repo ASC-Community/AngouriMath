@@ -53,7 +53,7 @@ namespace AngouriMath
             internal override Entity? ComputeLimitDivideEtImpera(Variable x, Entity dist, ApproachFrom side)
             {
                 if (ComputeLimitImpl(this, x, dist, side) is { } lim)
-                    return lim;
+                    return CancelledDifference(lim, x);
                 var (minuend, subtrahend) =
                     (Minuend.ComputeLimitDivideEtImpera(x, dist, side), Subtrahend.ComputeLimitDivideEtImpera(x, dist, side)) switch
                     {
@@ -61,7 +61,9 @@ namespace AngouriMath
                         var (lim1, lim2) => (lim1 is { IsFinite: true } ? lim1 : Minuend,
                                              lim2 is { IsFinite: true } ? lim2 : Subtrahend)
                     };
-                return ComputeLimitImpl(New(minuend, subtrahend), x, dist, side) ?? ByTheLimitsOfItsTerms(this, x, dist, side);
+                return ComputeLimitImpl(New(minuend, subtrahend), x, dist, side) is { } byParts
+                    ? CancelledDifference(byParts, x)
+                    : ByTheLimitsOfItsTerms(this, x, dist, side);
             }
         }
 

@@ -203,6 +203,25 @@ folded. The logarithm of any other point on the unit circle, such as `-1/2 + i s
 | `"sin(x) + cos(x) = 1".Solve("x")` | `union({ 2 * pi * n, ln(i) / i + 2 * pi * n }, n in ZZ)` | `union({ 2 * pi * n, pi / 2 + 2 * pi * n }, n in ZZ)` |
 | `"sin(2x) = sin(x)".Solve("x")` | the root `ln(-1) / i + 2 * pi * n` | `pi + 2 * pi * n` |
 
+### The limit of a difference quotient at a symbolic point is the derivative
+
+**Not silent: a wrong answer is corrected.** The limit of `(e^(a + x) - e^a) / x` at 0 was `NaN`, which claims there
+is no limit, and the same held for `sqrt`, `sin`, `ln` and cube roots. The limit of the numerator came back as
+`e^a - e^a`, which the inner simplification leaves written. Nothing read that as 0, so the quotient was taken for a
+constant over a vanishing divisor, whose two sides disagree. A limit that comes back as one constant minus itself is
+now 0, with the constant's domain condition where it has one
+([#2628](https://github.com/asc-community/AngouriMath/issues/2628)).
+
+| `.Limit(x, ...)` | Was (2.10.0) | Now |
+|---|---|---|
+| `(e^(a + x) - e^a) / x` at 0 | `NaN` | `e ^ a` |
+| `(sin(a + x) - sin(a)) / x` at 0 | `NaN` | `cos(a)` |
+| `(ln(a + x) - ln(a)) / x` at 0 | `NaN` | `1 / a` |
+| `(sqrt(a + x) - sqrt(a)) / x` at 0 | `NaN` | `a ^ (-1/2) / 2` |
+| `(sqrt(x) - sqrt(b)) / (x - b)` at `b` | `NaN` | `b ^ (-1/2) / 2` |
+| `e^(a + x) - e^a` at 0 | `e ^ a - e ^ a` | `0` |
+| `ln(a + x) - ln(a)` at 0 | `ln(a) - ln(a)` | `0 provided not a = 0` |
+
 ### A root found by Newton's method prints only digits that are right
 
 **Silent, in the digits.** A root that the solver could only find numerically was computed in `double` and widened to
