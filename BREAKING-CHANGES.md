@@ -61,6 +61,25 @@ one point, or else `Simplify` proving it zero. A singular matrix answers as `[[1
 | `"[[sin(x)^2, 1], [1 - cos(x)^2, 1]]^(-1)".Simplify()` | `NaN` | `1 / [[sin(x) ^ 2, 1], [sin(x) ^ 2, 1]]` |
 | `"[[e^x, e^(2x)], [2, e^x]]^(-1)".Simplify()` | its inverse | unchanged |
 
+### A real integral through ln of a negative number is real
+
+**Not silent: a divergent integral had an imaginary part, and a finite one was written through `ln` of a negative
+number.** The antiderivative of `1/u` is `ln(u)`, and a definite integral over a range where `u < 0` took it at
+negative numbers. A finite value came out as `ln(-1) - ln(-2)`. The value was right, but it was written through
+complex logarithms. A divergent integral came out as `-oo - ln(-1)`, an infinity with an imaginary part. The integral
+of a real function is `-oo` there. Where `u` is real and seen to be negative in the range, the logarithm is now taken of
+`abs(u)`. The two differ by a constant between the points where the range is already split, so the value is
+unchanged and is written as a real number. An argument that is not real on the real line, such as `x + i`, is left as
+it was ([#2611](https://github.com/asc-community/AngouriMath/issues/2611)).
+
+| simplified | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/x, x, -1, 0)` | `-oo - ln(-1)` | `-oo` |
+| `integral(1/(x-3), x, 0, 3)` | `-oo - ln(-3)` | `-oo` |
+| `integral(tan(x), x, pi/2, 3 pi/4)` | `-oo - ln(-1/2 * sqrt(2))` | `-oo` |
+| `integral(1/x, x, -2, -1)` | `ln(-1) - ln(-2)` | `-ln(2)` |
+| `integral(1/(x^2-1), x, -1/2, 1/2)` | `(ln(-1/3) - ln(-3)) / 2` | `ln(1/3)` |
+
 ### An inequality with abs of x is solved
 
 **Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException`, *"Only
