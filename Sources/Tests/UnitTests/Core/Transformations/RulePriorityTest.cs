@@ -144,7 +144,7 @@ namespace AngouriMath.Tests.Core.Transformations
         /// <remarks>
         /// <para>
         /// Over every rule rather than within a set, because the relation is about patterns and
-        /// nothing about it stops at a set boundary: <b>969</b> ordered pairs claim subsumption,
+        /// nothing about it stops at a set boundary: <b>976</b> ordered pairs claim subsumption,
         /// <b>502</b> of them (501 before the constant antilogarithm rule of #994 subsumed the symbolic one) are put to the test by the corpus containing something the narrower
         /// pattern matches, and none is contradicted across <b>85,153</b> nodes. All three counts
         /// are asserted — a corpus that stopped reaching these shapes would otherwise turn this
@@ -205,7 +205,7 @@ namespace AngouriMath.Tests.Core.Transformations
                 if (put) witnessed++;
             }
 
-            Assert.Equal(969, claims.Count);
+            Assert.Equal(976, claims.Count);
             Assert.Equal(502, witnessed);
             // Asserted so the two figures in the remark above cannot go stale in silence: the
             // whole point of `witnessed` is that it is a coverage number, and it means nothing

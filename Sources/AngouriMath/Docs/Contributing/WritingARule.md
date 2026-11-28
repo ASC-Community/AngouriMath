@@ -18,7 +18,7 @@ effect". This is how to supply those seven things.
 ## Where a rule goes
 
 `Core/Transformations/Matching/MatchedRules.cs`, as a value in a `MatchedRuleSet`. **33** sets and
-**341** rules live there today.
+**343** rules live there today.
 
 The `switch` statements in `Functions/Simplification/Patterns` are the older form. **All thirty
 registered sets now run as data and describe what they run**; none executes its `switch` any more.
@@ -64,7 +64,7 @@ in a name and putting the identity in brackets after it:
 2. Tangent is sine over cosine (tan(a) = sin(a) / cos(a)), so tan(x) becomes sin(x) / cos(x).
 ```
 
-So the name has to be a clause that survives being read that way. **All 312 distinct rule names are,
+So the name has to be a clause that survives being read that way. **All 314 distinct rule names are,
 and `StepAsASentenceTest` holds them to it** — a name with a capital, a bracket or an underscore
 fails that test rather than degrading the prose quietly.
 
@@ -91,7 +91,7 @@ debugged for an afternoon.
 | `Left.ToString()` | `Divf(var a, Divf(var b, var c))` — how the matcher spells it |
 
 Write the identity with `=`, not `->`: it is an equality, and the arrow belongs to the direction the
-rule happens to be applied in. **338** rules carry one today; a new rule should.
+rule happens to be applied in. **340** rules carry one today; a new rule should.
 
 ## The pattern language
 
@@ -123,7 +123,7 @@ matches and silently builds nothing. `BuildableNodeTypesTest` is the list.
 
 ## Replacement: a pattern, or code
 
-**42** of the 341 rules have a pattern on both sides. The rest build their answer in code, and both
+**42** of the 343 rules have a pattern on both sides. The rest build their answer in code, and both
 are legitimate — but the choice costs two things, so make it deliberately.
 
 A pattern replacement gets:
@@ -227,7 +227,7 @@ limit, against nothing for handing the node over.
 | `SoundUnderAssumptions` | holds given something the rule does not check |
 | `Heuristic` | usually right |
 
-**190** of the 341 rules are `Sound` and **151** are conditional. Every one of the thirty registered
+**192** of the 343 rules are `Sound` and **151** are conditional. Every one of the thirty registered
 *sets* declares `SoundUnderAssumptions`, because a set's tier is the **minimum** over its rules — so
 the set grain says nothing and the rule grain says everything. A derivation reports the rule's tier
 (`RewriteStep.Soundness`), which is why getting it right matters beyond the label.

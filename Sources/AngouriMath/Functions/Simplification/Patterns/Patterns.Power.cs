@@ -279,6 +279,17 @@ namespace AngouriMath.Functions
             Logf(var any1, Rational literal)
                 when TreeAnalyzer.TryPerfectPower(literal, out var root, out var exponent)
                 => Integer.Create(exponent) * MathS.Log(any1, root),
+            // A negative multiple of the logarithm of a rational between 0 and 1 is turned round:
+            // c log_b(p/q) = (-c) log_b(q/p), which holds on the principal branch because p/q is a
+            // positive real. ln(1/b) = -ln(b) below matches a written quotient and never the
+            // literal 1/2, so -ln(1/2) was left as written. Only under a negative coefficient,
+            // where the sign it takes off pays for itself: turning a bare ln(1/2) into -ln(2)
+            // inside the pass hid it from e^(x ln(1/2)) = (1/2)^x, which reads the logarithm as
+            // the exponent's direct factor. https://github.com/asc-community/AngouriMath/issues/2617
+            Mulf(Rational { IsNegative: true } coefficient, Logf(var any1, Rational literal)) when IsARationalBelowOne(literal)
+                => (-coefficient).InnerSimplified * MathS.Log(any1, Reciprocal(literal)),
+            Mulf(Logf(var any1, Rational literal), Rational { IsNegative: true } coefficient) when IsARationalBelowOne(literal)
+                => (-coefficient).InnerSimplified * MathS.Log(any1, Reciprocal(literal)),
             // log_b(b) is 1 wherever it is defined at all, so the condition to carry is the
             // node's own and not one written out here. Asserting `any1 > 0` stated the real
             // reading inside the rule and was wrong in both directions at once: undefined at
@@ -438,6 +449,18 @@ namespace AngouriMath.Functions
         /// </remarks>
         private static bool IsPositiveReal(Entity entity)
             => entity.Evaled is Real { EDecimal.IsFinite: true } value && value.IsPositive;
+
+        /// <summary>
+        /// Whether <paramref name="literal"/> lies strictly between 0 and 1, so that its logarithm
+        /// is minus that of its reciprocal. https://github.com/asc-community/AngouriMath/issues/2617
+        /// </summary>
+        internal static bool IsARationalBelowOne(Rational literal)
+            => literal is not Integer && literal.ERational.Sign > 0
+               && literal.ERational.Numerator.CompareTo(literal.ERational.Denominator) < 0;
+
+        /// <summary>The reciprocal of a non-zero rational, as a rational.</summary>
+        internal static Rational Reciprocal(Rational literal)
+            => Rational.Create(literal.ERational.Denominator, literal.ERational.Numerator);
 
         /// <summary>
         /// Whether the exponent may be pulled out of a logarithm: because the base is a decidably

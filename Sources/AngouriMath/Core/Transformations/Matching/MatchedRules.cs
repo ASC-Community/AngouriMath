@@ -3440,6 +3440,31 @@ namespace AngouriMath.Core.Transformations.Matching
                 // One literal becomes a product of a literal and a logarithm of a literal: two
                 // nodes more, whatever the base is.
                 growth: RewriteRuleGrowth.Expands),
+            // A negative multiple of the logarithm of a rational between 0 and 1, turned round;
+            // it holds on the principal branch because the literal is a positive real. Only under
+            // a negative coefficient, so that a bare ln(1/2) stays where e^(x ln(1/2)) reads it.
+            // https://github.com/asc-community/AngouriMath/issues/2617
+            new MatchedRule(
+                "a-negative-multiple-of-a-logarithm-of-a-rational-below-one-turns-round",
+                MatchPattern.Node<Mulf>(
+                    MatchPattern.Any<Rational>("c", c => c.IsNegative),
+                    MatchPattern.Node<Logf>(MatchPattern.Any("a"),
+                        MatchPattern.Any<Rational>("r", Functions.Patterns.IsARationalBelowOne))),
+                bound => (-bound["c"]).InnerSimplified * MathS.Log(bound["a"], Functions.Patterns.Reciprocal((Rational)bound["r"])),
+                Soundness.Sound,
+                description: "c * log(a, r) = (-c) * log(a, 1 / r) where c < 0 and 0 < r < 1",
+                // The coefficient and the literal are each replaced by one: the same size.
+                growth: RewriteRuleGrowth.Rearranges),
+            new MatchedRule(
+                "a-logarithm-of-a-rational-below-one-by-a-negative-multiple-turns-round",
+                MatchPattern.Node<Mulf>(
+                    MatchPattern.Node<Logf>(MatchPattern.Any("a"),
+                        MatchPattern.Any<Rational>("r", Functions.Patterns.IsARationalBelowOne)),
+                    MatchPattern.Any<Rational>("c", c => c.IsNegative)),
+                bound => (-bound["c"]).InnerSimplified * MathS.Log(bound["a"], Functions.Patterns.Reciprocal((Rational)bound["r"])),
+                Soundness.Sound,
+                description: "log(a, r) * c = (-c) * log(a, 1 / r) where c < 0 and 0 < r < 1",
+                growth: RewriteRuleGrowth.Rearranges),
 
             // The condition to carry is the node's own: log(-3, -3) is 1 where a written-out
             // `a > 0` calls it undefined, and log(1, 1) is NaN where that guard calls it 1.
