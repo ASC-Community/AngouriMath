@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2019-2026 Angouri.
 // AngouriMath is licensed under MIT.
 // Details: https://github.com/asc-community/AngouriMath/blob/master/LICENSE.md.
@@ -59,6 +59,19 @@ namespace AngouriMath.Functions.Algebra
         internal static List<(Entity At, Real Value)>? Inside(Entity antiderivative, Variable x, Real lower, Real upper)
         {
             var breaks = new List<(Entity At, Real Value)>();
+            // A sum over the roots of a polynomial, sum(c(r) ln(x - r)), breaks where x is one of its real roots,
+            // which are the zeros of the polynomial in x. Its terms are read no further: ln(x - r) has the bound r in
+            // it, whose zeros the solver cannot list, and so the root sum's breaks were never listed, and the integral
+            // of 1/(x^3 + x + 1) over [-1, 0] was taken across the pole at its real root as a complex number.
+            // https://github.com/asc-community/AngouriMath/issues/2624
+            if (antiderivative.Nodes.Any(node => node is SumOverSetf sum && sum.ContainsNode(x)))
+            {
+                foreach (var sum in antiderivative.Nodes.OfType<SumOverSetf>().Where(sum => sum.ContainsNode(x)).Distinct())
+                    if (RootPolynomial(sum, x) is not { } polynomial || !ZerosOf(polynomial, x, lower, upper, breaks))
+                        return null;
+                var standIn = Variable.CreateUnique(antiderivative, "s");
+                antiderivative = antiderivative.Replace(node => node is SumOverSetf sum && sum.ContainsNode(x) ? standIn : node);
+            }
             // A subexpression repeated in the antiderivative is read once.
             var read = new HashSet<Entity>();
             foreach (var node in antiderivative.Nodes)
@@ -92,6 +105,16 @@ namespace AngouriMath.Functions.Algebra
                     distinct.Add(point);
             return distinct;
         }
+
+        /// <summary>
+        /// The polynomial in <paramref name="x"/> whose roots <paramref name="sum"/> runs over, read off its set
+        /// <c>{ r : p(r) = q(r) }</c> as <c>p(x) - q(x)</c>, or <see langword="null"/> where the set is not that shape.
+        /// </summary>
+        internal static Entity? RootPolynomial(SumOverSetf sum, Variable x)
+            => sum.Over is ConditionalSet { Var: Variable setVariable, Predicate: Equalsf(var left, var right) }
+               && !left.ContainsNode(x) && !right.ContainsNode(x)
+                ? (left - right).Substitute(setVariable, x)
+                : null;
 
         /// <summary>
         /// Adds the real zeros of <paramref name="expression"/> strictly inside the range, and

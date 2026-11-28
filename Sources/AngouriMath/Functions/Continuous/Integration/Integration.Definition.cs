@@ -323,6 +323,9 @@ namespace AngouriMath
         /// </remarks>
         private static Entity? AtTheBound(Entity antiderivative, Variable x, Entity bound, Entity otherBound, bool continuousInside)
         {
+            if (bound.Evaled is Number.Real { EDecimal: var infinite } && infinite.IsInfinity()
+                && antiderivative.Nodes.Any(node => node is SumOverSetf sum && sum.ContainsNode(x)))
+                return AtAnInfiniteBoundThroughSumsOverRoots(antiderivative, x, bound, otherBound, continuousInside, infinite.IsPositiveInfinity());
             var value = antiderivative.Substitute(x, bound);
             if (!value.InnerSimplified.IsNaN)
                 return continuousInside && AtAnInfiniteBound(antiderivative, x, bound, value) is { } atInfinity ? atInfinity : value;
@@ -350,6 +353,90 @@ namespace AngouriMath
             if (limit.Nodes.Any(node => node is Limitf))
                 return null;
             return limit.IsNaN ? value : limit;
+        }
+
+        /// <summary>
+        /// The antiderivative's value at an infinite bound where it holds a sum over the roots of a polynomial, each such
+        /// sum taken at <c>+oo</c> to its limit 0 where that is shown; or <see langword="null"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The antiderivative of <c>1/(x^3 + x + 1)</c> is <c>sum(ln(x - r) / (3 r^2 + 1), r)</c> over the roots of
+        /// <c>r^3 + r + 1</c>. At <c>+oo</c> it was <c>sum(ln(+oo - r) / (3 r^2 + 1), r)</c>, which nothing settles and
+        /// which evaluates to <c>NaN</c>, and the integral over <c>[0, +oo)</c> simplified to <c>NaN</c>, where it is
+        /// <c>0.92176...</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2624
+        /// </para>
+        /// <para>
+        /// <c>sum(c(r) ln(x - r))</c> is <c>(sum c(r)) ln(x) + sum(c(r) ln(1 - r/x))</c> for <c>x</c> past every root's
+        /// modulus, the principal logarithm being continuous near 1. The second part tends to 0 at <c>+oo</c>. The first
+        /// is 0 where <c>c(r)</c> is <c>N(r) / p'(r)</c> with <c>p</c> square-free and <c>N</c> of degree at most
+        /// <c>deg p - 2</c>, by the Euler–Jacobi identity <c>sum r^k / p'(r) = 0</c> for <c>k &lt;= n - 2</c>. That is
+        /// what the integral's convergence at <c>+oo</c> asks of a rational integrand, and the sum is then 0 at the
+        /// bound exactly. A sum not shown so, and any at <c>-oo</c>, where <c>ln(x - r)</c> takes a branch of each root's
+        /// own, leave the bound with no value.
+        /// </para>
+        /// </remarks>
+        private static Entity? AtAnInfiniteBoundThroughSumsOverRoots(Entity antiderivative, Variable x, Entity bound,
+            Entity otherBound, bool continuousInside, bool positive)
+        {
+            if (!positive)
+                return null;
+            var settled = antiderivative.Replace(node =>
+                node is SumOverSetf sum && sum.ContainsNode(x) && VanishesAtPlusInfinity(sum, x) ? Integer.Zero : node);
+            if (settled.Nodes.Any(node => node is SumOverSetf sum && sum.ContainsNode(x)))
+                return null;
+            return AtTheBound(settled.InnerSimplified, x, bound, otherBound, continuousInside);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="sum"/> is <c>sum(c(r) ln(x - r))</c> over the roots of a square-free polynomial
+        /// <c>p</c>, with <c>c(r) p'(r)</c> a polynomial in <c>r</c> of degree at most <c>deg p - 2</c>: then it tends
+        /// to 0 at <c>+oo</c> (see <see cref="AtAnInfiniteBoundThroughSumsOverRoots"/>).
+        /// </summary>
+        private static bool VanishesAtPlusInfinity(SumOverSetf sum, Variable x)
+        {
+            if (sum.Var is not Variable root || AntiderivativeBreaks.RootPolynomial(sum, x) is not { } polynomial)
+                return false;
+            var logarithm = sum.Expression.Nodes.FirstOrDefault(node =>
+                node is Logf(var logBase, Minusf(var variable, var subtracted)) && logBase == MathS.e && variable == x && subtracted == root);
+            if (logarithm is null)
+                return false;
+            var standIn = Variable.CreateUnique(sum, "u");
+            var linear = sum.Expression.Substitute(logarithm, standIn);
+            var coefficient = linear.Differentiate(standIn).InnerSimplified;
+            if (coefficient.ContainsNode(standIn) || coefficient.ContainsNode(x)
+                || Bare((linear - coefficient * standIn).Simplify()) != Integer.Zero)
+                return false;
+            if (MathS.Polynomials.SquareFreePart(polynomial, x) is not { } squareFree
+                || DegreeIn(squareFree, x) is not { } squareFreeDegree
+                || DegreeIn(polynomial, x) is not { } degree || squareFreeDegree != degree || degree < 2)
+                return false;
+            // A condition the simplification writes on, that 3 r^2 + 1 is not 0, holds at every root of a
+            // square-free p, where p'(r) is not 0.
+            var numerator = Bare((coefficient.Substitute(root, x) * polynomial.Differentiate(x)).Simplify());
+            if (numerator == Integer.Zero)
+                return true;
+            return DegreeIn(numerator, x) is { } numeratorDegree && numeratorDegree <= degree - 2;
+
+            static Entity Bare(Entity expr)
+            {
+                while (expr is Providedf(var inner, _))
+                    expr = inner;
+                return expr;
+            }
+
+            static int? DegreeIn(Entity polynomial, Variable x)
+            {
+                if (Functions.Algebra.LimitSolvers.ParseAsPolynomial(polynomial, x) is not { } monomials
+                    || monomials.Values.Any(coefficient => coefficient.ContainsNode(x)))
+                    return null;
+                if (monomials.Count == 0)
+                    return 0;
+                var highest = monomials.Keys.Max()!;
+                return highest.IsInteger() && highest.Sign >= 0 && highest.CompareTo(PeterO.Numbers.EDecimal.FromInt32(1000)) < 0
+                    ? highest.ToInt32Checked() : null;
+            }
         }
 
         /// <summary>
