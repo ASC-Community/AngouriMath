@@ -153,6 +153,24 @@ sum, `arcsin(a)` or `arccos(1/3)`, is written as before
 | `cos(x) = -1` | `union({ pi / 2 - -pi / 2 + 2 * pi * n, -(pi / 2 - -pi / 2) + 2 * pi * n }, n in ZZ)` | `union({ pi + 2 * pi * n }, n in ZZ)` |
 | `2cos(x)^2 + cos(x) - 1 = 0` | four members, among them `pi / 2 - -pi / 2` and `-(pi / 2 - -pi / 2)` | `union({ pi + 2 * pi * n, pi / 3 + 2 * pi * n, -pi / 3 + 2 * pi * n }, n in ZZ)` |
 
+### A definite integral of a function of abs is split where its argument changes sign
+
+**An answer where there was none.** A definite integral whose integrand holds `abs(u)` was left unevaluated unless the
+integrator found an antiderivative for the whole integrand. For `sqrt(abs(x))`, `exp(-abs(x))` and `abs(x^2 - 1)` it
+finds none. Such an integral is now split where `u` is zero or breaks. On each piece `abs(u)` is `u` or `-u`, and the
+pieces are added. A piece that diverges stays an infinity, so `1/abs(x)` over `[-1, 1]` is `+oo`. An integral that was
+answered through an antiderivative, such as `abs(x - 1)` over `[0, 3]`, gives the same answer as before
+([#2605](https://github.com/asc-community/AngouriMath/issues/2605)).
+
+| simplified | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/sqrt(abs(x)), x, -1, 1)` | unevaluated | `4` |
+| `integral(abs(x^2 - 1), x, -2, 2)` | unevaluated | `4` |
+| `integral(abs(sin(x)), x, 0, 2 pi)` | unevaluated | `4` |
+| `integral(exp(-abs(x)), x, -oo, +oo)` | unevaluated | `2` |
+| `integral(1/abs(x), x, -1, 1)` | unevaluated | `+oo` |
+| `integral(abs(x - 1), x, 0, 3)` | `5/2` | unchanged |
+
 ---
 
 ### An inequality through ln, an exponential or sqrt is solved

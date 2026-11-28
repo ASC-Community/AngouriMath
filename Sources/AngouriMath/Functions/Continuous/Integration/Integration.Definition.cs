@@ -56,9 +56,13 @@ namespace AngouriMath
             // written. See BreakpointIntegration.
             Functions.Algebra.BreakpointIntegration.HasABreak(this, x)
             ? Functions.Algebra.BreakpointIntegration.Split(this, x, from, to) ?? new Integralf(this, x, (from, to))
-            : Transformation.Integration(x).Apply(this).Output is { } antiderivative
-                ? AcrossTheRange(antiderivative, x, from, to) ?? new Integralf(this, x, (from, to))
-                : new Integralf(this, x, (from, to));
+            : (Transformation.Integration(x).Apply(this).Output is { } antiderivative
+                ? AcrossTheRange(antiderivative, x, from, to)
+                : null)
+                // Where there is no antiderivative to take it through, an integrand holding abs(u) is split where u
+                // changes sign. https://github.com/asc-community/AngouriMath/issues/2605
+                ?? Functions.Algebra.BreakpointIntegration.AcrossTheSignsOfAbs(this, x, from, to)
+                ?? new Integralf(this, x, (from, to));
 
         /// <summary>
         /// <c>F(b) - F(a)</c> through <paramref name="antiderivative"/>, taken piece by piece
