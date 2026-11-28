@@ -101,7 +101,7 @@ namespace AngouriMath.Functions.Algebra
         /// to read. The modulus and a positive power are zero where what they hold is, a product
         /// where one of its factors is, and a quotient where its numerator is.
         /// </summary>
-        private static bool ZerosOf(Entity expression, Variable x, Real lower, Real upper, List<(Entity At, Real Value)> breaks)
+        internal static bool ZerosOf(Entity expression, Variable x, Real lower, Real upper, List<(Entity At, Real Value)> breaks)
             => expression switch
             {
                 Cosf(var argument) => PeriodicZeros(argument, x, lower, upper, halfPeriodShift: true, breaks),
