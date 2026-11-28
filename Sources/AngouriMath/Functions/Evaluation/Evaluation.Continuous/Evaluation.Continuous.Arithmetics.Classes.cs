@@ -441,6 +441,16 @@ namespace AngouriMath
                    && ratio.ERational.Denominator.Remainder(2).IsZero;
             
             /// <summary>
+            /// Whether an exact <paramref name="base"/> to a decimal <paramref name="exponent"/> would be a power too
+            /// large to build were the exponent the whole number just past it.
+            /// </summary>
+            private static bool IsTooLargeToBuild(Complex @base, PeterO.Numbers.EDecimal exponent)
+                => exponent.IsFinite
+                   && exponent.Abs().CompareTo(PeterO.Numbers.EDecimal.FromInt64(1L << 40)) >= 0
+                       ? Number.IsTooLargeToBuild(@base, PeterO.Numbers.EInteger.One.ShiftLeft(41))
+                       : exponent.IsFinite && Number.IsTooLargeToBuild(@base, exponent.Abs().ToEInteger().Add(PeterO.Numbers.EInteger.One));
+
+            /// <summary>
             /// Whether an exact <paramref name="base"/> to the rational <paramref name="exponent"/> is past the size an
             /// exact power is built to, a fraction <c>p / q</c> read as the whole power just above <c>|p / q|</c>: a
             /// <c>q</c>-th root makes the power no longer than that, and one that is not exact is a decimal of the
@@ -511,6 +521,11 @@ namespace AngouriMath
                     // what can be said of it is said by structure or by its exponent, and the rest is
                     // left undecided. https://github.com/asc-community/AngouriMath/issues/1448
                     (Complex n1, Rational n2) when IsTooLargeToBuild(n1, n2) => null,
+                    // So is one whose exponent is a decimal that large: e^(e^6), about 1e175, is a decimal,
+                    // and 46655 to it is no more +oo than 46655^(10^20) is. Until a decimal that large was
+                    // taken for an integer it reached the arm above.
+                    // https://github.com/asc-community/AngouriMath/issues/2615
+                    (Complex n1, Real { EDecimal: var large } n2) when n2 is not Rational && IsTooLargeToBuild(n1, large) => null,
                     (Complex n1, Complex n2) when !isExact => Number.Pow(n1, n2), // returns 1 for 0^0 and 0 for 0^(negative real part), we need to handle these cases above
                     (Integer(1), { DomainCondition: var condition }) => Integer.One.Provided(condition),
                     (var n1, Integer(-1)) => (1 / n1).InnerSimplified(isExact),

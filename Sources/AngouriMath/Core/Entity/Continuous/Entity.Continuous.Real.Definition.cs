@@ -132,11 +132,18 @@ namespace AngouriMath
                     // https://github.com/asc-community/AngouriMath/issues/1338
                     if (!Rational.MayBeASmallRational(value, MathS.Settings.FloatToRationalIterCount, MathS.Settings.DowncastingToleranceAsDouble))
                         return new Real(value);
+                    var tolerance = MathS.Settings.DowncastingTolerance;
+                    // A value whose working digits do not reach the tolerance below its point is no integer and no small
+                    // rational, however its decimal happens to end: at a hundred digits, 2^340 sqrt(2) is 103 digits
+                    // long, its last three rounded to 0, and it was taken for an integer, which Simplify then put in
+                    // place of the exact product. https://github.com/asc-community/AngouriMath/issues/2615
+                    // A machine number's digits are all exact, however many there are, and it is not asked this.
+                    if (!fromMachineNumber && !WorkingDigitsReachTheTolerance(value, tolerance))
+                        return new Real(value);
                     var (intPart, intRest) = value.SplitDecimal();
                     // If the difference between value & round(value) is zero (see Number.IsZero), we consider value as an integer.
                     // Onto zero only as a residual of the cancellation that produced it, below the tolerance times the
                     // scale of what cancelled; a negative one reaches zero by rounding up.
-                    var tolerance = MathS.Settings.DowncastingTolerance;
                     bool IsAResidual() => value.IsZero || !cancelledScale.IsZero && value.Abs().LessThan(tolerance.Multiply(cancelledScale.Abs()));
                     if (intRest.LessThan(tolerance) && (!intPart.IsZero || IsAResidual()))
                         return Integer.Create(intPart);
@@ -150,6 +157,37 @@ namespace AngouriMath
                         return new Real(value);
                     else
                         return attempt;
+                }
+
+                /// <summary>
+                /// Whether the working precision places <paramref name="value"/>'s digits down to
+                /// <paramref name="tolerance"/>: its magnitude is below the tolerance times ten to the precision. Always
+                /// where the precision is unlimited.
+                /// </summary>
+                private static bool WorkingDigitsReachTheTolerance(EDecimal value, EDecimal tolerance)
+                {
+                    var precision = MathS.Settings.DecimalPrecisionContext.Value.Precision;
+                    if (precision.IsZero)
+                        return true;
+                    // In doubles first, which allocate nothing: every number the parser reads comes through here, and
+                    // building ten to the precision for each was 7% more bytes on parsing "1 + 2 / x + 2 / (y + x)".
+                    // A magnitude a digit or more either side of the bound is decided; only one near it is compared exactly.
+                    if (precision.CanFitInInt32())
+                    {
+                        var magnitude = System.Math.Abs(value.ToDouble());
+                        var toleranceAsDouble = MathS.Settings.DowncastingToleranceAsDouble;
+                        if (magnitude == 0)
+                            return true;
+                        if (magnitude < double.PositiveInfinity && toleranceAsDouble > 0)
+                        {
+                            var digitsPast = System.Math.Log10(magnitude) - (System.Math.Log10(toleranceAsDouble) + precision.ToInt32Unchecked());
+                            if (digitsPast < -1)
+                                return true;
+                            if (digitsPast > 1)
+                                return false;
+                        }
+                    }
+                    return value.Abs().LessThan(tolerance.Multiply(EDecimal.Create(EInteger.One, precision)));
                 }
 
                 /// <inheritdoc/>

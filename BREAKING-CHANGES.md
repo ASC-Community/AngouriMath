@@ -42,6 +42,31 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.10.0
 
+### A number past the working digits is not taken for an exact one
+
+**Not silent: wrong answers become exact ones.** At the default hundred digits, a product past about `10^50`
+evaluated to a decimal whose last digits had been rounded to 0. That decimal was taken for an integer, and `Simplify`
+put it in place of the exact expression. So `2^340 * sqrt(2)` became a 103-digit integer, and
+`sqrt(2)^800 / 2^400` became a fraction that is not 1. A rational past the decimals' exponent range also read as
+not finite, so a product of one with `sqrt(2)` or `pi` simplified to `+oo` above that range and to `0` below it.
+
+A value now becomes an integer or a small rational only if the working digits reach the downcasting tolerance below
+its point. A large or small rational counts as finite when deciding whether evaluation alone made a zero or an
+infinity. `Evaled` of such a product is now the decimal it always was, for example `3.167...E+102`, and not an
+integer. Exact large integers are unchanged
+([#2615](https://github.com/asc-community/AngouriMath/issues/2615)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `"2^340 * sqrt(2)".Simplify()` | `3167477390…7832751217000` | `2239744742…607115776 * sqrt(2)` |
+| `"sqrt(2)^800 / 2^400".Simplify()` | `1231312693…/1231312693…`, not 1 | `1` |
+| `"10^200 * pi / 10^199".Simplify()` | `7853981633…/2500000000…` | `10 * pi` |
+| `"e^700".Simplify()` | `1014232054…` followed by about 200 zeros | `e ^ 700` |
+| `"2^4000 * sqrt(2)".Simplify()` | `+oo` | `1318204093… * sqrt(2)` |
+| `"2^(-20000) * sqrt(2)".Simplify()` | `0` | `sqrt(2) / 3980276840…` |
+| `"integral(exp(x), x, 0, 300)".Simplify()` | `1942426395…4199999…9` | `e ^ 300 - 1` |
+| `"2^340 * sqrt(2)".Evaled` | an `Integer` | `3.167477390…E+102`, a `Real` |
+
 ### A square system is answered exactly whichever order its equations are in
 
 **Not silent: a decimal answer is now exact, and a refused system has an answer.** The eliminator took the last
