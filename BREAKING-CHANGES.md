@@ -115,6 +115,23 @@ it was ([#2611](https://github.com/asc-community/AngouriMath/issues/2611)).
 | `integral(1/x, x, -2, -1)` | `ln(-1) - ln(-2)` | `-ln(2)` |
 | `integral(1/(x^2-1), x, -1/2, 1/2)` | `(ln(-1/3) - ln(-3)) / 2` | `ln(1/3)` |
 
+### Logarithms whose multiples are not rational multiples of each other cancel at infinity
+
+**An answer where there was none.** The antiderivative of `1/(x^5 + 1)` has three logarithms with the multiples
+`-(sqrt(5) + 1)/20`, `(sqrt(5) - 1)/20` and `1/5`. At `+oo` each one diverges but their sum does not. Only
+logarithms whose multiples are rational multiples of each other were gathered, so the limit at the bound was not
+settled, and the integral over `[0, +oo)` was left unevaluated after eight seconds. Each polynomial argument of degree
+`d` now has `d ln|x|` taken out of its logarithm. Where these parts cancel, which happens exactly when the integral
+converges, what is left tends to the logarithms of the leading coefficients
+([#2623](https://github.com/asc-community/AngouriMath/issues/2623)).
+
+| simplified | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/(x^5+1), x, 0, +oo)` | unevaluated | `pi / (5 sin(pi/5))`, written through `sqrt(5)` |
+| `integral(x^3/(x^5+1), x, 0, +oo)` | unevaluated | the same value |
+| `integral(1/(x^7+1), x, 0, +oo)` | unevaluated | `pi / (7 sin(pi/7))`, written through `cotan(pi/7)` |
+| `integral(1/(x^5+1), x, 1, +oo)` | unevaluated | `0.18064…`, in closed form |
+
 ### An integral through a sum over roots is not NaN at infinity, nor taken across a real root
 
 **Not silent: wrong answers.** The antiderivative of `1/(x^3 + x + 1)` is a sum over the roots of `r^3 + r + 1`.

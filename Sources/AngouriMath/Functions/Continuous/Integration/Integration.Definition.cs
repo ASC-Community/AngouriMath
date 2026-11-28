@@ -571,6 +571,8 @@ namespace AngouriMath
                 if (!joined)
                     groups.Add((multiple, new() { (argument, Integer.One) }));
             }
+            if (AcrossTheGroups(groups) is { } acrossTheGroups)
+                return Sumf.Sum(others.Concat(acrossTheGroups));
             if (groups.All(group => group.Members.Count < 2))
                 return antiderivative;
             var gathered = new List<Entity>(others);
@@ -589,6 +591,57 @@ namespace AngouriMath
 
             bool IsPositiveOnTheWay(Entity argument)
                 => MathS.Signum(argument).Limit(x, bound, side).Evaled is Integer { EInteger: var sign } && sign.Equals(PeterO.Numbers.EInteger.One);
+
+            // Groups whose multiples are not rational multiples of each other, each gathered with the power of the
+            // variable its logarithm grows like taken out, where those powers cancel: ln(a) = d ln(t) + ln(a / t^d) for
+            // a polynomial a of degree d positive on the way and t = |x|, which is positive there too. The logarithms
+            // of the antiderivative of 1/(x^5 + 1) have the multiples -(sqrt(5) + 1)/20, (sqrt(5) - 1)/20 and 1/5, and
+            // 2 c1 + 2 c2 + 1/5 is 0, so their ln(t) parts cancel exactly and what is left tends to the logarithms of
+            // the leading coefficients. Gathered only by rational ratios, each group diverged alone, and the integral
+            // over [0, +oo) was left unevaluated. https://github.com/asc-community/AngouriMath/issues/2623
+            List<Entity>? AcrossTheGroups(List<(Entity Multiple, List<(Entity Argument, Entity Power)> Members)> groups)
+            {
+                if (groups.Count < 2)
+                    return null;
+                Entity t = bound.Evaled is Number.Real { IsNegative: true } ? -x : x;
+                var exponents = new List<Entity>();
+                Entity growth = Integer.Zero;
+                foreach (var (multiple, members) in groups)
+                {
+                    Entity exponent = Integer.Zero;
+                    foreach (var (argument, power) in members)
+                    {
+                        if (DegreeOf(argument) is not { } degree || !IsPositiveOnTheWay(argument))
+                            return null;
+                        exponent += power * degree;
+                    }
+                    exponent = exponent.InnerSimplified;
+                    exponents.Add(exponent);
+                    growth += multiple * exponent;
+                }
+                if (growth.Simplify() != Integer.Zero)
+                    return null;
+                var gathered = new List<Entity>();
+                for (var i = 0; i < groups.Count; i++)
+                {
+                    var (multiple, members) = groups[i];
+                    var product = members.Select(member => member.Power == Integer.One ? member.Argument : MathS.Pow(member.Argument, member.Power))
+                        .Aggregate((all, one) => all * one);
+                    gathered.Add(multiple * MathS.Ln((product / MathS.Pow(t, exponents[i])).InnerSimplified));
+                }
+                return gathered;
+            }
+
+            // The degree of a polynomial in x with numeric coefficients, or null.
+            Integer? DegreeOf(Entity argument)
+            {
+                if (Functions.Algebra.LimitSolvers.ParseAsPolynomial(argument, x) is not { Count: > 0 } monomials)
+                    return null;
+                var highest = monomials.Keys.Max()!;
+                if (!highest.IsInteger() || highest.Sign <= 0 || monomials.Values.Any(coefficient => coefficient.ContainsNode(x)))
+                    return null;
+                return Integer.Create(highest.ToEInteger());
+            }
 
             (Entity Argument, Entity Multiple)? AsAMultipleOfALogarithm(Entity term) => term switch
             {
