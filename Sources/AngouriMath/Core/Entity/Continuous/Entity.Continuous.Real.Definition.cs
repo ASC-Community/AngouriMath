@@ -169,6 +169,24 @@ namespace AngouriMath
                     var precision = MathS.Settings.DecimalPrecisionContext.Value.Precision;
                     if (precision.IsZero)
                         return true;
+                    // In doubles first, which allocate nothing: every number the parser reads comes through here, and
+                    // building ten to the precision for each was 7% more bytes on parsing "1 + 2 / x + 2 / (y + x)".
+                    // A magnitude a digit or more either side of the bound is decided; only one near it is compared exactly.
+                    if (precision.CanFitInInt32())
+                    {
+                        var magnitude = System.Math.Abs(value.ToDouble());
+                        var toleranceAsDouble = MathS.Settings.DowncastingToleranceAsDouble;
+                        if (magnitude == 0)
+                            return true;
+                        if (magnitude < double.PositiveInfinity && toleranceAsDouble > 0)
+                        {
+                            var digitsPast = System.Math.Log10(magnitude) - (System.Math.Log10(toleranceAsDouble) + precision.ToInt32Unchecked());
+                            if (digitsPast < -1)
+                                return true;
+                            if (digitsPast > 1)
+                                return false;
+                        }
+                    }
                     return value.Abs().LessThan(tolerance.Multiply(EDecimal.Create(EInteger.One, precision)));
                 }
 
