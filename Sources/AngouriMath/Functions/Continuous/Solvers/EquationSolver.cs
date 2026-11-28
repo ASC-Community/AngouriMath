@@ -453,6 +453,22 @@ namespace AngouriMath.Functions.Algebra
                     + "triangularising path declined it and eliminating in radicals has not "
                     + "finished. Raise MathS.Settings.Budget to allow more, or pass a "
                     + "cancellation token with MathS.Multithreading.SetLocalCancellationToken");
+            // An equation that is zero for every value constrains nothing, and solving it for an
+            // unknown it still mentions gives all of CC, which no candidate goes on from: with
+            // z = 1 - x - y from x + y + z = 1, its copy 2x + 2y + 2z = 2 is 2x + 2y + 2(1 - x - y) - 2,
+            // and the system was declined. Dropped, it can leave fewer equations than unknowns, or an
+            // unknown none of them mentions, and that is the non-square solver's shape.
+            // https://github.com/asc-community/AngouriMath/issues/2601
+            var constraining = equations.Where(equation => !NonSquareSystemSolver.Vanishes(equation, System.Array.Empty<Variable>())).ToList();
+            if (constraining.Count < equations.Count && ledger is not null)
+            {
+                var unknowns = vars.ToArray();
+                if (constraining.Count < unknowns.Length || unknowns.Any(unknown => !constraining.Any(equation => equation.ContainsNode(unknown))))
+                    // Its null is both "no solutions" and "could not tell", and is passed on as the
+                    // second, which declines the system rather than dropping a branch's rows.
+                    return NonSquareSystemSolver.Solve(constraining, unknowns, ledger);
+                equations = constraining;
+            }
             var var = vars[^1];
             if (equations.Count == 1)
             {
@@ -476,7 +492,6 @@ namespace AngouriMath.Functions.Algebra
                     return null;
                 return new();
             }
-            var result = new List<List<Entity>>();
             var replacements = new Dictionary<Variable, Entity>();
             var remainingVars = vars.Slice(0, vars.Length - 1);
             // Which equation to eliminate `var` from is decided by whether it occurs in
@@ -487,6 +502,24 @@ namespace AngouriMath.Functions.Algebra
             // answer, and committing to the first candidate meant the whole system was
             // then declared unsolvable -- https://github.com/asc-community/AngouriMath/issues/608.
             // So a candidate that yields nothing is passed over for the next one rather than ending the search.
+            //
+            // Nor is a candidate that leaves the rest undecided, or answers it only in decimals, the
+            // end of it. Each candidate is an elimination of its own, and one that is told gives every
+            // solution, so the next is tried and the first exact answer kept. Where none is exact, the
+            // answer is the first candidate's, as it was: a decimal answer found after an undecided
+            // candidate would be a root-finder's list standing for a system that may have more, where
+            // the undecided one said it could not tell. Which equation came first
+            // is how the caller wrote the system: from ln(x) + ln(y) = 1, y is e^(1 - ln(x)), and
+            // x = e^(1 - ln(x)) is solved by Newton's method, where y = x from the other gives
+            // 2 ln(x) = 1 and sqrt(e); and e^x e^y = 4 left x - ln(4 / e^x) = 0, which is not solved,
+            // and declined the system. https://github.com/asc-community/AngouriMath/issues/2607
+            // Only an exact system is owed an exact answer: one with a decimal in it answers in
+            // decimals by any candidate, and trying each in turn at every level is exponential in
+            // the unknowns, so it ends at its first candidate as it did.
+            var exactSystem = !equations.Any(equation => equation.Nodes.Any(node => node is Number { IsExact: false }));
+            List<List<Entity>>? inDecimals = null;
+            var firstUndecided = false;
+            var decided = false;
             for (int i = 0; i < equations.Count; i++)
                 if (equations[i].ContainsNode(var))
                 {
@@ -496,11 +529,16 @@ namespace AngouriMath.Functions.Algebra
                     var rest = new List<Entity>(equations);
                     rest.RemoveAt(i);
 
+                    var result = new List<List<Entity>>();
+                    var told = true;
                     foreach (var sol in sols)
                     {
                         var below = rest.Select(eq => eq.Substitute(var, sol)).ToList();
                         if (InSolveSystem(below, remainingVars, nameSource, ledger) is not { } rows)
-                            return null;
+                        {
+                            told = false;
+                            break;
+                        }
                         foreach (var j in rows)
                         {
                             replacements.Clear();
@@ -511,10 +549,22 @@ namespace AngouriMath.Functions.Algebra
                         }
                     }
 
-                    if (result.Count > 0)
+                    if (!told)
+                    {
+                        if (!exactSystem)
+                            return null;
+                        if (!decided)
+                            (firstUndecided, decided) = (true, true);
+                        continue;
+                    }
+                    if (result.Count == 0)
+                        continue;
+                    if (!exactSystem || !result.Any(row => row.Any(value => value.Nodes.Any(node => node is Number { IsExact: false }))))
                         return result;
+                    if (!decided)
+                        (inDecimals, decided) = (result, true);
                 }
-            return result;
+            return firstUndecided ? null : inDecimals ?? new List<List<Entity>>();
         }
         /// <summary>
         /// <paramref name="roots"/> where <paramref name="predicate"/> holds, as

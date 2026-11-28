@@ -42,6 +42,23 @@ A not-equal written `<>` is read as `not (a = b)`, and printed that way.
 
 ## Unreleased — since 2.10.0
 
+### A square system is answered exactly whichever order its equations are in
+
+**Not silent: a decimal answer is now exact, and a refused system has an answer.** The eliminator took the last
+unknown from the first equation that gave a root for it, and kept whatever that led to. From `ln(x) + ln(y) = 1`, `y`
+is `e^(1 - ln(x))`, and `x = e^(1 - ln(x))` was solved by Newton's method. When the substitution left an equation the
+solver could not solve, the system was declined. Each candidate equation is now tried in turn, and the first exact
+answer is kept. A system with a decimal in it, or one whose first candidate is undecided and whose later ones answer
+only in decimals, is answered as before ([#2607](https://github.com/asc-community/AngouriMath/issues/2607)).
+
+| `MathS.Equations(...).Solve("x", "y")` | Was (2.10.0) | Now |
+|---|---|---|
+| `ln(x) + ln(y) - 1`, `x - y` | `[[1.64872127070012819416433558217249810695648193359375, …]]` | `[[sqrt(e), sqrt(e)]]` |
+| `ln(x) + ln(y) - 2`, `x - y` | `[[2.718281828459045090795598298427648842334747314453125, …]]` | `[[sqrt(e ^ 2), sqrt(e ^ 2)]]` |
+| `e^x * e^y - 4`, `x - y` | `null` | `[[ln(2) + 2 * pi * i * n_1, …], [ln(-2) + 2 * pi * i * n_1, …]]` |
+| `2^x + 2^y - 8`, `x - y` | `null` | `[[2 + 2 * pi * i * n_1 / ln(2), …]]` |
+| `x - y`, `ln(x) + ln(y) - 1` | `[[sqrt(e), sqrt(e)]]` | unchanged |
+
 ### A singular matrix is not inverted because its determinant is not written as 0
 
 **Not silent: a wrong answer is now no answer.** `Matrix.Inverse`, `Matrix.Pow` with a negative exponent, `M^(-1)` and
@@ -79,6 +96,25 @@ since past about 10^100 an integer times a radical is folded into a rounded deci
 | `32768 * 2^(-29/2)` | `32768 * 2 ^ (-29/2)` | `sqrt(2)` |
 | `2 / (2^(-29/2) * 32768)` | `1/16384 / 2 ^ (-29/2)` | `sqrt(2)` |
 
+### A real integral through ln of a negative number is real
+
+**Not silent: a divergent integral had an imaginary part, and a finite one was written through `ln` of a negative
+number.** The antiderivative of `1/u` is `ln(u)`, and a definite integral over a range where `u < 0` took it at
+negative numbers. A finite value came out as `ln(-1) - ln(-2)`. The value was right, but it was written through
+complex logarithms. A divergent integral came out as `-oo - ln(-1)`, an infinity with an imaginary part. The integral
+of a real function is `-oo` there. Where `u` is real and seen to be negative in the range, the logarithm is now taken of
+`abs(u)`. The two differ by a constant between the points where the range is already split, so the value is
+unchanged and is written as a real number. An argument that is not real on the real line, such as `x + i`, is left as
+it was ([#2611](https://github.com/asc-community/AngouriMath/issues/2611)).
+
+| simplified | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/x, x, -1, 0)` | `-oo - ln(-1)` | `-oo` |
+| `integral(1/(x-3), x, 0, 3)` | `-oo - ln(-3)` | `-oo` |
+| `integral(tan(x), x, pi/2, 3 pi/4)` | `-oo - ln(-1/2 * sqrt(2))` | `-oo` |
+| `integral(1/x, x, -2, -1)` | `ln(-1) - ln(-2)` | `-ln(2)` |
+| `integral(1/(x^2-1), x, -1/2, 1/2)` | `(ln(-1/3) - ln(-3)) / 2` | `ln(1/3)` |
+
 ### An inequality with abs of x is solved
 
 **Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException`, *"Only
@@ -97,6 +133,24 @@ equation `abs(x - 1) = 2` is solved over `CC` as before
 | `abs(x^2 - 4) < 3` | throws | `(-sqrt(7); -1) \/ (1; sqrt(7))` |
 | `abs(1/x) > 1` | throws | `(0; 1) \/ (-1; 0)` |
 | `abs(sqrt(x)) > 1` | throws | unchanged |
+
+### A limit at infinity comparing 2^x with 3^x is answered
+
+**Not silent: a limit that was left unevaluated has a value.** Gruntz's algorithm writes each fastest-growing exponential
+as a power of one of them, and for `2^x` and `3^x` that power is `ln(3)/ln(2)`, which is irrational. The series it
+expands in took rational exponents only, so such limits were declined. Its exponents may now be rational multiples of
+irrational constants. Where two exponents written over different constants cannot be told apart by value, as
+`ln(6)/ln(2)` and `1 + ln(3)/ln(2)`, the limit is still declined
+([#2597](https://github.com/asc-community/AngouriMath/issues/2597)).
+
+| `.Limit("x", ...)` | Was (2.10.0) | Now |
+|---|---|---|
+| `(3^x + 2^x)^(1/x)` at `+oo` | `limit((3 ^ x + 2 ^ x) ^ (1 / x), x, +oo)` | `3` |
+| `(3^x + 2^x)^(1/x)` at `-oo` | unevaluated | `2` |
+| `ln(2^x + 3^x) / x` at `+oo` | unevaluated | `ln(3)` |
+| `(4^x + 3^x) / (4^x - 3^x)` at `+oo` | unevaluated | `1` |
+| `(2^x + 3^x) / (3^x + 4^x)` at `+oo` | unevaluated | `0` |
+| `x^10 * 2^x / 3^x` at `+oo` | unevaluated | `0` |
 
 ### ln(-1), ln(i) and ln(-i) are folded
 
@@ -117,6 +171,24 @@ folded. The logarithm of any other point on the unit circle, such as `-1/2 + i s
 | `"sin(x) + cos(x) = 1".Solve("x")` | `union({ 2 * pi * n, ln(i) / i + 2 * pi * n }, n in ZZ)` | `union({ 2 * pi * n, pi / 2 + 2 * pi * n }, n in ZZ)` |
 | `"sin(2x) = sin(x)".Solve("x")` | the root `ln(-1) / i + 2 * pi * n` | `pi + 2 * pi * n` |
 
+### A term with a finite limit is taken out of a sum
+
+**An answer where there was none.** A sum whose two halves tend to opposite infinities was left unevaluated, so its
+limit depended on how it was bracketed. `ln(x + 1) + (-1/2 ln(x^2 + 1) + arctan(x))` at `+oo` had no answer, while
+`(ln(x + 1) - 1/2 ln(x^2 + 1)) + arctan(x)` was `pi / 2`. A term with a finite limit is now replaced by that limit,
+and the terms that diverge are taken together. That sum is the antiderivative of `1/((x + 1)(x^2 + 1))`, so a
+rational function with a linear and an irreducible quadratic factor below the bar now has its integral up to `+oo`
+([#2599](https://github.com/asc-community/AngouriMath/issues/2599)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/((x+1)*(x^2+1)), x, 0, +oo)`, simplified | unevaluated | `pi / 4` |
+| `integral(1/((x+2)*(x^2+1)), x, 0, +oo)`, simplified | unevaluated | `(pi - ln(2)) / 5` |
+| `integral(1/(x^3+1), x, 0, +oo)`, simplified | unevaluated | `2/9 * sqrt(3) * pi` |
+| `integral(1/(x^4+1), x, 0, +oo)`, simplified | unevaluated | `sqrt(2) * pi / 4` |
+| `ln(x + 1) + (-1/2 * ln(x^2 + 1) + arctan(x))`, limit at `+oo` | unevaluated | `pi / 2` |
+| `ln(x) + (exp(x) - ln(sin(x)))`, limit at 0 from the right | unevaluated | `1` |
+
 ### A trigonometric root at a rational multiple of pi is one multiple, written once
 
 **Silent, in the printed form only, and in how many members a family lists.** The inversion of `sin` and `cos` wrote a
@@ -135,7 +207,41 @@ sum, `arcsin(a)` or `arccos(1/3)`, is written as before
 | `cos(x) = -1` | `union({ pi / 2 - -pi / 2 + 2 * pi * n, -(pi / 2 - -pi / 2) + 2 * pi * n }, n in ZZ)` | `union({ pi + 2 * pi * n }, n in ZZ)` |
 | `2cos(x)^2 + cos(x) - 1 = 0` | four members, among them `pi / 2 - -pi / 2` and `-(pi / 2 - -pi / 2)` | `union({ pi + 2 * pi * n, pi / 3 + 2 * pi * n, -pi / 3 + 2 * pi * n }, n in ZZ)` |
 
+### A definite integral of a function of abs is split where its argument changes sign
+
+**An answer where there was none.** A definite integral whose integrand holds `abs(u)` was left unevaluated unless the
+integrator found an antiderivative for the whole integrand. For `sqrt(abs(x))`, `exp(-abs(x))` and `abs(x^2 - 1)` it
+finds none. Such an integral is now split where `u` is zero or breaks. On each piece `abs(u)` is `u` or `-u`, and the
+pieces are added. A piece that diverges stays an infinity, so `1/abs(x)` over `[-1, 1]` is `+oo`. An integral that was
+answered through an antiderivative, such as `abs(x - 1)` over `[0, 3]`, gives the same answer as before
+([#2605](https://github.com/asc-community/AngouriMath/issues/2605)).
+
+| simplified | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/sqrt(abs(x)), x, -1, 1)` | unevaluated | `4` |
+| `integral(abs(x^2 - 1), x, -2, 2)` | unevaluated | `4` |
+| `integral(abs(sin(x)), x, 0, 2 pi)` | unevaluated | `4` |
+| `integral(exp(-abs(x)), x, -oo, +oo)` | unevaluated | `2` |
+| `integral(1/abs(x), x, -1, 1)` | unevaluated | `+oo` |
+| `integral(abs(x - 1), x, 0, 3)` | `5/2` | unchanged |
+
 ---
+
+### A power of a constant cancels across a quotient
+
+**Silent, in the printed form only.** `Simplify` paired the factors of a quotient only when the numerator and the
+denominator both held a variable. So a power of a constant such as `ln(2)`, `pi` or `sin(1)` was not cancelled when
+only one side held `x`, although `y / (x y^2)` was. The factors are now also paired when one side holds a variable
+and the two share a factor free of variables. The value is the same
+([#2603](https://github.com/asc-community/AngouriMath/issues/2603)).
+
+| | Was (2.10.0) | Now |
+|---|---|---|
+| `"ln(2) / (x * ln(2)^2)".Simplify()` | `ln(2) / (x * ln(2) ^ 2)` | `1 / (x * ln(2))` |
+| `"log(2, x)".Differentiate("x").Simplify()` | `ln(2) / (x * ln(2) ^ 2)` | `1 / (x * ln(2))` |
+| `"pi / (x * pi^2)".Simplify()` | `pi / (x * pi ^ 2)` | `1 / (pi * x)` |
+| `"ln(2)^2 / (x * ln(2))".Simplify()` | `ln(2) ^ 2 / (x * ln(2))` | `ln(2) / x` |
+| `"ln(2) * x / ln(2)^2".Simplify()` | `x * ln(2) / ln(2) ^ 2` | `x / ln(2)` |
 
 ### An inequality through ln, an exponential or sqrt is solved
 
@@ -156,6 +262,23 @@ a symbolic bound, is still declined ([#2585](https://github.com/asc-community/An
 | `(1/2)^x > 4` | throws | `(-oo; -2)` |
 | `e^x > -1` | throws | `RR` |
 | `ln(x) > a` | throws | unchanged |
+
+### A system with a redundant equation is solved
+
+**Not silent: a refused system has an answer, and one incomplete answer is now complete.** Some systems repeat an
+equation, or contain a multiple of another. After the elimination substituted a root, such an equation became an
+identity like `2x - 2x`, and the system was declined. Where the elimination was square, it could also stop at one
+point of a curve of solutions. An equation that is zero for every value is now dropped, and what remains is solved as a
+family. An inconsistency is not dropped: `x - y`, `2x - 2y`, `x - y - 1` is still `null`
+([#2601](https://github.com/asc-community/AngouriMath/issues/2601)).
+
+| `MathS.Equations(...).Solve(...)` | Was (2.10.0) | Now |
+|---|---|---|
+| `x - y`, `2x - 2y`, `3x - 3y` for x, y | `null` | `[[t_1, t_1]]` |
+| `x + 2y - 3`, `2x + 4y - 6`, `3x + 6y - 9` for x, y | `null` | `[[t_1, -(t_1 + -3) / 2]]` |
+| `x + y + z - 1` with its double and triple, for x, y, z | `null` | a family in two parameters |
+| `sin(x) - y`, `2 sin(x) - 2y`, `3 sin(x) - 3y` for x, y | `null` | `[[t_1, sin(t_1)]]` |
+| `x y - z`, `2 x y - 2 z`, `x + y + z` for x, y, z | `[[0, 0, 0]]`, one point of a curve | `[[t_1, -t_1 / (1 + t_1), t_1 * -t_1 / (1 + t_1)]]` |
 
 ## 2.10.0 — since 2.9.0
 

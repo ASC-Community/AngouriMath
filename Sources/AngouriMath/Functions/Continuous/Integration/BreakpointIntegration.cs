@@ -98,6 +98,89 @@ namespace AngouriMath.Functions.Algebra
             return null;
         }
 
+        // ---- the modulus of something in the variable: split where it changes sign ---------------
+
+        /// <summary>
+        /// The integral of an integrand holding <c>abs(u)</c> of something in <paramref name="x"/>, split where each
+        /// <c>u</c> is zero or breaks, with <c>abs(u)</c> on each piece written as <c>u</c> or <c>-u</c> by its sign at the
+        /// piece's midpoint; or <see langword="null"/> where a bound is not a number, a <c>u</c> holds another variable
+        /// or another modulus, its zeros cannot all be listed, or a piece does not integrate.
+        /// </summary>
+        /// <remarks>
+        /// Asked only where the integrand has no antiderivative the integral can be taken through, so an integral answered
+        /// that way, <c>abs(x - 1)</c> through <c>sgn(x - 1) (x - 1)^2 / 2</c>, is answered as before. The integrator has
+        /// none for <c>sqrt(abs(x))</c>, <c>exp(-abs(x))</c> or <c>abs(x^2 - 1)</c>, and their integrals were left
+        /// unevaluated, where on each side of a zero of <c>u</c> they are integrals of elementary functions. Between two
+        /// listed points <c>u</c> is continuous and not zero, so it keeps the sign it has at the midpoint. A piece that
+        /// diverges is an infinity, which the sum keeps: <c>1/abs(x)</c> over <c>[-1, 1]</c> is <c>+oo</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2605
+        /// </remarks>
+        internal static Entity? AcrossTheSignsOfAbs(Entity expr, Variable x, Entity from, Entity to)
+        {
+            var arguments = expr.Nodes.OfType<Absf>().Select(abs => abs.Argument).Where(u => u.ContainsNode(x)).Distinct().ToList();
+            if (arguments.Count == 0)
+                return null;
+            if (from.Evaled is not Real lower || lower.IsNaN || to.Evaled is not Real upper || upper.IsNaN || lower == upper)
+                return null;
+            if (upper < lower)
+                return AcrossTheSignsOfAbs(expr, x, to, from) is { } reversed ? (-reversed).InnerSimplified : null;
+            var breaks = new List<(Entity At, Real Value)>();
+            foreach (var argument in arguments)
+            {
+                if (argument.Vars.Any(variable => variable != x) || argument.Nodes.Any(node => node is Absf))
+                    return null;
+                // Where u is zero, and where it is not continuous, which is the other place a sign can change.
+                if (!AntiderivativeBreaks.ZerosOf(argument, x, lower, upper, breaks)
+                    || AntiderivativeBreaks.Inside(argument, x, lower, upper) is not { } poles)
+                    return null;
+                breaks.AddRange(poles);
+            }
+            var points = new List<(Entity At, Real Value)> { (from, lower) };
+            foreach (var point in breaks.Where(point => lower < point.Value && point.Value < upper).OrderBy(point => point.Value.EDecimal))
+                if (point.Value != points[points.Count - 1].Value)
+                    points.Add(point);
+            points.Add((to, upper));
+
+            Entity total = Integer.Zero;
+            for (var i = 0; i + 1 < points.Count; i++)
+            {
+                var (start, end) = (points[i], points[i + 1]);
+                Entity midpoint = (start.Value.IsFinite, end.Value.IsFinite) switch
+                {
+                    (true, true) => (start.Value + end.Value) / Integer.Create(2),
+                    (true, false) => start.Value + Integer.One,
+                    (false, true) => end.Value - Integer.One,
+                    _ => Integer.Zero
+                };
+                var failed = false;
+                var resolved = expr.Replace(node =>
+                {
+                    if (node is not Absf(var argument) || !argument.ContainsNode(x))
+                        return node;
+                    if (argument.Substitute(x, midpoint).Evaled is not Real { IsFinite: true } sign || sign.IsZero)
+                    {
+                        failed = true;
+                        return node;
+                    }
+                    return sign.IsNegative ? -argument : argument;
+                });
+                if (failed)
+                    return null;
+                var piece = resolved.Integrate(x, start.At, end.At);
+                if (piece.Nodes.Any(node => node is Integralf))
+                    return null;
+                // A real integrand diverging on a piece diverges to a real infinity. The antiderivative of -1/x on
+                // [-1, 0] is -ln(x), which is complex there, and the difference came out +oo + i pi, an imaginary
+                // part that only the logarithm's branch put in.
+                if (piece.Evaled is Complex { RealPart.EDecimal: var real, ImaginaryPart.EDecimal: var imaginary }
+                    && real.IsInfinity() && imaginary.IsFinite
+                    && resolved.Substitute(x, midpoint).Evaled is Real)
+                    piece = real.IsPositiveInfinity() ? Real.PositiveInfinity : Real.NegativeInfinity;
+                total += piece;
+            }
+            return total.InnerSimplified;
+        }
+
         // ---- a floor or a ceiling of something in the variable: the pieces StepPieces proves -------
 
         /// <summary>

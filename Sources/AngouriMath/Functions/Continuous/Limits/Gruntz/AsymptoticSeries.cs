@@ -40,12 +40,12 @@ namespace AngouriMath.Functions.Algebra
     internal sealed class AsymptoticSeries
     {
         /// <summary>Coefficients by exponent, ascending. None of them contain w.</summary>
-        internal SortedDictionary<ERational, Entity> Terms { get; }
+        internal SortedDictionary<SeriesExponent, Entity> Terms { get; }
 
         /// <summary>Nothing is known at or beyond this exponent.</summary>
-        internal ERational Order { get; }
+        internal SeriesExponent Order { get; }
 
-        private AsymptoticSeries(SortedDictionary<ERational, Entity> terms, ERational order)
+        private AsymptoticSeries(SortedDictionary<SeriesExponent, Entity> terms, SeriesExponent order)
             => (Terms, Order) = (terms, order);
 
         /// <summary>
@@ -54,20 +54,20 @@ namespace AngouriMath.Functions.Algebra
         /// matters: a series carrying a finite order is one whose terms beyond it have been
         /// thrown away, and multiplying by it would throw away the other factor's terms too.
         /// </summary>
-        [ConstantField] internal static readonly ERational Exact = ERational.FromInt32(1 << 24);
+        [ConstantField] internal static readonly SeriesExponent Exact = SeriesExponent.Of(1 << 24);
 
         internal static AsymptoticSeries Constant(Entity value)
         {
-            var terms = new SortedDictionary<ERational, Entity>();
+            var terms = new SortedDictionary<SeriesExponent, Entity>();
             if (!IsKnownZero(value))
-                terms[ERational.Zero] = value;
+                terms[SeriesExponent.Zero] = value;
             return new AsymptoticSeries(terms, Exact);
         }
 
         /// <summary>The one term <c>coefficient * w^power</c>.</summary>
-        internal static AsymptoticSeries Monomial(Entity coefficient, ERational power)
+        internal static AsymptoticSeries Monomial(Entity coefficient, SeriesExponent power)
         {
-            var terms = new SortedDictionary<ERational, Entity>();
+            var terms = new SortedDictionary<SeriesExponent, Entity>();
             if (!IsKnownZero(coefficient))
                 terms[power] = coefficient;
             return new AsymptoticSeries(terms, Exact);
@@ -77,7 +77,7 @@ namespace AngouriMath.Functions.Algebra
         /// The leading coefficient and its exponent, or <see langword="null"/> if every term
         /// known so far cancelled and the series is indistinguishable from zero at this order.
         /// </summary>
-        internal (Entity Coefficient, ERational Power)? LeadingTerm()
+        internal (Entity Coefficient, SeriesExponent Power)? LeadingTerm()
         {
             foreach (var term in Terms)
                 if (!IsKnownZero(term.Value))
@@ -114,9 +114,9 @@ namespace AngouriMath.Functions.Algebra
             return collected == Integer.Zero;
         }
 
-        private static SortedDictionary<ERational, Entity> Fresh() => new();
+        private static SortedDictionary<SeriesExponent, Entity> Fresh() => new();
 
-        internal AsymptoticSeries WithOrder(ERational order)
+        internal AsymptoticSeries WithOrder(SeriesExponent order)
         {
             if (order.CompareTo(Order) >= 0)
                 return this;
@@ -172,15 +172,15 @@ namespace AngouriMath.Functions.Algebra
             return new AsymptoticSeries(terms, order);
         }
 
-        private static ERational Min(ERational a, ERational b) => a.CompareTo(b) <= 0 ? a : b;
+        private static SeriesExponent Min(SeriesExponent a, SeriesExponent b) => a.CompareTo(b) <= 0 ? a : b;
 
         /// <summary>
         /// The series divided by its own leading term, which leaves a series starting at 1.
         /// </summary>
-        private AsymptoticSeries? Normalised(out Entity coefficient, out ERational power)
+        private AsymptoticSeries? Normalised(out Entity coefficient, out SeriesExponent power)
         {
             coefficient = Integer.Zero;
-            power = ERational.Zero;
+            power = SeriesExponent.Zero;
             if (LeadingTerm() is not var (c, e))
                 return null;
             (coefficient, power) = (c, e);
@@ -204,7 +204,7 @@ namespace AngouriMath.Functions.Algebra
         {
             var terms = Fresh();
             foreach (var term in Terms)
-                if (term.Key.CompareTo(ERational.Zero) != 0)
+                if (term.Key.CompareTo(SeriesExponent.Zero) != 0)
                     terms[term.Key] = term.Value;
             return new AsymptoticSeries(terms, Order);
         }
@@ -214,7 +214,7 @@ namespace AngouriMath.Functions.Algebra
         /// taken out. Declines if the leading term cannot be found, since dividing by a
         /// series that might be zero is not something to guess at.
         /// </summary>
-        internal AsymptoticSeries? Invert(ERational requested)
+        internal AsymptoticSeries? Invert(SeriesExponent requested)
         {
             if (Normalised(out var coefficient, out var power) is not { } unit)
                 return null;
@@ -241,11 +241,11 @@ namespace AngouriMath.Functions.Algebra
         /// comparability class than w, which the algorithm has already ruled out by putting
         /// it in the set of most rapidly varying subexpressions instead.
         /// </summary>
-        internal AsymptoticSeries? Exponentiate(ERational requested)
+        internal AsymptoticSeries? Exponentiate(SeriesExponent requested)
         {
-            var constant = Terms.TryGetValue(ERational.Zero, out var atZero) ? atZero : Integer.Zero;
+            var constant = Terms.TryGetValue(SeriesExponent.Zero, out var atZero) ? atZero : Integer.Zero;
             var rest = WithoutConstant();
-            if (rest.LeadingTerm() is var (_, least) && least.CompareTo(ERational.Zero) <= 0)
+            if (rest.LeadingTerm() is var (_, least) && least.CompareTo(SeriesExponent.Zero) <= 0)
                 return null;
             // exp(constant) is left unexpanded on purpose: it is a coefficient, and opening
             // it up would reveal a function of a faster class than w.
@@ -267,11 +267,11 @@ namespace AngouriMath.Functions.Algebra
         /// has to be found, since <c>log</c> of something that might be zero is not something
         /// to guess at.
         /// </summary>
-        internal AsymptoticSeries? Logarithm(Entity logarithmOfW, ERational requested)
+        internal AsymptoticSeries? Logarithm(Entity logarithmOfW, SeriesExponent requested)
         {
             if (Normalised(out var coefficient, out var power) is not { } unit)
                 return null;
-            var head = (MathS.Ln(coefficient) + Rational.Create(power) * logarithmOfW).InnerSimplified;
+            var head = (MathS.Ln(coefficient) + power.ToEntity() * logarithmOfW).InnerSimplified;
             // log(1 + d) = d - d^2/2 + d^3/3 - ...
             var rest = unit.WithoutConstant();
             var sum = Constant(head);
@@ -291,13 +291,13 @@ namespace AngouriMath.Functions.Algebra
         /// to <paramref name="order"/>, or <see langword="null"/> if some part of it is not
         /// something this can expand.
         /// </summary>
-        internal static AsymptoticSeries? Expand(Entity expr, Variable w, Entity logarithmOfW, ERational order)
+        internal static AsymptoticSeries? Expand(Entity expr, Variable w, Entity logarithmOfW, SeriesExponent order)
         {
             MultithreadingFunctional.ExitIfCancelled();
             if (!expr.ContainsNode(w))
                 return Constant(expr);
             if (expr == w)
-                return Monomial(1, ERational.One);
+                return Monomial(1, SeriesExponent.One);
             switch (expr)
             {
                 case Sumf(var left, var right):
@@ -312,6 +312,13 @@ namespace AngouriMath.Functions.Algebra
                         && Expand(left, w, logarithmOfW, inverted.Order) is { } dividend
                             ? dividend.Multiply(inverted)
                             : null;
+                // w to an irrational constant, which is how Gruntz.Rewrite writes a member of
+                // the mrv set whose logarithm is an irrational multiple of w's.
+                // https://github.com/asc-community/AngouriMath/issues/2597
+                case Powf(var @base, var power) when @base == w && !power.ContainsNode(w)
+                                                    && power.Evaled is not Rational
+                                                    && SeriesExponent.Of(power) is { } exponent:
+                    return Monomial(1, exponent);
                 case Powf(var @base, var power) when @base == MathS.e:
                     return Expand(power, w, logarithmOfW, order)?.Exponentiate(order);
                 case Powf(var @base, var power) when !power.ContainsNode(w):
@@ -335,7 +342,7 @@ namespace AngouriMath.Functions.Algebra
         }
 
         private static AsymptoticSeries? RaiseToConstant(
-            Entity @base, Entity power, Variable w, Entity logarithmOfW, ERational order)
+            Entity @base, Entity power, Variable w, Entity logarithmOfW, SeriesExponent order)
         {
             var requested = order;
             if (Expand(@base, w, logarithmOfW, order) is not { } expanded)
@@ -371,7 +378,7 @@ namespace AngouriMath.Functions.Algebra
             }
             sum = sum.WithOrder(requested);
             var scaled = MathS.Pow(coefficient, power).InnerSimplified;
-            return sum.Multiply(Monomial(scaled, wanted.Multiply(leading)));
+            return sum.Multiply(Monomial(scaled, leading.Scale(wanted)));
         }
 
         private static AsymptoticSeries Repeated(AsymptoticSeries series, int times)
