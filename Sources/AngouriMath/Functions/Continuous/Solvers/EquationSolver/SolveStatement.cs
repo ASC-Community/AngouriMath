@@ -225,8 +225,14 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
             var substituted = equation.Substitute(x, root);
             if (IsUndefinedExactly(substituted))
                 return RootVerdict.Spurious;
-            if (IsEvidenceAgainstUnlessEnclosed(substituted))
-                return RootVerdict.Spurious;
+            switch (Weigh(substituted))
+            {
+                case ResidualWeight.Against:
+                    return RootVerdict.Spurious;
+                // https://github.com/asc-community/AngouriMath/issues/2627
+                case ResidualWeight.CannotTell:
+                    return RootVerdict.ShownNotARoot;
+            }
             return !substituted.Vars.Any() && IsAboveTheIntervalFloor(equation, x, root) && IsShownNotZero(substituted)
                 ? RootVerdict.ShownNotARoot
                 : RootVerdict.Kept;
@@ -275,20 +281,24 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// <c>(1 + sqrt(2))^140</c> in the coefficients the terms are near <c>1e107</c>, and the
         /// residual <c>-2</c> is inside an interval of a hundred digits.
         /// </remarks>
-        internal static bool IsShownNotZero(Entity residual) => ExcludesZero(residual) is true;
+        internal static bool IsShownNotZero(Entity residual) => ExcludesZero(residual, out _) is true;
 
         /// <summary>
         /// Whether an interval enclosing <paramref name="residual"/> leaves out zero, as
         /// <see cref="IsShownNotZero"/> works it out; <see langword="false"/> where it holds zero,
         /// and <see langword="null"/> where no interval can be worked out.
         /// </summary>
-        private static bool? ExcludesZero(Entity residual)
+        private static bool? ExcludesZero(Entity residual, out Numerics.PreciseComplexInterval? excluding)
         {
+            excluding = null;
             var digits = IntervalDigits();
             if (Numerics.PreciseEvaluation.Of(residual, digits) is not { } enclosure)
                 return null;
             if (Excludes(enclosure))
+            {
+                excluding = enclosure;
                 return true;
+            }
             var width = PeterO.Numbers.EDecimal.Max(
                 enclosure.Re.High.Subtract(enclosure.Re.Low), enclosure.Im.High.Subtract(enclosure.Im.Low));
             if (width.IsZero)
@@ -302,7 +312,10 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
                 return false;
             if (!more.CanFitInInt32() || more.ToInt32Unchecked() > MostMoreDigits)
                 more = MostMoreDigits;
-            return Numerics.PreciseEvaluation.Of(residual, digits + more.ToInt32Unchecked()) is { } finer && Excludes(finer);
+            if (Numerics.PreciseEvaluation.Of(residual, digits + more.ToInt32Unchecked()) is not { } finer || !Excludes(finer))
+                return false;
+            excluding = finer;
+            return true;
 
             static bool Excludes(Numerics.PreciseComplexInterval enclosure)
                 => enclosure.Re.Mignitude.Sign > 0 || enclosure.Im.Mignitude.Sign > 0;
@@ -467,7 +480,81 @@ namespace AngouriMath.Functions.Algebra.AnalyticalSolving
         /// <a href="https://github.com/asc-community/AngouriMath/issues/2448">#2448</a>
         /// </remarks>
         internal static bool IsEvidenceAgainstUnlessEnclosed(Entity substituted)
-            => IsEvidenceAgainst(substituted) && !(IsExactAndAlgebraic(substituted) && ExcludesZero(substituted) is false);
+            => Weigh(substituted) is ResidualWeight.Against;
+
+        /// <summary>What a residual says of the root or the row put in.</summary>
+        internal enum ResidualWeight
+        {
+            /// <summary>Nothing against it.</summary>
+            None,
+            /// <summary>It is no solution.</summary>
+            Against,
+            /// <summary>Rounding reached it, and whether it is one cannot be told.</summary>
+            CannotTell,
+        }
+
+        /// <summary>
+        /// <see cref="IsEvidenceAgainst"/>, weighed against an interval where <paramref name="substituted"/> is exact and
+        /// algebraic. An enclosure that holds zero says the residual is what rounding left, and is no evidence. One that
+        /// leaves zero out but is no further from it than rounding leaves, or none at all where twice the digits evaluate
+        /// the residual to something else, says rounding reached what found the root or the row: whether it is one cannot
+        /// be told, and the caller declines, since dropping it may lose a solution and keeping it may keep a point that is
+        /// none.
+        /// </summary>
+        /// <remarks>
+        /// In <c>y^2 - 2, x^2 + (P - Q y) x - 3</c>, with <c>(1 + sqrt(2))^n = P + Q sqrt(2)</c>, a system solved for
+        /// <c>y</c> from the second equation goes through <c>((x^2 + P x - 3)/(Q x))^2 = 2</c>, a quartic in <c>x</c> with
+        /// coefficients near <c>Q^2</c>. At <c>n = 90</c> its small root, exact, left <c>-0.042</c> against terms of 3 at a
+        /// hundred digits, with no enclosure, and something else at two hundred; at <c>n = 70</c>, merged with a
+        /// change that kept <c>P + Q sqrt(2)</c> exact, the row of that root left <c>-7.2e-21</c> where its enclosure is
+        /// near <c>6e-53</c>, exact and not zero. Each was dropped as no solution, and three rows of four were answered.
+        /// https://github.com/asc-community/AngouriMath/issues/2627
+        /// </remarks>
+        internal static ResidualWeight Weigh(Entity substituted)
+        {
+            if (!IsEvidenceAgainst(substituted))
+                return ResidualWeight.None;
+            if (!IsExactAndAlgebraic(substituted))
+                return ResidualWeight.Against;
+            return ExcludesZero(substituted, out var excluding) switch
+            {
+                false => ResidualWeight.None,
+                true => IsWithinRounding(substituted, excluding!.Value) ? ResidualWeight.CannotTell : ResidualWeight.Against,
+                // No interval: an enclosure divides by one that holds zero where the terms cancel past the digits it
+                // is worked to. A residual that twice the digits evaluate to about the same is a whole quantity; one
+                // they move is what rounding left.
+                null => IsEvidenceAgainstWithMoreDigits(substituted) ? ResidualWeight.Against : ResidualWeight.CannotTell,
+            };
+        }
+
+        /// <summary>
+        /// Whether <paramref name="substituted"/> evaluates to about the same residual with twice the working digits,
+        /// to within a half of it: rounding's residual moves with the digits, and a whole quantity does not.
+        /// </summary>
+        private static bool IsEvidenceAgainstWithMoreDigits(Entity substituted)
+        {
+            var context = MathS.Settings.DecimalPrecisionContext.Value;
+            if (context.Precision.IsZero || !context.Precision.CanFitInInt32() || substituted.Evaled is not Number.Complex atTheDigits)
+                return true;
+            Entity atMoreDigits;
+            using (MathS.Settings.DecimalPrecisionContext.Set(context.WithPrecision(2 * context.Precision.ToInt32Unchecked())))
+                atMoreDigits = substituted.Evaled;
+            return atMoreDigits is Number.Complex more && more.IsFinite
+                && ((Number.Complex)(more - atTheDigits)).Abs().EDecimal.CompareTo(atTheDigits.Abs().EDecimal.Divide(2)) <= 0;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="enclosure"/> of <paramref name="substituted"/>, exact and algebraic, is no
+        /// further from zero than <see cref="IsEvidenceAgainst"/> takes rounding to leave: a share of the
+        /// largest term or of one, the share being ten to the minus half the working digits.
+        /// </summary>
+        private static bool IsWithinRounding(Entity substituted, Numerics.PreciseComplexInterval enclosure)
+        {
+            var share = EDecimal.Create(EInteger.One, MathS.Settings.DecimalPrecisionContext.Value.Precision.Divide(2).Negate());
+            var unused = false;
+            var bound = EDecimal.Max(LargestTerm(substituted, ref unused), share).Multiply(share);
+            return EDecimal.Max(enclosure.Re.Magnitude, enclosure.Im.Magnitude).CompareTo(bound) <= 0;
+        }
 
         /// <summary>
         /// Whether <paramref name="expression"/> is exact numbers in sums, products, quotients and

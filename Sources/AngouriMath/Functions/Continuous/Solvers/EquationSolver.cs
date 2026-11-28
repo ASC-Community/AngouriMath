@@ -333,8 +333,13 @@ namespace AngouriMath.Functions.Algebra
                 for (var index = 0; index < variables.Length; index++)
                     replacements[variables[index]] = row[index];
                 var residuals = equations.Select(equation => equation.Substitute(replacements)).ToList();
-                if (residuals.Any(residual => !residual.Vars.Any()
-                        && (residual.Evaled is Complex { IsFinite: false } || StatementSolver.IsEvidenceAgainstUnlessEnclosed(residual))))
+                var weights = residuals.Select(residual => residual.Vars.Any() ? StatementSolver.ResidualWeight.None : StatementSolver.Weigh(residual)).ToList();
+                // A residual rounding reached says nothing of the row either way, and the row may stand for a
+                // solution that was lost: https://github.com/asc-community/AngouriMath/issues/2627
+                if (weights.Contains(StatementSolver.ResidualWeight.CannotTell))
+                    return null;
+                if (residuals.Select((residual, index) => !residual.Vars.Any()
+                        && (residual.Evaled is Complex { IsFinite: false } || weights[index] is StatementSolver.ResidualWeight.Against)).Any(dropped => dropped))
                     continue;
                 if (residuals.Any(residual => residual.Vars.Any() && StatementSolver.IsEvidenceAgainst(AtASamplePoint(residual, own))))
                     return null;
