@@ -59,6 +59,22 @@ only in decimals, is answered as before ([#2607](https://github.com/asc-communit
 | `2^x + 2^y - 8`, `x - y` | `null` | `[[2 + 2 * pi * i * n_1 / ln(2), …]]` |
 | `x - y`, `ln(x) + ln(y) - 1` | `[[sqrt(e), sqrt(e)]]` | unchanged |
 
+### An odd root of a negative number is real with downcasting off as well
+
+**Silent, with `MathS.Settings.DowncastingEnabled` off only.** An odd root of a negative number is the real one:
+`(-8)^(1/3)` is `-2`. With downcasting off, the parser keeps `1/3` as a quotient of the decimals 1 and 3, which
+evaluates to `0.333…`. The power then took the principal root, `1 + 1.732i`. A power whose exponent is written as an
+exact fraction with an odd denominator below 10 now takes the real root under either setting, as the precise evaluator
+already did. With downcasting on, nothing changes ([#2622](https://github.com/asc-community/AngouriMath/issues/2622)).
+
+| `.Evaled`, downcasting off | Was (2.10.0) | Now |
+|---|---|---|
+| `(-8)^(1/3)` | `1.000… + 1.732…i` | `-2.000…` |
+| `(-8)^(2/3)` | `-2.000… + 3.464…i` | `4.000…` |
+| `(-32)^(1/5)` | `1.618… + 1.175…i` | `-2.000…` |
+| `(-30.5)^(1/3)` | `1.562… + 2.705…i` | `-3.124…` |
+| `(-30.5)^(1/2)` | `5.522…i` | unchanged |
+
 ### A singular matrix is not inverted because its determinant is not written as 0
 
 **Not silent: a wrong answer is now no answer.** `Matrix.Inverse`, `Matrix.Pow` with a negative exponent, `M^(-1)` and
