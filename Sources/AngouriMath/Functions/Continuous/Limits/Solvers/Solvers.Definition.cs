@@ -484,12 +484,32 @@ namespace AngouriMath.Functions.Algebra
             }
         }
 
+        /// <summary>
+        /// 0 for a limit that came back as one finite constant minus itself, and the limit as it
+        /// is otherwise. The inner simplification leaves <c>u - u</c> as it is, so the limit of
+        /// <c>e^(a + x) - e^a</c> at 0 came back <c>e^a - e^a</c>. Nothing read that as 0, so the
+        /// difference quotient <c>(e^(a + x) - e^a) / x</c> was taken for a constant over a
+        /// vanishing divisor, which has no limit from both sides, and it answered NaN where the
+        /// limit is <c>e^a</c>. The constant's own domain condition is carried, as
+        /// <c>Simplify</c> carries it for <c>ln(a) - ln(a)</c>.
+        /// https://github.com/asc-community/AngouriMath/issues/2628
+        /// </summary>
+        internal static Entity CancelledDifference(Entity limit, Variable x)
+            => limit is Minusf(var left, var right) && (left == right || left.InnerSimplified == right.InnerSimplified) && !left.ContainsNode(x)
+               && !left.Nodes.Any(static node => node is Number { IsFinite: false } or Limitf)
+                ? left.DomainCondition == Boolean.True
+                    ? Integer.Zero
+                    : new Providedf(Integer.Zero, left.DomainCondition)
+                : limit;
+
         public static Entity? ComputeLimit(Entity expr, Variable x, Entity dest, ApproachFrom side = ApproachFrom.BothSides, bool acceptNaN = false)
         {
             var key = (expr, x, dest, side, acceptNaN);
             if (limitMemo is { } memo && memo.TryGetValue(key, out var known))
                 return known;
-            var found = ComputeLimitUnmemoised(expr, x, dest, side, acceptNaN);
+            var found = ComputeLimitUnmemoised(expr, x, dest, side, acceptNaN) is { } computed
+                ? CancelledDifference(computed, x)
+                : null;
             if (found is { } && limitMemo is { } store && found.Evaled != MathS.NaN)
                 store[key] = found;
             return found;
