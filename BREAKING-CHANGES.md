@@ -132,6 +132,27 @@ converges, what is left tends to the logarithms of the leading coefficients
 | `integral(1/(x^7+1), x, 0, +oo)` | unevaluated | `pi / (7 sin(pi/7))`, written through `cotan(pi/7)` |
 | `integral(1/(x^5+1), x, 1, +oo)` | unevaluated | `0.18064…`, in closed form |
 
+### An integral through a sum over roots is not NaN at infinity, nor taken across a real root
+
+**Not silent: wrong answers.** The antiderivative of `1/(x^3 + x + 1)` is a sum over the roots of `r^3 + r + 1`.
+Taken at `+oo` it was that sum with `+oo` inside, which evaluates to `NaN`. So the integral over `[0, +oo)` simplified
+to `NaN`, a claim that it does not exist, where it is `0.92176…`. Across a real root of the polynomial, the sum was
+treated as continuous. The integral over `[-1, 0]`, which diverges at the root `-0.6823…`, came out as a complex
+number.
+
+At `+oo` the root sum is now 0 where its multiples are `N(r) / p'(r)` with the degree of `N` at most `deg p - 2`. That
+is the Euler–Jacobi identity, and it is what the integral's convergence asks of the integrand. A real root strictly
+inside the range is now a break, and the integral is left unevaluated there unless both sides settle. At `-oo` a root
+sum leaves the integral unevaluated ([#2624](https://github.com/asc-community/AngouriMath/issues/2624)).
+
+| simplified | Was (2.10.0) | Now |
+|---|---|---|
+| `integral(1/(x^3+x+1), x, 0, +oo)` | `NaN` | `-sum(ln(-r) / (1 + 3 * r ^ 2), r in { r : 1 + r ^ 3 + r = 0 })` = `0.92176…` |
+| `integral(1/(x^3-x^2+1), x, 0, +oo)` | `NaN` | the root sum `1.79044…` |
+| `integral(1/(x^5+x+1), x, 0, +oo)` | `NaN` | the root sum `0.79590…` |
+| `integral(1/(x^3+x+1), x, -1, 0)` | a complex number | unevaluated (it diverges) |
+| `integral(1/(x^3+x+1), x, -oo, 0)` | `NaN` | unevaluated |
+
 ### An inequality with abs of x is solved
 
 **Not silent: an inequality that threw has an answer.** `Solve` threw `NotSufficientlySupportedException`, *"Only
